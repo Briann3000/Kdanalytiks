@@ -1,15 +1,20 @@
 <?php
+// 1. Determine timeout BEFORE starting the session
+// Check if the "Remember Me" cookie exists or if the checkbox was just ticked
+$is_remembered = isset($_COOKIE['remember_me']) || isset($_POST['remember_me']);
+$session_timeout = $is_remembered ? (30 * 24 * 3600) : 1800; // 30 days vs 30 mins
+
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     // 2. Base security and timeout rules
     ini_set('session.cookie_httponly', 1);
     ini_set('session.use_only_cookies', 1);
-    ini_set('session.gc_maxlifetime', 1800); // 30 minutes server timeout
-    
+    ini_set('session.gc_maxlifetime', $session_timeout); 
+
     // 3. Robust check for HTTPS..no https user cant stay logged in
     $is_https = (
-        (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || 
-        (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) ||
+        (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ||
+        (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443) ||
         (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
     );
 
@@ -19,24 +24,27 @@ if (session_status() === PHP_SESSION_NONE) {
     }
 
     // 5. Set the client-side cookie timeout
-    session_set_cookie_params(1800); // 30 minutes
+    session_set_cookie_params($session_timeout); 
     session_start();
 }
 
-
+// If they just logged in with "Remember Me", set a persistent cookie
+if (isset($_POST['remember_me']) && isset($_SESSION['user'])) {
+    setcookie('remember_me', '1', time() + (30 * 24 * 3600), "/", "", $is_https, true);
+}
 
 // Update last activity for timeout
-if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > 1800)) {
+if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $session_timeout)) {
     session_unset();
     session_destroy();
-    header('Location: admin-login.php?error=Session timed out');
+    header('Location: index.php?error=Session timed out');
     exit();
 }
 $_SESSION['last_activity'] = time();
 
 // Setup database if not already set up
 if (!defined('RB_SETUP')) {
-    
+
     // 1. Define absolute paths using __DIR__
     $rbPath = __DIR__ . '/rb.php';
     $dbPath = __DIR__ . '/kmsurveytool.db';
@@ -48,18 +56,18 @@ if (!defined('RB_SETUP')) {
         echo "System configuration error. Please try again later.";
         exit();
     }
-    
+
     require_once $rbPath;
-    
+
     // 3. Check if database file exists gracefully
     if (!file_exists($dbPath)) {
         error_log("Critical Error: Database file not found at {$dbPath}");
         http_response_code(500);
         // Kept your original instruction here so you know what to fix
-        echo "Database not found. Please run fresh_setup.php first."; 
+        echo "Database not found. Please run fresh_setup.php first.";
         exit();
     }
-    
+
     // 4. Setup RedBean using the absolute path
     R::setup('sqlite:' . $dbPath);
     define('RB_SETUP', true);
@@ -70,6 +78,7 @@ if (!defined('RB_SETUP')) {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -78,10 +87,15 @@ if (!defined('RB_SETUP')) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        .w3-blue { background-color: #0b66c3 !important; }
-        .w3-button:hover { background-color: #0a5bb0 !important; }
+        .w3-blue {
+            background-color: #0b66c3 !important;
+        }
+
+        .w3-button:hover {
+            background-color: #0a5bb0 !important;
+        }
     </style>
-       <!-- <style>
+    <!-- <style>
         body {
             font-family: Arial, sans-serif;
             max-width: 800px;
@@ -162,38 +176,39 @@ if (!defined('RB_SETUP')) {
         }
     </style>-->
 </head>
-<body class="w3-light-grey">
-<!-- Navigation -->
-<div class="w3-bar w3-blue w3-large">
-    <a href="index.php" class="w3-bar-item w3-button w3-mobile">
-        <i class="fa fa-poll"></i> KMSurveyTool
-    </a>
-    
-    <!-- Right-sided navbar links -->
-    <div class="w3-right">
-        <?php if (isset($_SESSION['user'])): ?>
-            <?php if ($_SESSION['user']['role'] == 'admin'): ?>
-                <a href="admin-dashboard.php" class="w3-bar-item w3-button w3-mobile">Admin</a>
-            <?php elseif ($_SESSION['user']['role'] == 'organization'): ?>
-                <a href="organization-dashboard.php" class="w3-bar-item w3-button w3-mobile">Dashboard</a>
-            <?php elseif ($_SESSION['user']['role'] == 'independent'): ?>
-                <a href="independent-dashboard.php" class="w3-bar-item w3-button w3-mobile">Dashboard</a>
-            <?php else: ?>
-                <a href="respondent-dashboard.php" class="w3-bar-item w3-button w3-mobile">Dashboard</a>
-            <?php endif; ?>
-            <a href="public-list-surveys.php" class="w3-bar-item w3-button w3-mobile">Public Surveys</a>
-            <a href="logout.php" class="w3-bar-item w3-button w3-mobile">
-                <i class="fa fa-sign-out-alt"></i> Logout
-            </a>
-        <?php else: ?>
-            <a href="admin-login.php" class="w3-bar-item w3-button w3-mobile">Admin</a>
-            <a href="organization-login.php" class="w3-bar-item w3-button w3-mobile">Organization</a>
-            <a href="independent-login.php" class="w3-bar-item w3-button w3-mobile">Researcher</a>
-            <a href="respondent-login.php" class="w3-bar-item w3-button w3-mobile">Respondent</a>
-            <a href="public-list-surveys.php" class="w3-bar-item w3-button w3-mobile">Public Surveys</a>
-        <?php endif; ?>
-    </div>
-</div>
 
-<!-- Page content -->
-<div style="margin-top:50px;">
+<body class="w3-light-grey">
+    <!-- Navigation -->
+    <div class="w3-bar w3-blue w3-large">
+        <a href="index.php" class="w3-bar-item w3-button w3-mobile">
+            <i class="fa fa-poll"></i> KMSurveyTool
+        </a>
+
+        <!-- Right-sided navbar links -->
+        <div class="w3-right">
+            <?php if (isset($_SESSION['user'])): ?>
+                <?php if ($_SESSION['user']['role'] == 'admin'): ?>
+                    <a href="admin-dashboard.php" class="w3-bar-item w3-button w3-mobile">Admin</a>
+                <?php elseif ($_SESSION['user']['role'] == 'organization'): ?>
+                    <a href="organization-dashboard.php" class="w3-bar-item w3-button w3-mobile">Dashboard</a>
+                <?php elseif ($_SESSION['user']['role'] == 'independent'): ?>
+                    <a href="independent-dashboard.php" class="w3-bar-item w3-button w3-mobile">Dashboard</a>
+                <?php else: ?>
+                    <a href="respondent-dashboard.php" class="w3-bar-item w3-button w3-mobile">Dashboard</a>
+                <?php endif; ?>
+                <a href="public-list-surveys.php" class="w3-bar-item w3-button w3-mobile">Public Surveys</a>
+                <a href="logout.php" class="w3-bar-item w3-button w3-mobile">
+                    <i class="fa fa-sign-out-alt"></i> Logout
+                </a>
+            <?php else: ?>
+                <a href="admin-login.php" class="w3-bar-item w3-button w3-mobile">Admin</a>
+                <a href="organization-login.php" class="w3-bar-item w3-button w3-mobile">Organization</a>
+                <a href="independent-login.php" class="w3-bar-item w3-button w3-mobile">Researcher</a>
+                <a href="respondent-login.php" class="w3-bar-item w3-button w3-mobile">Respondent</a>
+                <a href="public-list-surveys.php" class="w3-bar-item w3-button w3-mobile">Public Surveys</a>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Page content -->
+    <div style="margin-top:50px;">

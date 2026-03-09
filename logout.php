@@ -1,6 +1,8 @@
 <?php
-session_start();
-session_destroy();
+require_once 'functions.php';
+
+logout();
+
 header('Location: index.php');
 exit();
 ?>

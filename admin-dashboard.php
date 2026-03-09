@@ -23,7 +23,7 @@ $totalPublicResponses = array_sum($publicSurveyResponses);
 <div class="w3-container w3-padding">
     <h2 class="w3-text-blue"><i class="fa fa-tachometer-alt"></i> Admin Dashboard</h2>
     <p>Welcome, <?php echo htmlspecialchars($_SESSION['admin_name']); ?>!</p>
-    
+
     <!-- Admin Info Panel -->
     <div class="w3-panel w3-blue w3-round w3-margin-bottom">
         <h4>Admin Information:</h4>
@@ -31,7 +31,7 @@ $totalPublicResponses = array_sum($publicSurveyResponses);
         <p><strong>Role:</strong> <?php echo htmlspecialchars($_SESSION['admin_role']); ?></p>
         <p><strong>Logged in at:</strong> <?php echo date('Y-m-d H:i:s', $_SESSION['login_time']); ?></p>
     </div>
-    
+
     <div class="w3-row-padding w3-margin-top">
         <div class="w3-quarter">
             <div class="w3-card w3-padding w3-blue w3-center">
@@ -58,7 +58,7 @@ $totalPublicResponses = array_sum($publicSurveyResponses);
             </div>
         </div>
     </div>
-    
+
     <div class="w3-row-padding w3-margin-top">
         <div class="w3-quarter">
             <div class="w3-card w3-padding w3-red w3-center">
@@ -85,7 +85,7 @@ $totalPublicResponses = array_sum($publicSurveyResponses);
             </div>
         </div>
     </div>
-    
+
     <!-- Public Surveys Statistics Section -->
     <div class="w3-margin-top">
         <h3 class="w3-text-blue">Public Surveys Overview</h3>
@@ -105,27 +105,32 @@ $totalPublicResponses = array_sum($publicSurveyResponses);
             <div class="w3-third">
                 <div class="w3-card w3-padding w3-orange w3-center">
                     <h3><?php echo $publicSurveys > 0 ? round($totalPublicResponses / $publicSurveys, 1) : 0; ?></h3>
-                <p>Avg Responses</p>
+                    <p>Avg Responses</p>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <div class="w3-margin-top">
         <h3 class="w3-text-grey">Quick Actions</h3>
         <a href="admin-users.php" class="w3-button w3-blue w3-margin-right">Manage Users</a>
         <a href="admin-surveys.php" class="w3-button w3-green w3-margin-right">Manage Surveys</a>
-        <a href="admin-survey-builder.php" class="w3-button w3-purple w3-margin-right">Create Public Survey</a>
+        <a href="admin-survey-builder-json.php" class="w3-button w3-purple w3-margin-right">
+            <i class="fa fa-pen"></i> Create Survey (New)
+        </a>
+        <a href="admin-survey-builder.php" class="w3-button w3-light-grey w3-margin-right" title="Legacy builder">
+            <i class="fa fa-edit"></i> Create Survey (Legacy)
+        </a>
         <a href="admin-reports.php" class="w3-button w3-orange">View Reports</a>
     </div>
-    
+
     <!-- Recent Public Surveys Section -->
     <div class="w3-margin-top">
         <h3 class="w3-text-blue">Recent Public Surveys</h3>
         <?php
         $recentPublicSurveys = R::find('surveys', ' type = ? ORDER BY created_at DESC LIMIT 3', ['public']);
         if (count($recentPublicSurveys) > 0):
-        ?>
+            ?>
             <div class="w3-row-padding">
                 <?php foreach ($recentPublicSurveys as $survey): ?>
                     <div class="w3-third w3-margin-bottom">
@@ -134,13 +139,17 @@ $totalPublicResponses = array_sum($publicSurveyResponses);
                             <p><?php echo substr(htmlspecialchars($survey->description), 0, 80) . '...'; ?></p>
                             <div class="w3-margin-top">
                                 <span class="w3-tag w3-blue"><?php echo htmlspecialchars($survey->category); ?></span>
-                                <span class="w3-tag w3-green w3-right"><?php echo R::count('responses', ' survey_id = ? ', [$survey->id]); ?> responses</span>
+                                <span
+                                    class="w3-tag w3-green w3-right"><?php echo R::count('responses', ' survey_id = ? ', [$survey->id]); ?>
+                                    responses</span>
                             </div>
                             <div class="w3-margin-top">
-                                <a href="public-survey-report.php?id=<?php echo $survey->id; ?>" class="w3-button w3-blue w3-round w3-small">
+                                <a href="public-survey-report.php?id=<?php echo $survey->id; ?>"
+                                    class="w3-button w3-blue w3-round w3-small">
                                     <i class="fa fa-chart-bar"></i> View Report
                                 </a>
-                                <a href="admin-send-survey.php?id=<?php echo $survey->id; ?>" class="w3-button w3-green w3-round w3-small w3-margin-left">
+                                <a href="admin-send-survey.php?id=<?php echo $survey->id; ?>"
+                                    class="w3-button w3-green w3-round w3-small w3-margin-left">
                                     <i class="fa fa-envelope"></i> Send Survey
                                 </a>
                             </div>
@@ -150,11 +159,12 @@ $totalPublicResponses = array_sum($publicSurveyResponses);
             </div>
         <?php else: ?>
             <div class="w3-panel w3-yellow w3-round">
-                <p>No public surveys created yet. <a href="admin-survey-builder.php" class="w3-text-blue">Create your first public survey</a></p>
+                <p>No public surveys created yet. <a href="admin-survey-builder.php" class="w3-text-blue">Create your first
+                        public survey</a></p>
             </div>
         <?php endif; ?>
     </div>
-    
+
     <!-- Quick Links Section -->
     <div class="w3-margin-top">
         <h3 class="w3-text-grey">Quick Links</h3>
@@ -176,7 +186,7 @@ $totalPublicResponses = array_sum($publicSurveyResponses);
             </div>
         </div>
     </div>
-    
+
     <div class="w3-margin-top">
         <a href="admin-logout.php" class="w3-button w3-red">
             <i class="fa fa-sign-out-alt"></i> Logout

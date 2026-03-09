@@ -1,26 +1,12 @@
 <?php
 ob_start();
+require_once 'functions.php';
+
+handle_remember_me();
+
 include 'header.php';
 
-$message = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email']);
-    $password = $_POST['password'];
-    
-    $user = R::findOne('users', ' email = ? AND role = ? ', [$email, 'organization']);
-    
-    if ($user && password_verify($password, $user->password)) {
-        if ($user->status == 'active') {
-            $_SESSION['user'] = $user->export();
-            header('Location: organization-dashboard.php');
-            exit();
-        } else {
-            $message = 'Your account is pending approval';
-        }
-    } else {
-        $message = 'Invalid email or password';
-    }
-}
+$message = login_user('organization', 'organization-dashboard.php', 'Your account is pending approval');
 
 
 ?>
@@ -28,11 +14,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="w3-container w3-padding" style="max-width:500px;margin:auto;">
     <div class="w3-card w3-white w3-padding w3-round">
         <h2 class="w3-text-blue w3-center"><i class="fa fa-building"></i> Organization Login</h2>
-        
+
         <?php if ($message): ?>
             <div class="w3-panel w3-red w3-round"><?php echo $message; ?></div>
         <?php endif; ?>
-        
+
         <form method="post">
             <p>
                 <label>Email</label>
@@ -43,12 +29,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <input class="w3-input w3-border" type="password" name="password" required>
             </p>
             <p>
+                <input class="w3-check" type="checkbox" name="remember_me" id="remember_me" value="1">
+                <label for="remember_me">Keep me logged in</label>
+            </p>
+            <p>
                 <button class="w3-button w3-blue w3-round w3-block" type="submit">
                     <i class="fa fa-sign-in-alt"></i> Login
                 </button>
             </p>
         </form>
-        
+
         <p class="w3-center">
             Don't have an account? <a href="organization-register.php" class="w3-text-blue">Register here</a>
         </p>
