@@ -1,0 +1,147 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\User;
+use App\Models\Organization;
+use App\Models\Independent;
+use App\Models\Survey;
+use App\Models\Payment;
+use App\Models\Response;
+
+class AdminController extends Controller
+{
+    public function dashboard()
+    {
+        $stats = [
+            'totalUsers' => User::count(),
+            'totalResponses' => Response::count(),
+            'totalOrganizations' => Organization::count(),
+            'totalResearchers' => Independent::count(),
+            'totalSurveys' => Survey::count(),
+            'pendingUsers' => User::where('status', \App\Enums\UserStatus::Pending)->count(),
+            'pendingSurveys' => Survey::where('status', \App\Enums\SurveyStatus::PendingApproval)->count(),
+            'draftSurveys' => Survey::where('status', \App\Enums\SurveyStatus::Draft)->count(),
+        ];
+
+        $publicStats = [
+            'count' => Survey::where('type', \App\Enums\SurveyType::Public)->count(),
+            'responses' => Response::whereHas('survey', function ($q) {
+                $q->where('type', \App\Enums\SurveyType::Public);
+            })->count(),
+        ];
+
+        $publicStats['average'] = $publicStats['count'] > 0
+            ? round($publicStats['responses'] / $publicStats['count'], 2)
+            : 0;
+
+        $recentPublicSurveys = Survey::where('type', \App\Enums\SurveyType::Public)
+            ->withCount('responses')
+            ->latest()
+            ->take(3)
+            ->get();
+
+        return view('admin.dashboard', compact('stats', 'publicStats', 'recentPublicSurveys'));
+    }
+
+    public function analytics()
+    {
+        $totalSurveys = Survey::count();
+        $totalResponses = Response::count();
+        $totalOrganizations = Organization::count();
+        $totalRespondents = User::where('role', \App\Enums\UserRole::Respondent->value)
+            ->orWhere('role', \App\Enums\UserRole::Respondent)
+            ->count();
+
+        $categoryStats = Survey::selectRaw('category, COUNT(*) as count')
+            ->groupBy('category')
+            ->get();
+
+        $responseTrends = Response::selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->where('created_at', '>=', now()->subDays(7))
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+
+        return view('admin.analytics', compact(
+            'totalSurveys',
+            'totalResponses',
+            'totalOrganizations',
+            'totalRespondents',
+            'categoryStats',
+            'responseTrends'
+        ));
+    }
+
+    public function users(Request $request)
+    {
+        $query = User::query();
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('role') && $request->role !== 'all') {
+            $query->where('role', $request->role);
+        }
+
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        $users = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        return view('admin.users', compact('users'));
+    }
+
+    public function updateUserStatus(Request $request, User $user)
+    {
+        $request->validate([
+            'status' => 'required|in:active,pending,suspended',
+        ]);
+
+        $user->update(['status' => $request->status]);
+
+        return back()->with('success', "User {$user->name} status updated to {$request->status}.");
+    }
+
+    public function surveys(Request $request)
+    {
+        $query = Survey::with(['organization', 'independent'])->withCount('responses');
+
+        if ($request->filled('search')) {
+            $query->where('title', 'like', "%{$request->search}%");
+        }
+
+        $surveys = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        return view('admin.surveys', compact('surveys'));
+    }
+
+    public function reports()
+    {
+        $totalUsers = User::count();
+        $totalSurveys = Survey::count();
+        $totalResponses = Response::count();
+        $usersByRole = User::selectRaw('role, count(*) as count')->groupBy('role')->pluck('count', 'role');
+        $surveysByStatus = Survey::selectRaw('status, count(*) as count')->groupBy('status')->pluck('count', 'status');
+
+        return view('admin.reports', compact('totalUsers', 'totalSurveys', 'totalResponses', 'usersByRole', 'surveysByStatus'));
+    }
+    public function approve(Survey $survey)
+    {
+        $survey->update(['status' => \App\Enums\SurveyStatus::Active]);
+        return back()->with('success', "Survey '{$survey->title}' has been approved and is now active.");
+    }
+
+    public function deactivate(Survey $survey)
+    {
+        $survey->update(['status' => \App\Enums\SurveyStatus::Closed]);
+        return back()->with('success', "Survey '{$survey->title}' has been deactivated.");
+    }
+}
