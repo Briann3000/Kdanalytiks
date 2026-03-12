@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Free Builder Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
+    
+    <script src="https://formbuilder.online/assets/js/form-builder.min.js"></script>
+    
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        /* Give the builder a designated space */
+        #fb-editor { min-height: 500px; border: 1px solid #ccc; padding: 10px; }
+    </style>
+</head>
+<body>
+
+    <h2>Free Drag & Drop Builder</h2>
+    
+    <div id="fb-editor"></div>
+    
+    <button id="save-btn" style="margin-top:20px; padding:10px 20px; cursor:pointer;">Save JSON to Console</button>
+
+    <script>
+    jQuery(function($) {
+        // Initialize the free builder
+        const formBuilder = $('#fb-editor').formBuilder({
+            controlPosition: 'left',
+            // You can easily disable fields you don't want (like hidden inputs)
+            disableFields: ['hidden', 'button'] 
+        });
+
+        // When you click save, it grabs the JSON exactly like SurveyJS did
+        $('#save-btn').click(function() {
+            const jsonSchema = formBuilder.actions.getData('json');
+            console.log("Here is the JSON ready for your database:");
+            console.log(jsonSchema);
+            alert("Check your browser console (F12) to see the JSON!");
+        });
+    });
+    </script>
+</body>
+</html>
