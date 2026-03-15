@@ -30,12 +30,15 @@ class QualitativeAnalysisService
             ];
         }
 
-        // Chunk responses to stay within token limits (e.g., 80 per batch for Llama 3.1 8b)
-        $chunks = array_chunk($responses, 80);
+        // Reduced to 150 chars and 12 responses to stay within Groq TPM limits (Free Tier)
+        $responses = array_map(function($r) {
+            $r = is_array($r) ? implode(', ', $r) : $r;
+            return strlen($r) > 150 ? substr($r, 0, 147) . '...' : $r;
+        }, $responses);
+
+        $chunks = array_chunk($responses, 12);
         
-        // If multiple chunks, we analyze the first one for now but ensure the prompt is robust.
-        // In a more advanced version, we would map-reduce these.
-        return $this->processChunk(count($chunks) > 1 ? array_merge(...array_slice($chunks, 0, 2)) : $chunks[0]);
+        return $this->processChunk($chunks[0]);
     }
 
     /**
@@ -72,6 +75,8 @@ RULES:
 4. Respond ONLY with the JSON object.";
 
         try {
+            Log::info("QualitativeAnalysisService: Analyzing batch of " . count($batch) . " responses.");
+            
             $response = Http::withToken($this->apiKey)
                 ->timeout(90)
                 ->post('https://api.groq.com/openai/v1/chat/completions', [
@@ -86,28 +91,33 @@ RULES:
 
             if ($response->failed()) {
                 Log::error('QualitativeAnalysisService Error: ' . $response->body());
-                throw new \Exception('AI analysis service failed to respond.');
+                throw new \Exception('AI analysis service failed/rate limited.');
             }
 
             $result = $response->json();
             $content = $result['choices'][0]['message']['content'] ?? '{}';
+            Log::info("QualitativeAnalysisService: Raw AI content: " . substr($content, 0, 100) . "...");
             
             $data = json_decode($content, true);
             if (!$data) throw new \Exception('Malformed AI JSON response.');
 
-            // Ensure structure consistency
+            // Ensure structure consistency with ai-insight-card.blade.php
             return [
-                'sentiment' => $data['sentiment'] ?? ['positive' => 0, 'neutral' => 0, 'negative' => 0],
+                'sentiment_breakdown' => [
+                    'Positive' => $data['sentiment']['positive'] ?? 0,
+                    'Neutral' => $data['sentiment']['neutral'] ?? 0,
+                    'Negative' => $data['sentiment']['negative'] ?? 0
+                ],
                 'key_themes' => $data['key_themes'] ?? [],
-                'top_quotes' => $data['top_quotes'] ?? []
+                'representative_quotes' => $data['top_quotes'] ?? []
             ];
 
         } catch (\Exception $e) {
             Log::error('QualitativeAnalysisService Exception: ' . $e->getMessage());
             return [
-                'sentiment' => ['positive' => 0, 'neutral' => 0, 'negative' => 0],
+                'sentiment_breakdown' => ['Positive' => 0, 'Neutral' => 0, 'Negative' => 0],
                 'key_themes' => [],
-                'top_quotes' => [],
+                'representative_quotes' => [],
                 'error' => $e->getMessage()
             ];
         }
