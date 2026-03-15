@@ -25,6 +25,9 @@
             <a href="{{ route('surveys.export_pdf', $survey) }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-bold text-gray-700 bg-white hover:bg-gray-50 transition-colors">
                 <i class="fa-solid fa-file-pdf mr-2 text-red-500"></i> Export PDF
             </a>
+            <a href="{{ route('surveys.qualitative', $survey) }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-bold text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                <i class="fa-solid fa-brain mr-2 text-indigo-600"></i> Qualitative Insights
+            </a>
             <a href="{{ route('surveys.responses', $survey) }}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">
                 <i class="fa-solid fa-users mr-2"></i> View Submissions
             </a>
@@ -52,25 +55,52 @@
         </div>
     </div>
 
-    <!-- AI Executive Summary Card -->
-    <div class="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl p-8 mb-10 text-white shadow-xl relative overflow-hidden">
-        <div class="absolute right-0 top-0 opacity-10">
-            <i class="fa-solid fa-brain text-[200px] -mr-20 -mt-10"></i>
-        </div>
-        <div class="relative z-10">
-            <div class="flex items-center mb-4">
-                <span class="bg-indigo-400/30 p-2 rounded-lg mr-3">
-                    <i class="fa-solid fa-sparkles text-indigo-100"></i>
-                </span>
-                <h3 class="text-xl font-bold tracking-tight">AI Executive Summary</h3>
-            </div>
-            <div class="prose prose-invert max-w-none">
-                <div class="text-indigo-50 leading-relaxed font-medium">
-                    {!! nl2br(e($aiSummary)) !!}
+    <!-- AI Executive Summary Card (Restored Tailwind Style) -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-10 overflow-hidden">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm">
+                        <i class="fa-solid fa-sparkles text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 tracking-tight leading-none uppercase">AI Executive Summary</h3>
+                        <p class="text-[10px] text-indigo-500 font-bold uppercase tracking-widest mt-1">Automatic Insight Analysis</p>
+                    </div>
                 </div>
+                <span class="px-2.5 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-indigo-100">Groq Llama 3.1</span>
             </div>
-            <div class="mt-6 flex items-center text-indigo-300 text-xs font-bold uppercase tracking-widest">
-                <i class="fa-solid fa-clock-rotate-left mr-2"></i> Real-time AI Analysis Generated using GPT-4o-mini
+
+            <div class="grid gap-3">
+                @php
+                    $rawLines = explode("\n", $aiSummary ?? '');
+                    $validLines = array_filter($rawLines, function($line) {
+                        return !empty(ltrim(trim($line), "-* \t\n\r\0\x0B"));
+                    });
+                @endphp
+
+                @forelse($validLines as $line)
+                    @php $trimmed = ltrim(trim($line), "-* \t\n\r\0\x0B"); @endphp
+                    <div class="flex gap-4 items-start p-4 bg-indigo-50/30 rounded-xl border border-indigo-100/20 group hover:bg-indigo-50 transition-colors">
+                        <div class="mt-1 flex-shrink-0">
+                            <i class="fa-solid fa-circle-check text-indigo-400 text-sm group-hover:scale-110 transition-transform"></i>
+                        </div>
+                        <p class="text-gray-700 font-medium leading-relaxed text-sm">{{ $trimmed }}</p>
+                    </div>
+                @empty
+                    <div class="py-12 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                        <i class="fa-solid fa-robot-slash text-gray-300 text-4xl mb-3"></i>
+                        <p class="text-gray-500 font-medium max-w-xs mx-auto">
+                            {{ $aiSummary ?: 'Intelligence engine is currently processing or unavailable.' }}
+                        </p>
+                    </div>
+                @endforelse
+            </div>
+
+            <div class="mt-6 pt-5 border-t border-gray-100 flex items-center justify-between opacity-60">
+                <div class="flex items-center text-gray-400 text-[10px] font-bold uppercase tracking-relaxed">
+                    <i class="fa-solid fa-clock-rotate-left mr-2"></i> Real-time analysis of last 15 responses
+                </div>
             </div>
         </div>
     </div>

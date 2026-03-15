@@ -17,6 +17,7 @@ class SurveyController extends Controller
             $orgId = $user->organization?->id;
             if ($orgId) {
                 $surveys = \App\Models\Survey::where('organization_id', $orgId)
+                    ->withCount('responses')
                     ->orderBy('created_at', 'desc')
                     ->paginate(10);
             }
@@ -24,6 +25,7 @@ class SurveyController extends Controller
             $indId = $user->independent?->id;
             if ($indId) {
                 $surveys = \App\Models\Survey::where('independent_id', $indId)
+                    ->withCount('responses')
                     ->orderBy('created_at', 'desc')
                     ->paginate(10);
             }
@@ -629,6 +631,7 @@ class SurveyController extends Controller
 
         return redirect()->back()->with('success', 'Thank you for completing the survey!');
     }
+
 
     private function authorizeOwner(\App\Models\Survey $survey)
     {

@@ -49,7 +49,7 @@
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responses</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Created</th>
                         <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
@@ -108,48 +108,56 @@
                             {{ $survey->created_at->format('M d, Y') }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            @if($statusVal === 'pending_approval')
-                                <form action="{{ route('admin.surveys.approve', $survey) }}" method="POST" class="inline-block">
-                                    @csrf
-                                    <button type="submit" class="text-green-600 hover:text-green-900 font-bold mr-3">Approve</button>
-                                </form>
-                            @endif
-                            
-                            @if($statusVal === 'active')
-                                <form action="{{ route('admin.surveys.deactivate', $survey) }}" method="POST" class="inline-block">
-                                    @csrf
-                                    <button type="submit" class="text-red-600 hover:text-red-900 font-bold">Deactivate</button>
-                                </form>
-                            @elseif($statusVal === 'closed')
-                                 <form action="{{ route('admin.surveys.approve', $survey) }}" method="POST" class="inline-block">
-                                    @csrf
-                                    <button type="submit" class="text-indigo-600 hover:text-indigo-900 font-bold">Re-activate</button>
-                                </form>
-                            @endif
+                            <div class="flex flex-wrap items-center justify-end gap-2">
+                                @if($statusVal === 'pending_approval')
+                                    <form action="{{ route('admin.surveys.approve', $survey) }}" method="POST" class="inline-block">
+                                        @csrf
+                                        <button type="submit" class="inline-flex items-center px-2 py-1 bg-green-50 text-green-700 rounded text-[10px] font-bold uppercase hover:bg-green-100 transition-colors">
+                                            <i class="fa-solid fa-check mr-1"></i> Approve
+                                        </button>
+                                    </form>
+                                @endif
+                                
+                                @if($statusVal === 'active')
+                                    <form action="{{ route('admin.surveys.deactivate', $survey) }}" method="POST" class="inline-block">
+                                        @csrf
+                                        <button type="submit" class="inline-flex items-center px-2 py-1 bg-red-50 text-red-700 rounded text-[10px] font-bold uppercase hover:bg-red-100 transition-colors">
+                                            <i class="fa-solid fa-ban mr-1"></i> Deactivate
+                                        </button>
+                                    </form>
+                                @elseif($statusVal === 'closed')
+                                     <form action="{{ route('admin.surveys.approve', $survey) }}" method="POST" class="inline-block">
+                                        @csrf
+                                        <button type="submit" class="inline-flex items-center px-2 py-1 bg-indigo-50 text-indigo-700 rounded text-[10px] font-bold uppercase hover:bg-indigo-100 transition-colors">
+                                            <i class="fa-solid fa-rotate-left mr-1"></i> Re-activate
+                                        </button>
+                                    </form>
+                                @endif
 
-                            @if($survey->created_by === auth()->id())
-                                <div class="inline-flex items-center ml-4 border-l pl-4 border-gray-200">
+                                @if($survey->created_by === auth()->id())
                                     @if($statusVal === 'draft')
-                                        <form action="{{ route('surveys.publish', $survey) }}" method="POST" class="inline-block" title="Publish Survey">
+                                        <form action="{{ route('surveys.publish', $survey) }}" method="POST" class="inline-block">
                                             @csrf
-                                            <button type="submit" class="text-indigo-600 hover:text-indigo-900 font-bold mr-3"><i class="fa-solid fa-paper-plane"></i> Publish</button>
+                                            <button type="submit" class="inline-flex items-center px-2 py-1 bg-indigo-50 text-indigo-700 rounded text-[10px] font-bold uppercase hover:bg-indigo-100 transition-colors">
+                                                <i class="fa-solid fa-paper-plane mr-1"></i> Publish
+                                            </button>
                                         </form>
                                     @endif
-                                    <button type="button" onclick="openInviteModal('{{ route('surveys.invite', $survey) }}', '{{ addslashes($survey->title) }}')" class="text-blue-600 hover:text-blue-900 font-bold mr-3" title="Send Email Invitations">
-                                        <i class="fa-solid fa-envelope"></i>
+                                    <button type="button" onclick="openInviteModal('{{ route('surveys.invite', $survey) }}', '{{ addslashes($survey->title) }}')" class="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 rounded text-[10px] font-bold uppercase hover:bg-blue-100 transition-colors">
+                                        <i class="fa-solid fa-envelope mr-1"></i> Invite
                                     </button>
-                                    <a href="{{ route('surveys.edit', $survey) }}" class="text-indigo-600 hover:text-indigo-900 font-bold mr-3" title="Edit your survey">
-                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    <a href="{{ route('surveys.edit', $survey) }}" class="inline-flex items-center px-2 py-1 bg-gray-50 text-gray-700 rounded text-[10px] font-bold uppercase hover:bg-gray-100 transition-colors">
+                                        <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
                                     </a>
                                     <form action="{{ route('surveys.destroy', $survey) }}" method="POST" class="inline-block" onsubmit="return confirm('Are you sure you want to delete this survey?');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="text-red-600 hover:text-red-900 font-bold" title="Delete your survey">
-                                            <i class="fa-solid fa-trash"></i>
+                                        <button type="submit" class="inline-flex items-center px-2 py-1 bg-red-50 text-red-700 rounded text-[10px] font-bold uppercase hover:bg-red-100 transition-colors">
+                                            <i class="fa-solid fa-trash mr-1"></i> Delete
                                         </button>
                                     </form>
-                                </div>
-                            @endif
+                                @endif
+                            </div>
                         </td>
                     </tr>
                     @empty
