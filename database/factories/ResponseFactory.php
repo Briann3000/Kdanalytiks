@@ -17,7 +17,8 @@ class ResponseFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'survey_id' => 1,
+            'respondent_id' => 1,
         ];
     }
 }

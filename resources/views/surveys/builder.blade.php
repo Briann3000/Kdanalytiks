@@ -233,9 +233,14 @@
                     types, options, and logic labels.
                 </p>
 
-                <textarea id="aiPrompt" rows="5"
-                    class="w-full p-4 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-700 bg-gray-50 mb-2"
-                    placeholder="e.g., Generate a 10-question customer satisfaction survey for a coffee shop including questions about quality, staff, and atmosphere..."></textarea>
+                <div class="relative">
+                    <textarea id="aiPrompt" rows="5"
+                        class="w-full p-4 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-700 bg-gray-50 mb-2"
+                        placeholder="e.g., Generate a 10-question customer satisfaction survey for a coffee shop including questions about quality, staff, and atmosphere..."></textarea>
+                    <div id="promptStatus" class="absolute bottom-4 right-4 text-[10px] font-medium text-indigo-400 opacity-50 italic">
+                        Prompt reflects current canvas
+                    </div>
+                </div>
 
                 <div
                     class="flex items-center space-x-2 text-xs text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-100 mb-4">
@@ -308,15 +313,34 @@
 
             formBuilder = $('#surveyCreatorContainer').formBuilder(options);
 
-            // 2. Update preview on form builder changes
-            $(document).on('change', '#surveyCreatorContainer', function () {
-                updateVisualPreview();
+            // 2. Update preview and sync data on form builder changes
+            const originalOnSave = options.onSave;
+            formBuilder.promise.then(builder => {
+                const updateAll = () => {
+                    updateVisualPreview();
+                    syncToJSON();
+                    syncToPrompt();
+                };
+
+                // FormBuilder doesn't always fire change on every internal action reliably for preview
+                // We use their internal events if possible, or a mutation observer on the stage
+                const stage = builder.actions.getData(); 
+                
+                // Set up a listener for any field change
+                $(document).on('fieldAdded fieldRemoved fieldAttributeChanged', function() {
+                    updateAll();
+                });
+
+                // Periodic check as a fallback for drag-drop if events miss
+                setInterval(updateVisualPreview, 2000); 
             });
 
-            // Delay initial render slightly to let formBuilder stabilize
-            setTimeout(function () {
+            // Update on any interaction in the container
+            $('#surveyCreatorContainer').on('click mouseup keyup change', function() {
                 updateVisualPreview();
-            }, 800);
+                syncToJSON();
+                syncToPrompt();
+            });
 
             // 3. Intercept the form submission
             $('#surveyForm').on('submit', function (e) {
@@ -409,6 +433,34 @@
             }
         }
 
+        // Sync Visual to JSON
+        function syncToJSON() {
+            if (!formBuilder || currentMode === 'json') return;
+            const schema = formBuilder.actions.getData('json');
+            $('#jsonInput').val(schema);
+        }
+
+        // Sync Visual to AI Prompt (Reverse Mapping)
+        function syncToPrompt() {
+            if (!formBuilder) return;
+            const data = formBuilder.actions.getData();
+            if (!data || data.length === 0) return;
+
+            let description = "Generate a survey with the following structure:\n";
+            data.forEach((field, index) => {
+                const label = field.label || "Untitled Question";
+                const type = field.type || "text";
+                description += `${index + 1}. A ${type} field labeled "${label}"`;
+                if (field.values && field.values.length > 0) {
+                    const options = field.values.map(v => v.label).join(", ");
+                    description += ` with options: ${options}`;
+                }
+                description += ".\n";
+            });
+
+            $('#aiPrompt').val(description);
+        }
+
         // Toggle between modes
         function switchMode(mode) {
             currentMode = mode;
@@ -428,6 +480,14 @@
                 jsonBtn.removeClass('border-transparent text-white bg-indigo-600 hover:bg-indigo-700')
                     .addClass('border-gray-300 text-gray-700 bg-white hover:bg-gray-50');
 
+                // If coming from JSON, try to load it
+                if ($('#jsonInput').val()) {
+                    try {
+                        const parsed = JSON.parse($('#jsonInput').val());
+                        formBuilder.actions.setData(parsed);
+                    } catch (e) {}
+                }
+
                 setTimeout(updateVisualPreview, 100);
             } else {
                 $('#visualMode').hide();
@@ -438,6 +498,9 @@
 
                 visualBtn.removeClass('border-transparent text-white bg-indigo-600 hover:bg-indigo-700')
                     .addClass('border-gray-300 text-gray-700 bg-white hover:bg-gray-50');
+
+                // Sync the JSON input when switching to JSON mode
+                syncToJSON();
             }
         }
 
@@ -458,6 +521,14 @@
                 if (!Array.isArray(parsed)) {
                     throw new Error("JSON root element must be an Array [] containing field objects");
                 }
+
+                // Check for required properties in fields
+                parsed.forEach((field, i) => {
+                    if (!field.type) throw new Error(`Field at index ${i} is missing "type" property`);
+                    if (!field.label && field.type !== 'paragraph' && field.type !== 'header') {
+                        // Some fields might not need labels but usually they do
+                    }
+                });
 
                 statusBox.innerHTML = '<div class="rounded-md bg-green-50 p-4"><div class="flex"><div class="flex-shrink-0"><i class="fa-solid fa-circle-check text-green-400"></i></div><div class="ml-3"><p class="text-sm font-medium text-green-800">JSON parsing successful!</p></div></div></div>';
 
@@ -526,13 +597,17 @@
                         formBuilder.actions.clearFields();
                         formBuilder.actions.setData(schema);
 
-                        // Update preview
-                        setTimeout(updateVisualPreview, 500);
+                        // Update preview and sync
+                        setTimeout(() => {
+                            updateVisualPreview();
+                            syncToJSON();
+                        }, 500);
 
                         // Close modal and cleanup
                         closeAiArchitect();
-                        $('#aiPrompt').val('');
-                        alert('AI has successfully generated your survey architect!');
+                        // We keep the prompt in case they want to tweak it, or clear it if successful
+                        // The user asked for "close automatically after entering your prompt and clicking generate"
+                        // alert('AI has successfully generated your survey architect!'); // Reduced noise
                     } else {
                         alert('AI Error: ' + data.message);
                     }

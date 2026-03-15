@@ -14,13 +14,19 @@ class SurveyController extends Controller
         $surveys = collect();
 
         if ($role === 'organization') {
-            $surveys = \App\Models\Survey::where('organization_id', $user->organization?->id)
-                ->orderBy('created_at', 'desc')
-                ->paginate(10);
+            $orgId = $user->organization?->id;
+            if ($orgId) {
+                $surveys = \App\Models\Survey::where('organization_id', $orgId)
+                    ->orderBy('created_at', 'desc')
+                    ->paginate(10);
+            }
         } elseif ($role === 'independent') {
-            $surveys = \App\Models\Survey::where('independent_id', $user->independent?->id)
-                ->orderBy('created_at', 'desc')
-                ->paginate(10);
+            $indId = $user->independent?->id;
+            if ($indId) {
+                $surveys = \App\Models\Survey::where('independent_id', $indId)
+                    ->orderBy('created_at', 'desc')
+                    ->paginate(10);
+            }
         }
 
         return view('surveys.index', compact('surveys', 'role'));
@@ -82,13 +88,23 @@ class SurveyController extends Controller
         $responses = \App\Models\Response::with('survey', 'respondent');
 
         if ($role === 'organization') {
-            $responses = $responses->whereHas('survey', function ($query) use ($user) {
-                $query->where('organization_id', $user->organization?->id);
-            });
+            $orgId = $user->organization?->id;
+            if ($orgId) {
+                $responses = $responses->whereHas('survey', function ($query) use ($orgId) {
+                    $query->where('organization_id', $orgId);
+                });
+            } else {
+                $responses->whereRaw('1 = 0'); // Return nothing if no org linked
+            }
         } elseif ($role === 'independent') {
-            $responses = $responses->whereHas('survey', function ($query) use ($user) {
-                $query->where('independent_id', $user->independent?->id);
-            });
+            $indId = $user->independent?->id;
+            if ($indId) {
+                $responses = $responses->whereHas('survey', function ($query) use ($indId) {
+                    $query->where('independent_id', $indId);
+                });
+            } else {
+                $responses->whereRaw('1 = 0');
+            }
         }
 
         $responses = $responses->orderBy('created_at', 'desc')->paginate(10);
@@ -104,9 +120,19 @@ class SurveyController extends Controller
         $surveys = \App\Models\Survey::withCount('responses');
 
         if ($role === 'organization') {
-            $surveys = $surveys->where('organization_id', $user->organization?->id);
+            $orgId = $user->organization?->id;
+            if ($orgId) {
+                $surveys = $surveys->where('organization_id', $orgId);
+            } else {
+                $surveys->whereRaw('1 = 0');
+            }
         } elseif ($role === 'independent') {
-            $surveys = $surveys->where('independent_id', $user->independent?->id);
+            $indId = $user->independent?->id;
+            if ($indId) {
+                $surveys = $surveys->where('independent_id', $indId);
+            } else {
+                $surveys->whereRaw('1 = 0');
+            }
         } elseif ($role === 'respondent') {
             $surveys = $surveys->whereHas('responses', function ($query) use ($user) {
                 $query->where('respondent_id', $user->id);
@@ -241,6 +267,8 @@ class SurveyController extends Controller
                 $canvasId = 'chart-' . str_replace('-', '_', $fieldId);
 
                 $analysis[] = [
+                    'id' => $fieldId,
+                    'survey_id' => $survey->id,
                     'label' => $label,
                     'type' => $type,
                     'isChartable' => $isChartable,
@@ -277,6 +305,8 @@ class SurveyController extends Controller
                 $canvasId = 'chart-question_' . $question->id;
 
                 $analysis[] = [
+                    'id' => $question->id,
+                    'survey_id' => $survey->id,
                     'label' => $question->text,
                     'type' => $question->type,
                     'isChartable' => $isChartable,
@@ -482,7 +512,7 @@ class SurveyController extends Controller
         $isOwner = $user && ($survey->created_by == $user->id);
         $isAdmin = $user && $user->isAdmin();
 
-        $isActive = ($survey->status == \App\Enums\SurveyStatus::Active) || ($survey->status == 'active');
+        $isActive = ($survey->status === \App\Enums\SurveyStatus::Active);
 
         if (!$isActive && !$isOwner && !$isAdmin) {
             abort(403, 'This survey is not active or you do not have permission to view it.');
@@ -603,11 +633,28 @@ class SurveyController extends Controller
     private function authorizeOwner(\App\Models\Survey $survey)
     {
         $user = auth()->user();
-        if ($user && $user->isAdmin())
+        if (!$user)
+            abort(403, 'Unauthorized action.');
+
+        // Admins can do everything
+        if ($user->isAdmin())
             return;
 
-        if (!$user || $survey->created_by !== $user->id) {
-            abort(403, 'Unauthorized action.');
+        // Check if the user is the direct creator
+        if ((int) $survey->created_by === (int) $user->id) {
+            return;
         }
+
+        // Check organization ownership
+        if ($survey->organization_id && $user->organization && (int) $survey->organization_id === (int) $user->organization->id) {
+            return;
+        }
+
+        // Check independent ownership
+        if ($survey->independent_id && $user->independent && (int) $survey->independent_id === (int) $user->independent->id) {
+            return;
+        }
+
+        abort(403, 'Unauthorized action.');
     }
 }

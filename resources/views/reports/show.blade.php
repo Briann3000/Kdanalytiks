@@ -37,7 +37,7 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <div class="bg-indigo-50 rounded-2xl p-6 text-center border border-indigo-100 shadow-sm relative overflow-hidden group">
             <div class="absolute -right-4 -top-4 w-20 h-20 bg-indigo-100 rounded-full blur-xl group-hover:bg-indigo-200 transition-colors"></div>
-            <h3 class="text-4xl font-black text-indigo-700 mb-1 relative z-10">{{ $responses->count() }}</h3>
+            <h3 class="text-4xl font-black text-indigo-700 mb-1 relative z-10">{{ count($responses) }}</h3>
             <p class="text-indigo-600 font-bold text-sm tracking-wide uppercase relative z-10">Total Responses</p>
         </div>
         <div class="bg-emerald-50 rounded-2xl p-6 text-center border border-emerald-100 shadow-sm relative overflow-hidden group">
@@ -111,6 +111,13 @@
                                 <canvas id="{{ $item['canvasId'] }}"></canvas>
                             </div>
                         @else
+                            <!-- AI Qualitative Analysis Card -->
+                            <x-ai-insight-card 
+                                :question-id="$item['id']" 
+                                :question-title="$item['label']" 
+                                :survey-id="$item['survey_id']" 
+                            />
+
                             <!-- Text Response Feed -->
                             <div class="bg-gray-50 rounded-xl border border-gray-100 p-2">
                                 <div class="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">

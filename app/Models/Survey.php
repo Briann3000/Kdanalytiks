@@ -23,13 +23,10 @@ class Survey extends Model
         'created_by',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'type' => \App\Enums\SurveyType::class,
-            'status' => \App\Enums\SurveyStatus::class,
-        ];
-    }
+    protected $casts = [
+        'type' => \App\Enums\SurveyType::class,
+        'status' => \App\Enums\SurveyStatus::class,
+    ];
 
     public function organization(): BelongsTo
     {
