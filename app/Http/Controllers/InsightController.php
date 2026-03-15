@@ -78,8 +78,9 @@ class InsightController extends Controller
                     ->toArray();
             } else {
                 // JSON format
-                $rawAnswers = Answer::whereHas('response', function($q) use ($survey) {
-                        $q->where('survey_id', $survey->id);
+                $surveyId = $survey->id;
+                $rawAnswers = Answer::whereHas('response', function($q) use ($surveyId) {
+                        $q->where('survey_id', $surveyId);
                     })
                     ->whereNull('question_id')
                     ->pluck('value')
@@ -90,13 +91,15 @@ class InsightController extends Controller
                     foreach ($parsed as $entry) {
                         if (isset($entry['name']) && $entry['name'] === $questionId && isset($entry['userData'])) {
                             $val = $entry['userData'];
-                            if ($val !== null && $val !== '' && !is_array($val)) {
-                                $responses[] = $val;
+                            if ($val !== null && $val !== '') {
+                                $responses[] = is_array($val) ? implode(', ', $val) : $val;
                             }
                         }
                     }
                 }
             }
+
+            \Log::info("Qualitative Analysis (analyze): Found " . count($responses) . " responses for Question ID: {$questionId} in Survey: {$survey->id}");
 
             return $this->analysisService->analyzeResponses($responses);
         });
@@ -150,6 +153,8 @@ class InsightController extends Controller
                 }
             }
 
+            \Log::info("Qualitative Analysis: Found " . count($responses) . " responses for Question ID: {$questionId} in Survey: {$surveyId}");
+            
             return $this->analysisService->analyzeResponses($responses);
         });
 
