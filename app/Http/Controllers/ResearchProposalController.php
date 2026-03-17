@@ -49,15 +49,26 @@ class ResearchProposalController extends Controller
         $request->validate([
             'survey_id' => 'required|exists:surveys,id',
             'style' => 'required|string|in:apa7,mla9,harvard',
-            'format' => 'required|string|in:docx,pdf'
+            'format' => 'required|string|in:docx,pdf',
+            'references' => 'nullable|array',
+            'references.*.author' => 'nullable|string',
+            'references.*.year' => 'nullable|string',
+            'references.*.title' => 'nullable|string',
+            'references.*.source' => 'nullable|string',
         ]);
 
         $survey = Survey::findOrFail($request->survey_id);
         $style = $request->style;
-        $format = $request->format;
+        $format = $request->input('format');
+        $manualReferences = $request->input('references', []);
+
+        // Filter out empty references
+        $manualReferences = array_filter($manualReferences, function($ref) {
+            return !empty($ref['author']) || !empty($ref['title']);
+        });
 
         // Generate the academic sections using AI
-        $content = $this->synthesisService->generateFullReport($survey, $style);
+        $content = $this->synthesisService->generateFullReport($survey, $style, $manualReferences);
 
         $filename = 'research_proposal_' . $survey->id . '_' . time();
         

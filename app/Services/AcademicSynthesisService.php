@@ -23,26 +23,35 @@ class AcademicSynthesisService
     /**
      * Generate a multi-section academic report based on survey data.
      */
-    public function generateFullReport(Survey $survey, string $style = 'apa7')
+    public function generateFullReport(Survey $survey, string $style = 'apa7', array $manualReferences = [])
     {
         $sections = [
-            'Abstract' => "Provide a 250-word formal abstract for a research paper based on this survey data.",
-            'Introduction' => "Write a formal introduction that sets the stage for the research objectives.",
-            'Methodology' => "Describe the methodology used in this survey, including data collection and tools.",
-            'Results' => "Analyze the quantitative and qualitative results. Focus on key trends and statistical highlights.",
-            'Discussion' => "Discuss the implications of the results in the context of the initial objectives.",
-            'Conclusion' => "Provide a final conclusion and recommendations for future research."
+            'Abstract' => "Provide a 250-word formal abstract for a research paper based on this survey data. Enforce a professional, objective tone.",
+            'Introduction' => "Write a formal introduction that sets the stage for the research objectives. Use the passive voice where appropriate for academic formality.",
+            'Methodology' => "Describe the methodology used in this survey, including data collection and tools. Ensure descriptions are clinical and precise.",
+            'Results' => "Analyze the quantitative and qualitative results. Focus on key trends and statistical highlights without using first-person pronouns.",
+            'Discussion' => "Discuss the implications of the results in the context of the initial objectives. Critically evaluate findings using formal scholarly language.",
+            'Conclusion' => "Provide a final conclusion and recommendations for future research. Summarize the scholarly contribution of this study."
         ];
 
         $reportContent = [];
         $surveyData = $this->prepareSurveyData($survey);
+        $referencePrompt = $this->prepareReferencePrompt($manualReferences, $style);
 
         foreach ($sections as $title => $instruction) {
-            $prompt = $instruction . "\n\nSURVEY CONTEXT:\nTitle: {$survey->title}\nDescription: {$survey->description}\n\nDATA SUMMARY:\n" . $surveyData;
-            
+            $systemPrompt = "You are a professional academic writer specialized in {$style} formatting. " .
+                "Maintain a strictly formal, objective, and scholarly tone. Use the passive voice for methodological descriptions and avoid first-person pronouns (no 'I', 'we', 'my'). " .
+                "IMPORTANT: Output ONLY the formal academic text for the section. DO NOT output JSON, DO NOT echo back the survey context data, and DO NOT explain your reasoning. Just provide the section prose. " .
+                "If citations are required, use the provided reference list strictly following {$style} rules. " .
+                "Current Section to write: {$title}. Instruction: {$instruction}";
+
+            $userPrompt = "SURVEY CONTEXT:\nTitle: {$survey->title}\nDescription: {$survey->description}\n\n" .
+                "DATA SUMMARY:\n" . $surveyData . "\n\n" .
+                "AVAILABLE REFERENCES FOR CITATION:\n" . $referencePrompt;
+
             Log::info("Generating section: {$title} for survey: {$survey->id}");
-            $sectionContent = $this->aiService->callGroq($prompt);
-            
+            $sectionContent = $this->aiService->callGroq($userPrompt, $systemPrompt);
+
             if ($sectionContent) {
                 $reportContent[$title] = $sectionContent;
             } else {
@@ -51,6 +60,26 @@ class AcademicSynthesisService
         }
 
         return $reportContent;
+    }
+
+    /**
+     * Prepare a readable string of manual references for the AI.
+     */
+    private function prepareReferencePrompt(array $references, string $style)
+    {
+        if (empty($references)) {
+            return "No manual references provided. Use general academic knowledge if needed, but do not hallucinate specific citations.";
+        }
+
+        $prompt = "Please use the following sources for in-text citations and bibliographical references where appropriate:\n";
+        foreach ($references as $index => $ref) {
+            $prompt .= "[" . ($index + 1) . "] Author: " . ($ref['author'] ?? 'Unknown') . 
+                       " | Year: " . ($ref['year'] ?? 'n.d.') . 
+                       " | Title: " . ($ref['title'] ?? 'Untitled') . 
+                       " | Source: " . ($ref['source'] ?? 'N/A') . "\n";
+        }
+        $prompt .= "\nFollow {$style} formatting for all citations.";
+        return $prompt;
     }
 
     /**

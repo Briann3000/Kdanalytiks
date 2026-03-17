@@ -29,7 +29,7 @@ class AiService
         $prompt = "Analyze the sentiment of the following survey response. Return ONLY a JSON object with 'sentiment' (Positive, Negative, or Neutral) and 'confidence' (0-1). \n\n" . $textData;
 
         try {
-            $responseJson = $this->callGroq($prompt, true);
+            $responseJson = $this->callGroq($prompt, null, true);
             if ($responseJson) {
                 $metadata = json_decode($responseJson, true);
                 if ($metadata) {
@@ -104,7 +104,7 @@ class AiService
     /**
      * Primary Groq API caller.
      */
-    public function callGroq($prompt, $isJson = false)
+    public function callGroq($prompt, $systemPrompt = null, $isJson = false)
     {
         try {
             $apiKey = config('services.groq.api_key');
@@ -115,13 +115,18 @@ class AiService
                 return null;
             }
 
+            $finalSystemPrompt = $systemPrompt;
+            if (!$finalSystemPrompt) {
+                $finalSystemPrompt = $isJson ? 'You are a helpful assistant that only outputs JSON.' : 'You are an expert researcher.';
+            }
+
             $options = [
                 'model' => $model,
                 'messages' => [
-                    ['role' => 'system', 'content' => $isJson ? 'You are a helpful assistant that only outputs JSON.' : 'You are an expert researcher.'],
+                    ['role' => 'system', 'content' => $finalSystemPrompt],
                     ['role' => 'user', 'content' => $prompt],
                 ],
-                'temperature' => $isJson ? 0.1 : 0.3
+                'temperature' => $isJson ? 0.1 : 0.4
             ];
 
             if ($isJson) {
@@ -171,7 +176,7 @@ class AiService
         Generate exactly what the user asks for, optimized for high completion rates.";
 
         try {
-            $groqData = $this->callGroq($systemPrompt . "\n\nUser Request: " . $prompt, true);
+            $groqData = $this->callGroq($prompt, $systemPrompt, true);
             if ($groqData) {
                 $decoded = json_decode($groqData, true);
                 return $this->formatSchemaResponse($decoded);

@@ -59,6 +59,55 @@
                         </div>
                     </div>
 
+                    <!-- Reference Manager -->
+                    <div class="mb-8" x-data="{ 
+                        references: [],
+                        addReference() {
+                            this.references.push({ author: '', year: '', title: '', source: '' });
+                        },
+                        removeReference(index) {
+                            this.references.splice(index, 1);
+                        }
+                    }">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">Reference Manager</h3>
+                            <button type="button" @click="addReference()" class="inline-flex items-center px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors">
+                                <i class="fa-solid fa-plus mr-2"></i> Add Source
+                            </button>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <template x-for="(ref, index) in references" :key="index">
+                                <div class="p-4 bg-white border border-gray-100 rounded-xl shadow-sm relative group">
+                                    <button type="button" @click="removeReference(index)" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <i class="fa-solid fa-xmark text-[10px]"></i>
+                                    </button>
+                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                        <div>
+                                            <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Author</label>
+                                            <input type="text" :name="'references['+index+'][author]'" x-model="ref.author" placeholder="e.g. Smith, J." class="w-full text-xs rounded-lg border-gray-100 focus:ring-indigo-500 focus:border-indigo-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Year</label>
+                                            <input type="text" :name="'references['+index+'][year]'" x-model="ref.year" placeholder="2024" class="w-full text-xs rounded-lg border-gray-100 focus:ring-indigo-500 focus:border-indigo-500">
+                                        </div>
+                                        <div class="md:col-span-2">
+                                            <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Title</label>
+                                            <input type="text" :name="'references['+index+'][title]'" x-model="ref.title" placeholder="Title of the work" class="w-full text-xs rounded-lg border-gray-100 focus:ring-indigo-500 focus:border-indigo-500">
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Source / Publisher / DOI</label>
+                                        <input type="text" :name="'references['+index+'][source]'" x-model="ref.source" placeholder="Journal Name, Book Publisher, etc." class="w-full text-xs rounded-lg border-gray-100 focus:ring-indigo-500 focus:border-indigo-500">
+                                    </div>
+                                </div>
+                            </template>
+                            <div x-show="references.length === 0" class="text-center py-8 border-2 border-dashed border-gray-100 rounded-2xl">
+                                <p class="text-xs text-gray-400 font-medium italic">No manual references added. AI will rely on general knowledge.</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex items-center justify-end space-x-4 pt-6 border-t border-gray-100">
                         <button type="button" class="px-6 py-2.5 rounded-xl text-sm font-semibold text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-all">
                             Cancel
