@@ -1,0 +1,166 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Survey;
+use App\Models\Question;
+use Illuminate\Support\Facades\DB;
+
+class DataAggregatorService
+{
+    /**
+     * Aggregate all data for a survey into a structured format for AI analysis.
+     */
+    public function aggregate(Survey $survey)
+    {
+        $questions = $survey->questions()->get();
+        $totalResponses = $survey->responses()->count();
+        $isJson = !empty($survey->json_schema);
+
+        $aggregatedData = [
+            'survey_info' => [
+                'title' => $survey->title,
+                'description' => $survey->description,
+                'total_responses' => $totalResponses,
+            ],
+            'questions' => []
+        ];
+
+        // If legacy questions table is empty, parse from JSON schema
+        if ($questions->isEmpty() && $isJson) {
+            $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
+            foreach ($schema as $field) {
+                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph'])) continue;
+                
+                // Create a transient question-like object for aggregation logic
+                $qObj = (object)[
+                    'id' => $field['name'],
+                    'name' => $field['name'],
+                    'type' => $field['type'] ?? 'text',
+                    'label' => $field['label'] ?? $field['name'],
+                ];
+                $aggregatedData['questions'][] = $this->aggregateQuestionData($qObj, $totalResponses);
+            }
+        } else {
+            foreach ($questions as $question) {
+                $aggregatedData['questions'][] = $this->aggregateQuestionData($question, $totalResponses);
+            }
+        }
+
+        return $aggregatedData;
+    }
+
+    /**
+     * Aggregate data for a single question.
+     */
+    private function aggregateQuestionData($question, $totalResponses)
+    {
+        $data = [
+            'id' => $question->id,
+            'type' => $question->type,
+            'label' => $question->label,
+            'stats' => [],
+            'insights' => []
+        ];
+
+        // Try standard individual answers first
+        if (in_array($question->type, ['select', 'radio-group', 'checkbox-group', 'starRating'])) {
+            $data['stats'] = $this->getChoiceStats($question, $totalResponses);
+        } elseif (in_array($question->type, ['text', 'textarea'])) {
+            $data['insights'] = $this->getThematicInsights($question);
+        }
+
+        // If no stats/insights found, check JSON blob responses (common in this app)
+        if (empty($data['stats']) && empty($data['insights'])) {
+            $this->aggregateFromJsonBlobs($question, $data, $totalResponses);
+        }
+
+        return $data;
+    }
+
+    /**
+     * For surveys using FormBuilder JSON storage.
+     */
+    private function aggregateFromJsonBlobs($question, &$data, $totalResponses)
+    {
+        // Find the "name" or identifier in the schema if applicable
+        $name = $question->name ?? $question->id;
+        
+        $responses = DB::table('answers')
+            ->whereNull('question_id')
+            ->where('value', 'LIKE', '%"name":"' . $name . '"%')
+            ->pluck('value');
+
+        $frequencyCount = [];
+        $textInsights = [];
+
+        foreach ($responses as $jsonBlob) {
+            $parsed = json_decode($jsonBlob, true) ?? [];
+            foreach ($parsed as $entry) {
+                if (isset($entry['name']) && $entry['name'] == $name && isset($entry['userData'])) {
+                    $val = $entry['userData'];
+                    if (is_array($val)) {
+                        foreach ($val as $v) {
+                            $frequencyCount[$v] = ($frequencyCount[$v] ?? 0) + 1;
+                        }
+                    } else {
+                        if (in_array($data['type'], ['text', 'textarea'])) {
+                            $textInsights[] = $val;
+                        } else {
+                            $frequencyCount[$val] = ($frequencyCount[$val] ?? 0) + 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!empty($frequencyCount)) {
+            foreach ($frequencyCount as $option => $count) {
+                $data['stats'][] = [
+                    'option' => $option,
+                    'count' => $count,
+                    'percentage' => $totalResponses > 0 ? round(($count / $totalResponses) * 100, 2) : 0
+                ];
+            }
+        }
+
+        if (!empty($textInsights)) {
+            $data['insights'] = array_slice($textInsights, 0, 20);
+        }
+    }
+
+    /**
+     * Get frequency stats for choice-based questions.
+     */
+    private function getChoiceStats($question, $totalResponses)
+    {
+        $answers = DB::table('answers')
+            ->where('question_id', $question->id)
+            ->select('value', DB::raw('count(*) as count'))
+            ->groupBy('value')
+            ->get();
+
+        return $answers->map(function ($answer) use ($totalResponses) {
+            return [
+                'option' => $answer->value,
+                'count' => $answer->count,
+                'percentage' => $totalResponses > 0 ? round(($answer->count / $totalResponses) * 100, 2) : 0
+            ];
+        })->toArray();
+    }
+
+    /**
+     * Get a sample of text answers for qualitative analysis.
+     */
+    private function getThematicInsights($question)
+    {
+        return DB::table('answers')
+            ->where('question_id', $question->id)
+            ->whereNotNull('value')
+            ->where('value', '!=', '')
+            ->latest()
+            ->take(20)
+            ->pluck('value')
+            ->toArray();
+    }
+}
