@@ -104,7 +104,7 @@ class AiService
     /**
      * Primary Groq API caller.
      */
-    private function callGroq($prompt, $isJson = false)
+    public function callGroq($prompt, $isJson = false)
     {
         try {
             $apiKey = config('services.groq.api_key');

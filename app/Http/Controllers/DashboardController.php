@@ -76,6 +76,22 @@ class DashboardController extends Controller
                 ->get();
         }
 
+        if ($role === 'respondent') {
+            $responses = \App\Models\Response::where('respondent_id', $user->id)
+                ->with('survey')
+                ->latest()
+                ->get();
+
+            $availableSurveys = Survey::where('type', \App\Enums\SurveyType::Public)
+                ->where('status', \App\Enums\SurveyStatus::Active)
+                ->whereDoesntHave('responses', function ($query) use ($user) {
+                    $query->where('respondent_id', $user->id);
+                })
+                ->get();
+
+            return view('respondent.dashboard', compact('responses', 'availableSurveys'));
+        }
+
         $displayName = $user->organization?->name ?? $user->independent?->name ?? $user->name;
 
         return view('dashboard', array_merge(compact(

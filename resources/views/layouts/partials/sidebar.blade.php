@@ -26,6 +26,10 @@
                     <i class="fa-solid fa-chart-line mr-3 {{ request()->routeIs('admin.analytics.*') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
                     Platform Analytics
                 </a>
+                <a href="{{ route('research-proposal.index') }}" class="flex items-center px-3 py-2 text-sm font-bold {{ request()->routeIs('research-proposal.*') ? 'text-indigo-700 bg-indigo-50' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg group transition-colors">
+                    <i class="fa-solid fa-graduation-cap mr-3 {{ request()->routeIs('research-proposal.*') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
+                    Research Studio
+                </a>
             @else
                 <a href="{{ route($role . '.dashboard') }}" class="flex items-center px-3 py-2 text-sm font-bold {{ request()->routeIs($role . '.dashboard') ? 'text-indigo-700 bg-indigo-50' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg group transition-colors">
                     <i class="fa-solid fa-gauge-high mr-3 {{ request()->routeIs($role . '.dashboard') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
@@ -44,10 +48,19 @@
                         <i class="fa-solid fa-chart-pie mr-3 {{ request()->routeIs($role . '.reports.*') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
                         Reports
                     </a>
+                    {{-- Research Studio for non-admins --}}
+                    <a href="{{ route('research-proposal.index') }}" class="flex items-center px-3 py-2 text-sm font-bold {{ request()->routeIs('research-proposal.*') ? 'text-indigo-700 bg-indigo-50' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg group transition-colors">
+                        <i class="fa-solid fa-graduation-cap mr-3 {{ request()->routeIs('research-proposal.*') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
+                        Research Studio
+                    </a>
                 @else
                     <a href="{{ route('respondent.history') }}" class="flex items-center px-3 py-2 text-sm font-bold {{ request()->routeIs('respondent.history') ? 'text-indigo-700 bg-indigo-50' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg group transition-colors">
                         <i class="fa-solid fa-clock-rotate-left mr-3 {{ request()->routeIs('respondent.history') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
                         My History
+                    </a>
+                    <a href="{{ route('research-proposal.index') }}" class="flex items-center px-3 py-2 text-sm font-bold {{ request()->routeIs('research-proposal.*') ? 'text-indigo-700 bg-indigo-50' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg group transition-colors">
+                        <i class="fa-solid fa-graduation-cap mr-3 {{ request()->routeIs('research-proposal.*') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
+                        Research Studio
                     </a>
                 @endif
                 <a href="{{ route('surveys.public') }}" class="flex items-center px-3 py-2 text-sm font-bold {{ request()->routeIs('surveys.public') ? 'text-indigo-700 bg-indigo-50' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg group transition-colors">

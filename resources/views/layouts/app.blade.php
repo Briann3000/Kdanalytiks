@@ -288,7 +288,9 @@
         @auth
             @php
                 // Show sidebar for all authenticated pages except specific full-width ones (like taking a survey)
-                $isWorkspace = !request()->routeIs(['surveys.show', 'surveys.submit', 'home']);
+                // Also explicitly hide on landing, login, register
+                $excludedRoutes = ['home', 'login', 'register', 'login.role', 'password.request', 'password.reset', 'surveys.show', 'surveys.submit'];
+                $isWorkspace = !request()->routeIs($excludedRoutes);
             @endphp
         @else
             @php $isWorkspace = false; @endphp

@@ -99,6 +99,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/surveys/{survey}/edit', [SurveyController::class, 'edit'])->name('surveys.edit');
     Route::put('/surveys/{survey}', [SurveyController::class, 'update'])->name('surveys.update');
     Route::delete('/surveys/{survey}', [SurveyController::class, 'destroy'])->name('surveys.destroy');
+
+    // Research Proposal Studio (Shared between Admin, Organization, Independent)
+    Route::get('/research-proposal', [\App\Http\Controllers\ResearchProposalController::class, 'index'])->name('research-proposal.index');
+    Route::post('/research-proposal/generate', [\App\Http\Controllers\ResearchProposalController::class, 'generate'])->name('research-proposal.generate');
 });
 
 // Public Survey Views and Submission
