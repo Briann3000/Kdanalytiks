@@ -13,53 +13,88 @@ class AcademicSynthesisService
 {
     protected $aiService;
     protected $referencingService;
+    protected $dataAggregator;
 
-    public function __construct(AiService $aiService, AcademicReferencingService $referencingService)
-    {
+    public function __construct(
+        AiService $aiService, 
+        AcademicReferencingService $referencingService,
+        DataAggregatorService $dataAggregator
+    ) {
         $this->aiService = $aiService;
         $this->referencingService = $referencingService;
+        $this->dataAggregator = $dataAggregator;
     }
 
     /**
-     * Generate a multi-section academic report based on survey data.
+     * Generate a full report using an iterative pipeline: Outline -> Sections -> Final Summary.
      */
-    public function generateFullReport(Survey $survey, string $style = 'apa7', array $manualReferences = [])
+    public function generateIterativeReport(Survey $survey, string $style = 'apa7', array $manualReferences = [])
     {
-        $sections = [
-            'Abstract' => "Provide a 250-word formal abstract for a research paper based on this survey data. Enforce a professional, objective tone.",
-            'Introduction' => "Write a formal introduction that sets the stage for the research objectives. Use the passive voice where appropriate for academic formality.",
-            'Methodology' => "Describe the methodology used in this survey, including data collection and tools. Ensure descriptions are clinical and precise.",
-            'Results' => "Analyze the quantitative and qualitative results. Focus on key trends and statistical highlights without using first-person pronouns.",
-            'Discussion' => "Discuss the implications of the results in the context of the initial objectives. Critically evaluate findings using formal scholarly language.",
-            'Conclusion' => "Provide a final conclusion and recommendations for future research. Summarize the scholarly contribution of this study."
-        ];
-
-        $reportContent = [];
-        $surveyData = $this->prepareSurveyData($survey);
+        set_time_limit(300); // Allow up to 5 minutes for multi-stage synthesis
+        $aggregatedData = $this->dataAggregator->aggregate($survey);
         $referencePrompt = $this->prepareReferencePrompt($manualReferences, $style);
 
-        foreach ($sections as $title => $instruction) {
-            $systemPrompt = "You are a professional academic writer specialized in {$style} formatting. " .
-                "Maintain a strictly formal, objective, and scholarly tone. Use the passive voice for methodological descriptions and avoid first-person pronouns (no 'I', 'we', 'my'). " .
-                "IMPORTANT: Output ONLY the formal academic text for the section. DO NOT output JSON, DO NOT echo back the survey context data, and DO NOT explain your reasoning. Just provide the section prose. " .
-                "If citations are required, use the provided reference list strictly following {$style} rules. " .
-                "Current Section to write: {$title}. Instruction: {$instruction}";
+        // Step 1: Generate Outline
+        $outlinePrompt = "Create a logical academic report outline for a survey titled: '{$survey->title}'. " .
+            "The report MUST be strictly based on the following aggregated data:\n" . json_encode($aggregatedData['questions']) . "\n\n" .
+            "Provide the outline as a numbered list of sections (e.g., 1. Introduction, 2. Methodology, etc.). " .
+            "IMPORTANT: DO NOT include word count percentages or estimated lengths in the section titles.";
+        
+        $systemPrompt = "You are a senior academic supervisor. Create a logical, standard academic structure for a research paper that directly addresses the survey findings.";
+        $outline = $this->aiService->callGroq($outlinePrompt, $systemPrompt);
 
-            $userPrompt = "SURVEY CONTEXT:\nTitle: {$survey->title}\nDescription: {$survey->description}\n\n" .
-                "DATA SUMMARY:\n" . $surveyData . "\n\n" .
+        // Parse outline into sections
+        $sectionTitles = $this->parseOutline($outline);
+
+        $reportContent = [];
+        $currentYear = date('Y');
+        foreach ($sectionTitles as $title) {
+            $sectionPrompt = "Write the '{$title}' section of the academic report. " .
+                "MANDATORY REQUIREMENT: Every paragraph MUST be grounded in the survey results provided below. " .
+                "MANDATORY SELF-CITATION: When reporting findings, refer to this survey as '{$survey->title}' ({$currentYear}). " .
+                "For example: 'Notably, the {$survey->title} ({$currentYear}) reveals that...' or 'According to the data gathered in {$currentYear}...' \n\n" .
+                "SURVEY DATA:\n" . json_encode($aggregatedData['questions']) . "\n\n" .
                 "AVAILABLE REFERENCES FOR CITATION:\n" . $referencePrompt;
 
-            Log::info("Generating section: {$title} for survey: {$survey->id}");
-            $sectionContent = $this->aiService->callGroq($userPrompt, $systemPrompt);
+            $sectionSystemPrompt = "You are a professional academic writer. Write formal, objective prose. " .
+                "STRICT DATA ADHERENCE: You are only allowed to write about information found in the 'SURVEY DATA'. " .
+                "AUTHORITATIVE ATTRIBUTION: Always attribute findings explicitly to the '{$survey->title}' survey conducted in {$currentYear}. " .
+                "Maintain strict academic rigor and follow {$style} rules. DO NOT output JSON. Output ONLY the prose.";
 
-            if ($sectionContent) {
-                $reportContent[$title] = $sectionContent;
-            } else {
-                $reportContent[$title] = "[AI failed to generate this section]";
-            }
+            Log::info("Generating iterative section: {$title}");
+            $content = $this->aiService->callGroq($sectionPrompt, $sectionSystemPrompt);
+            $reportContent[$title] = $content ?? "[Generation failed]";
         }
 
-        return $reportContent;
+        return [
+            'outline' => $outline,
+            'sections' => $reportContent,
+            'metadata' => [
+                'survey_id' => $survey->id,
+                'style' => $style,
+                'manual_references' => $manualReferences,
+                'generated_at' => now()->toIso8601String()
+            ]
+        ];
+    }
+
+    /**
+     * Simple parser to extract section titles from a numbered list outline.
+     */
+    private function parseOutline(string $outline)
+    {
+        $lines = explode("\n", $outline);
+        $titles = [];
+        foreach ($lines as $line) {
+            if (preg_match('/^\d+\.\s*(.*)/', trim($line), $matches)) {
+                $title = trim($matches[1]);
+                $title = str_replace(['*', '_', '#'], '', $title);
+                $titles[] = $title;
+            }
+        }
+        
+        // Fallback to defaults if parsing fails
+        return !empty($titles) ? $titles : ['Introduction', 'Methodology', 'Results', 'Discussion', 'Conclusion'];
     }
 
     /**
