@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class SurveyController extends Controller
 {
@@ -14,13 +15,21 @@ class SurveyController extends Controller
         $surveys = collect();
 
         if ($role === 'organization') {
-            $surveys = \App\Models\Survey::where('organization_id', $user->organization?->id)
-                ->orderBy('created_at', 'desc')
-                ->paginate(10);
+            $orgId = $user->organization?->id;
+            if ($orgId) {
+                $surveys = \App\Models\Survey::where('organization_id', $orgId)
+                    ->withCount('responses')
+                    ->orderBy('created_at', 'desc')
+                    ->paginate(10);
+            }
         } elseif ($role === 'independent') {
-            $surveys = \App\Models\Survey::where('independent_id', $user->independent?->id)
-                ->orderBy('created_at', 'desc')
-                ->paginate(10);
+            $indId = $user->independent?->id;
+            if ($indId) {
+                $surveys = \App\Models\Survey::where('independent_id', $indId)
+                    ->withCount('responses')
+                    ->orderBy('created_at', 'desc')
+                    ->paginate(10);
+            }
         }
 
         return view('surveys.index', compact('surveys', 'role'));
@@ -82,13 +91,23 @@ class SurveyController extends Controller
         $responses = \App\Models\Response::with('survey', 'respondent');
 
         if ($role === 'organization') {
-            $responses = $responses->whereHas('survey', function ($query) use ($user) {
-                $query->where('organization_id', $user->organization?->id);
-            });
+            $orgId = $user->organization?->id;
+            if ($orgId) {
+                $responses = $responses->whereHas('survey', function ($query) use ($orgId) {
+                    $query->where('organization_id', $orgId);
+                });
+            } else {
+                $responses->whereRaw('1 = 0'); // Return nothing if no org linked
+            }
         } elseif ($role === 'independent') {
-            $responses = $responses->whereHas('survey', function ($query) use ($user) {
-                $query->where('independent_id', $user->independent?->id);
-            });
+            $indId = $user->independent?->id;
+            if ($indId) {
+                $responses = $responses->whereHas('survey', function ($query) use ($indId) {
+                    $query->where('independent_id', $indId);
+                });
+            } else {
+                $responses->whereRaw('1 = 0');
+            }
         }
 
         $responses = $responses->orderBy('created_at', 'desc')->paginate(10);
@@ -104,9 +123,19 @@ class SurveyController extends Controller
         $surveys = \App\Models\Survey::withCount('responses');
 
         if ($role === 'organization') {
-            $surveys = $surveys->where('organization_id', $user->organization?->id);
+            $orgId = $user->organization?->id;
+            if ($orgId) {
+                $surveys = $surveys->where('organization_id', $orgId);
+            } else {
+                $surveys->whereRaw('1 = 0');
+            }
         } elseif ($role === 'independent') {
-            $surveys = $surveys->where('independent_id', $user->independent?->id);
+            $indId = $user->independent?->id;
+            if ($indId) {
+                $surveys = $surveys->where('independent_id', $indId);
+            } else {
+                $surveys->whereRaw('1 = 0');
+            }
         } elseif ($role === 'respondent') {
             $surveys = $surveys->whereHas('responses', function ($query) use ($user) {
                 $query->where('respondent_id', $user->id);
@@ -122,7 +151,9 @@ class SurveyController extends Controller
     {
         $this->authorizeOwner($survey);
         $responses = $survey->responses()->with('respondent')->latest()->paginate(20);
-        return view('responses.show', compact('survey', 'responses'));
+        $analysis = $this->getSurveyAnalysisMetadata($survey);
+        
+        return view('responses.show', compact('survey', 'responses', 'analysis'));
     }
 
     public function showResponseDetail(\App\Models\Survey $survey, \App\Models\Response $response)
@@ -196,6 +227,7 @@ class SurveyController extends Controller
         $responses = $survey->responses()->with('answers.question')->get();
         $isJson = !empty($survey->json_schema);
 
+        $totalResponses = $responses->count();
         $analysis = [];
         $chartConfigs = [];
 
@@ -213,39 +245,67 @@ class SurveyController extends Controller
 
                 $answersList = [];
                 $frequencyCount = [];
+                $answeredCount = 0;
 
                 foreach ($responses as $response) {
                     $jsonAnswer = $response->answers->first();
+                    $found = false;
                     if ($jsonAnswer) {
                         $parsedData = json_decode($jsonAnswer->value, true) ?? [];
                         foreach ($parsedData as $data) {
                             if (isset($data['name']) && $data['name'] === $fieldId && isset($data['userData'])) {
                                 $val = $data['userData'];
-
-                                if (is_array($val)) {
-                                    // Handle array values (checkboxes)
-                                    foreach ($val as $v) {
-                                        $answersList[] = $v;
-                                        $frequencyCount[$v] = ($frequencyCount[$v] ?? 0) + 1;
+                                if ($val !== '' && $val !== null && (!is_array($val) || !empty($val))) {
+                                    $found = true;
+                                    if (is_array($val)) {
+                                        foreach ($val as $v) {
+                                            $answersList[] = $v;
+                                            $frequencyCount[$v] = ($frequencyCount[$v] ?? 0) + 1;
+                                        }
+                                    } else {
+                                        $answersList[] = $val;
+                                        $frequencyCount[$val] = ($frequencyCount[$val] ?? 0) + 1;
                                     }
-                                } else {
-                                    $answersList[] = $val;
-                                    $frequencyCount[$val] = ($frequencyCount[$val] ?? 0) + 1;
                                 }
                             }
                         }
                     }
+                    if ($found) $answeredCount++;
                 }
 
+                $missingCount = $totalResponses - $answeredCount;
                 $isChartable = in_array($type, ['select', 'radio-group', 'checkbox-group', 'number']);
                 $canvasId = 'chart-' . str_replace('-', '_', $fieldId);
 
+                // Calculate Statistics
+                $stats = [];
+                foreach ($frequencyCount as $val => $count) {
+                    $stats[] = [
+                        'value' => (string)$val,
+                        'count' => (int)$count,
+                        'percentage' => $totalResponses > 0 ? round(($count / $totalResponses) * 100, 1) : 0
+                    ];
+                }
+                
+                // Add Missing data to stats for completeness
+                $stats[] = [
+                    'value' => '[Missing / Skipped]',
+                    'count' => $missingCount,
+                    'percentage' => $totalResponses > 0 ? round(($missingCount / $totalResponses) * 100, 1) : 0,
+                    'is_missing' => true
+                ];
+
                 $analysis[] = [
+                    'id' => $fieldId,
+                    'survey_id' => $survey->id,
                     'label' => $label,
                     'type' => $type,
                     'isChartable' => $isChartable,
                     'canvasId' => $canvasId,
-                    'answers' => $answersList
+                    'answers' => $answersList,
+                    'stats' => $stats,
+                    'answered_count' => $answeredCount,
+                    'missing_count' => $missingCount
                 ];
 
                 if ($isChartable && !empty($frequencyCount)) {
@@ -265,23 +325,47 @@ class SurveyController extends Controller
 
                 $answersList = [];
                 $frequencyCount = [];
+                $answeredCount = 0;
 
-                foreach ($answers as $answer) {
-                    if ($answer->value !== null && $answer->value !== '') {
+                foreach ($responses as $response) {
+                    $answer = $answers->where('response_id', $response->id)->first();
+                    if ($answer && $answer->value !== null && $answer->value !== '') {
+                        $answeredCount++;
                         $answersList[] = $answer->value;
                         $frequencyCount[$answer->value] = ($frequencyCount[$answer->value] ?? 0) + 1;
                     }
                 }
 
+                $missingCount = $totalResponses - $answeredCount;
                 $isChartable = in_array($question->type, ['radio', 'checkbox', 'select', 'number']);
                 $canvasId = 'chart-question_' . $question->id;
 
+                $stats = [];
+                foreach ($frequencyCount as $val => $count) {
+                    $stats[] = [
+                        'value' => $val,
+                        'count' => $count,
+                        'percentage' => $totalResponses > 0 ? round(($count / $totalResponses) * 100, 1) : 0
+                    ];
+                }
+                $stats[] = [
+                    'value' => '[Missing / Skipped]',
+                    'count' => $missingCount,
+                    'percentage' => $totalResponses > 0 ? round(($missingCount / $totalResponses) * 100, 1) : 0,
+                    'is_missing' => true
+                ];
+
                 $analysis[] = [
+                    'id' => $question->id,
+                    'survey_id' => $survey->id,
                     'label' => $question->text,
                     'type' => $question->type,
                     'isChartable' => $isChartable,
                     'canvasId' => $canvasId,
-                    'answers' => $answersList
+                    'answers' => $answersList,
+                    'stats' => $stats,
+                    'answered_count' => $answeredCount,
+                    'missing_count' => $missingCount
                 ];
 
                 if ($isChartable && !empty($frequencyCount)) {
@@ -302,7 +386,7 @@ class SurveyController extends Controller
             \Log::error("AI Summary Error: " . $e->getMessage());
         }
 
-        return view('reports.show', compact('survey', 'responses', 'analysis', 'chartConfigs', 'aiSummary'));
+        return view('reports.show', compact('survey', 'responses', 'analysis', 'chartConfigs', 'aiSummary', 'totalResponses'));
     }
 
     public function exportPdf(\App\Models\Survey $survey)
@@ -371,7 +455,7 @@ class SurveyController extends Controller
         }
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.pdf', compact('survey', 'responses', 'analysis'));
-        $filename = "Analytical_Report_" . \Illuminate\Support\Str::slug($survey->title) . ".pdf";
+        $filename = "Analytical_Report_" . Str::slug($survey->title) . ".pdf";
         return $pdf->download($filename);
     }
 
@@ -482,7 +566,7 @@ class SurveyController extends Controller
         $isOwner = $user && ($survey->created_by == $user->id);
         $isAdmin = $user && $user->isAdmin();
 
-        $isActive = ($survey->status == \App\Enums\SurveyStatus::Active) || ($survey->status == 'active');
+        $isActive = ($survey->status === \App\Enums\SurveyStatus::Active);
 
         if (!$isActive && !$isOwner && !$isAdmin) {
             abort(403, 'This survey is not active or you do not have permission to view it.');
@@ -600,14 +684,66 @@ class SurveyController extends Controller
         return redirect()->back()->with('success', 'Thank you for completing the survey!');
     }
 
+
+    private function getSurveyAnalysisMetadata(\App\Models\Survey $survey)
+    {
+        $analysis = [];
+        $isJson = !empty($survey->json_schema);
+
+        if ($isJson) {
+            $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
+            $schema = is_array($schema) ? $schema : [];
+
+            foreach ($schema as $field) {
+                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph']))
+                    continue;
+
+                $analysis[] = [
+                    'id' => $field['name'],
+                    'label' => $field['label'] ?? $field['name'],
+                    'type' => $field['type'] ?? 'text',
+                    'isChartable' => in_array($field['type'] ?? 'text', ['select', 'radio-group', 'checkbox-group', 'number']),
+                ];
+            }
+        } else {
+            $questions = $survey->questions()->orderBy('position')->get();
+            foreach ($questions as $question) {
+                $analysis[] = [
+                    'id' => $question->id,
+                    'label' => $question->text,
+                    'type' => $question->type,
+                    'isChartable' => in_array($question->type, ['radio', 'checkbox', 'select', 'number']),
+                ];
+            }
+        }
+        return $analysis;
+    }
+
     private function authorizeOwner(\App\Models\Survey $survey)
     {
         $user = auth()->user();
-        if ($user && $user->isAdmin())
+        if (!$user)
+            abort(403, 'Unauthorized action.');
+
+        // Admins can do everything
+        if ($user->isAdmin())
             return;
 
-        if (!$user || $survey->created_by !== $user->id) {
-            abort(403, 'Unauthorized action.');
+        // Check if the user is the direct creator
+        if ((int) $survey->created_by === (int) $user->id) {
+            return;
         }
+
+        // Check organization ownership
+        if ($survey->organization_id && $user->organization && (int) $survey->organization_id === (int) $user->organization->id) {
+            return;
+        }
+
+        // Check independent ownership
+        if ($survey->independent_id && $user->independent && (int) $survey->independent_id === (int) $user->independent->id) {
+            return;
+        }
+
+        abort(403, 'Unauthorized action.');
     }
 }
