@@ -17,7 +17,11 @@ class QuestionFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'survey_id' => 1,
+            'text' => $this->faker->sentence . '?',
+            'type' => 'text',
+            'position' => 1,
+            'required' => false,
         ];
     }
 }

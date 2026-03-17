@@ -17,7 +17,12 @@ class SurveyFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'title' => $this->faker->sentence,
+            'description' => $this->faker->paragraph,
+            'category' => 'Technology',
+            'type' => 'public',
+            'status' => 'active',
+            'created_by' => 1,
         ];
     }
 }

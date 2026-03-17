@@ -1,14 +1,14 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-        <div class="px-4 py-5 sm:px-6 flex justify-between items-center bg-indigo-50 border-l-4 border-indigo-600">
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
+        <div class="px-6 py-6 sm:px-8 flex justify-between items-center bg-indigo-50 border-l-8 border-indigo-600">
             <div>
-                <h3 class="text-xl leading-6 font-bold text-gray-900">
-                    Welcome, {{ $displayName }}
+                <h3 class="text-2xl leading-none font-black text-gray-900 mb-1">
+                    Welcome back, {{ $displayName }}
                 </h3>
-                <p class="mt-1 max-w-2xl text-sm text-gray-600 font-medium">
-                    {{ ucfirst($role) }} Dashboard &bull; System Status: Active
+                <p class="text-sm text-gray-600 font-bold uppercase tracking-widest">
+                    {{ $role }} DASHBOARD &bull; <span class="text-green-600">SYSTEM ONLINE</span>
                 </p>
             </div>
         </div>
@@ -199,38 +199,75 @@
         </div>
 
         <!-- Generated Reports Widget -->
-        <div class="bg-white overflow-hidden shadow rounded-lg border-t-4 border-purple-400 transform hover:scale-[1.02] transition-all">
+        <div class="bg-white overflow-hidden shadow rounded-lg border-t-4 border-purple-400 transform hover:scale-[1.02] transition-all text-center">
             <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <i class="fa-solid fa-file-invoice text-3xl text-purple-400"></i>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">
-                                Reports Generated
-                            </dt>
-                            <dd>
-                                <div class="text-2xl font-bold text-gray-900">
-                                    {{ $reportsGenerated ?? 0 }}
-                                </div>
-                            </dd>
-                        </dl>
-                    </div>
-                </div>
+                <dl>
+                    <dt class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Reports Generated</dt>
+                    <dd>
+                        <div class="text-3xl font-black text-gray-900">{{ $reportsGenerated ?? 0 }}</div>
+                    </dd>
+                </dl>
             </div>
             <div class="bg-gray-50 px-5 py-3 text-xs">
                 @if($role === 'respondent')
-                    <a href="{{ route('respondent.history') }}" class="font-bold text-purple-600 hover:text-purple-500">
-                        View my reports <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
+                    <a href="{{ route('respondent.history') }}" class="font-bold text-purple-600 hover:text-purple-500 uppercase tracking-tighter">
+                        My Reports <i class="fa-solid fa-chevron-right ml-1"></i>
                     </a>
                 @else
-                    <a href="{{ route($role . '.reports.index') }}" class="font-bold text-purple-600 hover:text-purple-500">
-                        Open reports gallery <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
+                    <a href="{{ route($role . '.reports.index') }}" class="font-bold text-purple-600 hover:text-purple-500 uppercase tracking-tighter">
+                        Reports Gallery <i class="fa-solid fa-chevron-right ml-1"></i>
                     </a>
                 @endif
             </div>
         </div>
+    </div>
+
+    <!-- Bottom Content Area -->
+    <div class="space-y-8 mb-12">
+        <!-- Recent activity if not respondent -->
+        @if($role !== 'respondent')
+            <div class="bg-white shadow rounded-lg border border-gray-100 overflow-hidden">
+                <div class="px-6 py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/30">
+                    <h3 class="text-xl font-black text-gray-900 uppercase tracking-tight flex items-center">
+                        <i class="fa-solid fa-clock-rotate-left mr-3 text-indigo-500"></i> Recent Platform Activity
+                    </h3>
+                </div>
+                <div class="p-8">
+                    @if(count($recentActivity) > 0)
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            @foreach($recentActivity as $activity)
+                                <div class="flex flex-col p-6 hover:bg-white rounded-2xl transition-all border border-gray-50 hover:border-indigo-200 hover:shadow-xl group bg-gray-50/50">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div class="p-3 bg-indigo-100 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                            <i class="fa-solid fa-file-signature text-lg"></i>
+                                        </div>
+                                        <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest bg-white px-2 py-1 rounded-md border border-indigo-50 shadow-sm">{{ $activity->status }}</span>
+                                    </div>
+                                    <div class="flex-1 min-w-0 mb-6">
+                                        <p class="text-base font-black text-gray-900 mb-1 leading-tight">{{ $activity->title }}</p>
+                                        <p class="text-xs text-gray-400 font-bold uppercase tracking-tighter">{{ $activity->created_at->diffForHumans() }}</p>
+                                    </div>
+                                    <div class="pt-4 border-t border-gray-100 flex justify-between items-center">
+                                        <span class="text-[10px] text-gray-300 font-bold uppercase">Activity Log #{{ $activity->id }}</span>
+                                        <a href="{{ route($role . '.surveys.index') }}" class="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase flex items-center">
+                                            Manage <i class="fa-solid fa-chevron-right ml-1 text-[8px]"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="text-center py-16">
+                            <div class="inline-flex items-center justify-center w-20 h-20 bg-gray-50 rounded-full mb-6">
+                                <i class="fa-solid fa-timeline text-gray-200 text-4xl"></i>
+                            </div>
+                            <p class="text-gray-900 text-lg font-black">Waiting for your first move.</p>
+                            <p class="text-sm text-gray-400 font-bold uppercase tracking-widest mt-1">Activities will appear here once you interact with the system.</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        @endif
     </div>
 
     @if($role === 'respondent')
@@ -246,7 +283,7 @@
                 </a>
             </div>
             <div class="overflow-x-auto scrollbar-hide">
-                @if($recentPublicSurveys->count() > 0)
+                @if(count($recentPublicSurveys) > 0)
                     <table class="min-w-full divide-y divide-gray-100">
                         <thead class="bg-gray-50/50">
                             <tr>

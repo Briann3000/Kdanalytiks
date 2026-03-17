@@ -33,6 +33,11 @@ class DashboardController extends Controller
                 ->whereHas('responses')
                 ->count();
 
+            $recentActivity = Survey::where('organization_id', $orgId)
+                ->latest()
+                ->take(5)
+                ->get();
+
         } elseif ($role === 'independent') {
             $indId = $user->independent?->id;
             $totalSurveys = Survey::where('independent_id', $indId)->count();
@@ -46,6 +51,11 @@ class DashboardController extends Controller
             $reportsGenerated = Survey::where('independent_id', $indId)
                 ->whereHas('responses')
                 ->count();
+
+            $recentActivity = Survey::where('independent_id', $indId)
+                ->latest()
+                ->take(5)
+                ->get();
 
         } elseif ($role === 'respondent') {
             $totalSurveys = Survey::where('status', \App\Enums\SurveyStatus::Active)
@@ -76,7 +86,8 @@ class DashboardController extends Controller
             'pendingSurveys',
             'reportsGenerated'
         ), [
-            'recentPublicSurveys' => $recentPublicSurveys ?? collect()
+            'recentPublicSurveys' => $recentPublicSurveys ?? collect(),
+            'recentActivity' => $recentActivity ?? collect()
         ]));
     }
 }

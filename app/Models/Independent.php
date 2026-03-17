@@ -20,12 +20,9 @@ class Independent extends Model
         'subscription_expiry',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'subscription_expiry' => 'datetime',
-        ];
-    }
+    protected $casts = [
+        'subscription_expiry' => 'datetime',
+    ];
 
     public function user(): BelongsTo
     {

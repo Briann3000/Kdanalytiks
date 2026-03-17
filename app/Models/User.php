@@ -25,15 +25,12 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'role' => \App\Enums\UserRole::class,
-            'status' => \App\Enums\UserStatus::class,
-        ];
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+        'role' => \App\Enums\UserRole::class,
+        'status' => \App\Enums\UserStatus::class,
+    ];
 
     public function organization(): HasOne
     {

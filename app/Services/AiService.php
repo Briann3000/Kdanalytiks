@@ -2,14 +2,15 @@
 
 namespace App\Services;
 
-use OpenAI\Laravel\Facades\OpenAI;
 use App\Models\Response;
 use App\Models\Survey;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class AiService
 {
     /**
-     * Analyze sentiment of a specific response.
+     * Analyze sentiment of a specific response using Groq.
      */
     public function analyzeResponseSentiment(Response $response)
     {
@@ -17,8 +18,8 @@ class AiService
         $textData = "";
 
         foreach ($answers as $answer) {
-            if (in_array($answer->question->type, ['text', 'textarea'])) {
-                $textData .= "Question: {$answer->question->text}\nAnswer: {$answer->answer_text}\n\n";
+            if ($answer->question && in_array($answer->question->type, ['text', 'textarea'])) {
+                $textData .= "Question: {$answer->question->text}\nAnswer: {$answer->value}\n\n";
             }
         }
 
@@ -28,79 +29,127 @@ class AiService
         $prompt = "Analyze the sentiment of the following survey response. Return ONLY a JSON object with 'sentiment' (Positive, Negative, or Neutral) and 'confidence' (0-1). \n\n" . $textData;
 
         try {
-            $result = OpenAI::chat()->create([
-                'model' => 'gpt-4o-mini',
-                'messages' => [
-                    ['role' => 'system', 'content' => 'You are a professional survey data analyst.'],
-                    ['role' => 'user', 'content' => $prompt],
-                ],
-                'response_format' => ['type' => 'json_object']
-            ]);
-
-            $metadata = json_decode($result->choices[0]->message->content, true);
-            $response->update(['ai_metadata' => array_merge($response->ai_metadata ?? [], $metadata)]);
-
-            return $metadata;
+            $responseJson = $this->callGroq($prompt, true);
+            if ($responseJson) {
+                $metadata = json_decode($responseJson, true);
+                if ($metadata) {
+                    $response->update(['ai_metadata' => array_merge($response->ai_metadata ?? [], $metadata)]);
+                    return $metadata;
+                }
+            }
+            return null;
         } catch (\Exception $e) {
-            \Log::error("AI Sentiment Analysis Error: " . $e->getMessage());
+            Log::error("AI Sentiment Analysis Error (Groq): " . $e->getMessage());
             return null;
         }
     }
 
     /**
-     * Generate an executive summary for a survey based on its responses.
+     * Generate an executive summary for a survey using Groq.
      */
     public function generateSurveySummary(Survey $survey)
     {
-        $responses = $survey->responses()->with('answers.question')->take(20)->get();
+        // Reduced to 8 to stay well within Groq TPM limits (Free Tier)
+        $responses = $survey->responses()->with('answers.question')->latest()->take(8)->get();
         if ($responses->isEmpty())
             return "No responses available for analysis.";
 
         $dataDump = "";
         foreach ($responses as $index => $response) {
-            $dataDump .= "Response " . ($index + 1) . ":\n";
+            $dataDump .= "R" . ($index + 1) . ": ";
             foreach ($response->answers as $answer) {
-                if (in_array($answer->question->type, ['text', 'textarea'])) {
-                    $dataDump .= "Q: {$answer->question->text} | A: {$answer->answer_text}\n";
+                $val = $answer->value;
+                if (is_null($answer->question_id) && !empty($val)) {
+                    $parsed = json_decode($val, true) ?? [];
+                    if (!is_array($parsed)) continue;
+                    
+                    foreach ($parsed as $entry) {
+                        if (isset($entry['userData']) && !empty($entry['userData'])) {
+                            if (is_array($entry['userData'])) continue;
+                            
+                            // Truncate long responses more aggressively (100 chars)
+                            $cleanVal = strlen($entry['userData']) > 100 ? substr($entry['userData'], 0, 97) . '...' : $entry['userData'];
+                            $dataDump .= "A: {$cleanVal} | ";
+                        }
+                    }
+                } elseif ($answer->question && in_array($answer->question->type, ['text', 'textarea'])) {
+                    $cleanVal = strlen($val) > 100 ? substr($val, 0, 97) . '...' : $val;
+                    $dataDump .= "A: {$cleanVal} | ";
+                } elseif (!is_null($val) && strlen($val) > 4) {
+                    $cleanVal = strlen($val) > 100 ? substr($val, 0, 97) . '...' : $val;
+                    $dataDump .= "A: {$cleanVal} | ";
                 }
             }
-            $dataDump .= "---\n";
+            $dataDump .= "\n";
         }
 
-        $prompt = "Summarize the key findings from these survey responses in exactly three bullet points. Focus on recurring themes and overall tone.\n\n" . $dataDump;
+        if (empty(trim($dataDump))) {
+            return "No meaningful text responses were found in the recent submissions to summarize.";
+        }
+
+        $prompt = "Summarize these voter responses in 3 concise bullet points. Focus on key themes and tone.\n\nDATA:\n" . $dataDump;
 
         try {
-            $result = OpenAI::chat()->create([
-                'model' => 'gpt-4o-mini',
-                'messages' => [
-                    ['role' => 'system', 'content' => 'You are an executive researcher summarizing raw data.'],
-                    ['role' => 'user', 'content' => $prompt],
-                ],
-            ]);
-
-            $summary = $result->choices[0]->message->content;
-
-            // Store summary in survey metadata or similar?
-            // For now, let's just return it for the report view.
-            return $summary;
+            $result = $this->callGroq($prompt);
+            if (!$result) {
+                 return "AI Summary is currently unavailable (Engine failed to respond).";
+            }
+            return $result;
         } catch (\Exception $e) {
-            \Log::error("AI Summary Error: " . $e->getMessage());
-            return "Unable to generate AI summary at this time.";
+            Log::error("Groq Summary Error: " . $e->getMessage());
+            return "AI Analysis temporarily unavailable (Connection error).";
         }
     }
 
     /**
-     * Generate a full survey schema (JSON) based on a text prompt.
-     * Compatible with jQuery FormBuilder.
+     * Primary Groq API caller.
+     */
+    private function callGroq($prompt, $isJson = false)
+    {
+        try {
+            $apiKey = config('services.groq.api_key');
+            $model = config('services.groq.model', 'llama-3.1-8b-instant');
+
+            if (empty($apiKey)) {
+                Log::error("Groq API Key is missing in configuration.");
+                return null;
+            }
+
+            $options = [
+                'model' => $model,
+                'messages' => [
+                    ['role' => 'system', 'content' => $isJson ? 'You are a helpful assistant that only outputs JSON.' : 'You are an expert researcher.'],
+                    ['role' => 'user', 'content' => $prompt],
+                ],
+                'temperature' => $isJson ? 0.1 : 0.3
+            ];
+
+            if ($isJson) {
+                $options['response_format'] = ['type' => 'json_object'];
+            }
+
+            $response = Http::withToken($apiKey)
+                ->timeout(60)
+                ->post('https://api.groq.com/openai/v1/chat/completions', $options);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                return $data['choices'][0]['message']['content'] ?? null;
+            }
+            
+            Log::error("Groq API Error: " . $response->body());
+            return null;
+        } catch (\Exception $e) {
+            Log::error("Groq Call Exception: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Generate a full survey schema (JSON) based on a text prompt using Groq.
      */
     public function generateSurveySchema($prompt)
     {
-        // Check if API key is configured
-        if (!config('openai.api_key')) {
-            \Log::warning("OpenAI API Key is missing. Using Mock AI for schema generation.");
-            return $this->getMockSchema($prompt);
-        }
-
         $systemPrompt = "You are an expert survey designer and researcher. Your goal is to generate high-quality survey schemas based on user descriptions. 
         You MUST return ONLY a JSON array of objects. Each object represents a question field compatible with 'jQuery FormBuilder'.
         
@@ -122,30 +171,27 @@ class AiService
         Generate exactly what the user asks for, optimized for high completion rates.";
 
         try {
-            $result = OpenAI::chat()->create([
-                'model' => 'gpt-4o-mini',
-                'messages' => [
-                    ['role' => 'system', 'content' => $systemPrompt],
-                    ['role' => 'user', 'content' => $prompt],
-                ],
-                'response_format' => ['type' => 'json_object']
-            ]);
-
-            $content = $result->choices[0]->message->content;
-            $decoded = json_decode($content, true);
-
-            if (!isset($decoded[0]) && is_array($decoded)) {
-                $firstKey = array_key_first($decoded);
-                if (is_array($decoded[$firstKey])) {
-                    return $decoded[$firstKey];
-                }
+            $groqData = $this->callGroq($systemPrompt . "\n\nUser Request: " . $prompt, true);
+            if ($groqData) {
+                $decoded = json_decode($groqData, true);
+                return $this->formatSchemaResponse($decoded);
             }
-
-            return $decoded;
+            return $this->getMockSchema($prompt);
         } catch (\Exception $e) {
-            \Log::error("AI Schema Generation Error: " . $e->getMessage());
+            Log::error("AI Schema Generation Error (Groq): " . $e->getMessage());
             return $this->getMockSchema($prompt);
         }
+    }
+
+    private function formatSchemaResponse($decoded)
+    {
+        if (!isset($decoded[0]) && is_array($decoded)) {
+            $firstKey = array_key_first($decoded);
+            if (is_array($decoded[$firstKey])) {
+                return $decoded[$firstKey];
+            }
+        }
+        return $decoded;
     }
 
     /**
@@ -157,69 +203,16 @@ class AiService
 
         if (str_contains($lowercase, 'coffee') || str_contains($lowercase, 'shop')) {
             return [
-                [
-                    'type' => 'header',
-                    'subtype' => 'h2',
-                    'label' => 'Coffee Shop Experience'
-                ],
-                [
-                    'type' => 'radio-group',
-                    'label' => 'How would you rate our coffee?',
-                    'name' => 'coffee_rating',
-                    'values' => [
-                        ['label' => '5 - Excellent', 'value' => '5', 'selected' => 'false'],
-                        ['label' => '4 - Good', 'value' => '4', 'selected' => 'false'],
-                        ['label' => '3 - Average', 'value' => '3', 'selected' => 'false'],
-                        ['label' => '2 - Poor', 'value' => '2', 'selected' => 'false'],
-                        ['label' => '1 - Awful', 'value' => '1', 'selected' => 'false']
-                    ]
-                ],
-                [
-                    'type' => 'select',
-                    'label' => 'Which was your favorite brew?',
-                    'name' => 'favorite_brew',
-                    'values' => [
-                        ['label' => 'Espresso', 'value' => 'espresso', 'selected' => 'true'],
-                        ['label' => 'Cappuccino', 'value' => 'cappuccino', 'selected' => 'false'],
-                        ['label' => 'Latte', 'value' => 'latte', 'selected' => 'false']
-                    ]
-                ],
-                [
-                    'type' => 'textarea',
-                    'label' => 'Any suggestions for our staff?',
-                    'name' => 'staff_feedback',
-                    'className' => 'form-control'
-                ]
+                ['type' => 'header', 'substrate' => 'h2', 'label' => 'Coffee Shop Experience'],
+                ['type' => 'radio-group', 'label' => 'How would you rate our coffee?', 'name' => 'coffee_rating', 'values' => [['label' => '5 - Excellent', 'value' => '5'], ['label' => '1 - Awful', 'value' => '1']]],
+                ['type' => 'textarea', 'label' => 'Any suggestions?', 'name' => 'suggestions', 'className' => 'form-control']
             ];
         }
 
         return [
-            [
-                'type' => 'header',
-                'subtype' => 'h2',
-                'label' => 'AI Generated Survey (Simulated)'
-            ],
-            [
-                'type' => 'text',
-                'label' => 'What is your primary feedback?',
-                'name' => 'feedback',
-                'required' => 'true',
-                'className' => 'form-control'
-            ],
-            [
-                'type' => 'radio-group',
-                'label' => 'Would you recommend us?',
-                'name' => 'recommend',
-                'values' => [
-                    ['label' => 'Yes', 'value' => 'yes', 'selected' => 'false'],
-                    ['label' => 'No', 'value' => 'no', 'selected' => 'false']
-                ]
-            ],
-            [
-                'type' => 'paragraph',
-                'subtype' => 'p',
-                'label' => 'Note: Add an OpenAI API key to .env to enable real AI generation.'
-            ]
+            ['type' => 'header', 'label' => 'AI Generated Survey (Simulated)'],
+            ['type' => 'text', 'label' => 'General Feedback', 'name' => 'feedback', 'required' => true, 'className' => 'form-control'],
+            ['type' => 'paragraph', 'label' => 'Note: The AI engine encountered an error, this is a simulated response.']
         ];
     }
 }

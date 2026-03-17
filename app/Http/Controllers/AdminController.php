@@ -42,7 +42,9 @@ class AdminController extends Controller
             ->take(3)
             ->get();
 
-        return view('admin.dashboard', compact('stats', 'publicStats', 'recentPublicSurveys'));
+        $latestUsers = User::latest()->take(5)->get();
+
+        return view('admin.dashboard', compact('stats', 'publicStats', 'recentPublicSurveys', 'latestUsers'));
     }
 
     public function analytics()

@@ -5,16 +5,15 @@
 @section('content')
 @php /** @var \Illuminate\Support\Collection|\App\Models\Survey[] $recentPublicSurveys */ @endphp
     <div class="px-4 sm:px-0">
-        <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center justify-between mb-10">
             <div>
-                <h2 class="text-2xl font-bold text-gray-900 leading-tight">Admin Overview</h2>
-                <p class="mt-1 text-sm text-gray-500">Global system metrics and administrative controls.</p>
+                <h2 class="text-3xl font-black text-gray-900 leading-none mb-2 tracking-tight">System Infrastructure</h2>
+                <p class="text-sm text-gray-500 font-bold uppercase tracking-widest">Global Administration & Monitoring</p>
             </div>
             <div class="flex space-x-3">
-                <span
-                    class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    <span class="h-2 w-2 mr-1.5 rounded-full bg-green-500"></span>
-                    System Healthy
+                <span class="inline-flex items-center px-4 py-2 rounded-full text-[10px] font-black bg-green-50 text-green-700 border border-green-100 uppercase tracking-widest">
+                    <span class="h-2 w-2 mr-2 rounded-full bg-green-500 animate-pulse"></span>
+                    Systems Operational
                 </span>
             </div>
         </div>
@@ -178,55 +177,85 @@
         </div>
 
         <!-- Recent Public Surveys Table -->
-        <div class="bg-white shadow rounded-lg border border-gray-100 overflow-hidden">
-            <div class="p-6 border-b border-gray-100 flex items-center justify-between">
-                <h3 class="text-lg font-bold text-gray-900">Recent Public Surveys</h3>
+        <div class="bg-white shadow rounded-lg border border-gray-100 overflow-hidden mb-8">
+            <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <h3 class="text-sm font-black text-gray-900 uppercase tracking-widest">Active Public Campaigns</h3>
                 <a href="{{ route('admin.surveys.index') }}?type=public"
-                    class="text-sm font-medium text-indigo-600 hover:text-indigo-500">View All</a>
+                    class="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase bg-white px-3 py-1 rounded-full shadow-sm border border-gray-100">Browse Full List</a>
             </div>
             @if($recentPublicSurveys->count() > 0)
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title
-                            </th>
-                            <th scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner
-                            </th>
-                            <th scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responses
-                            </th>
-                            <th scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        @foreach($recentPublicSurveys as $survey)
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{{ $survey->title }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ $survey->organization_id ? $survey->organization->name : ($survey->independent_id ? $survey->independent->name : 'Admin') }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span
-                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        {{ $survey->responses_count }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ $survey->created_at->diffForHumans() }}</td>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-100">
+                        <thead>
+                            <tr class="bg-gray-50/30">
+                                <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Campaign</th>
+                                <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Entity</th>
+                                <th class="px-6 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Engagement</th>
+                                <th class="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Launch Date</th>
                             </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50">
+                            @foreach($recentPublicSurveys as $survey)
+                                <tr class="hover:bg-gray-50/50 transition-colors group">
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm font-black text-gray-900 group-hover:text-indigo-600 transition-colors">{{ $survey->title }}</div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="text-[11px] font-bold text-gray-500 uppercase">
+                                            {{ $survey->organization_id ? $survey->organization->name : ($survey->independent_id ? $survey->independent->name : 'Platform') }}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-100 shadow-sm">
+                                            {{ number_format($survey->responses_count) }} RESPONSES
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase">
+                                        {{ $survey->created_at->diffForHumans() }}
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             @else
-                <div class="p-12 text-center">
-                    <i class="fa-solid fa-folder-open text-gray-200 text-5xl mb-4"></i>
-                    <p class="text-gray-500 font-medium">No recent public surveys found.</p>
+                <div class="p-16 text-center">
+                    <i class="fa-solid fa-folder-open text-gray-200 text-6xl mb-4 block"></i>
+                    <p class="text-gray-400 font-black uppercase text-xs tracking-widest">No active campaigns found</p>
                 </div>
             @endif
+        </div>
+
+        <!-- Admin Dashboard Bottom Grid -->
+        <div class="mb-12">
+            <!-- Latest Signups - Now Full Width and more card-like -->
+            <div class="bg-white shadow rounded-lg border border-gray-100 overflow-hidden">
+                <div class="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                    <h3 class="text-lg font-black text-gray-900 uppercase tracking-widest flex items-center">
+                        <i class="fa-solid fa-user-plus mr-4 text-indigo-500"></i> Recent User Integrations
+                    </h3>
+                    <a href="{{ route('admin.users.index') }}" class="text-[11px] font-black text-indigo-600 hover:text-indigo-800 uppercase bg-white px-4 py-2 rounded-full shadow-sm border border-gray-100 transition-all">Audit Directory</a>
+                </div>
+                <div class="p-8">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        @foreach($latestUsers as $user)
+                            <div class="flex items-center space-x-5 p-6 bg-gray-50/50 rounded-2xl border border-gray-50 hover:border-indigo-200 hover:bg-white hover:shadow-lg transition-all group">
+                                <div class="h-14 w-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm">
+                                    <i class="fa-solid fa-user text-xl"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-base font-black text-gray-900 truncate tracking-tight mb-0.5">{{ $user->name }}</p>
+                                    <p class="text-xs text-gray-400 font-medium truncate mb-2">{{ $user->email }}</p>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-[9px] font-black px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded uppercase tracking-wider">{{ $user->role instanceof \UnitEnum ? $user->role->name : $user->role }}</span>
+                                        <span class="text-[9px] font-bold text-gray-300 uppercase italic">{{ $user->created_at->diffForHumans() }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 @endsection

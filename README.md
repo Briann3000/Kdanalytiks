@@ -16,6 +16,7 @@ KMSurveyTool is a state-of-the-art, role-based survey and data collection platfo
 - **`app/Http/Controllers/`**: Contains role-specific controllers (Admin, Org, Independent) and the AI logic.
 - **`app/Models/`**: Eloquent models with defined relationships for a relational survey database.
 - **`resources/views/`**: Modern Blade templates organized by role and feature.
+- **`docs/`**: Project documentation, including implementation plans and task lists.
 - **`backup/`**: An archive of the legacy PHP files and database dumps for historical reference.
 - **`database/migrations/`**: A chronological record of the schema evolution.
 

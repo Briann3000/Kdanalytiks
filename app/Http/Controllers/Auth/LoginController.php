@@ -31,9 +31,9 @@ class LoginController extends Controller
         $user = User::where('email', $request->email)->where('role', $role)->first();
 
         if ($user && Hash::check($request->password, $user->password)) {
-            if ($user->status == 'active') {
+            if ($user->status === \App\Enums\UserStatus::Active) {
                 Auth::login($user, $request->has('remember'));
-                return redirect()->route($user->role . '.dashboard');
+                return redirect()->route($user->role->value . '.dashboard');
             } else {
                 return back()->withErrors(['status' => 'Your account is not active']);
             }

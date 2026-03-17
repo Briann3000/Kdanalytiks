@@ -147,4 +147,10 @@ Route::middleware(['auth', 'role:respondent'])->prefix('respondent')->name('resp
 // AI Integration Routes
 Route::middleware(['auth'])->group(function () {
     Route::post('/ai/generate-survey', [\App\Http\Controllers\AiController::class, 'generateSchema'])->name('ai.generate');
+    Route::get('/ai/insights/question/{question}', [\App\Http\Controllers\InsightController::class, 'generateQuestionInsight'])->name('ai.insights.question');
+    
+    // Qualitative Reports
+    Route::get('/surveys/{survey}/qualitative-report', [\App\Http\Controllers\InsightController::class, 'showQualitativeReport'])->name('surveys.qualitative');
+    Route::get('/surveys/{survey}/analyze/{question_id}', [\App\Http\Controllers\InsightController::class, 'analyze'])->name('surveys.analyze');
 });
+Route::post('/api/agent/chat', [\App\Http\Controllers\AgentController::class, 'chat'])->name('api.agent.chat');

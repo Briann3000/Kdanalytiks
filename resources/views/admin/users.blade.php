@@ -92,7 +92,7 @@
                             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status
                         </th>
                         <th scope="col"
-                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Joined
                         </th>
                         <th scope="col"
                             class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions
@@ -136,9 +136,15 @@
                                         @csrf
                                         <input type="hidden" name="status"
                                             value="{{ $statusVal === 'active' ? 'suspended' : 'active' }}">
-                                        <button type="submit" class="text-indigo-600 hover:text-indigo-900 font-bold">
-                                            {{ $statusVal === 'active' ? 'Suspend' : 'Activate' }}
-                                        </button>
+                                        @if($statusVal === 'active')
+                                            <button type="submit" class="inline-flex items-center px-2 py-1 bg-red-50 text-red-700 rounded text-[10px] font-bold uppercase hover:bg-red-100 transition-colors">
+                                                <i class="fa-solid fa-user-slash mr-1"></i> Suspend
+                                            </button>
+                                        @else
+                                            <button type="submit" class="inline-flex items-center px-2 py-1 bg-green-50 text-green-700 rounded text-[10px] font-bold uppercase hover:bg-green-100 transition-colors">
+                                                <i class="fa-solid fa-user-check mr-1"></i> Activate
+                                            </button>
+                                        @endif
                                     </form>
                                 @else
                                     <span class="text-gray-400">N/A</span>

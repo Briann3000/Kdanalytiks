@@ -74,7 +74,9 @@ class KenyanDataSeeder extends Seeder
             'wairimu.gakuru@email.com',
             'musyoka.mutula@email.com',
             'akinyi.okech@email.com',
-            'juma.jux@email.com'
+            'juma.jux@email.com',
+            'organization@example.com',
+            'independent@example.com'
         ];
 
         $kenyanCompanies = [
@@ -293,15 +295,15 @@ class KenyanDataSeeder extends Seeder
         // 18-24: Respondents (7 users)
         foreach ($kenyanNames as $i => $name) {
             $role = UserRole::Respondent;
-            if ($i < 10)
+            if ($i < 10 || $kenyanEmails[$i] === 'organization@example.com')
                 $role = UserRole::Organization;
-            elseif ($i < 18)
+            elseif ($i < 18 || $kenyanEmails[$i] === 'independent@example.com')
                 $role = UserRole::Independent;
 
             $users[] = User::updateOrCreate(
                 ['email' => $kenyanEmails[$i]],
                 [
-                    'name' => $name,
+                    'name' => ($kenyanEmails[$i] === 'organization@example.com') ? 'Demo Organization' : (($kenyanEmails[$i] === 'independent@example.com') ? 'Independent Researcher' : $name),
                     'password' => $password,
                     'role' => $role,
                     'status' => UserStatus::Active,
@@ -311,22 +313,46 @@ class KenyanDataSeeder extends Seeder
 
         // 20 Companies
         for ($i = 0; $i < 20; $i++) {
+            $u = $users[$i % 10];
             Organization::updateOrCreate(
-                ['name' => $kenyanCompanies[$i]],
+                ['user_id' => $u->id],
                 [
-                    'user_id' => $users[$i % 10]->id,
+                    'name' => $kenyanCompanies[$i % count($kenyanCompanies)],
                 ]
+            );
+        }
+
+        // Special check for demo org user
+        $orgUser = User::where('email', 'organization@example.com')->first();
+        if ($orgUser) {
+            Organization::updateOrCreate(
+                ['user_id' => $orgUser->id],
+                ['name' => 'Demo Organization']
             );
         }
 
         // 20 Independents
         for ($i = 0; $i < 20; $i++) {
+            $u = $users[10 + ($i % 8)];
             Independent::updateOrCreate(
-                ['name' => $kenyanNames[($i + 8) % count($kenyanNames)]],
+                ['user_id' => $u->id],
                 [
-                    'user_id' => $users[10 + ($i % 8)]->id, // Assign to independant users
-                    'institution' => $kenyanUniversities[$i],
-                    'research_area' => $researchAreas[$i],
+                    'name' => $u->name,
+                    'institution' => $kenyanUniversities[$i % count($kenyanUniversities)],
+                    'research_area' => $researchAreas[$i % count($researchAreas)],
+                ]
+            );
+        }
+
+        // Special check for demo independent user
+        $indepUser = User::where('email', 'independent@example.com')->first();
+        if ($indepUser) {
+            Independent::updateOrCreate(
+                ['user_id' => $indepUser->id],
+                [
+                    'name' => 'Independent Researcher',
+                    'institution' => 'Kenyatta University',
+                    'research_area' => 'Social Sciences'
                 ]
             );
         }
