@@ -88,26 +88,60 @@ Route::name('respondent.')->prefix('respondent')->group(function () {
 
 // Shared Authenticated Routes
 Route::middleware(['auth'])->group(function () {
-    Route::post('/surveys', [SurveyController::class, 'store'])->name('surveys.store');
+    // Survey Hub & Core Actions
     Route::get('/surveys/{survey}/responses', [SurveyController::class, 'showResponses'])->name('surveys.responses');
     Route::get('/surveys/{survey}/responses/{response}', [SurveyController::class, 'showResponseDetail'])->name('surveys.responses.show');
     Route::get('/surveys/{survey}/export', [SurveyController::class, 'exportResponses'])->name('surveys.export');
     Route::get('/surveys/{survey}/export-pdf', [SurveyController::class, 'exportPdf'])->name('surveys.export_pdf');
     Route::get('/surveys/{survey}/report', [SurveyController::class, 'report'])->name('surveys.report');
-    Route::post('/surveys/{survey}/publish', [SurveyController::class, 'publish'])->name('surveys.publish');
-    Route::post('/surveys/{survey}/invite', [SurveyController::class, 'sendInvitation'])->name('surveys.invite');
-    Route::get('/surveys/{survey}/edit', [SurveyController::class, 'edit'])->name('surveys.edit');
-    Route::put('/surveys/{survey}', [SurveyController::class, 'update'])->name('surveys.update');
+    
+    // Core Survey CRUD (Except Index, Show, Destroy handled separately)
+    Route::resource('surveys', \App\Http\Controllers\SurveyController::class)->except(['index', 'show', 'destroy']);
     Route::delete('/surveys/{survey}', [SurveyController::class, 'destroy'])->name('surveys.destroy');
+    Route::post('/surveys/initialize', [SurveyController::class, 'initialize'])->name('surveys.initialize');
+    
+    // Quick-Access Project Lists
+    // Projects & Library Overhaul (Kobo-style)
+    Route::prefix('projects')->name('projects.')->group(function () {
+        Route::get('/active', [SurveyController::class, 'index'])->name('active');
+        Route::get('/archived', [SurveyController::class, 'archivedIndex'])->name('archived');
+        Route::get('/drafts', [SurveyController::class, 'draftsIndex'])->name('drafts');
+        
+        // Use /projects as the hub
+        Route::get('/', [SurveyController::class, 'hub'])->name('index');
+        
+        // Project Hub (Single Survey Management content)
+        Route::prefix('{survey}')->group(function () {
+            Route::get('/', [SurveyController::class, 'projectSummary'])->name('summary');
+            Route::get('/data', [SurveyController::class, 'showResponses'])->name('data');
+            Route::get('/reports', [SurveyController::class, 'report'])->name('reports');
+            Route::get('/settings', [SurveyController::class, 'projectSettings'])->name('settings');
+            Route::post('/publish', [SurveyController::class, 'publish'])->name('publish');
+            Route::post('/archive', [SurveyController::class, 'archive'])->name('archive');
+        });
+    });
 
-    // Research Proposal Studio (Shared between Admin, Organization, Independent)
-    Route::get('/research-proposal', [\App\Http\Controllers\ResearchProposalController::class, 'index'])->name('research-proposal.index');
+
+    Route::prefix('library')->name('library.')->group(function () {
+        Route::get('/templates', [SurveyController::class, 'templatesIndex'])->name('templates');
+    });
+
+    // Research Proposal Studio
+    Route::get('/research-proposal/history', [\App\Http\Controllers\ResearchProposalController::class, 'history'])->name('research-proposal.history');
+    Route::post('/research-proposal/store', [\App\Http\Controllers\ResearchProposalController::class, 'storeProposal'])->name('research-proposal.store');
+    Route::get('/research-proposal/export-proposal/{proposal}', [\App\Http\Controllers\ResearchProposalController::class, 'exportProposal'])->name('research-proposal.export-proposal');
     Route::post('/research-proposal/generate', [\App\Http\Controllers\ResearchProposalController::class, 'generate'])->name('research-proposal.generate');
+    Route::get('/research-proposal/preview/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'preview'])->name('research-proposal.preview');
+    Route::post('/research-proposal/export/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'export'])->name('research-proposal.export');
+    
+    Route::resource('research-proposal', \App\Http\Controllers\ResearchProposalController::class);
 });
 
-// Public Survey Views and Submission
+// Public Survey Views
 Route::get('/surveys/{survey}', [SurveyController::class, 'show'])->name('surveys.show');
 Route::post('/surveys/{survey}/submit', [SurveyController::class, 'submit'])->middleware('throttle:10,1')->name('surveys.submit');
+
+Route::post('/surveys/{survey}/invite', [SurveyController::class, 'invite'])->name('surveys.invite');
 
 // Admin Routes
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
@@ -115,7 +149,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/users', [\App\Http\Controllers\AdminController::class, 'users'])->name('users.index');
     Route::post('/users/{user}/status', [\App\Http\Controllers\AdminController::class, 'updateUserStatus'])->name('users.status');
     Route::get('/surveys', [\App\Http\Controllers\AdminController::class, 'surveys'])->name('surveys.index');
-    Route::get('/surveys/create', [SurveyController::class, 'create'])->name('surveys.create');
+
     Route::get('/reports-summary', [\App\Http\Controllers\AdminController::class, 'reports'])->name('reports.summary');
     Route::get('/reports', [SurveyController::class, 'reportsIndex'])->name('reports.index');
     Route::get('/analytics', [\App\Http\Controllers\AdminController::class, 'analytics'])->name('analytics.index');
@@ -127,7 +161,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 Route::middleware(['auth', 'role:organization'])->prefix('organization')->name('organization.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/surveys', [SurveyController::class, 'index'])->name('surveys.index');
-    Route::get('/surveys/create', [SurveyController::class, 'create'])->name('surveys.create');
+
     Route::get('/responses', [SurveyController::class, 'responsesIndex'])->name('responses.index');
     Route::get('/reports', [SurveyController::class, 'reportsIndex'])->name('reports.index');
 });
@@ -136,7 +170,7 @@ Route::middleware(['auth', 'role:organization'])->prefix('organization')->name('
 Route::middleware(['auth', 'role:independent'])->prefix('independent')->name('independent.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/surveys', [SurveyController::class, 'index'])->name('surveys.index');
-    Route::get('/surveys/create', [SurveyController::class, 'create'])->name('surveys.create');
+
     Route::get('/responses', [SurveyController::class, 'responsesIndex'])->name('responses.index');
     Route::get('/reports', [SurveyController::class, 'reportsIndex'])->name('reports.index');
 });
