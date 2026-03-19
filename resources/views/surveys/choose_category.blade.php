@@ -3,7 +3,7 @@
 @section('title', 'Create New Project - Choice')
 
 @section('content')
-<div class="container-fluid px-4 py-8 min-h-[80vh] flex flex-col items-center justify-center">
+<div class="w-full flex flex-col items-center py-12 px-4">
     <div class="max-w-5xl w-full">
         <div class="text-center mb-12">
             <h1 class="text-4xl font-black text-gray-900 tracking-tight uppercase mb-4">Initialize New Project</h1>
