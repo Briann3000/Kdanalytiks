@@ -14,12 +14,14 @@
     <!-- Inter Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
 
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Alpine.js -->
+    <!-- Alpine.js + Plugins -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     @stack('styles')
@@ -35,12 +37,14 @@
 
         /* Global Scaling */
         html {
-            font-size: 15px; /* Reduced for data-density */
+            font-size: 15px;
+            /* Reduced for data-density */
             font-family: 'Inter', sans-serif;
         }
 
         /* Prevent content cut-off */
-        html, body {
+        html,
+        body {
             height: 100%;
             margin: 0;
             padding: 0;
@@ -67,20 +71,24 @@
             -webkit-overflow-scrolling: touch;
             width: 100%;
         }
-        
+
         @media (max-width: 640px) {
             .mobile-stack {
                 flex-direction: column;
             }
+
             .mobile-hide {
                 display: none;
             }
+
             .mobile-padding {
                 padding-left: 1rem;
                 padding-right: 1rem;
             }
+
             main {
-                padding-bottom: 80px; /* Space for chatbot button */
+                padding-bottom: 80px;
+                /* Space for chatbot button */
             }
         }
 
@@ -91,6 +99,7 @@
             opacity: 0;
             overflow: hidden;
         }
+
         #mobile-menu.open {
             max-height: 500px;
             opacity: 1;
@@ -107,19 +116,51 @@
         .workspace-layout {
             display: flex;
             height: calc(100vh - 4rem);
-            overflow: hidden; /* Prevent body/layout scroll */
+            overflow: hidden;
+            /* Prevent body/layout scroll */
             position: relative;
         }
 
         .sidebar-pane {
-            width: 150px;
+            width: 200px;
             background: white;
             border-right: 1px solid #e5e7eb;
             display: flex;
             flex-direction: column;
-            z-index: 40;
+            z-index: 100;
+            /* High z-index to stay above content */
             flex-shrink: 0;
-            overflow-y: auto; /* Internal scroll if needed */
+            overflow: visible !important;
+            /* CRITICAL: Allow flyouts to overflow the container */
+            position: relative;
+        }
+
+        /* Essential logic for flyouts */
+        .flyout-menu {
+            position: absolute;
+            left: 100%;
+            top: 0;
+            width: 180px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            box-shadow: 10px 0 20px rgba(0, 0, 0, 0.08);
+            /* Stronger shadow for depth */
+            display: none;
+            z-index: 110;
+            /* Higher than sidebar-pane */
+            border-radius: 0 0.5rem 0.5rem 0;
+            overflow: visible;
+        }
+
+        .sidebar-item:hover .flyout-menu {
+            display: block;
+        }
+
+        /* Basic submenu indentation */
+        .sidebar-submenu {
+            padding-left: 1.5rem;
+            margin-top: 0.25rem;
+            border-left: 1px solid #f3f4f6;
         }
 
         .content-pane {
@@ -129,7 +170,8 @@
             min-width: 0;
             background: #fdfdfd;
             position: relative;
-            overflow-y: auto; /* ONLY the content area scrolls */
+            overflow-y: auto;
+            /* ONLY the content area scrolls */
         }
 
         @media (max-width: 1023px) {
@@ -150,22 +192,27 @@
         .sidebar-nav {
             flex: 1;
             overflow-y: auto;
+            overflow: visible;
             padding: 1.5rem 1rem;
         }
 
         /* Custom Scrollbar Helper */
         .custom-scrollbar::-webkit-scrollbar {
-            width: 8px; /* Increased for better interaction */
+            width: 8px;
+            /* Increased for better interaction */
         }
+
         .custom-scrollbar::-webkit-scrollbar-track {
             background: #f1f1f1;
             border-radius: 10px;
         }
+
         .custom-scrollbar::-webkit-scrollbar-thumb {
             background: #d1d5db;
             border-radius: 10px;
             border: 2px solid #f1f1f1;
         }
+
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #9ca3af;
         }
@@ -192,27 +239,31 @@
                             @php
                                 $isReportPage = request()->routeIs('surveys.report', 'surveys.responses') || request()->is('*/report', '*/responses*');
                             @endphp
-                            
+
                             <!-- Main Sidebar Toggle -->
-                            <button type="button" @click="desktopSidebarOpen = !desktopSidebarOpen" onclick="if(window.innerWidth < 1024) toggleSidebar()"
+                            <button type="button" @click="desktopSidebarOpen = !desktopSidebarOpen"
+                                onclick="if(window.innerWidth < 1024) toggleSidebar()"
                                 class="mr-3 p-2 rounded-xl bg-slate-50 border border-slate-200 text-indigo-700 hover:bg-slate-100 hover:border-slate-300 shadow-sm transition-all flex items-center justify-center w-10 h-10 group">
-                                <i class="fa-solid fa-bars-staggered text-lg group-hover:scale-110 transition-transform" :class="desktopSidebarOpen ? 'rotate-0' : 'rotate-180'"></i>
+                                <i class="fa-solid fa-bars-staggered text-lg group-hover:scale-110 transition-transform"
+                                    :class="desktopSidebarOpen ? 'rotate-0' : 'rotate-180'"></i>
                             </button>
                         @endauth
 
                         <div class="flex-shrink-0 flex items-center">
-                            <a href="{{ url('/') }}" class="text-xl font-black text-indigo-700 flex items-center tracking-tighter">
+                            <a href="{{ url('/') }}"
+                                class="text-xl font-black text-indigo-700 flex items-center tracking-tighter">
                                 <i class="fa-solid fa-square-poll-vertical mr-2"></i>
                                 <span>KMSurveyTool</span>
                             </a>
                         </div>
-                        
+
                         <!-- Desktop Nav Links -->
                         @auth
                             <div class="hidden sm:ml-8 sm:flex sm:items-center">
                                 @php
                                     $roleValNav = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
                                 @endphp
+
                                 <a href="{{ route($roleValNav . '.dashboard') }}"
                                     class="text-gray-500 hover:text-indigo-700 px-3 py-2 text-sm font-bold transition-colors">
                                     Dashboard
@@ -234,10 +285,12 @@
                                         $displayName = auth()->user()->independent->name;
                                     }
                                 @endphp
-                                <span class="text-sm text-gray-600 mr-4">Welcome, <span class="font-medium text-gray-900">{{ $displayName }}</span></span>
+                                <span class="text-sm text-gray-600 mr-4">Welcome, <span
+                                        class="font-medium text-gray-900">{{ $displayName }}</span></span>
                                 <form method="POST" action="{{ route('logout') }}">
                                     @csrf
-                                    <button type="submit" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-all font-black text-[11px] uppercase tracking-widest">
+                                    <button type="submit"
+                                        class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-all font-black text-[11px] uppercase tracking-widest">
                                         <i class="fa-solid fa-power-off"></i> Logout
                                     </button>
                                 </form>
@@ -245,13 +298,15 @@
 
                             <!-- Mobile menu button -->
                             <div class="flex items-center sm:hidden">
-                                <button type="button" onclick="toggleMobileMenu()" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500">
+                                <button type="button" onclick="toggleMobileMenu()"
+                                    class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500">
                                     <span class="sr-only">Open main menu</span>
                                     <i class="fa-solid fa-bars text-xl" id="menu-icon"></i>
                                 </button>
                             </div>
                         @else
-                            <a href="{{ route('login') }}" class="text-sm font-bold text-indigo-600 hover:text-indigo-500">Sign In</a>
+                            <a href="{{ route('login') }}"
+                                class="text-sm font-bold text-indigo-600 hover:text-indigo-500">Sign In</a>
                         @endauth
                     </div>
                 </div>
@@ -275,7 +330,8 @@
                         <div class="mt-4 pt-4 border-t border-gray-100">
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
-                                <button type="submit" class="flex items-center w-full px-3 py-2 text-base font-bold text-red-600 hover:bg-red-50 rounded-md">
+                                <button type="submit"
+                                    class="flex items-center w-full px-3 py-2 text-base font-bold text-red-600 hover:bg-red-50 rounded-md">
                                     <i class="fa-solid fa-right-from-bracket mr-3"></i> Sign Out
                                 </button>
                             </form>
@@ -285,16 +341,12 @@
             </div>
         </nav>
 
-        @auth
-            @php
-                // Show sidebar for all authenticated pages except specific full-width ones (like taking a survey)
-                // Also explicitly hide on landing, login, register
-                $excludedRoutes = ['home', 'login', 'register', 'login.role', 'password.request', 'password.reset', 'surveys.show', 'surveys.submit'];
-                $isWorkspace = !request()->routeIs($excludedRoutes);
-            @endphp
-        @else
-            @php $isWorkspace = false; @endphp
-        @endauth
+        @php
+            // Show sidebar for all authenticated pages except specific full-width ones (like taking a survey)
+            // Also explicitly hide on landing, login, register
+            $excludedRoutes = ['home', 'login', 'register', 'login.role', 'password.request', 'password.reset', 'surveys.show', 'surveys.submit'];
+            $isWorkspace = !request()->routeIs($excludedRoutes);
+        @endphp
 
         @if($isWorkspace || View::hasSection('sidebar'))
             <div class="workspace-layout">
@@ -347,6 +399,7 @@
     <x-agent-ui />
 
     @stack('scripts')
+
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.store('workspace', {
@@ -372,7 +425,7 @@
             const menu = document.getElementById('mobile-menu');
             const icon = document.getElementById('menu-icon');
             const isOpen = menu.classList.contains('open');
-            
+
             if (isOpen) {
                 menu.classList.remove('open');
                 icon.classList.remove('fa-xmark');
@@ -388,7 +441,7 @@
             const sidebar = document.getElementById('sidebar-pane');
             const overlay = document.getElementById('sidebar-overlay');
             const icon = document.getElementById('sidebar-toggle-icon');
-            
+
             if (sidebar.classList.contains('open')) {
                 sidebar.classList.remove('open');
                 overlay.classList.remove('open');
