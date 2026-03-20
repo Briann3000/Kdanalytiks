@@ -1,234 +1,186 @@
 @extends('layouts.app')
 
-@section('title', 'Manage Surveys')
+@section('title', 'Survey Inventory - Admin')
 
 @section('content')
-@php /** @var \Illuminate\Pagination\LengthAwarePaginator $surveys */ @endphp
-<div class="px-4 sm:px-0">
-    <div class="flex items-center justify-between mb-8">
-        <div>
-            <h2 class="text-2xl font-bold text-gray-900 leading-tight">Survey Management</h2>
-            <p class="mt-1 text-sm text-gray-500">Oversee all surveys across the platform.</p>
-        </div>
-        <div>
-            <a href="{{ route('admin.surveys.create') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">
-                <i class="fa-solid fa-plus mr-2"></i> Create New Survey
-            </a>
-        </div>
+<div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-8">
+        <h1 class="text-2xl font-black text-gray-900 tracking-tight uppercase">Survey Inventory</h1>
+        <p class="text-sm text-gray-500 font-medium">Manage and monitor all surveys across the platform.</p>
     </div>
 
     <!-- Filters -->
-    <div class="bg-white shadow rounded-lg border border-gray-100 p-6 mb-8">
-        <form action="{{ route('admin.surveys.index') }}" method="GET" class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-            <div class="sm:col-span-4">
-                <label for="search" class="block text-sm font-medium text-gray-700">Search</label>
-                <div class="mt-1 relative rounded-md shadow-sm">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
-                    </div>
-                    <input type="text" name="search" id="search" value="{{ request('search') }}" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md" placeholder="Survey title...">
-                </div>
+    <div class="bg-white p-6 rounded-lg border border-gray-100 shadow-sm mb-8">
+        <form action="{{ route('admin.surveys.index') }}" method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</label>
+                <select name="status" class="w-full text-xs font-bold border-gray-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="">All Statuses</option>
+                    @foreach(collect(\App\Enums\SurveyStatus::cases())->sortBy(fn($s) => strtoupper(str_replace('_', ' ', $s->value))) as $status)
+                        <option value="{{ $status->value }}" {{ request('status') == $status->value ? 'selected' : '' }}>{{ strtoupper(str_replace('_', ' ', $status->value)) }}</option>
+                    @endforeach
+                </select>
             </div>
-
-            <div class="sm:col-span-2 flex items-end">
-                <button type="submit" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Search Surveys
+            <div>
+                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Category</label>
+                <select name="category" class="w-full text-xs font-bold border-gray-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="">All Categories</option>
+                    @foreach(collect(\App\Enums\SurveyCategory::cases())->sortBy('value') as $cat)
+                        <option value="{{ $cat->value }}" {{ request('category') == $cat->value ? 'selected' : '' }}>{{ $cat->value }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Source</label>
+                <select name="source" class="w-full text-xs font-bold border-gray-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="">All Sources</option>
+                    <option value="admin" {{ request('source') == 'admin' ? 'selected' : '' }}>ADMIN</option>
+                    <option value="independent" {{ request('source') == 'independent' ? 'selected' : '' }}>INDEPENDENT</option>
+                    <option value="organization" {{ request('source') == 'organization' ? 'selected' : '' }}>ORGANIZATION</option>
+                </select>
+            </div>
+            <div class="md:col-span-1">
+                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Search</label>
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Title or Owner..." class="w-full text-xs font-bold border-gray-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-black rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-all uppercase tracking-wider">
+                    Filter
                 </button>
             </div>
         </form>
     </div>
 
     <!-- Surveys Table -->
-    <div class="bg-white shadow rounded-lg border border-gray-100 overflow-hidden mb-8">
-        <div class="table-container">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+    <div class="bg-white shadow-xl shadow-gray-100/50 rounded-xl border border-gray-100 overflow-hidden mb-8">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-100">
+                <thead class="bg-gray-50/50">
                     <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Survey Detail</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner / Creator</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responses</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Created</th>
-                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Survey Detail</th>
+                        <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Owner</th>
+                        <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Type</th>
+                        <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
+                        <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Responses</th>
+                        <th class="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
+                <tbody class="bg-white divide-y divide-gray-100">
                     @forelse($surveys as $survey)
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                    <tr class="hover:bg-gray-50/50 transition-colors group" x-data="{ deleted: false }" x-show="!deleted" x-transition.scale.origin.left.opacity.duration.500ms>
+                        <td class="px-6 py-4">
                             <div class="text-sm font-bold text-gray-900">{{ $survey->title }}</div>
-                            <div class="text-xs text-gray-500">{{ $survey->category }}</div>
+                            <div class="text-[10px] text-gray-400 font-black uppercase tracking-tighter">{{ $survey->category instanceof \BackedEnum ? $survey->category->value : $survey->category }}</div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-6 py-4">
                             @if($survey->organization)
                                 <div class="flex items-center">
-                                    <span class="flex-shrink-0 h-6 w-6 bg-green-100 rounded-full flex items-center justify-center mr-2">
-                                        <i class="fa-solid fa-building text-[10px] text-green-600"></i>
-                                    </span>
-                                    <span class="text-xs font-medium text-gray-900">{{ $survey->organization->name }}</span>
+                                    <div class="w-6 h-6 rounded-lg bg-green-50 text-green-600 flex items-center justify-center mr-2 border border-green-100">
+                                        <i class="fa-solid fa-building text-[10px]"></i>
+                                    </div>
+                                    <span class="text-xs font-bold text-gray-600">{{ $survey->organization->name }}</span>
                                 </div>
                             @elseif($survey->independent)
                                 <div class="flex items-center">
-                                    <span class="flex-shrink-0 h-6 w-6 bg-purple-100 rounded-full flex items-center justify-center mr-2">
-                                        <i class="fa-solid fa-user-graduate text-[10px] text-purple-600"></i>
-                                    </span>
-                                    <span class="text-xs font-medium text-gray-900">{{ $survey->independent->name }}</span>
+                                    <div class="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center mr-2 border border-purple-100">
+                                        <i class="fa-solid fa-user-graduate text-[10px]"></i>
+                                    </div>
+                                    <span class="text-xs font-bold text-gray-600">{{ $survey->independent->name }}</span>
                                 </div>
                             @else
-                                <span class="text-xs text-gray-400 italic">Platform Admin</span>
+                                <span class="text-[10px] font-black text-gray-300 uppercase italic">Platform Admin</span>
                             @endif
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 uppercase tracking-wider">
-                                {{ ucfirst($survey->type instanceof \BackedEnum ? $survey->type->value : $survey->type) }}
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 bg-gray-100 text-gray-500 rounded text-[10px] font-black uppercase tracking-widest">
+                                {{ $survey->type instanceof \BackedEnum ? $survey->type->value : $survey->type }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-6 py-4">
                             @php 
                                 $statusVal = $survey->status instanceof \BackedEnum ? $survey->status->value : $survey->status; 
-                                $statusLabel = $statusVal === 'pending_approval' ? 'Pending Approval' : ucfirst($statusVal);
                             @endphp
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusVal === 'active' ? 'bg-green-100 text-green-800' : ($statusVal === 'pending_approval' ? 'bg-yellow-100 text-yellow-800' : ($statusVal === 'draft' ? 'bg-gray-100 text-gray-800' : 'bg-red-100 text-red-800')) }}">
-                                {{ $statusLabel }}
+                            <span class="px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest
+                                {{ $statusVal === 'active' ? 'bg-emerald-50 text-emerald-600' : ($statusVal === 'pending_approval' ? 'bg-amber-50 text-amber-600' : 'bg-gray-100 text-gray-400') }}">
+                                {{ str_replace('_', ' ', $statusVal) }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-bold text-indigo-600">
-                                @if(($survey->responses_count ?? 0) > 0)
-                                    <a href="{{ route('surveys.report', $survey) }}" class="hover:underline hover:text-indigo-900" title="View Question Analysis">
-                                        {{ $survey->responses_count }} <i class="fa-solid fa-chart-pie ml-1 text-[10px]"></i>
-                                    </a>
-                                @else
-                                    0
-                                @endif
-                            </div>
+                        <td class="px-6 py-4 text-sm font-bold text-indigo-600">
+                            {{ $survey->responses_count }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
-                            {{ $survey->created_at->format('M d, Y') }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div class="flex flex-wrap items-center justify-end gap-2">
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end gap-2">
                                 @if($statusVal === 'pending_approval')
-                                    <form action="{{ route('admin.surveys.approve', $survey) }}" method="POST" class="inline-block">
+                                    <form action="{{ route('admin.surveys.approve', $survey) }}" method="POST">
                                         @csrf
-                                        <button type="submit" class="inline-flex items-center px-2 py-1 bg-green-50 text-green-700 rounded text-[10px] font-bold uppercase hover:bg-green-100 transition-colors">
-                                            <i class="fa-solid fa-check mr-1"></i> Approve
-                                        </button>
+                                        <button type="submit" class="px-2 py-1 bg-emerald-600 text-white rounded text-[10px] font-black uppercase hover:bg-emerald-700 transition-all">Approve</button>
                                     </form>
                                 @endif
-                                
-                                @if($statusVal === 'active')
-                                    <form action="{{ route('admin.surveys.deactivate', $survey) }}" method="POST" class="inline-block">
-                                        @csrf
-                                        <button type="submit" class="inline-flex items-center px-2 py-1 bg-red-50 text-red-700 rounded text-[10px] font-bold uppercase hover:bg-red-100 transition-colors">
-                                            <i class="fa-solid fa-ban mr-1"></i> Deactivate
-                                        </button>
-                                    </form>
-                                @elseif($statusVal === 'closed')
-                                     <form action="{{ route('admin.surveys.approve', $survey) }}" method="POST" class="inline-block">
-                                        @csrf
-                                        <button type="submit" class="inline-flex items-center px-2 py-1 bg-indigo-50 text-indigo-700 rounded text-[10px] font-bold uppercase hover:bg-indigo-100 transition-colors">
-                                            <i class="fa-solid fa-rotate-left mr-1"></i> Re-activate
-                                        </button>
-                                    </form>
-                                @endif
-
-                                @if($survey->created_by === auth()->id())
-                                    @if($statusVal === 'draft')
-                                        <form action="{{ route('surveys.publish', $survey) }}" method="POST" class="inline-block">
-                                            @csrf
-                                            <button type="submit" class="inline-flex items-center px-2 py-1 bg-indigo-50 text-indigo-700 rounded text-[10px] font-bold uppercase hover:bg-indigo-100 transition-colors">
-                                                <i class="fa-solid fa-paper-plane mr-1"></i> Publish
-                                            </button>
-                                        </form>
-                                    @endif
-                                    <button type="button" onclick="openInviteModal('{{ route('surveys.invite', $survey) }}', '{{ addslashes($survey->title) }}')" class="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 rounded text-[10px] font-bold uppercase hover:bg-blue-100 transition-colors">
-                                        <i class="fa-solid fa-envelope mr-1"></i> Invite
+                                <a href="{{ route('surveys.report', $survey) }}" class="w-7 h-7 bg-gray-50 text-gray-400 rounded-lg flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all">
+                                    <i class="fa-solid fa-chart-line text-[10px]"></i>
+                                </a>
+                                <form id="delete-form-{{ $survey->id }}" action="{{ route('surveys.destroy', $survey) }}" method="POST" class="hidden">
+                                    @csrf
+                                    @method('DELETE')
+                                </form>
+                                <div x-data="{ confirming: false }" class="inline-flex items-center gap-1">
+                                    <button type="button" 
+                                            x-show="!confirming"
+                                            @click.stop="confirming = true"
+                                            class="w-7 h-7 bg-red-50 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100" 
+                                            title="Delete permanently">
+                                        <i class="fa-solid fa-trash-can text-[10px]"></i>
                                     </button>
-                                    <a href="{{ route('surveys.edit', $survey) }}" class="inline-flex items-center px-2 py-1 bg-gray-50 text-gray-700 rounded text-[10px] font-bold uppercase hover:bg-gray-100 transition-colors">
-                                        <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
-                                    </a>
-                                    <form action="{{ route('surveys.destroy', $survey) }}" method="POST" class="inline-block" onsubmit="return confirm('Are you sure you want to delete this survey?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="inline-flex items-center px-2 py-1 bg-red-50 text-red-700 rounded text-[10px] font-bold uppercase hover:bg-red-100 transition-colors">
-                                            <i class="fa-solid fa-trash mr-1"></i> Delete
-                                        </button>
-                                    </form>
-                                @endif
+                                    <div x-show="confirming" class="flex items-center gap-1 animate-in fade-in slide-in-from-right-2 duration-200" style="display:none">
+                                        <span class="text-[9px] font-black text-red-600 uppercase tracking-tighter mr-1 shadow-sm px-1.5 border border-red-200 bg-red-50 rounded">SURE?</span>
+                                        <button type="button" 
+                                                @click.stop="
+                                                    console.log('AJAX Deleting Survey:', '{{ $survey->id }}');
+                                                    fetch('{{ route('surveys.destroy', $survey) }}', {
+                                                        method: 'POST',
+                                                        headers: {
+                                                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                                            'Content-Type': 'application/json',
+                                                            'Accept': 'application/json'
+                                                        },
+                                                        body: JSON.stringify({ _method: 'DELETE' })
+                                                    }).then(res => {
+                                                        if(res.ok) {
+                                                            deleted = true;
+                                                            console.log('AJAX Success for Survey:', '{{ $survey->id }}');
+                                                        } else {
+                                                            alert('Error - survey could not be deleted from server.');
+                                                        }
+                                                    });
+                                                "
+                                                class="px-2 py-1 bg-red-600 text-white rounded text-[10px] font-black uppercase hover:bg-red-700 shadow-sm">YES</button>
+                                        <button type="button" 
+                                                @click.stop="confirming = false"
+                                                class="px-2 py-1 bg-gray-100 text-gray-400 rounded text-[10px] font-black uppercase hover:bg-gray-200">NO</button>
+                                    </div>
+                                </div>
                             </div>
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="px-6 py-12 text-center text-gray-500 italic">No surveys found matching your criteria.</td>
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-400 italic font-medium">No surveys found.</td>
                     </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-        <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
-            {{ method_exists($surveys, 'withQueryString') ? $surveys->withQueryString()->links() : $surveys->links() }}
+        @if($surveys->hasPages())
+        <div class="bg-gray-50/50 px-6 py-4 border-t border-gray-100">
+            {{ $surveys->links() }}
         </div>
+        @endif
     </div>
 
-    <div class="mt-6">
-        <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
+    <div class="mt-6 pb-20">
+        <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center text-xs font-black text-gray-400 uppercase tracking-widest hover:text-indigo-600 transition-colors">
             <i class="fa-solid fa-arrow-left mr-2"></i> Back to Dashboard
         </a>
     </div>
 </div>
-
-<!-- Send Invitation Modal -->
-<div id="inviteModal" class="fixed z-10 inset-0 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeInviteModal()"></div>
-
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-        <div class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-            <div class="sm:flex sm:items-start">
-                <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 sm:mx-0 sm:h-10 sm:w-10">
-                    <i class="fa-solid fa-envelope text-indigo-600"></i>
-                </div>
-                <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                        Invite Participants
-                    </h3>
-                    <div class="mt-2">
-                        <p class="text-sm text-gray-500 mb-4">
-                            Send direct email invitations for "<span id="inviteSurveyTitle" class="font-bold"></span>". Separate multiple emails with commas.
-                        </p>
-                        <form id="inviteForm" method="POST" action="">
-                            @csrf
-                            <textarea name="emails" rows="4" required class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border border-gray-300 rounded-md p-2" placeholder="john@example.com, jane@example.com"></textarea>
-                            <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
-                                <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm">
-                                    Send Invitations
-                                </button>
-                                <button type="button" onclick="closeInviteModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm">
-                                    Cancel
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    function openInviteModal(actionUrl, title) {
-        document.getElementById('inviteSurveyTitle').innerText = title;
-        document.getElementById('inviteForm').action = actionUrl;
-        document.getElementById('inviteModal').classList.remove('hidden');
-    }
-
-    function closeInviteModal() {
-        document.getElementById('inviteModal').classList.add('hidden');
-    }
-</script>
 @endsection
