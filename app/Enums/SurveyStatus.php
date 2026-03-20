@@ -8,4 +8,5 @@ enum SurveyStatus: string
     case PendingApproval = 'pending_approval';
     case Active = 'active';
     case Closed = 'closed';
+    case Archived = 'archived';
 }

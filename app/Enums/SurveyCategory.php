@@ -8,6 +8,6 @@ enum SurveyCategory: string
     case Polls = 'polls';
     case MarketResearch = 'market_research';
     case Feasibility = 'feasibility';
-    case Social = 'social';
-    case Business = 'business';
+    case Baseline = 'baseline';
+    case Others = 'others';
 }

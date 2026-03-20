@@ -26,6 +26,7 @@ class Survey extends Model
     protected $casts = [
         'type' => \App\Enums\SurveyType::class,
         'status' => \App\Enums\SurveyStatus::class,
+        'category' => \App\Enums\SurveyCategory::class,
     ];
 
     public function organization(): BelongsTo
