@@ -5,7 +5,7 @@
 
     <div class="p-4 flex-grow overflow-y-auto custom-scrollbar">
         <div x-show="sidebarOpen" x-transition class="mb-6">
-            <h3 class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Workspace</h3>
+            <h3 class="text-[9px] font-black text-gray-400 tracking-[0.2em] mb-4">Reports</h3>
         </div>
 
         <!-- Vertical Label for Minimized State -->
