@@ -103,18 +103,50 @@ class AdminController extends Controller
 
     public function updateUserStatus(Request $request, User $user)
     {
+        $status = \App\Enums\UserStatus::tryFrom($request->status) ?? \App\Enums\UserStatus::Active;
+        $user->update(['status' => $status]);
+        return back()->with('success', "User {$user->name} status updated to {$status->value}.");
+    }
+
+    public function createUser()
+    {
+        $roles = \App\Enums\UserRole::cases();
+        return view('admin.users_create', compact('roles'));
+    }
+
+    public function storeUser(Request $request)
+    {
         $request->validate([
-            'status' => 'required|in:active,pending,suspended',
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'role' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
-        $user->update(['status' => $request->status]);
+        User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'role' => $request->role,
+            'password' => bcrypt($request->password),
+            'status' => \App\Enums\UserStatus::Active->value,
+        ]);
 
-        return back()->with('success', "User {$user->name} status updated to {$request->status}.");
+        return redirect()->route('admin.users.index')->with('success', 'User created successfully.');
     }
 
     public function surveys(Request $request)
     {
         $query = Survey::with(['organization', 'independent'])->withCount('responses');
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('source')) {
+            if ($request->source === 'organization') $query->whereNotNull('organization_id');
+            elseif ($request->source === 'independent') $query->whereNotNull('independent_id');
+            elseif ($request->source === 'admin') $query->whereNull('organization_id')->whereNull('independent_id');
+        }
 
         if ($request->filled('search')) {
             $query->where('title', 'like', "%{$request->search}%");

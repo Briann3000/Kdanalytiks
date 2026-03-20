@@ -10,9 +10,13 @@
                 <h2 class="text-2xl font-bold text-gray-900 leading-tight">User Management</h2>
                 <p class="mt-1 text-sm text-gray-500">Monitor and manage all system users and their access levels.</p>
             </div>
-            <div>
+            <div class="flex items-center space-x-3">
+                <a href="{{ route('admin.users.create') }}"
+                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-indigo-100">
+                    <i class="fa-solid fa-plus mr-2"></i> Create New User
+                </a>
                 <span
-                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600">
+                    class="inline-flex items-center px-4 py-2 border border-gray-200 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white">
                     Total: {{ $users->total() }} Users
                 </span>
             </div>
@@ -39,7 +43,7 @@
                     <select name="role" id="role"
                         class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
                         <option value="all">All Roles</option>
-                        @foreach(['admin', 'organization', 'independent', 'respondent'] as $r)
+                        @foreach(['admin', 'independent', 'organization', 'respondent'] as $r)
                             <option value="{{ $r }}" {{ request('role') == $r ? 'selected' : '' }}>{{ ucfirst($r) }}</option>
                         @endforeach
                     </select>
