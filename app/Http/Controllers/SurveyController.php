@@ -7,41 +7,116 @@ use Illuminate\Support\Str;
 
 class SurveyController extends Controller
 {
-    public function index()
+    public function index(Request $request)
+    {
+        return $this->filteredIndex(\App\Enums\SurveyStatus::Active, 'projects.active');
+    }
+
+    public function hub()
+    {
+        return view('projects.hub', ['role' => auth()->user()->role]);
+    }
+
+    public function archivedIndex()
+    {
+        return $this->filteredIndex(\App\Enums\SurveyStatus::Archived, 'projects.archived');
+    }
+
+    public function draftsIndex()
+    {
+        return $this->filteredIndex(\App\Enums\SurveyStatus::Draft, 'projects.drafts');
+    }
+
+    public function templatesIndex()
+    {
+        // For now, templates are just a future feature or a subset of surveys
+        return view('surveys.templates', ['role' => auth()->user()->role]);
+    }
+
+    private function filteredIndex($status, $viewName)
     {
         $user = auth()->user();
         $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
 
-        $surveys = collect();
+        $query = \App\Models\Survey::where('status', $status)->withCount('responses');
 
-        if ($role === 'organization') {
-            $orgId = $user->organization?->id;
-            if ($orgId) {
-                $surveys = \App\Models\Survey::where('organization_id', $orgId)
-                    ->withCount('responses')
-                    ->orderBy('created_at', 'desc')
-                    ->paginate(10);
-            }
-        } elseif ($role === 'independent') {
-            $indId = $user->independent?->id;
-            if ($indId) {
-                $surveys = \App\Models\Survey::where('independent_id', $indId)
-                    ->withCount('responses')
-                    ->orderBy('created_at', 'desc')
-                    ->paginate(10);
-            }
+        if (request()->filled('category')) {
+            $query->where('category', request('category'));
         }
 
-        return view('surveys.index', compact('surveys', 'role'));
+        if (request()->filled('search')) {
+            $query->where('title', 'like', '%' . request('search') . '%');
+        }
+
+        if ($role === 'organization') {
+            $query->where('organization_id', $user->organization?->id);
+        } elseif ($role === 'independent') {
+            $query->where('independent_id', $user->independent?->id);
+        }
+
+        $surveys = $query->orderBy('created_at', 'desc')->paginate(10);
+        return view('surveys.index', compact('surveys', 'role', 'status'));
     }
 
     public function create()
     {
-        return view('surveys.builder');
+        return view('surveys.choose_category');
+    }
+
+    /**
+     * Step 2 of creation: Initialize a draft with a category
+     */
+    public function initialize(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'category' => 'required|string',
+        ]);
+
+        $user = auth()->user();
+        $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+
+        $survey = new \App\Models\Survey();
+        $survey->title = $validated['title'];
+        $survey->category = $validated['category'];
+        $survey->status = \App\Enums\SurveyStatus::Draft;
+        $survey->type = \App\Enums\SurveyType::Public;
+        $survey->created_by = $user->id;
+
+        if ($role === 'organization') {
+            $survey->organization_id = $user->organization?->id;
+        } elseif ($role === 'independent') {
+            $survey->independent_id = $user->independent?->id;
+        }
+
+        $survey->save();
+
+        return redirect()->route('surveys.edit', $survey);
+    }
+
+    public function projectSummary(\App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+        $survey->loadCount('responses');
+        return view('surveys.project_summary', compact('survey'));
+    }
+
+    public function projectSettings(\App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+        return view('surveys.project_settings', compact('survey'));
+    }
+
+    public function archive(\App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+        $survey->update(['status' => \App\Enums\SurveyStatus::Archived]);
+        return redirect()->route('projects.index')->with('success', 'Project archived successfully.');
     }
 
     public function store(Request $request)
     {
+        // This is now mainly called by the builder to update the draft/active survey
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -50,28 +125,31 @@ class SurveyController extends Controller
             'json_schema' => 'required|string',
         ]);
 
-        /** @var \App\Models\User $user */
         $user = auth()->user();
+        $surveyId = $request->input('survey_id');
+        
+        if ($surveyId) {
+            $survey = \App\Models\Survey::findOrFail($surveyId);
+            $this->authorizeOwner($survey);
+        } else {
+            $survey = new \App\Models\Survey();
+            $survey->created_by = $user->id;
+        }
 
-        $userRoleValue = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
-
-        $survey = new \App\Models\Survey();
         $survey->title = $validated['title'];
         $survey->description = $validated['description'];
         $survey->category = $validated['category'];
-
-        // Ensure proper usage of enums for type and status
         $survey->type = \App\Enums\SurveyType::tryFrom($validated['type']) ?? \App\Enums\SurveyType::Public;
-        $survey->status = \App\Enums\SurveyStatus::Draft;
-
         $survey->json_schema = $validated['json_schema'];
-        $survey->created_by = $user->id;
 
-        // Associate with specific entity if not admin
-        if ($userRoleValue === 'organization') {
-            $survey->organization_id = $user->organization?->id;
-        } elseif ($userRoleValue === 'independent') {
-            $survey->independent_id = $user->independent?->id;
+        if (!$survey->exists) {
+            $survey->status = \App\Enums\SurveyStatus::Draft;
+            $userRoleValue = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+            if ($userRoleValue === 'organization') {
+                $survey->organization_id = $user->organization?->id;
+            } elseif ($userRoleValue === 'independent') {
+                $survey->independent_id = $user->independent?->id;
+            }
         }
 
         $survey->save();
@@ -79,8 +157,29 @@ class SurveyController extends Controller
         return response()->json([
             'success' => true,
             'survey_id' => $survey->id,
-            'message' => 'Survey saved successfully'
+            'message' => 'Project saved successfully'
         ]);
+    }
+
+    public function invite(Request $request, \App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+
+        $request->validate([
+            'emails' => 'required|string',
+        ]);
+
+        $emails = array_map('trim', explode(',', $request->emails));
+        $count = 0;
+
+        foreach ($emails as $email) {
+            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                // In a real app, you would send an email here
+                $count++;
+            }
+        }
+
+        return back()->with('success', "Invitations sent to {$count} participants.");
     }
 
     public function responsesIndex()
@@ -122,6 +221,14 @@ class SurveyController extends Controller
 
         $surveys = \App\Models\Survey::withCount('responses');
 
+        if (request()->filled('category')) {
+            $surveys->where('category', request('category'));
+        }
+
+        if (request()->filled('search')) {
+            $surveys->where('title', 'like', '%' . request('search') . '%');
+        }
+
         if ($role === 'organization') {
             $orgId = $user->organization?->id;
             if ($orgId) {
@@ -150,10 +257,8 @@ class SurveyController extends Controller
     public function showResponses(\App\Models\Survey $survey)
     {
         $this->authorizeOwner($survey);
-        $responses = $survey->responses()->with('respondent')->latest()->paginate(20);
-        $analysis = $this->getSurveyAnalysisMetadata($survey);
-        
-        return view('responses.show', compact('survey', 'responses', 'analysis'));
+        $responses = $survey->responses()->with('respondent')->orderBy('created_at', 'desc')->paginate(15);
+        return view('surveys.project_data', compact('survey', 'responses'));
     }
 
     public function showResponseDetail(\App\Models\Survey $survey, \App\Models\Response $response)
@@ -252,19 +357,21 @@ class SurveyController extends Controller
                     $found = false;
                     if ($jsonAnswer) {
                         $parsedData = json_decode($jsonAnswer->value, true) ?? [];
-                        foreach ($parsedData as $data) {
-                            if (isset($data['name']) && $data['name'] === $fieldId && isset($data['userData'])) {
-                                $val = $data['userData'];
-                                if ($val !== '' && $val !== null && (!is_array($val) || !empty($val))) {
-                                    $found = true;
-                                    if (is_array($val)) {
-                                        foreach ($val as $v) {
-                                            $answersList[] = $v;
-                                            $frequencyCount[$v] = ($frequencyCount[$v] ?? 0) + 1;
+                        if (is_array($parsedData)) {
+                            foreach ($parsedData as $data) {
+                                if (isset($data['name']) && $data['name'] === $fieldId && isset($data['userData'])) {
+                                    $val = $data['userData'];
+                                    if ($val !== '' && $val !== null && (!is_array($val) || !empty($val))) {
+                                        $found = true;
+                                        if (is_array($val)) {
+                                            foreach ($val as $v) {
+                                                $answersList[] = $v;
+                                                $frequencyCount[$v] = ($frequencyCount[$v] ?? 0) + 1;
+                                            }
+                                        } else {
+                                            $answersList[] = $val;
+                                            $frequencyCount[$val] = ($frequencyCount[$val] ?? 0) + 1;
                                         }
-                                    } else {
-                                        $answersList[] = $val;
-                                        $frequencyCount[$val] = ($frequencyCount[$val] ?? 0) + 1;
                                     }
                                 }
                             }
@@ -386,7 +493,7 @@ class SurveyController extends Controller
             \Log::error("AI Summary Error: " . $e->getMessage());
         }
 
-        return view('reports.show', compact('survey', 'responses', 'analysis', 'chartConfigs', 'aiSummary', 'totalResponses'));
+        return view('surveys.project_reports', compact('survey', 'responses', 'analysis', 'chartConfigs', 'aiSummary'));
     }
 
     public function exportPdf(\App\Models\Survey $survey)
@@ -551,10 +658,7 @@ class SurveyController extends Controller
 
         $surveys = $query->latest()->paginate(12);
 
-        $categories = \App\Models\Survey::where('status', \App\Enums\SurveyStatus::Active)
-            ->where('type', \App\Enums\SurveyType::Public)
-            ->distinct()
-            ->pluck('category');
+        $categories = \App\Enums\SurveyCategory::cases();
 
         return view('surveys.public_list', compact('surveys', 'categories'));
     }

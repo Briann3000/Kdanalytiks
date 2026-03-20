@@ -147,6 +147,8 @@ Route::post('/surveys/{survey}/invite', [SurveyController::class, 'invite'])->na
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/users', [\App\Http\Controllers\AdminController::class, 'users'])->name('users.index');
+    Route::get('/users/create', [\App\Http\Controllers\AdminController::class, 'createUser'])->name('users.create');
+    Route::post('/users/store', [\App\Http\Controllers\AdminController::class, 'storeUser'])->name('users.store');
     Route::post('/users/{user}/status', [\App\Http\Controllers\AdminController::class, 'updateUserStatus'])->name('users.status');
     Route::get('/surveys', [\App\Http\Controllers\AdminController::class, 'surveys'])->name('surveys.index');
 
