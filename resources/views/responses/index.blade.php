@@ -6,7 +6,7 @@
         <p class="mt-1 text-sm text-gray-500">View all responses collected across your surveys.</p>
     </div>
 
-    <div class="bg-white shadow overflow-hidden sm:rounded-md">
+    <div class="bg-white shadow sm:rounded-md">
         @if ($responses->count() > 0)
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">

@@ -19,16 +19,16 @@
         <div class="mb-8">
             <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Quick Actions</h3>
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-5">
-                <a href="{{ route($role . '.surveys.create') }}"
+                <a href="{{ route('surveys.create') }}"
                     class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-indigo-500 hover:ring-1 hover:ring-indigo-500 transition-all">
                     <div
                         class="w-12 h-12 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors mb-3">
                         <i class="fa-solid fa-plus text-xl"></i>
                     </div>
-                    <span class="text-sm font-medium text-gray-900">Create Survey</span>
+                    <span class="text-sm font-medium text-gray-900">Create Project</span>
                 </a>
 
-                <a href="{{ route($role . '.surveys.index') }}"
+                <a href="{{ route('projects.active') }}"
                     class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-blue-500 hover:ring-1 hover:ring-blue-500 transition-all">
                     <div
                         class="w-12 h-12 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors mb-3">
@@ -120,7 +120,7 @@
             </div>
             <div class="bg-gray-50 px-5 py-3 text-xs">
                 @if(in_array($role, ['organization', 'independent']))
-                    <a href="{{ route($role . '.surveys.index') }}" class="font-bold text-indigo-600 hover:text-indigo-500">
+                    <a href="{{ route('projects.active') }}" class="font-bold text-indigo-600 hover:text-indigo-500">
                         Manage surveys <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i></a>
                 @else
                     <a href="{{ route('surveys.public') }}" class="font-bold text-indigo-600 hover:text-indigo-500"> Browse all
@@ -191,8 +191,8 @@
                 @if($role === 'respondent')
                     <span class="text-gray-400 font-medium italic">Check email for invites</span>
                 @else
-                    <a href="{{ route($role . '.surveys.index') }}" class="font-bold text-yellow-600 hover:text-yellow-500">
-                        Publish drafts <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
+                    <a href="{{ route('projects.active') }}" class="font-bold text-yellow-600 hover:text-yellow-500">
+                        Manage drafts <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
                     </a>
                 @endif
             </div>
@@ -249,7 +249,7 @@
                                     </div>
                                     <div class="pt-4 border-t border-gray-100 flex justify-between items-center">
                                         <span class="text-[10px] text-gray-300 font-bold uppercase">Activity Log #{{ $activity->id }}</span>
-                                        <a href="{{ route($role . '.surveys.index') }}" class="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase flex items-center">
+                                        <a href="{{ route('projects.active') }}" class="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase flex items-center">
                                             Manage <i class="fa-solid fa-chevron-right ml-1 text-[8px]"></i>
                                         </a>
                                     </div>

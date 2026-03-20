@@ -29,16 +29,10 @@
                             'desc' => 'Thematic research focusing on academic rigor, hypotheses, and peer-reviewed standards.',
                             'color' => 'indigo'
                         ],
-                        'polls' => [
-                            'icon' => 'fa-square-poll-vertical',
-                            'label' => 'Standard Polls',
-                            'desc' => 'Quick sentiment tracking or public opinion voting on specific, single-focused topics.',
-                            'color' => 'blue'
-                        ],
-                        'market_research' => [
-                            'icon' => 'fa-chart-line',
-                            'label' => 'Market Research',
-                            'desc' => 'Consumer behavior analysis, brand positioning, and competitive market landscape.',
+                        'baseline' => [
+                            'icon' => 'fa-clipboard-list',
+                            'label' => 'Baseline Survey',
+                            'desc' => 'Initial assessment for monitoring and evaluation of programs.',
                             'color' => 'emerald'
                         ],
                         'feasibility' => [
@@ -47,17 +41,23 @@
                             'desc' => 'Assessing viability of new projects, business ideas, or technical implementations.',
                             'color' => 'amber'
                         ],
-                        'social' => [
-                            'icon' => 'fa-people-group',
-                            'label' => 'Social Research',
-                            'desc' => 'NGO impact assessments, community needs, and sociological behavioral studies.',
-                            'color' => 'rose'
+                        'market_research' => [
+                            'icon' => 'fa-chart-line',
+                            'label' => 'Market Research',
+                            'desc' => 'Consumer behavior analysis, brand positioning, and competitive market landscape.',
+                            'color' => 'blue'
                         ],
-                        'business' => [
-                            'icon' => 'fa-briefcase',
-                            'label' => 'Business Operations',
-                            'desc' => 'Employee NPS, operational efficiency reviews, and internal organizational feedback.',
+                        'others' => [
+                            'icon' => 'fa-folder-open',
+                            'label' => 'Others',
+                            'desc' => 'General purpose data collection for miscellaneous research needs.',
                             'color' => 'slate'
+                        ],
+                        'polls' => [
+                            'icon' => 'fa-square-poll-vertical',
+                            'label' => 'Standard Polls',
+                            'desc' => 'Quick sentiment tracking or public opinion voting on specific, single-focused topics.',
+                            'color' => 'rose'
                         ],
                     ];
                 @endphp

@@ -126,7 +126,7 @@
                         <i class="fa-solid fa-list-check text-2xl text-gray-400 group-hover:text-blue-600 mb-2"></i>
                         <span class="text-sm font-bold text-gray-700 group-hover:text-blue-900">Manage Surveys</span>
                     </a>
-                    <a href="{{ route('admin.surveys.create') }}"
+                    <a href="{{ route('surveys.create') }}"
                         class="flex flex-col items-center justify-center p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-green-50 hover:border-green-200 transition-all group">
                         <i class="fa-solid fa-plus-circle text-2xl text-gray-400 group-hover:text-green-600 mb-2"></i>
                         <span class="text-sm font-bold text-gray-700 group-hover:text-green-900">Create Survey</span>
