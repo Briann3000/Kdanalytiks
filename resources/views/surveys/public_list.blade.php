@@ -36,29 +36,35 @@
             class="fa-solid fa-square-poll-vertical absolute right-8 bottom-[-20px] text-[240px] text-gray-50 transform rotate-6 pointer-events-none"></i>
     </div>
 
-    <div class="mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="md:col-span-3">
-            <form action="{{ route('surveys.public') }}" method="GET" class="relative group">
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search surveys by title..."
-                    class="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all shadow-sm group-hover:shadow-md">
-                <i
-                    class="fa-solid fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-hover:text-indigo-500 transition-colors"></i>
-                @if(request('category'))
-                    <input type="hidden" name="category" value="{{ request('category') }}">
-                @endif
-            </form>
-        </div>
-        <div class="md:col-span-1">
-            <select onchange="window.location.href=this.value"
-                class="w-full px-4 py-4 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm cursor-pointer">
-                <option value="{{ route('surveys.public', ['search' => request('search')]) }}">All Categories</option>
-                @foreach($categories as $category)
-                    <option value="{{ route('surveys.public', ['category' => $category, 'search' => request('search')]) }}" {{ request('category') == $category ? 'selected' : '' }}>
-                        {{ $category }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
+    <div class="mb-8 bg-white/50 backdrop-blur-sm p-4 rounded-3xl border border-gray-100 shadow-sm">
+        <form action="{{ route('surveys.public') }}" method="GET" class="flex flex-col md:flex-row gap-4 items-center">
+            <div class="relative w-full md:w-96 group">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 group-focus-within:text-indigo-600 transition-colors"></i>
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by title..." 
+                       class="w-full pl-12 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all shadow-sm">
+            </div>
+            <div class="relative w-full md:w-64 group">
+                <i class="fa-solid fa-filter absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 group-focus-within:text-indigo-600 transition-colors"></i>
+                <select name="category" 
+                        class="w-full pl-12 pr-10 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 appearance-none transition-all shadow-sm">
+                    <option value="">All Categories</option>
+                    @foreach($categories as $category)
+                        @php $val = $category instanceof \BackedEnum ? $category->value : $category; @endphp
+                        <option value="{{ $val }}" {{ request('category') === $val ? 'selected' : '' }}>
+                            {{ ucfirst(str_replace('_', ' ', $val)) }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <button type="submit" class="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">
+                Filter
+            </button>
+            @if(request()->anyFilled(['search', 'category']))
+                <a href="{{ route('surveys.public') }}" class="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-red-500 transition-colors">
+                    Clear
+                </a>
+            @endif
+        </form>
     </div>
 
     @if($surveys->count() > 0)

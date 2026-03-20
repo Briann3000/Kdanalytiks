@@ -29,16 +29,10 @@
                         'desc' => 'Thematic research focusing on academic rigor and peer-reviewed standards.',
                         'color' => 'indigo'
                     ],
-                    'polls' => [
-                        'icon' => 'fa-square-poll-vertical',
-                        'label' => 'Standard Polls',
-                        'desc' => 'Quick sentiment tracking or public opinion voting on specific topics.',
-                        'color' => 'blue'
-                    ],
-                    'market_research' => [
-                        'icon' => 'fa-chart-line',
-                        'label' => 'Market Research',
-                        'desc' => 'Consumer behavior analysis, brand positioning, and market landscape.',
+                    'baseline' => [
+                        'icon' => 'fa-clipboard-list',
+                        'label' => 'Baseline Survey',
+                        'desc' => 'Initial assessment for monitoring and evaluation of programs.',
                         'color' => 'emerald'
                     ],
                     'feasibility' => [
@@ -47,10 +41,22 @@
                         'desc' => 'Assessing viability of new projects or technical implementations.',
                         'color' => 'amber'
                     ],
-                    'social' => [
-                        'icon' => 'fa-people-group',
-                        'label' => 'Social Research',
-                        'desc' => 'NGO impact assessments and community needs studies.',
+                    'market_research' => [
+                        'icon' => 'fa-chart-line',
+                        'label' => 'Market Research',
+                        'desc' => 'Consumer behavior analysis, brand positioning, and market landscape.',
+                        'color' => 'blue'
+                    ],
+                    'others' => [
+                        'icon' => 'fa-folder-open',
+                        'label' => 'Others',
+                        'desc' => 'General purpose data collection for miscellaneous research needs.',
+                        'color' => 'slate'
+                    ],
+                    'polls' => [
+                        'icon' => 'fa-square-poll-vertical',
+                        'label' => 'Standard Polls',
+                        'desc' => 'Quick sentiment tracking or public opinion voting on specific topics.',
                         'color' => 'rose'
                     ],
                 ];

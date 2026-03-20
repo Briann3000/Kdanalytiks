@@ -27,7 +27,7 @@
                 </div>
                 <div class="hidden sm:block">
                     <span class="inline-flex items-center px-4 py-2 rounded-full text-xs font-bold bg-white/10 text-white border border-white/20 backdrop-blur-sm">
-                        <i class="fa-solid fa-tag mr-2"></i> {{ ucfirst($survey->category ?? 'General') }}
+                        <i class="fa-solid fa-tag mr-2"></i> {{ ucfirst($survey->category instanceof \BackedEnum ? $survey->category->value : ($survey->category ?? 'General')) }}
                     </span>
                 </div>
             </div>
