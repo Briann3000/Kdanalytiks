@@ -19,15 +19,26 @@ class Survey extends Model
         'category',
         'type',
         'status',
+        'is_template',
         'json_schema',
         'created_by',
+        'is_anonymous',
+        'public_access',
+        'share_token',
     ];
 
     protected $casts = [
         'type' => \App\Enums\SurveyType::class,
         'status' => \App\Enums\SurveyStatus::class,
         'category' => \App\Enums\SurveyCategory::class,
+        'is_template' => 'boolean',
+        'is_anonymous' => 'boolean',
     ];
+
+    public function collaborators(): HasMany
+    {
+        return $this->hasMany(SurveyPermission::class);
+    }
 
     public function organization(): BelongsTo
     {
