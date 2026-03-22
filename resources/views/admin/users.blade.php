@@ -54,7 +54,7 @@
                     <select name="status" id="status"
                         class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
                         <option value="all">All Status</option>
-                        @foreach(['active', 'pending', 'suspended'] as $s)
+                        @foreach(['active', 'suspended'] as $s)
                             <option value="{{ $s }}" {{ request('status') == $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
                         @endforeach
                     </select>
@@ -83,7 +83,7 @@
         @endif
 
         <!-- Users Table -->
-        <div class="bg-white shadow rounded-lg border border-gray-100 overflow-hidden">
+        <div class="bg-white shadow rounded-lg border border-gray-100 overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>

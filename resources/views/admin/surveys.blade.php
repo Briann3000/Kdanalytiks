@@ -3,48 +3,64 @@
 @section('title', 'Survey Inventory - Admin')
 
 @section('content')
-<div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="px-4 sm:px-8 lg:px-12 py-8">
     <div class="mb-8">
         <h1 class="text-2xl font-black text-gray-900 tracking-tight uppercase">Survey Inventory</h1>
         <p class="text-sm text-gray-500 font-medium">Manage and monitor all surveys across the platform.</p>
     </div>
 
+    <!-- Status Tabs -->
+    <div class="flex flex-wrap gap-2 mb-6">
+        <a href="{{ route('admin.surveys.index') }}" 
+           class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all {{ !request('status') ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white text-gray-400 hover:text-indigo-600 border border-gray-100' }}">
+            All Surveys
+        </a>
+        <a href="{{ route('admin.surveys.index', ['status' => 'active']) }}" 
+           class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all {{ request('status') === 'active' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-100' : 'bg-white text-gray-400 hover:text-emerald-600 border border-gray-100' }}">
+            Active
+        </a>
+        <a href="{{ route('admin.surveys.index', ['status' => 'draft']) }}" 
+           class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all {{ request('status') === 'draft' ? 'bg-gray-600 text-white shadow-lg shadow-gray-100' : 'bg-white text-gray-400 hover:text-gray-600 border border-gray-100' }}">
+            Drafts
+        </a>
+    </div>
+
     <!-- Filters -->
-    <div class="bg-white p-6 rounded-lg border border-gray-100 shadow-sm mb-8">
-        <form action="{{ route('admin.surveys.index') }}" method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</label>
-                <select name="status" class="w-full text-xs font-bold border-gray-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+    <div class="bg-white p-3 rounded-lg border border-gray-100 shadow-sm mb-6">
+        <form action="{{ route('admin.surveys.index') }}" method="GET" class="flex flex-wrap gap-3 items-center">
+            <div class="w-40">
+                <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</label>
+                <select name="status" class="w-full text-[10px] font-bold border-gray-100 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-1.5 shadow-sm">
                     <option value="">All Statuses</option>
-                    @foreach(collect(\App\Enums\SurveyStatus::cases())->sortBy(fn($s) => strtoupper(str_replace('_', ' ', $s->value))) as $status)
+                    @foreach(collect(\App\Enums\SurveyStatus::cases())->filter(fn($s) => $s->value !== 'pending_approval')->sortBy(fn($s) => strtoupper(str_replace('_', ' ', $s->value))) as $status)
                         <option value="{{ $status->value }}" {{ request('status') == $status->value ? 'selected' : '' }}>{{ strtoupper(str_replace('_', ' ', $status->value)) }}</option>
                     @endforeach
                 </select>
             </div>
-            <div>
-                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Category</label>
-                <select name="category" class="w-full text-xs font-bold border-gray-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+            <div class="w-40">
+                <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Category</label>
+                <select name="category" class="w-full text-[10px] font-bold border-gray-100 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-1.5 shadow-sm">
                     <option value="">All Categories</option>
                     @foreach(collect(\App\Enums\SurveyCategory::cases())->sortBy('value') as $cat)
                         <option value="{{ $cat->value }}" {{ request('category') == $cat->value ? 'selected' : '' }}>{{ $cat->value }}</option>
                     @endforeach
                 </select>
             </div>
-            <div>
-                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Source</label>
-                <select name="source" class="w-full text-xs font-bold border-gray-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+            <div class="w-40">
+                <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Source</label>
+                <select name="source" class="w-full text-[10px] font-bold border-gray-100 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-1.5 shadow-sm">
                     <option value="">All Sources</option>
                     <option value="admin" {{ request('source') == 'admin' ? 'selected' : '' }}>ADMIN</option>
                     <option value="independent" {{ request('source') == 'independent' ? 'selected' : '' }}>INDEPENDENT</option>
                     <option value="organization" {{ request('source') == 'organization' ? 'selected' : '' }}>ORGANIZATION</option>
                 </select>
             </div>
-            <div class="md:col-span-1">
-                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Search</label>
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Title or Owner..." class="w-full text-xs font-bold border-gray-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+            <div class="flex-grow max-w-xs">
+                <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Search</label>
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Title or Owner..." class="w-full text-[10px] font-bold border-gray-100 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-1.5 shadow-sm">
             </div>
-            <div class="flex items-end">
-                <button type="submit" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-black rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-all uppercase tracking-wider">
+            <div class="flex items-end self-end">
+                <button type="submit" class="inline-flex justify-center py-1.5 px-6 border border-transparent shadow-md text-[10px] font-black rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-all uppercase tracking-wider">
                     Filter
                 </button>
             </div>
@@ -52,9 +68,9 @@
     </div>
 
     <!-- Surveys Table -->
-    <div class="bg-white shadow-xl shadow-gray-100/50 rounded-xl border border-gray-100 overflow-hidden mb-8">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-100">
+    <div class="bg-white shadow-xl shadow-gray-100/50 rounded-xl border border-gray-100 mb-8">
+        <div class="overflow-x-auto custom-scrollbar rounded-xl">
+            <table class="min-w-[1000px] w-full divide-y divide-gray-100">
                 <thead class="bg-gray-50/50">
                     <tr>
                         <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Survey Detail</th>
@@ -62,7 +78,7 @@
                         <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Type</th>
                         <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
                         <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Responses</th>
-                        <th class="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Actions</th>
+                        <th class="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest pr-20">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-100">
@@ -108,14 +124,8 @@
                         <td class="px-6 py-4 text-sm font-bold text-indigo-600">
                             {{ $survey->responses_count }}
                         </td>
-                        <td class="px-6 py-4 text-right">
+                        <td class="px-6 py-4 text-right pr-20">
                             <div class="flex items-center justify-end gap-2">
-                                @if($statusVal === 'pending_approval')
-                                    <form action="{{ route('admin.surveys.approve', $survey) }}" method="POST">
-                                        @csrf
-                                        <button type="submit" class="px-2 py-1 bg-emerald-600 text-white rounded text-[10px] font-black uppercase hover:bg-emerald-700 transition-all">Approve</button>
-                                    </form>
-                                @endif
                                 <a href="{{ route('surveys.report', $survey) }}" class="w-7 h-7 bg-gray-50 text-gray-400 rounded-lg flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all">
                                     <i class="fa-solid fa-chart-line text-[10px]"></i>
                                 </a>

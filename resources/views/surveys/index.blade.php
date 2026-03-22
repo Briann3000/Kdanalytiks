@@ -25,17 +25,17 @@
     @endif
 </div>
 
-<div class="mb-8 bg-white/50 backdrop-blur-sm p-4 rounded-3xl border border-gray-100 shadow-sm">
-    <form action="{{ url()->current() }}" method="GET" class="flex flex-col md:flex-row gap-4 items-center">
-        <div class="relative w-full md:w-96 group">
-            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 group-focus-within:text-indigo-600 transition-colors"></i>
+<div class="mb-6 bg-white/40 backdrop-blur-md p-3 rounded-2xl border border-gray-100 shadow-sm">
+    <form action="{{ url()->current() }}" method="GET" class="flex flex-wrap gap-3 items-center">
+        <div class="relative flex-grow max-w-sm group">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 group-focus-within:text-indigo-600 transition-colors"></i>
             <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by title..." 
-                   class="w-full pl-12 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all shadow-sm">
+                   class="w-full pl-10 pr-4 py-2 bg-white border border-gray-100 rounded-xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all shadow-sm">
         </div>
-        <div class="relative w-full md:w-64 group">
-            <i class="fa-solid fa-filter absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 group-focus-within:text-indigo-600 transition-colors"></i>
+        <div class="relative w-48 group">
+            <i class="fa-solid fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 group-focus-within:text-indigo-600 transition-colors"></i>
             <select name="category" 
-                    class="w-full pl-12 pr-10 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 appearance-none transition-all shadow-sm">
+                    class="w-full pl-10 pr-8 py-2 bg-white border border-gray-100 rounded-xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 appearance-none transition-all shadow-sm">
                 <option value="">All Categories</option>
                 <option value="academic" {{ request('category') === 'academic' ? 'selected' : '' }}>Academic</option>
                 <option value="baseline" {{ request('category') === 'baseline' ? 'selected' : '' }}>Baseline</option>
@@ -45,7 +45,7 @@
                 <option value="polls" {{ request('category') === 'polls' ? 'selected' : '' }}>Polls</option>
             </select>
         </div>
-        <button type="submit" class="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">
+        <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">
             Filter
         </button>
         @if(request()->anyFilled(['search', 'category']))
@@ -56,16 +56,16 @@
     </form>
 </div>
 
-<div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-    <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-100">
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
+    <div class="overflow-x-auto custom-scrollbar rounded-xl">
+        <table class="min-w-[900px] w-full divide-y divide-gray-100">
             <thead class="bg-gray-50/50">
                 <tr>
                     <th scope="col" class="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Survey Detail</th>
                     <th scope="col" class="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
                     <th scope="col" class="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Framework</th>
                     <th scope="col" class="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Submissions</th>
-                    <th scope="col" class="px-8 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Management</th>
+                    <th scope="col" class="px-8 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest pr-20">Management</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50 bg-white">
@@ -107,7 +107,7 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="px-8 py-6 text-right">
+                        <td class="px-8 py-6 text-right pr-20">
                             <div class="flex items-center justify-end gap-2">
                                 <a href="{{ route('projects.summary', $survey) }}" class="w-8 h-8 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm" title="Open Project Hub">
                                      <i class="fa-solid fa-arrow-right text-[10px]"></i>

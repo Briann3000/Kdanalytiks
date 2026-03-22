@@ -32,10 +32,6 @@
                                 <dt class="text-sm font-medium text-gray-500 truncate">Total Users</dt>
                                 <dd class="flex items-baseline">
                                     <div class="text-2xl font-semibold text-gray-900">{{ $stats['totalUsers'] }}</div>
-                                    <div class="ml-2 flex items-baseline text-sm font-semibold text-gray-500">
-                                        <span class="sr-only">Pending</span>
-                                        <span class="text-orange-600">({{ $stats['pendingUsers'] }} pending)</span>
-                                    </div>
                                 </dd>
                             </dl>
                         </div>
@@ -56,7 +52,6 @@
                                 <dd class="flex items-baseline">
                                     <div class="text-2xl font-semibold text-gray-900">{{ $stats['totalSurveys'] }}</div>
                                     <div class="ml-2 flex flex-col text-xs font-semibold">
-                                        <span class="text-orange-600">{{ $stats['pendingSurveys'] }} pending approval</span>
                                         <span class="text-gray-400">{{ $stats['draftSurveys'] }} drafts</span>
                                     </div>
                                 </dd>
