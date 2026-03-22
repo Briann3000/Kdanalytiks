@@ -9,6 +9,8 @@ use App\Models\User;
 use App\Models\Organization;
 use App\Models\Independent;
 
+use Illuminate\Auth\Events\Registered;
+
 class RegisterController extends Controller
 {
     public function showRegistrationForm(Request $request, $role = 'respondent')
@@ -30,8 +32,10 @@ class RegisterController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $role,
-            'status' => 'pending', // or active, depending on logic
+            'status' => 'active', 
         ]);
+
+        event(new Registered($user));
 
         if ($role == 'organization') {
             Organization::create([
@@ -47,8 +51,6 @@ class RegisterController extends Controller
             ]);
         }
 
-        // For respondent, no additional table
-
-        return redirect()->route($role . '.login')->with('success', 'Registration successful. Please wait for activation.');
+        return redirect()->route($role . '.login')->with('success', 'Registration successful. A verification link has been sent to your email.');
     }
 }

@@ -20,8 +20,6 @@ class AdminController extends Controller
             'totalOrganizations' => Organization::count(),
             'totalResearchers' => Independent::count(),
             'totalSurveys' => Survey::count(),
-            'pendingUsers' => User::where('status', \App\Enums\UserStatus::Pending)->count(),
-            'pendingSurveys' => Survey::where('status', \App\Enums\SurveyStatus::PendingApproval)->count(),
             'draftSurveys' => Survey::where('status', \App\Enums\SurveyStatus::Draft)->count(),
         ];
 

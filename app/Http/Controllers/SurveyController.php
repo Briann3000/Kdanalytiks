@@ -3,13 +3,17 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\QuestionLibrary;
+use App\Models\Survey;
+use App\Models\Response;
+use App\Models\Answer;
 use Illuminate\Support\Str;
 
 class SurveyController extends Controller
 {
     public function index(Request $request)
     {
-        return $this->filteredIndex(\App\Enums\SurveyStatus::Active, 'projects.active');
+        return $this->filteredIndex(\App\Enums\SurveyStatus::Active, 'surveys.index');
     }
 
     public function hub()
@@ -19,18 +23,47 @@ class SurveyController extends Controller
 
     public function archivedIndex()
     {
-        return $this->filteredIndex(\App\Enums\SurveyStatus::Archived, 'projects.archived');
+        return $this->filteredIndex(\App\Enums\SurveyStatus::Archived, 'surveys.index');
     }
 
     public function draftsIndex()
     {
-        return $this->filteredIndex(\App\Enums\SurveyStatus::Draft, 'projects.drafts');
+        return $this->filteredIndex(\App\Enums\SurveyStatus::Draft, 'surveys.index');
     }
 
     public function templatesIndex()
     {
-        // For now, templates are just a future feature or a subset of surveys
-        return view('surveys.templates', ['role' => auth()->user()->role]);
+        $templates = \App\Models\Survey::where('is_template', true)->get();
+        return view('surveys.templates', [
+            'role' => auth()->user()->role,
+            'templates' => $templates
+        ]);
+    }
+
+    public function cloneTemplate(\App\Models\Survey $survey)
+    {
+        if (!$survey->is_template) {
+            abort(404);
+        }
+
+        $user = auth()->user();
+        $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+
+        $newSurvey = $survey->replicate();
+        $newSurvey->title = $survey->title . ' (Copy)';
+        $newSurvey->is_template = false;
+        $newSurvey->status = \App\Enums\SurveyStatus::Draft;
+        $newSurvey->created_by = $user->id;
+
+        if ($role === 'organization') {
+            $newSurvey->organization_id = $user->organization?->id;
+        } elseif ($role === 'independent') {
+            $newSurvey->independent_id = $user->independent?->id;
+        }
+
+        $newSurvey->save();
+
+        return redirect()->route('surveys.edit', $newSurvey)->with('success', 'Project created from template.');
     }
 
     private function filteredIndex($status, $viewName)
@@ -55,7 +88,7 @@ class SurveyController extends Controller
         }
 
         $surveys = $query->orderBy('created_at', 'desc')->paginate(10);
-        return view('surveys.index', compact('surveys', 'role', 'status'));
+        return view($viewName, compact('surveys', 'role', 'status'));
     }
 
     public function create()
@@ -104,7 +137,80 @@ class SurveyController extends Controller
     public function projectSettings(\App\Models\Survey $survey)
     {
         $this->authorizeOwner($survey);
+        $survey->load('collaborators.user');
+        
+        if (!$survey->share_token) {
+            $survey->update(['share_token' => Str::random(32)]);
+        }
+        
         return view('surveys.project_settings', compact('survey'));
+    }
+
+    public function updateProjectSettings(Request $request, \App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+        
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'is_anonymous' => 'nullable',
+            'public_access' => 'nullable|string|in:none,view,submit,edit',
+        ]);
+        
+        $survey->update([
+            'title' => $validated['title'],
+            'description' => $validated['description'],
+            'is_anonymous' => $request->has('is_anonymous'),
+            'public_access' => $validated['public_access'] ?? 'none'
+        ]);
+        
+        return back()->with('success', 'Settings updated successfully.');
+    }
+
+    public function addCollaborator(Request $request, \App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+        
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+        ]);
+        
+        $user = \App\Models\User::where('email', $request->email)->first();
+        
+        if ($user->id === (int)$survey->created_by) {
+            return back()->with('error', 'Owner already has full access.');
+        }
+
+        // Available permission keys after simplification
+        $permissionKeys = [
+            'view_form', 'edit_form', 'view_submissions', 'add_submissions', 
+            'edit_submissions', 'validate_submissions', 'delete_submissions', 'manage_project'
+        ];
+
+        $permissions = [];
+        foreach ($permissionKeys as $key) {
+            $permissions[$key] = $request->has($key);
+        }
+
+        // Default if none provided (Basic viewer)
+        if (!array_filter($permissions)) {
+            $permissions['view_form'] = true;
+            $permissions['add_submissions'] = true;
+        }
+        
+        \App\Models\SurveyPermission::updateOrCreate(
+            ['survey_id' => $survey->id, 'user_id' => $user->id],
+            ['permissions' => $permissions]
+        );
+        
+        return back()->with('success', 'Collaborator updated with granular permissions.');
+    }
+
+    public function removeCollaborator(\App\Models\Survey $survey, \App\Models\SurveyPermission $permission)
+    {
+        $this->authorizeOwner($survey);
+        $permission->delete();
+        return back()->with('success', 'Collaborator removed.');
     }
 
     public function archive(\App\Models\Survey $survey)
@@ -598,13 +704,8 @@ class SurveyController extends Controller
     {
         $this->authorizeOwner($survey);
 
-        if (auth()->user()->isAdmin()) {
-            $survey->update(['status' => \App\Enums\SurveyStatus::Active]);
-            return back()->with('success', 'Survey is now active.');
-        }
-
-        $survey->update(['status' => \App\Enums\SurveyStatus::PendingApproval]);
-        return back()->with('success', 'Survey submitted for admin approval.');
+        $survey->update(['status' => \App\Enums\SurveyStatus::Active]);
+        return back()->with('success', 'Project deployed successfully and is now live!');
     }
 
     public function edit(\App\Models\Survey $survey)
@@ -630,7 +731,7 @@ class SurveyController extends Controller
             'category' => $validated['category'],
             'type' => $validated['type'],
             'json_schema' => $validated['json_schema'],
-            'status' => \App\Enums\SurveyStatus::Draft // Revert to draft if edited? Or keep status?
+            'status' => $survey->is_template ? $survey->status : \App\Enums\SurveyStatus::Draft
         ]);
 
         return response()->json(['success' => true, 'message' => 'Survey updated successfully']);
@@ -667,13 +768,27 @@ class SurveyController extends Controller
     {
         // Public view for taking the survey
         $user = auth()->user();
+        $token = request('token');
+        
         $isOwner = $user && ($survey->created_by == $user->id);
         $isAdmin = $user && $user->isAdmin();
+        $isCollaborator = $user && $survey->collaborators()->where('user_id', $user->id)->exists();
+        
+        // Handle Sharing Token Access
+        $hasToken = $token && $survey->share_token === $token;
+        $publicCanView = $survey->public_access !== 'none' || $hasToken;
 
-        $isActive = ($survey->status === \App\Enums\SurveyStatus::Active);
+        $isActive = ($survey->status === \App\Enums\SurveyStatus::Active) || $survey->is_template;
 
-        if (!$isActive && !$isOwner && !$isAdmin) {
+        // If not active and not template, only certain people can see
+        if (!$isActive && !$isOwner && !$isAdmin && !$isCollaborator && !$hasToken) {
             abort(403, 'This survey is not active or you do not have permission to view it.');
+        }
+
+        // Check if user is forbidden from viewing based on public_access
+        // Templates are publically viewable by authenticated users
+        if (!$isOwner && !$isAdmin && !$isCollaborator && !$publicCanView && !$survey->is_template) {
+             abort(403, 'Access denied. You need permission to view this survey.');
         }
 
         return view('surveys.show_public', compact('survey'));
@@ -838,6 +953,15 @@ class SurveyController extends Controller
             return;
         }
 
+        // Check for Collaborator Permission
+        $permission = \App\Models\SurveyPermission::where('survey_id', $survey->id)
+            ->where('user_id', $user->id)
+            ->first();
+            
+        if ($permission && in_array($permission->role, ['edit-survey', 'manage-access'])) {
+            return;
+        }
+
         // Check organization ownership
         if ($survey->organization_id && $user->organization && (int) $survey->organization_id === (int) $user->organization->id) {
             return;
@@ -848,6 +972,56 @@ class SurveyController extends Controller
             return;
         }
 
-        abort(403, 'Unauthorized action.');
+        abort(403, 'You do not have permission to manage this survey.');
+    }
+
+    public function getLibraryQuestions()
+    {
+        $questions = QuestionLibrary::where('user_id', auth()->id())
+            ->orWhere('is_public', true)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'title' => $item->title,
+                    'type' => $item->type,
+                    'content' => is_string($item->content_json) ? json_decode($item->content_json, true) : $item->content_json,
+                    'is_template' => false
+                ];
+            });
+            
+        $dbTemplates = \App\Models\Survey::where('is_template', true)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'id' => 'db-tpl-' . $item->id,
+                    'title' => $item->title,
+                    'type' => $item->category instanceof \UnitEnum ? $item->category->name : (string)$item->category,
+                    'is_template' => true,
+                    'content' => is_string($item->json_schema) ? json_decode($item->json_schema, true) : $item->json_schema
+                ];
+            });
+
+        return response()->json($questions->concat($dbTemplates));
+    }
+
+    public function saveToLibrary(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string',
+            'type' => 'required|string',
+            'content_json' => 'required',
+            'category' => 'nullable|string'
+        ]);
+
+        $item = QuestionLibrary::create([
+            'user_id' => auth()->id(),
+            'title' => $validated['title'],
+            'type' => $validated['type'],
+            'content_json' => $validated['content_json'],
+            'category' => $validated['category'] ?? 'General'
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Question saved to library', 'item' => $item]);
     }
 }

@@ -5,6 +5,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SurveyController;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
 /*
 |--------------------------------------------------------------------------
@@ -86,8 +88,23 @@ Route::name('respondent.')->prefix('respondent')->group(function () {
     Route::post('/login', [\App\Http\Controllers\Auth\LoginController::class, 'login']);
 });
 
+// Email Verification Routes
+Route::get('/email/verify', function () {
+    return view('auth.verify');
+})->middleware('auth')->name('verification.notice');
+
+Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
+    $request->fulfill();
+    return redirect()->route('home');
+})->middleware(['auth', 'signed'])->name('verification.verify');
+
+Route::post('/email/verification-notification', function (Request $request) {
+    $request->user()->sendEmailVerificationNotification();
+    return back()->with('message', 'Verification link sent!');
+})->middleware(['auth', 'throttle:6,1'])->name('verification.resend');
+
 // Shared Authenticated Routes
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     // Survey Hub & Core Actions
     Route::get('/surveys/{survey}/responses', [SurveyController::class, 'showResponses'])->name('surveys.responses');
     Route::get('/surveys/{survey}/responses/{response}', [SurveyController::class, 'showResponseDetail'])->name('surveys.responses.show');
@@ -116,6 +133,9 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/data', [SurveyController::class, 'showResponses'])->name('data');
             Route::get('/reports', [SurveyController::class, 'report'])->name('reports');
             Route::get('/settings', [SurveyController::class, 'projectSettings'])->name('settings');
+            Route::post('/settings', [SurveyController::class, 'updateProjectSettings'])->name('settings.update');
+            Route::post('/collaborators', [SurveyController::class, 'addCollaborator'])->name('collaborators.add');
+            Route::delete('/collaborators/{permission}', [SurveyController::class, 'removeCollaborator'])->name('collaborators.remove');
             Route::post('/publish', [SurveyController::class, 'publish'])->name('publish');
             Route::post('/archive', [SurveyController::class, 'archive'])->name('archive');
         });
@@ -124,6 +144,9 @@ Route::middleware(['auth'])->group(function () {
 
     Route::prefix('library')->name('library.')->group(function () {
         Route::get('/templates', [SurveyController::class, 'templatesIndex'])->name('templates');
+        Route::get('/templates/{survey}/clone', [SurveyController::class, 'cloneTemplate'])->name('templates.clone');
+        Route::get('/questions', [SurveyController::class, 'getLibraryQuestions'])->name('questions');
+        Route::post('/questions', [SurveyController::class, 'saveToLibrary'])->name('questions.save');
     });
 
     // Research Proposal Studio
