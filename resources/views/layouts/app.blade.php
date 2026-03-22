@@ -18,7 +18,7 @@
         rel="stylesheet">
 
     <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <!-- Alpine.js + Plugins -->
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
@@ -115,9 +115,8 @@
 
         .workspace-layout {
             display: flex;
-            height: calc(100vh - 4rem);
-            overflow: hidden;
-            /* Prevent body/layout scroll */
+            height: calc(100vh - 4.1rem);
+            overflow: visible !important;
             position: relative;
         }
 
@@ -128,32 +127,55 @@
             display: flex;
             flex-direction: column;
             z-index: 100;
-            /* High z-index to stay above content */
             flex-shrink: 0;
-            overflow: visible !important;
-            /* CRITICAL: Allow flyouts to overflow the container */
-            position: relative;
+            position: sticky;
+            top: 0;
+            height: 100%;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            scrollbar-width: thin;
+            transition: transform 0.3s ease-in-out, width 0.3s ease;
         }
 
-        /* Essential logic for flyouts */
+        @media (max-width: 768px) {
+            .sidebar-pane {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                transform: translateX(-100%);
+                width: 260px;
+                z-index: 1000;
+            }
+            .sidebar-pane.mobile-open {
+                transform: translateX(0);
+            }
+            .workspace-layout {
+                height: auto;
+            }
+        }
+
+        .sidebar-pane::-webkit-scrollbar {
+            width: 4px;
+        }
+        .sidebar-pane::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 20px;
+        }
+
+        /* Remove wrapper scrollbar styles as we now apply them directly to sidebar-pane */
+
+        /* Essential logic for JS fixed flyouts */
         .flyout-menu {
-            position: absolute;
-            left: 100%;
-            top: 0;
-            width: 180px;
+            position: fixed !important;
+            width: auto;
+            min-width: 180px;
             background: white;
             border: 1px solid #e5e7eb;
-            box-shadow: 10px 0 20px rgba(0, 0, 0, 0.08);
-            /* Stronger shadow for depth */
-            display: none;
-            z-index: 110;
-            /* Higher than sidebar-pane */
-            border-radius: 0 0.5rem 0.5rem 0;
-            overflow: visible;
-        }
-
-        .sidebar-item:hover .flyout-menu {
-            display: block;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+            border-radius: 0.5rem;
+            pointer-events: auto;
         }
 
         /* Basic submenu indentation */
@@ -171,7 +193,8 @@
             background: #fdfdfd;
             position: relative;
             overflow-y: auto;
-            /* ONLY the content area scrolls */
+            overflow-x: hidden;
+            /* Prevent horizontal page wobble while allowing vertical content scroll */
         }
 
         @media (max-width: 1023px) {
@@ -188,33 +211,33 @@
             }
         }
 
-        /* Independent Sidebar Scrolling */
+        /* Sidebar Navigation Container */
         .sidebar-nav {
             flex: 1;
-            overflow-y: auto;
-            overflow: visible;
             padding: 1.5rem 1rem;
+            overflow: visible !important;
+        }
+
+        .sidebar-item {
+            position: relative;
         }
 
         /* Custom Scrollbar Helper */
         .custom-scrollbar::-webkit-scrollbar {
-            width: 8px;
-            /* Increased for better interaction */
+            width: 4px;
         }
 
         .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
+            background: transparent;
         }
 
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #d1d5db;
-            border-radius: 10px;
-            border: 2px solid #f1f1f1;
+            background: #e2e8f0;
+            border-radius: 20px;
         }
 
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #9ca3af;
+            background: #cbd5e1;
         }
 
         /* Sidebar Footer */
@@ -227,8 +250,10 @@
     </style>
 </head>
 
-<body class="font-sans antialiased bg-gray-50 text-gray-900">
-    <div class="min-h-screen flex flex-col" x-data="{ sidebarOpen: true, desktopSidebarOpen: true }">
+<body class="font-sans antialiased bg-gray-50 text-gray-900" x-data="{ mobileMenuOpen: false }">
+    <div class="min-h-screen flex flex-col" x-data="{ sidebarOpen: true, desktopSidebarOpen: window.innerWidth > 1024 }"
+        @close-sidebar.window="desktopSidebarOpen = false"
+        @open-sidebar.window="desktopSidebarOpen = true">
         <!-- Navigation Bar -->
         <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
             <div class="max-w-full mx-auto px-4 sm:px-8 lg:px-12">
@@ -354,8 +379,8 @@
                 <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
                 <!-- Sidebar -->
-                <aside class="sidebar-pane" id="sidebar-pane" x-show="desktopSidebarOpen" x-transition>
-                    <div class="sidebar-nav custom-scrollbar">
+                <aside class="sidebar-pane custom-scrollbar" id="sidebar-pane" x-show="desktopSidebarOpen" x-transition>
+                    <div class="sidebar-nav">
                         @if(View::hasSection('sidebar'))
                             @yield('sidebar')
                         @else
