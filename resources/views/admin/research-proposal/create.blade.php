@@ -3,8 +3,8 @@
 @section('title', 'Draft New Report - Research Studio')
 
 @section('content')
-<div class="container-fluid px-4 py-8">
-    <div class="max-w-4xl mx-auto">
+<div class="container-fluid px-4 md:px-8 py-8">
+    <div class="max-w-full mx-auto">
         <header class="mb-8 flex items-center justify-between">
             <div>
                 <a href="{{ route('research-proposal.index') }}" class="inline-flex items-center text-xs font-bold text-gray-400 hover:text-indigo-600 mb-2 transition-colors uppercase tracking-widest">
@@ -119,9 +119,9 @@
                 </p>
                 <div class="flex items-center space-x-4">
                     <a href="{{ route('research-proposal.index') }}" class="px-8 py-4 rounded-2xl text-xs font-black text-gray-500 uppercase tracking-widest hover:bg-gray-100 transition-all">Cancel</a>
-                    <button type="submit" @click="loading = true" class="px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center group">
+                    <button type="submit" @click="loading = true" class="w-full md:w-auto px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center border-none group">
                         <template x-if="!loading">
-                            <div class="flex items-center">
+                            <div class="flex items-center justify-center w-full">
                                 <span class="mr-3">Draft Reports</span>
                                 <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
                             </div>

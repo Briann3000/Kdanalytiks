@@ -13,7 +13,7 @@
     #kma-btn {
         width: 48px;
         height: 48px;
-        bottom: 15px;
+        bottom: 85px;
         right: 15px;
     }
     #kma-btn i { font-size: 20px !important; }
