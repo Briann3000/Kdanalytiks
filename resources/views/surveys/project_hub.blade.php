@@ -47,7 +47,7 @@
 
     <!-- Project Tabs -->
     <div class="border-b border-gray-200 mb-8">
-        <nav class="flex space-x-8 -mb-px">
+        <nav class="flex flex-wrap gap-x-6 gap-y-2 -mb-px">
             <a href="{{ route('projects.summary', $survey) }}" 
                class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('projects.summary') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                 <i class="fa-solid fa-chart-pie mr-2"></i> Summary
