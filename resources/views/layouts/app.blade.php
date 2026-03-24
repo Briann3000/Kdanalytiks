@@ -6,6 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
+    <!-- PWA Settings -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="{{ asset('manifest.json') }}?v=4">
+
     <title>{{ config('app.name', 'KMSurveyTool') }}</title>
 
     <!-- Tailwind CSS (via Vite) -->
@@ -110,7 +116,8 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: hidden;
         }
 
         .workspace-layout {
@@ -137,18 +144,31 @@
             transition: transform 0.3s ease-in-out, width 0.3s ease;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 1023px) {
             .sidebar-pane {
                 position: fixed;
                 left: 0;
                 top: 0;
                 bottom: 0;
-                transform: translateX(-100%);
                 width: 260px;
                 z-index: 1000;
+                background: white;
+                box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+                transition: transform 0.3s ease-in-out;
+                transform: translateX(-100%);
             }
-            .sidebar-pane.mobile-open {
-                transform: translateX(0);
+            .sidebar-pane[style*="display: none"] {
+                transform: translateX(-100%) !important;
+            }
+            .sidebar-pane:not([style*="display: none"]) {
+                transform: translateX(0) !important;
+            }
+            .sidebar-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.5);
+                backdrop-filter: blur(2px);
+                z-index: 999;
             }
             .workspace-layout {
                 height: auto;
@@ -193,17 +213,13 @@
             background: #fdfdfd;
             position: relative;
             overflow-y: auto;
-            overflow-x: hidden;
-            /* Prevent horizontal page wobble while allowing vertical content scroll */
+            overflow-x: auto;
+            /* Allow horizontal content scroll for builder tables */
         }
 
         @media (max-width: 1023px) {
             .sidebar-pane {
                 /* Removed drawer transition as per request */
-            }
-
-            .sidebar-overlay {
-                display: none !important;
             }
 
             .content-pane {
@@ -267,7 +283,6 @@
 
                             <!-- Main Sidebar Toggle -->
                             <button type="button" @click="desktopSidebarOpen = !desktopSidebarOpen"
-                                onclick="if(window.innerWidth < 1024) toggleSidebar()"
                                 class="mr-3 p-2 rounded-xl bg-slate-50 border border-slate-200 text-indigo-700 hover:bg-slate-100 hover:border-slate-300 shadow-sm transition-all flex items-center justify-center w-10 h-10 group">
                                 <i class="fa-solid fa-bars-staggered text-lg group-hover:scale-110 transition-transform"
                                     :class="desktopSidebarOpen ? 'rotate-0' : 'rotate-180'"></i>
@@ -376,7 +391,7 @@
         @if($isWorkspace || View::hasSection('sidebar'))
             <div class="workspace-layout">
                 <!-- Sidebar Overlay (Mobile Only) -->
-                <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+                <div class="sidebar-overlay flex xl:hidden" id="sidebar-overlay" x-show="desktopSidebarOpen" x-cloak @click="desktopSidebarOpen = false" x-transition.opacity style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); z-index: 999;"></div>
 
                 <!-- Sidebar -->
                 <aside class="sidebar-pane custom-scrollbar" id="sidebar-pane" x-show="desktopSidebarOpen" x-transition>
@@ -393,9 +408,37 @@
                 @yield('sub_sidebar')
 
                 <!-- Main Content -->
-                <main class="content-pane custom-scrollbar">
+                <main class="content-pane custom-scrollbar pb-16 md:pb-0 flex-1">
                     @yield('content')
+                    @include('layouts.partials.footer')
                 </main>
+
+                <!-- Mobile Bottom Navigation (Visible only on small screens) -->
+                @auth
+                @php
+                    $roleValNav = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
+                @endphp
+                <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center h-16 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe pt-2">
+                    <a href="{{ route($roleValNav . '.dashboard') }}" class="flex flex-col items-center justify-center w-full text-gray-500 hover:text-indigo-600 {{ request()->routeIs($roleValNav . '.dashboard') ? 'text-indigo-600' : '' }} transition-colors">
+                        <i class="fa-solid fa-house mb-1 text-lg"></i>
+                        <span class="text-[10px] font-bold">Home</span>
+                    </a>
+                    <a href="{{ route('projects.active') }}" class="flex flex-col items-center justify-center w-full text-gray-500 hover:text-indigo-600 {{ request()->routeIs('projects.*') ? 'text-indigo-600' : '' }} transition-colors">
+                        <i class="fa-solid fa-layer-group mb-1 text-lg"></i>
+                        <span class="text-[10px] font-bold">Projects</span>
+                    </a>
+                    <a href="{{ route('surveys.create') }}" class="flex flex-col items-center justify-center w-full text-gray-500 hover:text-indigo-600 {{ request()->routeIs('surveys.create') ? 'text-indigo-600' : '' }} transition-colors relative">
+                        <div class="absolute -top-4 bg-indigo-600 text-white w-10 h-10 flex items-center justify-center rounded-full shadow-lg border-2 border-gray-50">
+                            <i class="fa-solid fa-plus text-lg"></i>
+                        </div>
+                        <span class="text-[10px] font-bold mt-5">Create</span>
+                    </a>
+                    <a href="{{ route('research-proposal.index') }}" class="flex flex-col items-center justify-center w-full text-gray-500 hover:text-indigo-600 {{ request()->routeIs('research-proposal.*') ? 'text-indigo-600' : '' }} transition-colors">
+                        <i class="fa-solid fa-file-signature mb-1 text-lg"></i>
+                        <span class="text-[10px] font-bold">Report</span>
+                    </a>
+                </nav>
+                @endauth
             </div>
         @else
             <!-- Default Layout for Non-Workspace Pages -->
@@ -462,22 +505,19 @@
             }
         }
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar-pane');
-            const overlay = document.getElementById('sidebar-overlay');
-            const icon = document.getElementById('sidebar-toggle-icon');
 
-            if (sidebar.classList.contains('open')) {
-                sidebar.classList.remove('open');
-                overlay.classList.remove('open');
-                icon.classList.remove('fa-xmark');
-                icon.classList.add('fa-bars-staggered');
-            } else {
-                sidebar.classList.add('open');
-                overlay.classList.add('open');
-                icon.classList.remove('fa-bars-staggered');
-                icon.classList.add('fa-xmark');
-            }
+    </script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js?v=4').then(registration => {
+                    console.log('SW registered: ', registration);
+                }).catch(registrationError => {
+                    console.log('SW registration failed: ', registrationError);
+                });
+            });
         }
     </script>
 </body>
