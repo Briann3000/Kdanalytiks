@@ -10,7 +10,7 @@
     <header class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
             <div class="flex items-center gap-2 mb-2">
-                <a href="{{ route('projects.active') }}" class="text-xs font-bold text-gray-400 hover:text-indigo-600 transition-colors">
+                <a href="{{ route('projects.active') }}" class="text-xs font-bold text-gray-600 hover:text-indigo-600 transition-colors">
                     <i class="fa-solid fa-chevron-left mr-1"></i> My Projects
                 </a>
                 <span class="text-gray-300">•</span>
@@ -49,19 +49,27 @@
     <div class="border-b border-gray-200 mb-8">
         <nav class="flex space-x-8 -mb-px">
             <a href="{{ route('projects.summary', $survey) }}" 
-               class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('projects.summary') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-300' }}">
+               class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('projects.summary') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                 <i class="fa-solid fa-chart-pie mr-2"></i> Summary
             </a>
             <a href="{{ route('projects.data', $survey) }}" 
-               class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('projects.data') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-300' }}">
+               class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('projects.data') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                 <i class="fa-solid fa-database mr-2"></i> Data
             </a>
             <a href="{{ route('projects.reports', $survey) }}" 
-               class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('projects.reports') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-300' }}">
+               class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('projects.reports') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                 <i class="fa-solid fa-file-contract mr-2"></i> Reports
             </a>
+            <a href="{{ route('projects.gallery', $survey) }}" 
+               class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('projects.gallery') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
+                <i class="fa-solid fa-images mr-2"></i> Gallery
+            </a>
+            <a href="{{ route('projects.downloads', $survey) }}" 
+               class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('projects.downloads') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
+                <i class="fa-solid fa-download mr-2"></i> Downloads
+            </a>
             <a href="{{ route('projects.settings', $survey) }}" 
-               class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('projects.settings') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-300' }}">
+               class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('projects.settings') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                 <i class="fa-solid fa-gears mr-2"></i> Settings
             </a>
         </nav>

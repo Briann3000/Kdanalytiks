@@ -132,6 +132,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/', [SurveyController::class, 'projectSummary'])->name('summary');
             Route::get('/data', [SurveyController::class, 'showResponses'])->name('data');
             Route::get('/reports', [SurveyController::class, 'report'])->name('reports');
+            Route::get('/gallery', [SurveyController::class, 'showGallery'])->name('gallery');
+            Route::get('/downloads', [SurveyController::class, 'showDownloads'])->name('downloads');
+            Route::delete('/downloads/{filename}', [SurveyController::class, 'deleteDownload'])->name('downloads.delete');
             Route::get('/settings', [SurveyController::class, 'projectSettings'])->name('settings');
             Route::post('/settings', [SurveyController::class, 'updateProjectSettings'])->name('settings.update');
             Route::post('/collaborators', [SurveyController::class, 'addCollaborator'])->name('collaborators.add');

@@ -42,12 +42,14 @@
 
         /* Preview specific improvements */
         .preview-input {
-            border: 2px solid #e5e7eb !important;
+            border: 2px solid #d1d5db !important;
             border-radius: 0.75rem !important;
             padding: 0.75rem 1rem !important;
             width: 100% !important;
             transition: all 0.2s ease !important;
-            background-color: #f9fafb !important;
+            background-color: #ffffff !important;
+            color: #111827 !important;
+            font-weight: 600 !important;
         }
         .preview-input:focus {
             border-color: #4f46e5 !important;
@@ -147,14 +149,14 @@
                         :class="activeMode === 'visual' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'">
                         <i class="fa-solid fa-paint-brush mr-2"></i> Visual
                     </button>
-                    <button type="button" @click.stop="activeMode = 'json'; showDetails = false; syncToJson()" 
+                    <button type="button" @click.stop="activeMode = 'json'; showDetails = false" 
                         class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center"
                         :class="activeMode === 'json' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'">
                         <i class="fa-solid fa-code mr-2"></i> JSON
                     </button>
-                    <button type="button" @click="showLibrary = false; $dispatch('close-sidebar'); openAiArchitect()" 
-                        class="px-4 py-2 bg-purple-50 text-purple-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-purple-100 border border-transparent transition-all flex items-center">
-                        <i class="fa-solid fa-sparkles mr-2 text-yellow-500"></i> AI Architect
+                    <button type="button" @click="showLibrary = false; $dispatch('close-sidebar'); showAiModal = true; $nextTick(() => document.getElementById('aiPrompt').focus())" 
+                        class="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black border border-transparent transition-all flex items-center shadow-lg shadow-slate-200 group">
+                        <i class="fa-solid fa-sparkles mr-2 text-cyan-400 group-hover:animate-pulse"></i> AI Architect
                     </button>
                     <button type="button" onclick="openFullScreenPreview()" 
                         class="px-4 py-2 bg-amber-50 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-100 border border-transparent transition-all flex items-center">
@@ -249,7 +251,7 @@
                         <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden mb-8">
                             <!-- Question Type Toolbar moved to TOP -->
                             <div class="p-6 bg-slate-50/50 border-b border-gray-100 flex flex-col items-center">
-                                <p class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Add New Question</p>
+                            <p class="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">Add New Question</p>
                                 <div class="flex flex-wrap justify-center gap-2">
                                     <template x-for="type in [
                                         {id: 'text', icon: 'fa-font', label: 'Short Text', bg: 'bg-indigo-50 text-indigo-700'},
@@ -277,7 +279,7 @@
                                     </div>
                                     <div>
                                         <h5 class="text-sm font-black text-gray-900 uppercase tracking-widest leading-none">Question Canvas</h5>
-                                        <p class="text-[9px] text-gray-400 font-bold uppercase mt-1 tracking-wider" x-text="questions.length + ' questions currently on draft'"></p>
+                                        <p class="text-[9px] text-gray-500 font-bold uppercase mt-1 tracking-wider" x-text="questions.length + ' questions currently on draft'"></p>
                                     </div>
                                 </div>
                                 <button type="button" @click.stop="resetCanvas()" class="px-4 py-2 text-[10px] font-black uppercase text-red-500 hover:bg-red-50 rounded-lg transition-all">
@@ -349,11 +351,11 @@
                                             </div>
                                             
                                             <div class="flex items-center space-x-2" x-data="{ confirmingDelete: false }">
-                                                <button type="button" @click="duplicateQuestion(index)" class="px-3 h-9 rounded-xl text-gray-400 hover:bg-indigo-50 hover:text-indigo-600 transition-all flex items-center justify-center border border-gray-100 space-x-2" title="Duplicate">
+                                                <button type="button" @click="duplicateQuestion(index)" class="px-3 h-9 rounded-xl text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all flex items-center justify-center border border-gray-100 space-x-2" title="Duplicate">
                                                     <i class="fa-solid fa-copy text-sm"></i>
                                                     <span class="text-[9px] font-black uppercase tracking-tight">Clone</span>
                                                 </button>
-                                                <button type="button" @click.stop="saveToLibrary(index)" class="px-3 h-9 rounded-xl text-gray-400 hover:bg-green-50 hover:text-green-600 transition-all flex items-center justify-center border border-gray-100 space-x-2" title="Save to Library">
+                                                <button type="button" @click.stop="saveToLibrary(index)" class="px-3 h-9 rounded-xl text-gray-500 hover:bg-green-50 hover:text-green-600 transition-all flex items-center justify-center border border-gray-100 space-x-2" title="Save to Library">
                                                     <i class="fa-solid fa-bookmark text-sm"></i>
                                                     <span class="text-[9px] font-black uppercase tracking-tight">Save</span>
                                                 </button>
@@ -370,7 +372,7 @@
                                                     <div x-show="confirmingDelete === index" class="flex items-center space-x-2 animate-in slide-in-from-right-2" style="display:none">
                                                         <span class="text-[9px] font-black text-red-600 uppercase tracking-tighter">SURE?</span>
                                                         <button type="button" @click="removeQuestion(index); confirmingDelete = null" class="px-2 py-1 bg-red-600 text-white rounded text-[9px] font-black uppercase">YES</button>
-                                                        <button type="button" @click="confirmingDelete = null" class="px-2 py-1 bg-white text-gray-400 rounded text-[9px] font-black uppercase border border-gray-200">NO</button>
+                                                        <button type="button" @click="confirmingDelete = null" class="px-2 py-1 bg-white text-gray-500 rounded text-[9px] font-black uppercase border border-gray-200">NO</button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -398,12 +400,12 @@
                                             
                                             <div x-show="q.type === 'header'" class="flex items-center space-x-4">
                                                 <div class="flex-1 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                                                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3">Header Configuration</p>
+                                                    <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-3">Header Configuration</p>
                                                     <div class="flex space-x-2">
                                                         <template x-for="level in ['h1', 'h2', 'h3']">
                                                             <button type="button" @click="q.subtype = level; syncToJson()" 
                                                                 class="px-4 py-2 rounded-lg text-[10px] font-bold uppercase transition-all"
-                                                                :class="q.subtype === level ? 'bg-indigo-600 text-white' : 'bg-white text-gray-400 border border-gray-100 hover:bg-gray-50'"
+                                                                :class="q.subtype === level ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'"
                                                                 x-text="level === 'h1' ? 'Large' : (level === 'h2' ? 'Medium' : 'Small')">
                                                             </button>
                                                         </template>
@@ -422,7 +424,7 @@
                                                 <label class="flex items-center space-x-3 cursor-pointer group/toggle">
                                                     <input type="checkbox" x-model="q.required" @change="syncToJson()" 
                                                         class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 transition-all cursor-pointer">
-                                                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest group-hover:text-gray-600">Mandatory Field</span>
+                                                    <span class="text-[10px] font-black text-gray-500 uppercase tracking-widest group-hover:text-gray-600">Mandatory Field</span>
                                                 </label>
                                                 
                                                 <button type="button" @click.prevent.stop="openSkipLogic(index)" class="text-[10px] font-black uppercase text-indigo-500 flex items-center hover:text-indigo-700 transition-colors">
@@ -447,7 +449,7 @@
                                         <i class="fa-solid fa-plus text-3xl group-hover:scale-125 transition-transform"></i>
                                     </button>
                                     <h5 class="text-lg font-black text-gray-900 uppercase tracking-tight">Your Canvas is Ready</h5>
-                                    <p class="text-sm text-gray-400 font-medium mt-1">Start adding questions from the toolbar above</p>
+                                    <p class="text-sm text-gray-500 font-medium mt-1">Start adding questions from the toolbar above</p>
                                 </div>
                             </div>
 
@@ -461,18 +463,18 @@
                         <div class="px-8 py-6 border-b border-gray-50 flex items-center justify-between">
                             <div>
                                 <h5 class="text-lg font-black text-gray-900 uppercase tracking-widest">Question Library</h5>
-                                <p class="text-[10px] text-gray-400 font-bold uppercase mt-1">Reusable templates</p>
+                                <p class="text-[10px] text-gray-500 font-bold uppercase mt-1">Reusable templates</p>
                             </div>
-                            <button type="button" @click="showLibrary = false" class="text-gray-400 hover:text-red-500">
+                            <button type="button" @click="showLibrary = false" class="text-gray-500 hover:text-red-500">
                                 <i class="fa-solid fa-times text-xl"></i>
                             </button>
                         </div>
                         <div class="px-8 py-4 bg-white sticky top-0 z-10 border-b border-gray-100">
                             <div class="flex p-1 bg-gray-100 rounded-xl">
                                 <button type="button" @click="libTab = 'templates'" class="flex-1 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all"
-                                    :class="libTab === 'templates' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'">Templates</button>
+                                    :class="libTab === 'templates' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-600'">Templates</button>
                                 <button type="button" @click="libTab = 'questions'" class="flex-1 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all"
-                                    :class="libTab === 'questions' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'">Library</button>
+                                    :class="libTab === 'questions' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-600'">Library</button>
                             </div>
                         </div>
 
@@ -486,7 +488,7 @@
                                             <i class="fa-solid fa-plus-circle text-gray-200 group-hover:text-purple-500 text-xl transition-all"></i>
                                         </div>
                                         <p class="text-sm font-black text-gray-900 uppercase tracking-tight leading-tight" x-text="item.title"></p>
-                                        <p class="text-[9px] text-gray-400 font-bold uppercase mt-2">Full Survey Blueprint</p>
+                                        <p class="text-[9px] text-gray-500 font-bold uppercase mt-2">Full Survey Blueprint</p>
                                     </div>
                                 </template>
                             </div>
@@ -504,174 +506,192 @@
                                 </template>
                                 <template x-if="library.filter(i => !i.is_template).length === 0">
                                     <div class="py-12 px-6 text-center">
-                                        <p class="text-xs font-bold text-gray-400 uppercase">No shared questions yet</p>
+                                        <p class="text-xs font-bold text-gray-500 uppercase">No shared questions yet</p>
                                     </div>
                                 </template>
-                            </div>
+                            </div> <!-- Close Questions Tab -->
                         </div>
                     </div>
-                </div> <!-- Close Visual Mode Wrapper -->
+                </div> <!-- Close Library Drawer -->
+            </div> <!-- Close activeMode === 'visual' -->
+        </div> <!-- Close Visual Builder Mode Content Wrapper -->
 
-                <!-- JSON Import Mode -->
-                <div x-show="activeMode === 'json'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0">
-                    <div class="bg-gray-900 rounded-3xl shadow-2xl border border-white/5 overflow-hidden">
-                        <div class="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-gray-900">
-                            <div>
-                                <h5 class="text-sm font-black text-white uppercase tracking-widest flex items-center">
-                                    <i class="fa-solid fa-code mr-3 text-indigo-400"></i> JSON Blueprint Editor
-                                </h5>
-                                <p class="text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-tight">Direct schema manipulation</p>
-                            </div>
-                        </div>
-                        <div class="p-8" style="background-color: #030712 !important; min-height: 700px;">
-                            <textarea id="jsonInput" x-model="jsonSchema"
-                                class="w-full rounded-3xl border-none shadow-2xl sm:text-sm font-mono p-10 text-emerald-400 h-[650px] focus:ring-0 leading-relaxed overflow-y-auto custom-scrollbar"
-                                style="background-color: #111827 !important; color: #10b981 !important; border: none !important; position: relative !important; z-index: 50 !important;"
-                                placeholder='[]'></textarea>
-
-                            <div class="mt-8 flex space-x-4">
-                                <button type="button" class="px-8 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-900/40 transition-all font-bold" onclick="validateJSON()">
-                                    Validate and Load
-                                </button>
-                                <button type="button" class="px-8 py-3 bg-white/5 text-gray-400 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all" onclick="clearJSON()">
-                                    Wipe Schema
-                                </button>
-                            </div>
-                            <div id="jsonStatus" class="mt-6"></div>
-                        </div>
+        <!-- JSON Import Mode -->
+        <div x-show="activeMode === 'json'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" class="max-w-7xl mx-auto mt-4 pb-20">
+            <div class="bg-gray-900 rounded-3xl shadow-2xl border border-white/5 overflow-hidden">
+                <div class="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-gray-900">
+                    <div>
+                        <h5 class="text-sm font-black text-white uppercase tracking-widest flex items-center">
+                            <i class="fa-solid fa-code mr-3 text-indigo-400"></i> JSON Blueprint Editor
+                        </h5>
+                        <p class="text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-tight">Direct schema manipulation</p>
                     </div>
                 </div>
+                <div class="p-8 bg-[#030712]">
+                    <textarea id="jsonInput" x-model="jsonSchema"
+                        @input="validateJSONManual()"
+                        class="w-full rounded-3xl border-none shadow-2xl sm:text-sm font-mono p-10 text-emerald-400 min-h-[600px] focus:ring-0 leading-relaxed overflow-y-auto custom-scrollbar"
+                        style="background-color: #111827 !important; color: #10b981 !important; outline: none !important; border: none !important;"
+                        placeholder='[]'></textarea>
 
-    <!-- Full Screen Preview Modal -->
-    <div id="previewModal" class="hidden fixed inset-0 z-[2000] flex-col items-center justify-center bg-gray-900/95 backdrop-blur-md">
-        <div class="h-screen w-screen flex flex-col p-0 md:p-4">
-            <div class="bg-white shadow-2xl flex-1 flex flex-col overflow-hidden w-full border-none">
-                <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0 z-10">
-                        <div class="flex-1 flex flex-col items-center text-center">
-                            <h3 class="text-xs font-black text-indigo-500 tracking-widest uppercase mb-1">Live Survey Preview</h3>
-                            <h2 class="text-xl font-black text-gray-900 tracking-tight leading-tight uppercase" id="previewSurveyTitle">Loading...</h2>
-                        </div>
-                    <button onclick="closeFullScreenPreview()" class="w-10 h-10 rounded-xl bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center">
+                    <div class="mt-8 flex space-x-4">
+                        <button type="button" class="px-8 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-900/40 transition-all font-bold" onclick="validateJSON()">
+                            Validate and Load
+                        </button>
+                        <button type="button" class="px-8 py-3 bg-white/5 text-gray-500 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all" onclick="clearJSON()">
+                            Wipe Schema
+                        </button>
+                    </div>
+                    <div id="jsonStatus" class="mt-6"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skip Logic Modal -->
+        <div x-show="showSkipModal" x-cloak class="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+            <div class="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden" @click.away="closeSkipLogic()">
+                <div class="px-8 py-6 border-b border-gray-50 flex items-center justify-between bg-white">
+                    <h3 class="text-xl font-black text-gray-900 flex items-center uppercase tracking-tight">
+                        <i class="fa-solid fa-code-branch mr-3 text-indigo-500"></i> Skip Logic
+                    </h3>
+                    <button type="button" @click="closeSkipLogic()" class="text-gray-500 hover:text-red-500 transition-colors">
                         <i class="fa-solid fa-times text-xl"></i>
                     </button>
                 </div>
-                <div id="fullPreviewContent" class="flex-1 overflow-y-auto p-4 md:p-12 h-full" style="background-color: #f9fafb !important;">
-                    <div class="max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl border border-gray-100 p-8 md:p-16 mb-24 min-h-[80vh]" id="previewRenderArea"></div>
-                </div>
-                <div class="px-6 py-4 border-t border-gray-100 bg-white flex justify-center sticky bottom-0">
-                    <button onclick="closeFullScreenPreview()" class="px-8 py-3 bg-indigo-700 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-indigo-800 transition-all">
-                        Return to Editor
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- AI Architect Modal (Centered) -->
-    <div id="aiModal" class="hidden fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
-        <div class="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden transform transition-all scale-100">
-            <div class="px-8 py-6 border-b border-gray-50 flex items-center justify-between">
-                <h3 class="text-xl font-black text-gray-900 flex items-center uppercase tracking-tight">
-                    <i class="fa-solid fa-sparkles mr-3 text-indigo-600 animate-pulse"></i> AI Survey Architect
-                </h3>
-                <button onclick="closeAiArchitect()" class="text-gray-400 hover:text-red-500 transition-colors">
-                    <i class="fa-solid fa-times text-xl"></i>
-                </button>
-            </div>
-
-            <div class="p-8 space-y-6">
-                <p class="text-sm text-gray-600 font-medium">
-                    Describe your survey goals below. Our AI will craft a high-conversion schema with optimal question types and structure.
-                </p>
-
-                <div class="relative group">
-                    <textarea id="aiPrompt" rows="6"
-                        class="w-full p-6 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-700 transition-all group-hover:bg-white"
-                        placeholder="e.g., A client feedback survey for a digital marketing agency focusing on communication quality and campaign ROI..."></textarea>
-                    <div id="promptStatus" class="absolute bottom-4 right-4 text-[9px] font-black text-indigo-300 uppercase tracking-widest opacity-50">
-                        Context Synced
-                    </div>
-                </div>
-
-                <div class="flex items-start space-x-3 p-4 bg-amber-50 rounded-2xl border border-amber-100">
-                    <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-1"></i>
-                    <p class="text-[11px] font-bold text-amber-700 uppercase tracking-tight">Warning: Generating a new blueprint will overwrite all questions currently on your canvas.</p>
-                </div>
-
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <button type="button" id="generateAiBtn" onclick="generateWithAi()"
-                        class="flex-1 px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-100">
-                        Generate Blueprint
-                    </button>
-                    <button type="button" onclick="closeAiArchitect()"
-                        class="px-8 py-4 bg-gray-50 text-gray-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-100 transition-all border border-gray-100">
-                        Maybe Later
-                    </button>
-                </div>
-            </div>
-
-            <div id="aiLoader" class="hidden absolute inset-0 bg-white/95 flex flex-col items-center justify-center z-50">
-                <div class="relative w-24 h-24 mb-6">
-                    <div class="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
-                    <div class="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
-                    <div class="absolute inset-0 flex items-center justify-center">
-                        <i class="fa-solid fa-sparkles text-indigo-600 text-3xl"></i>
-                    </div>
-                </div>
-                <p class="text-lg font-black text-gray-900 uppercase tracking-widest animate-pulse">Architecting...</p>
-                <p class="text-xs text-gray-400 font-bold uppercase mt-2">Crafting your custom survey</p>
-            </div>
-    </div>
-        </div>
-    </div> <!-- Close aiModal -->
-
-    <!-- Skip Logic Modal -->
-    <div x-show="showSkipModal" x-cloak class="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
-        <div class="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden" @click.away="closeSkipLogic()">
-            <div class="px-8 py-6 border-b border-gray-50 flex items-center justify-between bg-white">
-                <h3 class="text-xl font-black text-gray-900 flex items-center uppercase tracking-tight">
-                    <i class="fa-solid fa-code-branch mr-3 text-indigo-500"></i> Skip Logic
-                </h3>
-                <button type="button" @click="closeSkipLogic()" class="text-gray-400 hover:text-red-500 transition-colors">
-                    <i class="fa-solid fa-times text-xl"></i>
-                </button>
-            </div>
-            <div class="p-8 bg-white">
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">If the answer is...</p>
-                <div class="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                    <template x-if="currentQuestionIndex !== null && ['radio-group', 'checkbox-group', 'select'].includes(questions[currentQuestionIndex].type)">
-                        <div class="space-y-3">
-                            <template x-for="(opt, oIdx) in questions[currentQuestionIndex].values" :key="oIdx">
-                                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 shadow-sm transition-all hover:border-indigo-200">
-                                    <span class="text-xs font-bold text-gray-700" x-text="opt.label"></span>
-                                    <div class="flex items-center space-x-3">
-                                        <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Jump to:</span>
-                                        <select x-model="opt.next" @change="syncToJson()" class="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-[10px] font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer">
-                                            <option value="">Next Question</option>
-                                            <template x-for="(qNext, qIdx) in questions" :key="qIdx">
-                                                <option x-show="qIdx > currentQuestionIndex" :value="qNext.name" x-text="(qIdx + 1) + '. ' + (qNext.label ? qNext.label.substring(0, 20) : 'Untitled') + (qNext.label && qNext.label.length > 20 ? '...' : '')"></option>
-                                            </template>
-                                            <option value="submit">End Survey</option>
-                                        </select>
+                <div class="p-8 bg-white">
+                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-6">If the answer is...</p>
+                    <div class="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                        <template x-if="currentQuestionIndex !== null && ['radio-group', 'checkbox-group', 'select'].includes(questions[currentQuestionIndex].type)">
+                            <div class="space-y-3">
+                                <template x-for="(opt, oIdx) in questions[currentQuestionIndex].values" :key="oIdx">
+                                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 shadow-sm transition-all hover:border-indigo-200">
+                                        <span class="text-xs font-bold text-gray-700" x-text="opt.label"></span>
+                                        <div class="flex items-center space-x-3">
+                                            <span class="text-[9px] font-black text-gray-500 uppercase tracking-widest">Jump to:</span>
+                                            <select x-model="opt.next" @change="syncToJson()" class="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-[10px] font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer">
+                                                <option value="">Next Question</option>
+                                                <template x-for="(qNext, qIdx) in questions" :key="qIdx">
+                                                    <option x-show="qIdx > currentQuestionIndex" :value="qNext.name" x-text="(qIdx + 1) + '. ' + (qNext.label ? qNext.label.substring(0, 20) : 'Untitled') + (qNext.label && qNext.label.length > 20 ? '...' : '')"></option>
+                                                </template>
+                                                <option value="submit">End Survey</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                </div>
-                            </template>
-                        </div>
-                    </template>
-                    <template x-if="currentQuestionIndex !== null && !['radio-group', 'checkbox-group', 'select'].includes(questions[currentQuestionIndex].type)">
-                        <div class="flex items-center justify-center p-8 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
-                            <p class="text-xs font-bold text-gray-400 text-center leading-relaxed">Skip logic is best applied to choice-based questions (Multiple Choice, Checkboxes, Dropdown).</p>
-                        </div>
-                    </template>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                <div class="px-8 py-6 bg-gray-50 border-t border-gray-100 flex justify-end">
+                    <button type="button" @click="closeSkipLogic()" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 shadow-lg shadow-indigo-100 transition-all active:scale-95">Done</button>
                 </div>
             </div>
-            <div class="px-8 py-6 bg-gray-50 border-t border-gray-100 flex justify-end">
-                <button type="button" @click="closeSkipLogic()" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 shadow-lg shadow-indigo-100 transition-all active:scale-95">Done</button>
+        </div>
+
+        <!-- AI Architect Modal -->
+        <div id="aiModal" x-show="showAiModal" x-cloak
+            class="fixed inset-0 z-[100001] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0">
+            <div class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden" @click.away="showAiModal = false">
+                <div class="px-8 py-6 border-b border-gray-50 flex items-center justify-between bg-white">
+                    <h3 class="text-xl font-black text-gray-900 flex items-center uppercase tracking-tight">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-3 text-cyan-500 animate-pulse"></i> AI Architect
+                    </h3>
+                    <button type="button" @click="showAiModal = false" class="text-gray-500 hover:text-red-500 transition-colors">
+                        <i class="fa-solid fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-8 bg-white">
+                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4 font-bold">Describe your survey requirements</p>
+                    <textarea id="aiPrompt" rows="6" 
+                        class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm text-gray-700 placeholder-slate-300 focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all shadow-inner"
+                        placeholder="e.g., Generate a 5-question customer satisfaction survey for a coffee shop including multiple choice for visit frequency and a text area for feedback."></textarea>
+                    
+                    <div id="aiLoader" class="hidden mt-6 bg-cyan-50 rounded-2xl p-6 border border-cyan-100 animate-in fade-in zoom-in">
+                        <div class="flex items-center">
+                            <i class="fa-solid fa-wand-magic-sparkles text-cyan-600 text-xl mr-4 animate-bounce"></i>
+                            <div>
+                                <p class="text-xs font-black text-cyan-900 uppercase tracking-widest">Architect is thinking...</p>
+                                <p class="text-[10px] text-cyan-500 font-bold uppercase mt-0.5">Crafting your custom survey schema</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-8 py-6 bg-gray-50 border-t border-gray-100 flex justify-end space-x-3">
+                    <button type="button" @click="showAiModal = false" class="px-6 py-2.5 bg-white text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 border border-gray-200 transition-all">Cancel</button>
+                    <button type="button" onclick="generateWithAi()" class="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black shadow-lg shadow-slate-100 transition-all active:scale-95">Generate Schema</button>
+                </div>
             </div>
         </div>
-    </div>
-            </div> <!-- Close max-w-7xl -->
-</div>
+
+        <!-- Preview Modal -->
+        <div id="previewModal" class="fixed inset-0 z-[100000] hidden items-center justify-center p-4" x-cloak>
+            <div class="relative w-full h-[90vh] max-w-5xl bg-slate-50 rounded-[2rem] shadow-2xl border border-white/20 overflow-hidden flex flex-col scale-in-center">
+                <!-- Modal Top Header -->
+                <div class="px-10 py-6 bg-white border-b border-gray-100 flex items-center justify-between sticky top-0 z-[11000]">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 shadow-sm border border-amber-100">
+                            <i class="fa-solid fa-eye text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black text-gray-900 tracking-tight uppercase" id="previewSurveyTitle">Live Preview</h2>
+                            <div class="flex items-center mt-0.5">
+                                <span class="flex h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+                                <p class="text-[10px] text-gray-500 font-black uppercase tracking-widest">Interactive Prototype</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-3">
+                        <div class="hidden md:flex items-center px-4 py-2 bg-gray-50 rounded-xl border border-gray-100 mr-4">
+                            <i class="fa-solid fa-desktop text-gray-500 mr-2 text-xs"></i>
+                            <span class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Desktop View</span>
+                        </div>
+                        <button type="button" onclick="closeFullScreenPreview()" 
+                            class="w-12 h-12 flex items-center justify-center bg-gray-900 text-white rounded-2xl hover:bg-red-600 hover:rotate-90 transition-all duration-300 shadow-xl group">
+                            <i class="fa-solid fa-times text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Preview Canvas -->
+                <div class="flex-1 overflow-y-auto p-12 custom-scrollbar">
+                    <div class="max-w-3xl mx-auto">
+                        <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+                            <!-- Hero Banner in Preview -->
+                            <div class="h-32 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 relative overflow-hidden">
+                                <div class="absolute inset-0 opacity-10">
+                                    <div class="absolute top-0 left-0 w-24 h-24 bg-white rounded-full -translate-x-12 -translate-y-12"></div>
+                                    <div class="absolute bottom-0 right-0 w-32 h-32 bg-white rounded-full translate-x-16 translate-y-16"></div>
+                                </div>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <i class="fa-solid fa-vial-circle-check text-white/20 text-6xl"></i>
+                                </div>
+                            </div>
+                            
+                            <!-- Question Area -->
+                            <div class="p-12">
+                                <div id="previewRenderArea" class="fb-render space-y-8"></div>
+                                
+                                <div class="mt-12 pt-10 border-t border-gray-50 flex justify-between items-center">
+                                    <button type="button" disabled class="px-8 py-4 bg-gray-100 text-gray-500 rounded-2xl text-xs font-black uppercase tracking-widest cursor-not-allowed">Previous Page</button>
+                                    <button type="button" onclick="alert('Success! This prototype works as expected.')" class="px-10 py-4 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all hover:-translate-y-1 active:scale-95">Complete Survey</button>
+                                </div>
+                                
+                                <p class="text-[9px] text-gray-300 text-center mt-12 font-bold uppercase tracking-widest">Powered by KM Survey Architect Engine</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div> <!-- Close surveyBuilder x-data -->
 @endsection
 
 @push('scripts')
@@ -687,16 +707,24 @@
                 activeMode: 'visual',
                 showLibrary: false,
                 showSkipModal: false,
+                showAiModal: false,
                 currentQuestionIndex: null,
                 jsonSchema: '',
                 questions: [],
                 library: [],
                 selectedQuestions: [],
-                confirmingDelete: null,
                 libTab: 'templates',
                 
-                 init() {
-                    const existingData = document.getElementById('json_schema').value;
+                init() {
+                    this.$watch('activeMode', value => {
+                        if (value === 'json') {
+                            this.syncToJson();
+                        }
+                    });
+                    
+                    
+                    const el = document.getElementById('json_schema');
+                    const existingData = el ? el.value : '[]';
                     if (existingData && existingData !== '[]') {
                         try {
                             const parsed = JSON.parse(existingData);
@@ -716,6 +744,10 @@
                     window.addEventListener('json-schema-synced', (e) => {
                         this.questions = this.mapFromLegacy(e.detail.schema);
                         this.syncToJson();
+                    });
+
+                    window.addEventListener('close-ai-modal', () => {
+                        this.showAiModal = false;
                     });
                 },
 
@@ -1160,7 +1192,7 @@
                     }
                     console.log('Dispatching ai-schema-generated with parsed schema:', schema);
                     window.dispatchEvent(new CustomEvent('ai-schema-generated', { detail: { schema: schema } }));
-                    closeAiArchitect();
+                    window.dispatchEvent(new CustomEvent('close-ai-modal'));
                 } else {
                     console.error('AI Error response:', data.message);
                     alert('AI Error: ' + data.message);

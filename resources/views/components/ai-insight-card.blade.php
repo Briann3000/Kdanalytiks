@@ -57,8 +57,7 @@ class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 my-4 transition-
             </div>
             <div class="hidden sm:flex items-center gap-4">
                 <div class="flex flex-col items-end">
-                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">AI Engine active</span>
-                    <span class="px-3 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest rounded-lg border border-indigo-100">LLAMA 3.1 8B</span>
+                    <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">AI Engine active</span>
                 </div>
             </div>
         </div>

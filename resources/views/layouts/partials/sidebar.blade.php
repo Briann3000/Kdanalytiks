@@ -176,8 +176,7 @@
                             </div>
                             <a href="{{ route('admin.surveys.index', ['status' => 'active']) }}"
                                 class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Active Surveys</a>
-                            <a href="{{ route('admin.surveys.index', ['status' => 'pending_approval']) }}"
-                                class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Pending Approval</a>
+                            {{-- Removed Pending Approval --}}
                             <a href="{{ route('admin.surveys.index', ['status' => 'draft']) }}"
                                 class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Drafts</a>
                         </div>
@@ -222,8 +221,7 @@
                         <a href="{{ route('admin.surveys.index', ['status' => 'active']) }}"
                             class="block py-1 text-xs font-bold uppercase tracking-wide {{ request('status') === 'active' ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} mt-1">ACTIVE</a>
 
-                        <a href="{{ route('admin.surveys.index', ['status' => 'pending_approval']) }}"
-                            class="block py-1 text-xs font-bold uppercase tracking-wide {{ request('status') === 'pending_approval' ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} mt-1">PENDING</a>
+                        {{-- Removed PENDING --}}
 
                         <a href="{{ route('admin.surveys.index', ['status' => 'draft']) }}"
                             class="block py-1 text-xs font-bold uppercase tracking-wide {{ request('status') === 'draft' ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} mt-1">DRAFTS</a>

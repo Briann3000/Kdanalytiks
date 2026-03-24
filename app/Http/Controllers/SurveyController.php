@@ -363,8 +363,9 @@ class SurveyController extends Controller
     public function showResponses(\App\Models\Survey $survey)
     {
         $this->authorizeOwner($survey);
-        $responses = $survey->responses()->with('respondent')->orderBy('created_at', 'desc')->paginate(15);
-        return view('surveys.project_data', compact('survey', 'responses'));
+        $responses = $survey->responses()->with('respondent', 'answers')->orderBy('created_at', 'desc')->paginate(15);
+        $headers = $this->getSurveyAnalysisMetadata($survey);
+        return view('surveys.project_data', compact('survey', 'responses', 'headers'));
     }
 
     public function showResponseDetail(\App\Models\Survey $survey, \App\Models\Response $response)
@@ -426,6 +427,11 @@ class SurveyController extends Controller
         rewind($handle);
         $csv = stream_get_contents($handle);
         fclose($handle);
+
+        // Save for History
+        $exportDir = storage_path('app/public/exports/' . $survey->id . '/');
+        if (!is_dir($exportDir)) mkdir($exportDir, 0755, true);
+        file_put_contents($exportDir . $filename, $csv);
 
         return response($csv)
             ->header('Content-Type', 'text/csv')
@@ -668,7 +674,14 @@ class SurveyController extends Controller
         }
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.pdf', compact('survey', 'responses', 'analysis'));
-        $filename = "Analytical_Report_" . Str::slug($survey->title) . ".pdf";
+        $filename = "Analytical_Report_" . Str::slug($survey->title) . "_" . date('Ymd_His') . ".pdf";
+        
+        // Save for History
+        $exportDir = storage_path('app/public/exports/' . $survey->id . '/');
+        if (!is_dir($exportDir)) mkdir($exportDir, 0755, true);
+        $output = $pdf->output();
+        file_put_contents($exportDir . $filename, $output);
+
         return $pdf->download($filename);
     }
 
@@ -816,11 +829,40 @@ class SurveyController extends Controller
         $response->respondent_id = auth()->id(); // Will be null for guests
         $response->save();
 
+        $uploadDir = storage_path('app/public/uploads/');
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $allowedMimeTypes = [
+            'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
+            'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/aac', 'audio/mp4',
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp'
+        ];
+
         if ($request->has('is_json_submission')) {
+            $jsonData = json_decode($request->input('json_data'), true) ?? [];
+            
+            // Handle File Uploads for JSON Surveys
+            foreach ($request->allFiles() as $name => $file) {
+                if ($file->isValid() && in_array($file->getMimeType(), $allowedMimeTypes)) {
+                    $newFileName = uniqid('media_') . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension();
+                    $file->move($uploadDir, $newFileName);
+                    $storagePath = 'uploads/' . $newFileName;
+                    
+                    // Update the JSON data with the storage path
+                    foreach ($jsonData as &$item) {
+                        if (isset($item['name']) && $item['name'] === $name) {
+                            $item['userData'] = $storagePath;
+                        }
+                    }
+                }
+            }
+
             $answer = new \App\Models\Answer();
             $answer->response_id = $response->id;
             $answer->question_id = null;
-            $answer->value = $request->input('json_data'); // Save the entire form output state as JSON
+            $answer->value = json_encode($jsonData); 
             $answer->save();
 
             // AI Sentiment Analysis Trigger
@@ -833,24 +875,6 @@ class SurveyController extends Controller
             session()->flash('success', 'Thank you for completing the survey!');
             return response()->json(['success' => true]);
         }
-
-        $uploadDir = storage_path('app/public/uploads/');
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
-        }
-
-        $allowedMimeTypes = [
-            'video/mp4',
-            'video/webm',
-            'video/ogg',
-            'video/quicktime',
-            'audio/mpeg',
-            'audio/ogg',
-            'audio/wav',
-            'audio/webm',
-            'audio/aac',
-            'audio/mp4'
-        ];
 
         $questions = $survey->questions;
 
@@ -1023,5 +1047,91 @@ class SurveyController extends Controller
         ]);
 
         return response()->json(['success' => true, 'message' => 'Question saved to library', 'item' => $item]);
+    }
+
+    public function showGallery(\App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+        
+        $mediaFiles = [];
+        $responses = $survey->responses()->with('answers')->get();
+        
+        foreach ($responses as $response) {
+            foreach ($response->answers as $answer) {
+                // Legacy / Direct Uploads
+                if (str_starts_with($answer->value, 'uploads/')) {
+                    $mediaFiles[] = $this->formatMediaItem($answer->value, $response->created_at);
+                } 
+                // JSON Uploads (need to parse JSON if question_id is null)
+                elseif ($answer->question_id === null) {
+                    $data = json_decode($answer->value, true) ?? [];
+                    foreach ($data as $item) {
+                        if (isset($item['userData']) && is_string($item['userData']) && str_starts_with($item['userData'], 'uploads/')) {
+                            $mediaFiles[] = $this->formatMediaItem($item['userData'], $response->created_at);
+                        }
+                    }
+                }
+            }
+        }
+
+        return view('surveys.project_gallery', compact('survey', 'mediaFiles'));
+    }
+
+    private function formatMediaItem($path, $date)
+    {
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $type = 'file';
+        if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'])) $type = 'image';
+        elseif (in_array($ext, ['mp4', 'webm', 'ogg', 'mov'])) $type = 'video';
+        elseif (in_array($ext, ['mp3', 'wav', 'aac'])) $type = 'audio';
+
+        return [
+            'path' => $path,
+            'type' => $type,
+            'date' => $date->format('M d, Y H:i'),
+            'filename' => basename($path)
+        ];
+    }
+
+    public function showDownloads(\App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+        
+        $exports = [];
+        $exportDir = storage_path('app/public/exports/' . $survey->id . '/');
+        
+        if (is_dir($exportDir)) {
+            $fileEntries = array_diff(scandir($exportDir, SCANDIR_SORT_DESCENDING), ['.', '..']);
+            foreach ($fileEntries as $file) {
+                $filePath = $exportDir . $file;
+                if (is_file($filePath)) {
+                    $exports[] = [
+                        'filename' => $file,
+                        'name' => $file,
+                        'extension' => pathinfo($file, PATHINFO_EXTENSION),
+                        'date' => date('M d, Y H:i', filemtime($filePath)),
+                        'size' => round(filesize($filePath) / 1024, 2) . ' KB'
+                    ];
+                }
+            }
+        }
+
+        return view('surveys.project_downloads', compact('survey', 'exports'));
+    }
+
+    public function deleteDownload(\App\Models\Survey $survey, $filename)
+    {
+        $this->authorizeOwner($survey);
+        
+        // Sanitize filename to prevent directory traversal
+        $filename = basename($filename);
+        $filePath = storage_path('app/public/exports/' . $survey->id . '/' . $filename);
+        
+        if (file_exists($filePath) && is_file($filePath)) {
+            unlink($filePath);
+            return response()->json(['success' => true]);
+        }
+        
+        return response()->json(['success' => false, 'message' => 'File not found'], 404);
     }
 }

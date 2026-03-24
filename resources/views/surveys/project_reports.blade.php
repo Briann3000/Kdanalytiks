@@ -43,8 +43,13 @@
                             <p class="text-[12px] font-medium leading-relaxed italic">{{ ltrim(trim($line), "-* \t\n\r\0\x0B") }}</p>
                         </div>
                     @empty
-                        <div class="col-span-2 p-4 text-center text-indigo-200 italic font-bold text-xs uppercase tracking-widest">
-                            AI is currently synthesizing your data...
+                        <div class="col-span-2 p-8 text-center bg-white/5 rounded-3xl border border-white/10">
+                            <i class="fa-solid fa-hourglass-start text-3xl mb-4 text-indigo-200 opacity-50"></i>
+                            <h4 class="text-sm font-black uppercase tracking-widest mb-2">Insufficient Data for Synthesis</h4>
+                            <p class="text-[11px] text-indigo-100/70 font-medium leading-relaxed max-w-md mx-auto">
+                                Our AI requires a diverse set of responses to generate high-quality strategic insights. 
+                                Once more respondents complete the survey, we'll provide a comprehensive analysis of trends and sentiment.
+                            </p>
                         </div>
                     @endforelse
                 </div>
@@ -63,14 +68,33 @@
                             <span class="text-indigo-600 mr-2 opacity-30 text-base font-black">#{{ $loop->iteration }}</span> 
                             {{ $item['label'] }}
                         </h4>
-                        <div class="flex gap-1 bg-gray-50 p-1 rounded-lg border border-gray-100">
-                             @foreach(['bar', 'pie', 'doughnut'] as $type)
-                                <button @click="switchChartType('{{ $item['canvasId'] }}', '{{ $type }}')" 
-                                        :class="chartTypes['{{ $item['canvasId'] }}'] === '{{ $type }}' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'"
-                                        class="p-1 px-2 rounded-md text-[10px] font-bold uppercase transition-all">
-                                    {{ $type }}
-                                </button>
-                             @endforeach
+                        <div class="flex flex-col gap-2">
+                            <div class="flex gap-1 bg-gray-100 p-1 rounded-lg border border-gray-100">
+                                @foreach(['bar', 'horizontal', 'line', 'area', 'pie', 'doughnut', 'polarArea', 'radar'] as $type)
+                                    <button @click="switchChartType('{{ $item['canvasId'] }}', '{{ $type }}')" 
+                                            :class="chartTypes['{{ $item['canvasId'] }}'] === '{{ $type }}' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-600'"
+                                            class="p-1 px-2 rounded-md text-[9px] font-black uppercase transition-all"
+                                            title="{{ ucfirst($type) }}">
+                                        {{ substr($type, 0, 3) }}
+                                    </button>
+                                @endforeach
+                            </div>
+                            <div class="flex justify-end gap-1">
+                                @foreach(['vibrant', 'indigo', 'emerald', 'rose', 'amber', 'purple'] as $color)
+                                    <button @click="switchColor('{{ $item['canvasId'] }}', '{{ $color }}')" 
+                                            class="w-4 h-4 rounded-full border border-white ring-1 ring-gray-200 transition-transform hover:scale-125 shadow-sm"
+                                            :class="{
+                                                'bg-gradient-to-br from-indigo-500 via-emerald-500 to-rose-500': '{{ $color }}' === 'vibrant',
+                                                'bg-indigo-500': '{{ $color }}' === 'indigo',
+                                                'bg-emerald-500': '{{ $color }}' === 'emerald',
+                                                'bg-rose-500': '{{ $color }}' === 'rose',
+                                                'bg-amber-500': '{{ $color }}' === 'amber',
+                                                'bg-purple-500': '{{ $color }}' === 'purple',
+                                                'ring-2 ring-offset-2 ring-indigo-600 scale-125': activeColors['{{ $item['canvasId'] }}'] === '{{ $color }}'
+                                            }">
+                                    </button>
+                                @endforeach
+                            </div>
                         </div>
                     </div>
 
@@ -82,7 +106,7 @@
                         <div class="overflow-hidden">
                              <table class="w-full text-left">
                                 <thead>
-                                    <tr class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                    <tr class="text-[10px] font-black text-gray-500 uppercase tracking-widest">
                                         <th class="py-2">Value</th>
                                         <th class="py-2 text-right">Frequency</th>
                                         <th class="py-2 text-right">Ratio</th>
@@ -148,40 +172,106 @@
 <script>
     const chartConfigs = {!! json_encode($chartConfigs) !!};
     const chartInstances = {};
-    const brandColor = '#4f46e5';
+    
+    const colorPalettes = {
+        indigo: ['#4f46e5', '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff', '#3730a3', '#312e81'],
+        emerald: ['#10b981', '#059669', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5', '#065f46', '#064e3b'],
+        rose: ['#f43f5e', '#e11d48', '#fb7185', '#fda4af', '#fecdd3', '#fff1f2', '#9f1239', '#881337'],
+        amber: ['#f59e0b', '#d97706', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7', '#b45309', '#92400e'],
+        purple: ['#8b5cf6', '#7c3aed', '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe', '#5b21b6', '#4c1d95'],
+        vibrant: ['#6366f1', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#f97316']
+    };
 
-    function createChart(canvasId, config, type = 'bar') {
+    function createChart(canvasId, config, type = 'bar', colorTheme = 'indigo') {
         const canvasElement = document.getElementById(canvasId);
         if (!canvasElement) return;
         const ctx = canvasElement.getContext('2d');
         
-        const isMultipleColors = ['pie', 'doughnut'].includes(type);
-        const colors = ['#4f46e5', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff', '#6366f1'];
+        const palette = colorPalettes[colorTheme];
+        // Ensure we have enough colors by repeating the palette if needed
+        const colors = config.labels.map((_, i) => palette[i % palette.length]);
+        const primaryColor = palette[0];
+        
+        let chartType = type;
+        let indexAxis = 'x';
+        let fill = false;
+
+        if (type === 'horizontal') {
+            chartType = 'bar';
+            indexAxis = 'y';
+        } else if (type === 'area') {
+            chartType = 'line';
+            fill = true;
+        }
+
+        const isCategorical = ['pie', 'doughnut', 'polarArea', 'bar', 'horizontal'].includes(type);
 
         const chartConfig = {
-            type: type,
+            type: chartType,
             data: {
                 labels: config.labels,
                 datasets: [{ 
+                    label: 'Responses',
                     data: config.data, 
-                    backgroundColor: isMultipleColors ? colors : brandColor,
-                    borderRadius: type === 'bar' ? 6 : 0,
-                    barThickness: type === 'bar' ? 24 : null,
+                    backgroundColor: isCategorical ? colors : (fill ? `${primaryColor}44` : primaryColor),
+                    borderColor: isCategorical ? (type === 'bar' || type === 'horizontal' ? colors : '#fff') : primaryColor,
+                    borderWidth: (type === 'line' || type === 'radar' || type === 'area') ? 3 : 1,
+                    fill: fill,
+                    borderRadius: (chartType === 'bar') ? 6 : 0,
+                    tension: 0.4,
+                    pointBackgroundColor: primaryColor,
+                    pointRadius: 4
                 }]
             },
             options: {
+                indexAxis: indexAxis,
                 responsive: true, 
                 maintainAspectRatio: false,
                 plugins: { 
-                    legend: { display: isMultipleColors, position: 'bottom', labels: { font: { weight: '700', size: 9 } } }
+                    legend: { 
+                        display: ['pie', 'doughnut', 'polarArea', 'radar'].includes(type), 
+                        position: 'bottom', 
+                        labels: { 
+                            boxWidth: 10, 
+                            padding: 15, 
+                            font: { weight: '700', size: 9, family: 'Inter' },
+                            usePointStyle: true
+                        } 
+                    },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        padding: 12,
+                        titleFont: { size: 12, weight: '800' },
+                        bodyFont: { size: 12, weight: '600' },
+                        cornerRadius: 12,
+                        displayColors: true
+                    }
                 }
             }
         };
 
-        if (type === 'bar') {
+        if (chartType === 'bar' || chartType === 'line') {
             chartConfig.options.scales = {
-                y: { beginAtZero: true, grid: { display: false }, ticks: { font: { weight: '700', size: 9 } } },
-                x: { grid: { display: false }, ticks: { font: { weight: '700', size: 9 } } }
+                y: { 
+                    beginAtZero: true, 
+                    grid: { color: '#f8fafc', drawBorder: false }, 
+                    ticks: { font: { weight: '600', size: 10, color: '#64748b' } } 
+                },
+                x: { 
+                    grid: { display: false }, 
+                    ticks: { font: { weight: '600', size: 10, color: '#64748b' } } 
+                }
+            };
+        }
+
+        if (type === 'radar') {
+            chartConfig.options.scales = {
+                r: { 
+                    grid: { color: '#f1f5f9' }, 
+                    angleLines: { color: '#f1f5f9' },
+                    pointLabels: { font: { weight: '700', size: 10 } },
+                    ticks: { display: false }
+                }
             };
         }
 
@@ -191,17 +281,26 @@
     window.chartManager = function() {
         return {
             chartTypes: {},
+            activeColors: {},
             init() {
                 chartConfigs.forEach(config => {
                     this.chartTypes[config.canvas_id] = 'bar';
-                    chartInstances[config.canvas_id] = createChart(config.canvas_id, config, 'bar');
+                    this.activeColors[config.canvas_id] = 'vibrant';
+                    chartInstances[config.canvas_id] = createChart(config.canvas_id, config, 'bar', 'vibrant');
                 });
             },
             switchChartType(canvasId, type) {
                 this.chartTypes[canvasId] = type;
+                this.refreshChart(canvasId);
+            },
+            switchColor(canvasId, color) {
+                this.activeColors[canvasId] = color;
+                this.refreshChart(canvasId);
+            },
+            refreshChart(canvasId) {
                 const config = chartConfigs.find(c => c.canvas_id === canvasId);
                 if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
-                chartInstances[canvasId] = createChart(canvasId, config, type);
+                chartInstances[canvasId] = createChart(canvasId, config, this.chartTypes[canvasId], this.activeColors[canvasId]);
             }
         }
     };

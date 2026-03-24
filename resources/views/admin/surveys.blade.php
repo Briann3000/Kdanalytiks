@@ -73,12 +73,12 @@
             <table class="min-w-[1000px] w-full divide-y divide-gray-100">
                 <thead class="bg-gray-50/50">
                     <tr>
-                        <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Survey Detail</th>
-                        <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Owner</th>
-                        <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Type</th>
-                        <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
-                        <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Responses</th>
-                        <th class="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest pr-20">Actions</th>
+                        <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">Survey Detail</th>
+                        <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">Owner</th>
+                        <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">Type</th>
+                        <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">Responses</th>
+                        <th class="px-6 py-4 text-right text-[11px] font-bold text-gray-900 uppercase tracking-wider pr-20">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-100">
@@ -117,7 +117,7 @@
                                 $statusVal = $survey->status instanceof \BackedEnum ? $survey->status->value : $survey->status; 
                             @endphp
                             <span class="px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest
-                                {{ $statusVal === 'active' ? 'bg-emerald-50 text-emerald-600' : ($statusVal === 'pending_approval' ? 'bg-amber-50 text-amber-600' : 'bg-gray-100 text-gray-400') }}">
+                                {{ $statusVal === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400' }}">
                                 {{ str_replace('_', ' ', $statusVal) }}
                             </span>
                         </td>

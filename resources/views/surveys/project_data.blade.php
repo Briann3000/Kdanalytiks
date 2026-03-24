@@ -18,26 +18,63 @@
     </div>
 
     @if($responses->count() > 0)
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto min-h-[400px]">
             <table class="min-w-full divide-y divide-gray-100">
                 <thead>
                     <tr class="bg-gray-50/10">
-                        <th scope="col" class="px-8 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Submission Date</th>
-                        <th scope="col" class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Respondent</th>
-                        <th scope="col" class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Sentiment</th>
-                        <th scope="col" class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Brief</th>
-                        <th scope="col" class="px-8 py-4 text-right"></th>
+                        <th scope="col" class="px-6 py-4 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest sticky left-0 bg-white z-10 border-r border-gray-50"># ID</th>
+                        <th scope="col" class="px-6 py-4 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest">Submission Date</th>
+                        <th scope="col" class="px-6 py-4 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest">Respondent</th>
+                        @foreach($headers as $header)
+                            <th scope="col" class="px-6 py-4 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest max-w-[200px] truncate" title="{{ $header['label'] }}">
+                                {{ $header['label'] }}
+                            </th>
+                        @endforeach
+                        <th scope="col" class="px-6 py-4 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest">Sentiment</th>
+                        <th scope="col" class="px-8 py-4 text-right sticky right-0 bg-white z-10 border-l border-gray-50">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50 bg-white">
                     @foreach($responses as $response)
                         <tr class="hover:bg-gray-50/50 transition-colors group">
-                            <td class="px-8 py-4 whitespace-nowrap text-xs text-gray-500 font-bold">
+                            <td class="px-6 py-4 whitespace-nowrap text-[10px] font-black text-gray-900 sticky left-0 bg-white group-hover:bg-gray-50/50 z-10 border-r border-gray-50">
+                                {{ $loop->iteration + ($responses->currentPage() - 1) * $responses->perPage() }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-[10px] text-gray-500 font-bold">
                                 {{ $response->created_at->format('M d, Y • H:i') }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="text-xs font-bold text-gray-900 tracking-tight">{{ $response->respondent ? $response->respondent->name : 'Anonymous User' }}</span>
+                                <span class="text-[10px] font-black text-gray-900 uppercase tracking-tight">{{ $response->respondent ? $response->respondent->name : 'Anonymous' }}</span>
                             </td>
+                            
+                            @foreach($headers as $header)
+                                <td class="px-6 py-4 text-[10px] text-gray-600 font-medium max-w-[250px] truncate">
+                                    @php
+                                        $val = '—';
+                                        if (!empty($survey->json_schema)) {
+                                            $jsonAnswer = $response->answers->first();
+                                            if ($jsonAnswer) {
+                                                $parsed = json_decode($jsonAnswer->value, true) ?? [];
+                                                foreach ($parsed as $item) {
+                                                    if (isset($item['name']) && $item['name'] === $header['id']) {
+                                                        $val = is_array($item['userData']) ? implode(', ', $item['userData']) : $item['userData'];
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            $ans = $response->answers->where('question_id', $header['id'])->first();
+                                            $val = $ans ? $ans->value : '—';
+                                        }
+                                        // Handle media paths
+                                        if (str_starts_with($val, 'uploads/')) {
+                                            $val = '[Media File]';
+                                        }
+                                    @endphp
+                                    {{ str($val)->limit(40) }}
+                                </td>
+                            @endforeach
+
                             <td class="px-6 py-4 whitespace-nowrap">
                                 @php
                                     $sentiment = $response->ai_metadata['sentiment'] ?? 'Neutral';
@@ -48,21 +85,13 @@
                                     ];
                                     $cls = $colors[$sentiment] ?? $colors['Neutral'];
                                 @endphp
-                                <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase border {{ $cls }}">
+                                <span class="px-2 py-0.5 rounded text-[8px] font-black uppercase border {{ $cls }}">
                                     {{ $sentiment }}
                                 </span>
                             </td>
-                            <td class="px-6 py-4 text-[11px] text-gray-400 max-w-xs truncate font-medium italic">
-                                @php
-                                    $answersSummary = $response->answers->take(2)->map(function ($a) {
-                                        return $a->value;
-                                    })->implode(', ');
-                                @endphp
-                                {{ str($answersSummary)->limit(50) }}
-                            </td>
-                            <td class="px-8 py-4 text-right">
-                                <a href="{{ route('surveys.responses.show', [$survey, $response]) }}" class="w-8 h-8 rounded-lg bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all">
-                                    <i class="fa-solid fa-eye text-[10px]"></i>
+                            <td class="px-8 py-4 text-right sticky right-0 bg-white group-hover:bg-gray-50/50 z-10 border-l border-gray-50">
+                                <a href="{{ route('surveys.responses.show', [$survey, $response]) }}" class="inline-flex items-center px-3 py-1 bg-gray-900 text-white rounded text-[9px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all">
+                                    <i class="fa-solid fa-eye mr-2"></i> View
                                 </a>
                             </td>
                         </tr>
@@ -72,7 +101,7 @@
         </div>
 
         @if($responses->hasPages())
-            <div class="p-8 border-t border-gray-50">
+            <div class="p-8 border-t border-gray-50 bg-gray-50/30">
                 {{ $responses->links() }}
             </div>
         @endif
