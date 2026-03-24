@@ -160,7 +160,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/research-proposal/preview/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'preview'])->name('research-proposal.preview');
     Route::post('/research-proposal/export/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'export'])->name('research-proposal.export');
     
-    Route::resource('research-proposal', \App\Http\Controllers\ResearchProposalController::class);
+    Route::resource('research-proposal', \App\Http\Controllers\ResearchProposalController::class)->except(['store']);
 });
 
 // Public Survey Views

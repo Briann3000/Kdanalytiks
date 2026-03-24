@@ -130,14 +130,28 @@
             font-weight: 900;
             margin-right: 0.75rem;
         }
+
+        /* Form Item Layout Fixes */
+        .form-wrap.form-builder .frmb .form-elements { display: flex !important; flex-wrap: wrap !important; gap: 0.5rem !important; }
+        .form-wrap.form-builder .frmb .form-elements .label-wrap { display: flex !important; flex-wrap: wrap !important; align-items: center !important; width: 100% !important; gap: 0.5rem !important; }
+        .form-wrap.form-builder .frmb .form-elements .fld-label { flex: 1 1 100% !important; min-width: 0 !important; width: 100% !important; max-width: 100% !important; }
+
+        @media (max-width: 640px) {
+            .form-wrap.form-builder .frmb-control li { padding: 0.25rem; }
+            .fb-render .form-group { padding: 1rem !important; margin-bottom: 1.5rem !important; }
+            .stage-wrap { max-width: 100%; overflow-x: hidden; }
+            .form-wrap.form-builder .frmb .form-elements { flex-direction: column !important; align-items: stretch !important; gap: 0.75rem !important;}
+            .form-wrap.form-builder .frmb .form-elements .label-wrap { display: flex !important; flex-direction: column !important; align-items: stretch !important; }
+            .form-wrap.form-builder .frmb .form-elements .fld-label { width: 100% !important; max-width: none !important; }
+        }
     </style>
 @endpush
 
 @section('content')
     <div x-data="surveyBuilder">
-        <div class="sticky top-0 z-[1000] bg-white border-b border-gray-200 shadow-sm px-6 py-3 mb-6 -mx-4 sm:-mx-8 lg:-mx-12" style="position: sticky; top: 0; z-index: 1000;">
-            <div class="max-w-7xl mx-auto flex items-center justify-between">
-                <div class="flex items-center space-x-3">
+        <div class="sticky top-0 z-[1000] bg-white border-b border-gray-200 shadow-sm px-4 sm:px-6 py-3 mb-6 -mx-4 sm:-mx-8 lg:-mx-12" style="position: sticky; top: 0; z-index: 1000;">
+            <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-2">
                     <button type="button" @click="showDetails = !showDetails" 
                         class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center"
                         :class="showDetails ? 'bg-indigo-600 text-white shadow-lg' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
@@ -292,6 +306,8 @@
                                     handle: '.drag-handle',
                                     animation: 150,
                                     ghostClass: 'sortable-ghost',
+                                    delay: 150, // Delay to allow scrolling on mobile
+                                    delayOnTouchOnly: true, // Only apply delay on touch
                                     onEnd: (evt) => {
                                         const newQs = [...questions];
                                         const [movedItem] = newQs.splice(evt.oldIndex, 1);
@@ -317,8 +333,8 @@
                                             <!-- Question Number -->
                                             <div class="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center font-black text-xs shadow-lg border-2 border-white" x-text="index + 1"></div>
                                             
-                                            <!-- Drag Handle (Bigger) -->
-                                            <div class="drag-handle text-gray-300 hover:text-indigo-600 transition-colors p-1 cursor-grab active:cursor-grabbing">
+                                            <!-- Drag Handle (Bigger for touch) -->
+                                            <div class="drag-handle text-gray-300 hover:text-indigo-600 transition-colors p-3 cursor-grab active:cursor-grabbing">
                                                 <i class="fa-solid fa-grip-vertical text-2xl"></i>
                                             </div>
                                         </div>
@@ -630,8 +646,8 @@
         </div>
 
         <!-- Preview Modal -->
-        <div id="previewModal" class="fixed inset-0 z-[100000] hidden items-center justify-center p-4" x-cloak>
-            <div class="relative w-full h-[90vh] max-w-5xl bg-slate-50 rounded-[2rem] shadow-2xl border border-white/20 overflow-hidden flex flex-col scale-in-center">
+        <div id="previewModal" class="fixed inset-0 z-[100000] hidden flex-col md:items-center md:justify-center p-0 md:p-4 bg-slate-50 md:bg-transparent backdrop-blur-sm" x-cloak>
+            <div class="relative w-full h-full md:h-[90vh] max-w-5xl bg-slate-50 rounded-none md:rounded-[2rem] shadow-none md:shadow-2xl border-none md:border border-white/20 overflow-hidden flex flex-col scale-in-center">
                 <!-- Modal Top Header -->
                 <div class="px-10 py-6 bg-white border-b border-gray-100 flex items-center justify-between sticky top-0 z-[11000]">
                     <div class="flex items-center space-x-4">
@@ -660,9 +676,12 @@
                 </div>
 
                 <!-- Preview Canvas -->
-                <div class="flex-1 overflow-y-auto p-12 custom-scrollbar">
-                    <div class="max-w-3xl mx-auto">
-                        <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+                <div class="flex-1 overflow-y-auto p-4 sm:p-12 custom-scrollbar">
+                    <div class="max-w-7xl mx-auto">
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                            <!-- Left: Form Builder Area -->
+                            <div class="lg:col-span-8 order-2 lg:order-1">
+                                <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-indigo-100/40 border border-gray-100 overflow-hidden relative">
                             <!-- Hero Banner in Preview -->
                             <div class="h-32 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 relative overflow-hidden">
                                 <div class="absolute inset-0 opacity-10">
@@ -675,8 +694,8 @@
                             </div>
                             
                             <!-- Question Area -->
-                            <div class="p-12">
-                                <div id="previewRenderArea" class="fb-render space-y-8"></div>
+                            <div class="p-6 sm:p-12">
+                                <div id="previewRenderArea" class="fb-render space-y-6 sm:space-y-8"></div>
                                 
                                 <div class="mt-12 pt-10 border-t border-gray-50 flex justify-between items-center">
                                     <button type="button" disabled class="px-8 py-4 bg-gray-100 text-gray-500 rounded-2xl text-xs font-black uppercase tracking-widest cursor-not-allowed">Previous Page</button>
