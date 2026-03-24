@@ -149,7 +149,7 @@
 
 @section('content')
     <div x-data="surveyBuilder">
-        <div class="sticky top-0 z-[1000] bg-white border-b border-gray-200 shadow-sm px-4 sm:px-6 py-3 mb-6 -mx-4 sm:-mx-8 lg:-mx-12" style="position: sticky; top: 0; z-index: 1000;">
+        <div class="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm px-4 sm:px-6 py-3 mb-6 -mx-4 sm:-mx-8 lg:-mx-12" style="position: sticky; top: 0; z-index: 40;">
             <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div class="flex flex-wrap items-center gap-2">
                     <button type="button" @click="showDetails = !showDetails" 

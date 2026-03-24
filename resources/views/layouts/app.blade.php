@@ -263,10 +263,18 @@
             font-size: 0.75rem;
             color: #6b7280;
         }
+
+        /* Native App Safe Areas */
+        .is-native-app {
+            padding-top: env(safe-area-inset-top, 20px);
+        }
+        .is-native-app nav.sticky {
+            top: env(safe-area-inset-top, 20px);
+        }
     </style>
 </head>
 
-<body class="font-sans antialiased bg-gray-50 text-gray-900" x-data="{ mobileMenuOpen: false }">
+<body class="font-sans antialiased bg-gray-50 text-gray-900" x-data="{ mobileMenuOpen: false }" :class="Capacitor.isNativePlatform() ? 'is-native-app' : ''">
     <div class="min-h-screen flex flex-col" x-data="{ sidebarOpen: true, desktopSidebarOpen: window.innerWidth > 1024 }"
         @close-sidebar.window="desktopSidebarOpen = false"
         @open-sidebar.window="desktopSidebarOpen = true">
