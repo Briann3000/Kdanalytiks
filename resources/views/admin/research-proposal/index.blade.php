@@ -13,9 +13,6 @@
             <h1 class="text-sm font-bold text-gray-900 tracking-tight">Research Studio: Report Generator</h1>
         </div>
         <div class="flex items-center space-x-4">
-            <span class="text-xs font-semibold text-gray-400 uppercase tracking-widest px-3 border-r border-gray-100">
-                Synthesis Engine v2.0
-            </span>
             <a href="{{ route('research-proposal.history') }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors">
                 <i class="fa-solid fa-clock-rotate-left mr-1"></i> View History
             </a>
@@ -36,7 +33,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="space-y-6">
                                 <div>
-                                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Source Dataset (Survey)</label>
+                                    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Source Survey</label>
                                     <select name="survey_id" required class="w-full h-12 bg-gray-50 border-gray-100 rounded-xl px-4 text-sm font-medium text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer">
                                         <option value="" disabled selected>Select active survey...</option>
                                         @foreach($surveys as $survey)
@@ -53,6 +50,10 @@
                                             <option value="apa7">APA 7th</option>
                                             <option value="mla9">MLA 9th</option>
                                             <option value="harvard">Harvard</option>
+                                            <option value="chicago">Chicago/Turabian</option>
+                                            <option value="ieee">IEEE</option>
+                                            <option value="vancouver">Vancouver</option>
+                                            <option value="oscola">OSCOLA</option>
                                         </select>
                                     </div>
                                     <div>
@@ -142,7 +143,7 @@
                         <div class="flex flex-col sm:flex-row items-center justify-between sm:justify-end space-y-4 sm:space-y-0 sm:space-x-4 pt-6 border-t border-gray-100">
                             <div class="flex items-center space-x-2 text-gray-400 w-full sm:w-auto justify-center sm:justify-start">
                                 <i class="fa-solid fa-shield-halved text-sm"></i>
-                                <span class="text-[10px] font-bold uppercase tracking-widest">Internal KMS Processing</span>
+                                <span class="text-[10px] font-bold uppercase tracking-widest">Secure Processing</span>
                             </div>
                             <button type="submit" class="w-full sm:w-auto min-h-[48px] px-10 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-md shadow-indigo-100 hover:bg-indigo-700 hover:shadow-lg transition-all transform active:scale-95 flex items-center justify-center border-none">
                                 <span class="whitespace-nowrap">Generate Full Report</span> <i class="fa-solid fa-arrow-right ml-2 bg-transparent text-white border-0"></i>

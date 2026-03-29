@@ -106,48 +106,82 @@ class AiService
      */
     public function callGroq($prompt, $systemPrompt = null, $isJson = false)
     {
-        try {
-            $apiKey = config('services.groq.api_key');
-            $model = config('services.groq.model', 'llama-3.1-8b-instant');
+        $apiKey = config('services.groq.api_key');
+        $model = config('services.groq.model', 'llama-3.1-8b-instant');
 
-            if (empty($apiKey)) {
-                Log::error("Groq API Key is missing in configuration.");
-                return null;
-            }
-
-            $finalSystemPrompt = $systemPrompt;
-            if (!$finalSystemPrompt) {
-                $finalSystemPrompt = $isJson ? 'You are a helpful assistant that only outputs JSON.' : 'You are an expert researcher.';
-            }
-
-            $options = [
-                'model' => $model,
-                'messages' => [
-                    ['role' => 'system', 'content' => $finalSystemPrompt],
-                    ['role' => 'user', 'content' => $prompt],
-                ],
-                'temperature' => $isJson ? 0.1 : 0.4
-            ];
-
-            if ($isJson) {
-                $options['response_format'] = ['type' => 'json_object'];
-            }
-
-            $response = Http::withToken($apiKey)
-                ->timeout(60)
-                ->post('https://api.groq.com/openai/v1/chat/completions', $options);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                return $data['choices'][0]['message']['content'] ?? null;
-            }
-            
-            Log::error("Groq API Error: " . $response->body());
-            return null;
-        } catch (\Exception $e) {
-            Log::error("Groq Call Exception: " . $e->getMessage());
+        if (empty($apiKey)) {
+            Log::error("Groq API Key is missing in configuration.");
             return null;
         }
+
+        $finalSystemPrompt = $systemPrompt;
+        if (!$finalSystemPrompt) {
+            $finalSystemPrompt = $isJson ? 'You are a helpful assistant that only outputs JSON.' : 'You are an expert researcher.';
+        }
+
+        $options = [
+            'model' => $model,
+            'messages' => [
+                ['role' => 'system', 'content' => $finalSystemPrompt],
+                ['role' => 'user', 'content' => $prompt],
+            ],
+            'temperature' => $isJson ? 0.1 : 0.4,
+            'max_tokens' => 4096,
+        ];
+
+        if ($isJson) {
+            $options['response_format'] = ['type' => 'json_object'];
+        }
+
+        // Retry loop with rate limit handling
+        $maxRetries = 3;
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            try {
+                Log::info("Groq API call (attempt {$attempt}): model={$model}, prompt_length=" . strlen($prompt));
+
+                $response = Http::withToken($apiKey)
+                    ->timeout(120)
+                    ->post('https://api.groq.com/openai/v1/chat/completions', $options);
+
+                if ($response->successful()) {
+                    $data = $response->json();
+                    $content = $data['choices'][0]['message']['content'] ?? null;
+                    $finishReason = $data['choices'][0]['finish_reason'] ?? 'unknown';
+                    Log::info("Groq API success: finish_reason={$finishReason}, response_length=" . strlen($content ?? ''));
+                    return $content;
+                }
+
+                // Check if rate limited
+                $body = $response->body();
+                $status = $response->status();
+
+                if ($status === 429 || str_contains($body, 'rate_limit_exceeded')) {
+                    // Extract wait time from error message: "Please try again in X.XXs"
+                    $waitSeconds = 10; // default fallback
+                    if (preg_match('/try again in (\d+\.?\d*)s/i', $body, $matches)) {
+                        $waitSeconds = ceil((float) $matches[1]) + 2; // Add 2s buffer
+                    }
+                    Log::warning("Groq rate limited (attempt {$attempt}/{$maxRetries}). Waiting {$waitSeconds}s before retry...");
+                    sleep($waitSeconds);
+                    continue; // Retry
+                }
+
+                // Non-rate-limit error
+                Log::error("Groq API Error (HTTP {$status}): " . $body);
+                return null;
+
+            } catch (\Exception $e) {
+                Log::error("Groq Call Exception (attempt {$attempt}): " . $e->getMessage());
+                if ($attempt < $maxRetries) {
+                    sleep(5);
+                    continue;
+                }
+                return null;
+            }
+        }
+
+        Log::error("Groq API: All {$maxRetries} attempts exhausted.");
+        return null;
     }
 
     /**

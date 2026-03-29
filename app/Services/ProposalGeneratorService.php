@@ -19,55 +19,95 @@ class ProposalGeneratorService
      */
     public function generateProposal(ResearchProposal $proposal)
     {
-        set_time_limit(300);
-
-        $sections = [
-            'Introduction' => "Provide a high-level overview of the research topic and its significance.",
-            'Problem Statement' => "Clearly define the research problem, gaps in current knowledge, and the necessity of this study.",
-            'Research Objectives' => "Detail the specific goals and intended outcomes of the research.",
-            'Methodology' => "Write a detailed methodology section for this research.",
-            'Expected Outcomes & Scope' => "Discuss the potential impact of the findings and the boundaries of the study.",
-            'Timeline & Phases' => "Outline a logical progression of the research from start to completion."
-        ];
-
+        set_time_limit(600);
         $generatedContent = [];
+        $style = $proposal->style ?? 'APA 7th';
+        $currentYear = date('Y');
+        
+        $systemPrompt = "You are a professional academic consultant. " .
+            "Transform sparse researcher inputs into high-quality, persuasive, logically sound 5-chapter drafts. " .
+            "Formal tone. Academic style: {$style}.";
 
-        foreach ($sections as $title => $instruction) {
-            // 🔥 Modify instruction ONLY for Methodology
-            if ($title === 'Methodology') {
-                    $instruction .= "\n\nFORMAT:
-                    Use subheadings:
-                    1. Research Design
-                    2. Population and Sampling
-                    3. Data Collection Methods
-                    4. Data Analysis Techniques
-                    5. Ethical Considerations";
-                }
+        // ── 1. PRELIMINARIES ──
+        $p0 = "Draft PRELIMINARY pages for a research study titled '{$proposal->title}':\n" .
+              "Use markers [SECTION: Name] for:\n" .
+              "[SECTION: Abstract] - 250-word formal abstract.\n" .
+              "[SECTION: Abbreviations] - Relevant list.\n" .
+              "[SECTION: Definition of Key Terms] - 5-8 core terms.";
+        Log::info("Drafting Preliminaries for ID: {$proposal->id}");
+        $this->batchProcess($p0, $generatedContent, $systemPrompt);
 
-            $prompt = "Draft the '{$title}' section of a formal academic research proposal.\n\n" .
-                "USER INPUTS:\n" .
-                "Title: {$proposal->title}\n" .
-                "Research Question: {$proposal->research_question}\n" .
-                "Objectives: {$proposal->objectives}\n" .
-                "Methodology Type: {$proposal->methodology_type}\n" .
-                "Target Population: {$proposal->target_population}\n" .
-                "Scope: {$proposal->scope}\n\n" .
-                "SECTION INSTRUCTION: {$instruction}\n\n" .
-                "STYLE RULES:
-                - Follow {$proposal->style} academic standards
-                - Use formal, objective, and authoritative language
-                - Use structured headings where appropriate
-                - Avoid vague statements".
-            $systemPrompt = "You are a professional academic consultant specializing in grant writing and research design. " .
-                "Your goal is to transform sparse researcher inputs into high-quality, persuasive, and logically sound proposal drafts.";
+        // ── 2. CHAPTER 1: INTRODUCTION ──
+        sleep(2);
+        $p1 = "Draft CHAPTER 1: INTRODUCTION for '{$proposal->title}':\n" .
+              "Objectives: {$proposal->objectives}\n" .
+              "Question: {$proposal->research_question}\n" .
+              "Scope: {$proposal->scope}\n\n" .
+              "Use markers [SECTION: Name] for:\n" .
+              "[SECTION: 1.1 Background of the Study]\n" .
+              "[SECTION: 1.2 Statement of the Problem]\n" .
+              "[SECTION: 1.3 Objectives of the Study]\n" .
+              "[SECTION: 1.4 Research Questions]\n" .
+              "[SECTION: 1.5 Significance of the Study]\n" .
+              "[SECTION: 1.6 Scope and Limitations]";
+        Log::info("Drafting Ch 1 for ID: {$proposal->id}");
+        $this->batchProcess($p1, $generatedContent, $systemPrompt);
 
-            Log::info("Generating proposal section: {$title} for Research ID: {$proposal->id}");
-            $content = $this->aiService->callGroq($prompt, $systemPrompt);
-            if (!$content) {
-                            sleep(2);
-                            $content = $this->aiService->callGroq($prompt, $systemPrompt);}
-            $generatedContent[$title] = $content ?? "[Generation failed]";
-        }
+        // ── 3. CHAPTER 2: LITERATURE REVIEW ──
+        sleep(2);
+        $p2 = "Draft CHAPTER 2: LITERATURE REVIEW for '{$proposal->title}':\n" .
+              "Use markers:\n" .
+              "[SECTION: 2.1 Theoretical Framework]\n" .
+              "[SECTION: 2.2 Conceptual Framework] - Discuss variables relationships.\n" .
+              "[SECTION: 2.3 Empirical Review] - Discuss past studies trends.\n" .
+              "[SECTION: 2.4 Research Gaps]";
+        Log::info("Drafting Ch 2 for ID: {$proposal->id}");
+        $this->batchProcess($p2, $generatedContent, $systemPrompt);
+
+        // ── 4. CHAPTER 3: METHODOLOGY ──
+        sleep(2);
+        $p3 = "Draft CHAPTER 3: RESEARCH METHODOLOGY for '{$proposal->title}':\n" .
+              "Methodology Type: {$proposal->methodology_type}\n\n" .
+              "Use markers:\n" .
+              "[SECTION: 3.1 Research Design]\n" .
+              "[SECTION: 3.2 Target Population & Sampling]\n" .
+              "[SECTION: 3.3 Data Collection Instruments]\n" .
+              "[SECTION: 3.4 Validity and Reliability]\n" .
+              "[SECTION: 3.5 Data Analysis Plan]";
+        Log::info("Drafting Ch 3 for ID: {$proposal->id}");
+        $this->batchProcess($p3, $generatedContent, $systemPrompt);
+
+        // ── 5. CHAPTER 4: EXPECTED RESULTS ──
+        sleep(2);
+        $p4 = "Draft CHAPTER 4: EXPECTED RESULTS & DATA PRESENTATION for '{$proposal->title}':\n" .
+              "Based on the objectives, discuss how findings will likely look.\n" .
+              "Use markers:\n" .
+              "[SECTION: 4.1 Introduction to Analysis]\n" .
+              "[SECTION: 4.2 Expected Finding Trends]\n" .
+              "[SECTION: 4.3 Data Presentation Plan]";
+        Log::info("Drafting Ch 4 for ID: {$proposal->id}");
+        $this->batchProcess($p4, $generatedContent, $systemPrompt);
+
+        // ── 6. CHAPTER 5: RECOMMENDATIONS ──
+        sleep(2);
+        $p5 = "Draft CHAPTER 5: SUMMARY, CONCLUSIONS AND RECOMMENDATIONS for '{$proposal->title}':\n" .
+              "Discuss conclusions for the study design.\n" .
+              "Use markers:\n" .
+              "[SECTION: 5.1 Summary of the Study Plan]\n" .
+              "[SECTION: 5.2 Conclusions based on expected trends]\n" .
+              "[SECTION: 5.3 Recommendations for Future Research]";
+        Log::info("Drafting Ch 5 for ID: {$proposal->id}");
+        $this->batchProcess($p5, $generatedContent, $systemPrompt);
+
+        // ── 7. REFERENCES & APPENDIX ──
+        sleep(2);
+        $p6 = "Draft REFERENCES and APPENDIX for '{$proposal->title}':\n" .
+              "Style: {$style}\n\n" .
+              "Use markers:\n" .
+              "[SECTION: REFERENCES] - 10-15 mock bibliography entries.\n" .
+              "[SECTION: APPENDIX: Sample Questionnaire] - Draft a 10-question instrument.";
+        Log::info("Drafting Appendix for ID: {$proposal->id}");
+        $this->batchProcess($p6, $generatedContent, $systemPrompt);
 
         $proposal->update([
             'content' => $generatedContent,
@@ -75,5 +115,20 @@ class ProposalGeneratorService
         ]);
 
         return $proposal;
+    }
+
+    private function batchProcess($prompt, &$contentArray, $systemPrompt)
+    {
+        $response = $this->aiService->callGroq($prompt, $systemPrompt);
+        if ($response) {
+            $parts = preg_split('/\[SECTION:\s*([^\]]+)\]/i', $response, -1, PREG_SPLIT_DELIM_CAPTURE);
+            for ($i = 1; $i < count($parts); $i += 2) {
+                $title = trim($parts[$i]);
+                $body = trim($parts[$i + 1] ?? '');
+                if ($title && $body) {
+                    $contentArray[$title] = $body;
+                }
+            }
+        }
     }
 }

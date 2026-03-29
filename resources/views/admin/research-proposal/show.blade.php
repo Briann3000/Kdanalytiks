@@ -39,47 +39,82 @@
 @endsection
 
 @section('content')
-<div class="flex flex-col h-full bg-gray-50/50">
-    <!-- Condensed Sticky Toolbar -->
-    <div class="sticky top-0 z-20 px-4 py-3 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm flex items-center justify-between">
+<div class="flex flex-col bg-gray-50/50" style="height: calc(100vh - 4.1rem);">
+    <!-- Condensed Sticky Toolbar matching Preview -->
+    <div class="sticky top-0 z-40 px-4 py-3 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm flex items-center justify-between">
         <div class="flex items-center space-x-3">
-            <a href="{{ route('research-proposal.index') }}" class="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-50 text-gray-400 hover:bg-gray-100 transition-all border border-gray-100">
-                <i class="fa-solid fa-arrow-left text-[10px]"></i>
-            </a>
-            <div class="hidden sm:block">
-                <h1 class="text-[10px] font-black text-gray-900 uppercase tracking-tight leading-none">Proposal Preview</h1>
-                <p class="text-[8px] text-gray-400 font-bold uppercase tracking-wider">{{ $proposal->title }}</p>
+            <div class="flex items-center space-x-2">
+                <a href="{{ route('research-proposal.index') }}" class="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-50 text-gray-400 hover:bg-gray-100 transition-all border border-gray-100">
+                    <i class="fa-solid fa-arrow-left text-[10px]"></i>
+                </a>
+                <div class="hidden sm:block">
+                    <h1 class="text-[10px] font-black text-gray-900 uppercase tracking-tight leading-none">Draft Report</h1>
+                    <p class="text-[8px] text-gray-400 font-bold uppercase tracking-wider truncate max-w-[200px]">{{ $proposal->title }}</p>
+                </div>
             </div>
+            <div class="h-5 w-[1px] bg-gray-200"></div>
+            <span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[8px] font-black uppercase tracking-widest rounded border border-emerald-100 italic">Formal Draft</span>
         </div>
 
         <div class="flex items-center space-x-3">
-            <span class="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest rounded-lg border border-emerald-100">Ready for Review</span>
-            
-            <a href="{{ route('research-proposal.export-proposal', $proposal->id) }}" 
-               class="px-4 py-1.5 bg-indigo-600 text-white rounded-xl font-black text-[8px] uppercase tracking-wider shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center group">
-                <i class="fa-solid fa-download mr-2 text-[10px]"></i>
-                <span>Download (DOCX)</span>
+             <div class="flex items-center space-x-2 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
+                <span class="text-[9px] font-black text-gray-400 uppercase">Style:</span>
+                <span class="text-[9px] font-black text-indigo-600 uppercase">{{ strtoupper($proposal->style) }}</span>
+            </div>
+
+            <div class="h-5 w-[1px] bg-gray-200"></div>
+
+            <a href="{{ route('research-proposal.export-proposal', ['id' => $proposal->id]) }}" 
+               class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-black text-[9px] uppercase tracking-wider shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center group">
+                <i class="fa-solid fa-file-word mr-2 text-[11px]"></i>
+                <span>Export (DOCX)</span>
             </a>
         </div>
     </div>
 
     <!-- Scrollable Draft Content Area -->
-    <div class="flex-1 p-10 overflow-y-auto custom-scrollbar">
+    <div class="flex-1 p-10 overflow-y-auto custom-scrollbar bg-gray-50/50">
         <div class="max-w-4xl mx-auto bg-white shadow-2xl shadow-gray-200/50 rounded-lg border border-gray-100 p-16 min-h-screen mb-12">
             <!-- Cover Section -->
             <div class="text-center py-12 mb-16 border-b-2 border-gray-50">
-                <span class="text-[12px] font-black text-indigo-600 uppercase tracking-[0.4em] mb-4 block">Formal Proposal</span>
-                <h2 class="text-3xl font-black text-gray-900 mb-4 tracking-tighter uppercase leading-none">{{ $proposal->title }}</h2>
+                <span class="text-[12px] font-black text-indigo-600 uppercase tracking-[0.4em] mb-4 block animate-pulse">Formal Research Report Draft</span>
+                <h2 class="text-4xl font-black text-gray-900 mb-4 tracking-tighter uppercase leading-none">{{ $proposal->title }}</h2>
                 <div class="w-16 h-1 bg-indigo-600 mx-auto rounded-full mb-6"></div>
-                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">Methodology: {{ ucfirst($proposal->methodology_type) }} | Style: {{ strtoupper($proposal->style) }}</p>
+                
+                <div class="flex items-center justify-center space-x-6">
+                    <div class="text-center">
+                        <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Methodology</p>
+                        <p class="text-[10px] font-black text-gray-900 uppercase tracking-widest italic">{{ $proposal->methodology_type }}</p>
+                    </div>
+                    <div class="h-8 w-[1px] bg-gray-100"></div>
+                    <div class="text-center">
+                        <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Standard</p>
+                        <p class="text-[10px] font-black text-gray-900 uppercase tracking-widest">{{ strtoupper($proposal->style) }}</p>
+                    </div>
+                </div>
             </div>
 
             <!-- Generated Sections -->
             <div class="space-y-16">
+                @php
+                    $currentChapter = null;
+                @endphp
                 @foreach($proposal->content ?? [] as $title => $content)
+                    @php
+                        // Check if it's a new chapter to add spacing/headers
+                        $isChapter = str_contains(strtoupper($title), 'CHAPTER');
+                    @endphp
+                    
                     <section id="section-{{ $loop->iteration }}" class="scroll-mt-32">
-                        <h3 class="text-xl font-black text-gray-900 mb-8 border-l-4 border-indigo-600 pl-5 tracking-tight uppercase leading-none">{{ $title }}</h3>
-                        <div class="prose prose-slate prose-lg max-w-none text-gray-700 leading-relaxed font-serif text-justify whitespace-pre-wrap">
+                        @if($isChapter)
+                            <div class="pt-8 pb-4 mb-10 border-b-4 border-gray-900">
+                                <h3 class="text-2xl font-black text-gray-900 tracking-tighter uppercase leading-none">{{ $title }}</h3>
+                            </div>
+                        @else
+                            <h4 class="text-lg font-black text-gray-900 mb-6 border-l-4 border-indigo-600 pl-5 tracking-tight uppercase leading-none">{{ $title }}</h4>
+                        @endif
+
+                        <div class="prose prose-slate prose-lg max-w-none text-gray-700 leading-relaxed font-serif text-justify whitespace-pre-wrap {{ $isChapter ? 'hidden' : '' }}">
                             {!! $content !!}
                         </div>
                     </section>
@@ -88,7 +123,8 @@
         </div>
         
         <footer class="max-w-4xl mx-auto py-12 text-center">
-            <p class="text-[9px] text-gray-300 font-bold uppercase tracking-[0.3em]">&bull; END OF PROPOSAL DRAFT &bull;</p>
+            <p class="text-[9px] text-gray-300 font-bold uppercase tracking-[0.3em]">&bull; END OF DRAFT REPORT &bull;</p>
+            <p class="text-[8px] text-gray-400 font-medium mt-2 uppercase tracking-widest font-black italic opacity-50">Generated by PRC™ Synthesis Engine</p>
         </footer>
     </div>
 </div>
