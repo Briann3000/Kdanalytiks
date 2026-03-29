@@ -1,7 +1,7 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/mwalimu/public_html/kmsurveytool
+    - export DEPLOYPATH=/home/mwalimu/kms_live
     - /bin/cp -R * $DEPLOYPATH
     - /bin/rm -rf $DEPLOYPATH/.git
     - /bin/rm -rf $DEPLOYPATH/.github
