@@ -14,6 +14,11 @@ class Response extends Model
     protected $fillable = [
         'survey_id',
         'respondent_id',
+        'ai_metadata',
+    ];
+
+    protected $casts = [
+        'ai_metadata' => 'array',
     ];
 
     public function survey(): BelongsTo

@@ -27,7 +27,7 @@ class ResearchProposalController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $surveys = \App\Models\Survey::where('user_id', $user->id)
+        $surveys = \App\Models\Survey::where('created_by', $user->id)
             ->orWhere('type', \App\Enums\SurveyType::Public)
             ->get();
 
@@ -70,7 +70,7 @@ class ResearchProposalController extends Controller
             'objectives' => 'required|string',
             'methodology_type' => 'required|string|in:survey,qualitative,mixed',
             'scope' => 'nullable|string',
-            'style' => 'required|string|in:apa7,mla9,harvard',
+            'style' => 'required|string|in:apa7,mla9,harvard,chicago,ieee,vancouver,oscola',
         ]);
 
         $proposal = ResearchProposal::create([
@@ -94,9 +94,10 @@ class ResearchProposalController extends Controller
     /**
      * View a generated proposal.
      */
-    public function show(ResearchProposal $proposal)
+    public function show(ResearchProposal $research_proposal)
     {
-        $this->authorizeOwner($proposal);
+        $this->authorizeOwner($research_proposal);
+        $proposal = $research_proposal;
         return view('admin.research-proposal.show', compact('proposal'));
     }
 
@@ -107,7 +108,7 @@ class ResearchProposalController extends Controller
     {
         $request->validate([
             'survey_id' => 'required|exists:surveys,id',
-            'style' => 'required|string|in:apa7,mla9,harvard',
+            'style' => 'required|string|in:apa7,mla9,harvard,chicago,ieee,vancouver,oscola',
             'format' => 'required|string|in:docx,pdf',
             'references' => 'nullable|array',
             'references.*.author' => 'nullable|string',
@@ -177,28 +178,29 @@ class ResearchProposalController extends Controller
     /**
      * Export a saved Research Proposal.
      */
-    public function exportProposal(ResearchProposal $proposal)
+    public function exportProposal($id)
     {
-        $this->authorizeOwner($proposal);
-        $filename = 'research_proposal_' . str($proposal->title)->slug() . '_' . time();
-        $path = $this->synthesisService->exportToDocx($proposal->content, $filename);
+        $research_proposal = ResearchProposal::findOrFail($id);
+        $this->authorizeOwner($research_proposal);
+        $filename = 'research_proposal_' . str($research_proposal->title)->slug() . '_' . time();
+        $path = $this->synthesisService->exportToDocx($research_proposal->content, $filename);
         return response()->download($path);
     }
 
-    public function destroy(ResearchProposal $proposal)
+    public function destroy(ResearchProposal $research_proposal)
     {
-        $this->authorizeOwner($proposal);
-        $proposal->delete();
+        $this->authorizeOwner($research_proposal);
+        $research_proposal->delete();
         return back()->with('success', 'Draft report deleted successfully.');
     }
 
-    private function authorizeOwner(ResearchProposal $proposal)
+    private function authorizeOwner(ResearchProposal $research_proposal)
     {
         if (auth()->user()->role === \App\Enums\UserRole::Admin || auth()->user()->role === 'admin') {
             return;
         }
 
-        if ((int)$proposal->user_id !== (int)auth()->id()) {
+        if ((int)$research_proposal->user_id !== (int)auth()->id()) {
             abort(403);
         }
     }

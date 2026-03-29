@@ -91,9 +91,28 @@ class SurveyController extends Controller
         return view($viewName, compact('surveys', 'role', 'status'));
     }
 
+
     public function create()
     {
-        return view('surveys.choose_category');
+        $user = auth()->user();
+        $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+
+        $survey = new \App\Models\Survey();
+        $survey->title = 'Untitled Survey';
+        $survey->category = \App\Enums\SurveyCategory::Others;
+        $survey->status = \App\Enums\SurveyStatus::Draft;
+        $survey->type = \App\Enums\SurveyType::Public;
+        $survey->created_by = $user->id;
+
+        if ($role === 'organization') {
+            $survey->organization_id = $user->organization?->id;
+        } elseif ($role === 'independent') {
+            $survey->independent_id = $user->independent?->id;
+        }
+
+        $survey->save();
+
+        return redirect()->route('surveys.edit', $survey);
     }
 
     /**
@@ -493,7 +512,7 @@ class SurveyController extends Controller
                 }
 
                 $missingCount = $totalResponses - $answeredCount;
-                $isChartable = in_array($type, ['select', 'radio-group', 'checkbox-group', 'number']);
+                $isChartable = in_array($type, ['select', 'select_one', 'select_many', 'radio-group', 'checkbox-group', 'number', 'decimal', 'rating', 'range', 'ranking']);
                 $canvasId = 'chart-' . str_replace('-', '_', $fieldId);
 
                 // Calculate Statistics
@@ -650,7 +669,7 @@ class SurveyController extends Controller
                 $analysis[] = [
                     'label' => $label,
                     'type' => $type,
-                    'isChartable' => in_array($type, ['select', 'radio-group', 'checkbox-group', 'number']),
+                    'isChartable' => in_array($type, ['select', 'select_one', 'select_many', 'radio-group', 'checkbox-group', 'number', 'decimal', 'rating', 'range', 'ranking']),
                     'answers' => array_filter($answersList, fn($val) => $val !== null && $val !== '')
                 ];
             }
@@ -809,124 +828,133 @@ class SurveyController extends Controller
 
     public function submit(Request $request, \App\Models\Survey $survey)
     {
-        // Public survey submission CAPTCHA validation
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'captcha' => 'required|captcha'
-        ], [
-            'captcha.captcha' => 'The security verification code is incorrect. Please try again.'
+            'terms_and_conditions' => 'required|accepted'
         ]);
 
         if ($validator->fails()) {
             if ($request->has('is_json_submission')) {
-                return response()->json(['success' => false, 'message' => $validator->errors()->first('captcha')], 422);
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'You must agree to the Terms and Conditions to proceed.'
+                ], 422);
             }
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        // Create response record
-        $response = new \App\Models\Response();
-        $response->survey_id = $survey->id;
-        $response->respondent_id = auth()->id(); // Will be null for guests
-        $response->save();
+        try {
+            // Create response record
+            $response = new \App\Models\Response();
+            $response->survey_id = $survey->id;
+            $response->respondent_id = auth()->id(); // Will be null for guests
+            $response->save();
 
-        $uploadDir = storage_path('app/public/uploads/');
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
-        }
+            $uploadDir = storage_path('app/public/uploads/');
+            if (!is_dir($uploadDir)) {
+                // Non-braking directory creation check (to avoid Permission denied crash)
+                @mkdir($uploadDir, 0755, true);
+            }
 
-        $allowedMimeTypes = [
-            'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
-            'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/aac', 'audio/mp4',
-            'image/jpeg', 'image/png', 'image/gif', 'image/webp'
-        ];
+            $allowedMimeTypes = [
+                'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
+                'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/aac', 'audio/mp4',
+                'image/jpeg', 'image/png', 'image/gif', 'image/webp'
+            ];
 
-        if ($request->has('is_json_submission')) {
-            $jsonData = json_decode($request->input('json_data'), true) ?? [];
-            
-            // Handle File Uploads for JSON Surveys
-            foreach ($request->allFiles() as $name => $file) {
-                if ($file->isValid() && in_array($file->getMimeType(), $allowedMimeTypes)) {
-                    $newFileName = uniqid('media_') . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension();
-                    $file->move($uploadDir, $newFileName);
-                    $storagePath = 'uploads/' . $newFileName;
-                    
-                    // Update the JSON data with the storage path
-                    foreach ($jsonData as &$item) {
-                        if (isset($item['name']) && $item['name'] === $name) {
-                            $item['userData'] = $storagePath;
+            if ($request->has('is_json_submission')) {
+                $jsonData = json_decode($request->input('json_data'), true) ?? [];
+                
+                // Handle File Uploads for JSON Surveys
+                foreach ($request->allFiles() as $name => $file) {
+                    if ($file->isValid() && in_array($file->getMimeType(), $allowedMimeTypes)) {
+                        $newFileName = uniqid('media_') . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension();
+                        $file->move($uploadDir, $newFileName);
+                        $storagePath = 'uploads/' . $newFileName;
+                        
+                        // Update the JSON data with the storage path
+                        foreach ($jsonData as &$item) {
+                            if (isset($item['name']) && $item['name'] === $name) {
+                                $item['userData'] = $storagePath;
+                            }
                         }
                     }
                 }
+
+                $answer = new \App\Models\Answer();
+                $answer->response_id = $response->id;
+                $answer->question_id = null;
+                $answer->value = json_encode($jsonData); 
+                $answer->save();
+
+                // AI Sentiment Analysis Trigger
+                try {
+                    (new \App\Services\AiService())->analyzeResponseSentiment($response);
+                } catch (\Exception $e) {
+                    \Log::error("AI Background Error: " . $e->getMessage());
+                }
+
+                session()->flash('success', 'Thank you for completing the survey!');
+                return response()->json(['success' => true]);
             }
 
-            $answer = new \App\Models\Answer();
-            $answer->response_id = $response->id;
-            $answer->question_id = null;
-            $answer->value = json_encode($jsonData); 
-            $answer->save();
+            // Legacy Form Submission logic
+            $questions = $survey->questions;
+            foreach ($questions as $question) {
+                $inputName = 'question_' . $question->id;
+                $finalAnswerValue = '';
 
-            // AI Sentiment Analysis Trigger
+                // Handle File Uploads
+                if (in_array($question->type, ['video', 'audio']) && $request->hasFile($inputName)) {
+                    $file = $request->file($inputName);
+
+                    if ($file->isValid() && in_array($file->getMimeType(), $allowedMimeTypes)) {
+                        $newFileName = uniqid('media_') . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension();
+                        $file->move($uploadDir, $newFileName);
+                        $finalAnswerValue = 'uploads/' . $newFileName;
+                    } else {
+                        \Log::warning("Blocked invalid file upload for question " . $question->id);
+                    }
+                } else {
+                    // Handle Standard Inputs
+                    $answerValue = $request->input($inputName, '');
+                    if (is_array($answerValue)) {
+                        $answerValue = implode(', ', $answerValue);
+                    }
+                    $finalAnswerValue = htmlspecialchars($answerValue);
+                }
+
+                // IMPORTANT: Fixed missing save() for legacy answers
+                if ($finalAnswerValue !== '') {
+                    $answer = new \App\Models\Answer();
+                    $answer->response_id = $response->id;
+                    $answer->question_id = $question->id;
+                    $answer->value = $finalAnswerValue;
+                    $answer->save(); // Fix applied here
+                }
+            }
+
+            // AI Sentiment Analysis Trigger for legacy forms
             try {
                 (new \App\Services\AiService())->analyzeResponseSentiment($response);
             } catch (\Exception $e) {
                 \Log::error("AI Background Error: " . $e->getMessage());
             }
 
-            session()->flash('success', 'Thank you for completing the survey!');
-            return response()->json(['success' => true]);
-        }
+            return redirect()->back()->with('success', 'Thank you for completing the survey!');
 
-        $questions = $survey->questions;
-
-        foreach ($questions as $question) {
-            $inputName = 'question_' . $question->id;
-            $finalAnswerValue = '';
-
-            // Handle File Uploads
-            if (in_array($question->type, ['video', 'audio']) && $request->hasFile($inputName)) {
-                $file = $request->file($inputName);
-
-                if ($file->isValid() && in_array($file->getMimeType(), $allowedMimeTypes)) {
-                    $newFileName = uniqid('media_') . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension();
-
-                    // Move the file to storage/app/public/uploads
-                    $file->move($uploadDir, $newFileName);
-
-                    // Store the relative public path
-                    $finalAnswerValue = 'uploads/' . $newFileName;
-                } else {
-                    \Log::warning("Blocked invalid file upload for question " . $question->id);
-                }
-            } else {
-                // Handle Standard Inputs
-                $answerValue = $request->input($inputName, '');
-
-                if (is_array($answerValue)) {
-                    $answerValue = implode(', ', $answerValue);
-                }
-
-                $finalAnswerValue = htmlspecialchars($answerValue);
-            }
-
-            // Save the answer if one was provided
-            if ($finalAnswerValue !== '') {
-                $answer = new \App\Models\Answer();
-                $answer->response_id = $response->id;
-                $answer->question_id = $question->id;
-                $answer->value = $finalAnswerValue;
-            }
-        }
-
-        // AI Sentiment Analysis Trigger for legacy forms
-        try {
-            (new \App\Services\AiService())->analyzeResponseSentiment($response);
         } catch (\Exception $e) {
-            \Log::error("AI Background Error: " . $e->getMessage());
+            \Log::error("Submission Error: " . $e->getMessage());
+            
+            if ($request->has('is_json_submission')) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Critical Error: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return redirect()->back()->withErrors(['submission' => 'A critical error occurred while saving your responses. Please contact the administrator.'])->withInput();
         }
-
-        return redirect()->back()->with('success', 'Thank you for completing the survey!');
     }
-
 
     private function getSurveyAnalysisMetadata(\App\Models\Survey $survey)
     {
