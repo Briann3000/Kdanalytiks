@@ -1,6 +1,11 @@
 @extends('layouts.app')
 
 @push('styles')
+    <style>
+        /* Hide the global footer for the builder to maximize canvas space */
+        footer { display: none !important; }
+        .content-pane { padding-bottom: 0 !important; }
+    </style>
     <link rel="stylesheet" href="https://formbuilder.online/assets/css/form-render.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
@@ -148,8 +153,8 @@
 @endpush
 
 @section('content')
-    <div x-data="surveyBuilder">
-        <div class="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm px-4 sm:px-6 py-3 mb-6 -mx-4 sm:-mx-8 lg:-mx-12" style="position: sticky; top: 0; z-index: 40;">
+    <div x-data="surveyBuilder" class="relative min-h-screen pb-20">
+        <div class="sticky top-0 z-[60] bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm px-4 sm:px-6 py-3 mb-6 -mx-4 sm:-mx-8 lg:-mx-12" style="position: sticky; top: -1px; z-index: 60;">
             <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div class="flex flex-wrap items-center gap-2">
                     <button type="button" @click="showDetails = !showDetails" 
@@ -165,8 +170,8 @@
                     </button>
                     <button type="button" @click.stop="activeMode = 'json'; showDetails = false" 
                         class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center"
-                        :class="activeMode === 'json' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'">
-                        <i class="fa-solid fa-code mr-2"></i> JSON
+                        :class="activeMode === 'json' ? 'bg-slate-900 text-white shadow-lg' : 'bg-gray-200 text-gray-500 hover:bg-gray-300 border border-transparent shadow-inner'">
+                        <i class="fa-solid fa-code mr-2"></i> Code
                     </button>
                     <button type="button" @click="showLibrary = false; $dispatch('close-sidebar'); showAiModal = true; $nextTick(() => document.getElementById('aiPrompt').focus())" 
                         class="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black border border-transparent transition-all flex items-center shadow-lg shadow-slate-200 group">
@@ -188,34 +193,28 @@
                     </button>
                 </div>
             </div>
-        </div>
 
-        <div class="max-w-7xl mx-auto">
-            <!-- Collapsible Survey Details -->
-            <div x-show="showDetails" x-collapse x-cloak class="mb-8">
-                <div class="bg-white rounded-3xl p-8 border border-gray-200 shadow-xl relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-4 opacity-[0.03]">
-                        <i class="fa-solid fa-gear text-[120px] text-gray-900"></i>
-                    </div>
-                    
+            <!-- Collapsible Survey Details (Now Sticky too) -->
+            <div x-show="showDetails" x-collapse x-cloak class="mt-4 max-w-7xl mx-auto overflow-hidden">
+                <div class="bg-indigo-50/50 rounded-2xl p-6 border border-indigo-100 relative">
                     <form method="POST"
                         action="{{ isset($survey) ? route('surveys.update', $survey) : route('surveys.store') }}"
-                        id="surveyForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
+                        id="surveyForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
                         @csrf
                         @if(isset($survey)) @method('PUT') @endif
                         <input type="hidden" name="json_schema" id="json_schema" x-model="jsonSchema" value="{{ isset($survey) ? $survey->json_schema : '[]' }}">
 
                         <div class="space-y-1">
-                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest">Survey Title</label>
+                            <label class="block text-[9px] font-black text-gray-500 uppercase tracking-widest">Survey Title</label>
                             <input type="text" name="title" id="title" required
-                                value="{{ isset($survey) ? $survey->title : '' }}"
-                                class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
+                                x-model="surveyTitle"
+                                class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-gray-900 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm">
                         </div>
 
                         <div class="space-y-1">
-                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest">Category</label>
+                            <label class="block text-[9px] font-black text-gray-500 uppercase tracking-widest">Category</label>
                             <select name="category" id="category" required
-                                class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all appearance-none">
+                                class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-gray-900 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all appearance-none shadow-sm">
                                 <option value="">Select Category</option>
                                 @foreach(['Marketing', 'Academic', 'Product', 'Political', 'Health', 'Other'] as $cat)
                                     <option value="{{ $cat }}" {{ (isset($survey) && $survey->category === $cat) ? 'selected' : '' }} style="background-color: white !important; color: #111827 !important;">
@@ -226,9 +225,9 @@
                         </div>
 
                         <div class="space-y-1">
-                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest">Type</label>
+                            <label class="block text-[9px] font-black text-gray-500 uppercase tracking-widest">Type</label>
                             <select name="type" id="type" required
-                                class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all appearance-none">
+                                class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-gray-900 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all appearance-none shadow-sm">
                                 @php $currentType = isset($survey) ? (is_object($survey->type) ? $survey->type->value : $survey->type) : 'public'; @endphp
                                 <option value="public" {{ $currentType === 'public' ? 'selected' : '' }}>Public</option>
                                 <option value="invitation" {{ $currentType === 'invitation' ? 'selected' : '' }}>Invitation Only</option>
@@ -237,23 +236,18 @@
 
                         <div class="flex items-end space-x-2">
                             <button type="submit"
-                                class="flex-1 flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-xl text-xs font-black uppercase tracking-widest text-white bg-green-600 hover:bg-green-500 focus:outline-none transition-all hover:-translate-y-1 active:scale-95">
+                                class="flex-1 flex justify-center items-center py-2 px-4 border border-transparent rounded-xl shadow-lg text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none transition-all active:scale-95">
                                 <i class="fa-solid fa-save mr-2"></i> {{ isset($survey) ? 'Update' : 'Save' }}
                             </button>
                             <button type="button" @click="showDetails = false"
-                                class="w-12 h-12 flex justify-center items-center border border-white/10 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
+                                class="w-10 h-10 flex justify-center items-center bg-white border border-gray-200 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all">
                                 <i class="fa-solid fa-times"></i>
                             </button>
-                        </div>
-                        
-                        <div class="md:col-span-2 lg:col-span-4 mt-2">
-                             <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Detailed Description</label>
-                            <textarea name="description" id="description" rows="2"
-                                class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-inner" placeholder="Optional survey description...">{{ isset($survey) ? $survey->description : '' }}</textarea>
                         </div>
                     </form>
                 </div>
             </div>
+        </div>
 
             <!-- Visual Builder / JSON Modes -->
 
@@ -263,28 +257,6 @@
                     <!-- Main Canvas -->
                     <div class="flex-1">
                         <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden mb-8">
-                            <!-- Question Type Toolbar moved to TOP -->
-                            <div class="p-6 bg-slate-50/50 border-b border-gray-100 flex flex-col items-center">
-                            <p class="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">Add New Question</p>
-                                <div class="flex flex-wrap justify-center gap-2">
-                                    <template x-for="type in [
-                                        {id: 'text', icon: 'fa-font', label: 'Short Text', bg: 'bg-indigo-50 text-indigo-700'},
-                                        {id: 'radio-group', icon: 'fa-circle-dot', label: 'Multiple Choice', bg: 'bg-blue-50 text-blue-700'},
-                                        {id: 'checkbox-group', icon: 'fa-check-square', label: 'Checkboxes', bg: 'bg-emerald-50 text-emerald-700'},
-                                        {id: 'audio', icon: 'fa-microphone', label: 'Audio', bg: 'bg-amber-50 text-amber-700'},
-                                        {id: 'video', icon: 'fa-video', label: 'Video', bg: 'bg-purple-50 text-purple-700'},
-                                        {id: 'header', icon: 'fa-heading', label: 'Section', bg: 'bg-gray-100 text-gray-700'},
-                                        {id: 'group', icon: 'fa-object-group', label: 'Question Group', bg: 'bg-rose-50 text-rose-700'}
-                                    ]">
-                                        <button type="button" @click.stop="addQuestion(type.id)" 
-                                            class="flex items-center px-4 py-2 rounded-xl border border-transparent hover:border-indigo-200 hover:shadow-md transition-all group"
-                                            :class="type.bg">
-                                            <i class="fa-solid text-sm mr-2 transition-transform group-hover:scale-125" :class="type.icon"></i>
-                                            <span class="text-[9px] font-black uppercase tracking-widest" x-text="type.label"></span>
-                                        </button>
-                                    </template>
-                                </div>
-                            </div>
 
                             <div class="px-8 py-6 border-b border-gray-50 flex justify-between items-center bg-white">
                                 <div class="flex items-center">
@@ -292,8 +264,16 @@
                                         <i class="fa-solid fa-layer-group text-lg"></i>
                                     </div>
                                     <div>
-                                        <h5 class="text-sm font-black text-gray-900 uppercase tracking-widest leading-none">Question Canvas</h5>
-                                        <p class="text-[9px] text-gray-500 font-bold uppercase mt-1 tracking-wider" x-text="questions.length + ' questions currently on draft'"></p>
+                                        <h5 class="text-sm font-black text-gray-900 uppercase tracking-widest leading-none">Question Area</h5>
+                                        <div x-show="questions.length === 0" class="mt-2">
+                                            <button type="button" @click="addQuestion()" class="flex items-center space-x-2 text-indigo-600 hover:text-indigo-700 transition-all group">
+                                                <div class="w-6 h-6 bg-indigo-50 rounded-lg flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                                                    <i class="fa-solid fa-plus text-[10px]"></i>
+                                                </div>
+                                                <span class="text-[10px] font-black uppercase tracking-widest">start creating your survey</span>
+                                            </button>
+                                        </div>
+                                        <p x-show="questions.length > 0" class="text-[9px] text-gray-500 font-bold uppercase mt-1 tracking-wider" x-text="questions.length + ' questions currently on draft'"></p>
                                     </div>
                                 </div>
                                 <button type="button" @click.stop="resetCanvas()" class="px-4 py-2 text-[10px] font-black uppercase text-red-500 hover:bg-red-50 rounded-lg transition-all">
@@ -341,16 +321,27 @@
                                         
                                         <div class="flex items-start justify-between mb-4">
                                             <div class="flex-1 mr-6">
-                                                <div class="flex items-center space-x-3 mb-3">
-                                                    <div class="flex items-center px-3 py-1 bg-indigo-50 rounded-lg border border-indigo-100">
+                                                <div class="mb-4">
+                                                    <input type="text" x-model="q.label" @input="syncToJson()" placeholder="Enter your question here..." 
+                                                        class="w-full text-lg font-bold text-gray-900 placeholder-gray-200 border-2 border-gray-100 rounded-2xl px-6 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 bg-white transition-all shadow-sm">
+                                                </div>
+                                                <div class="flex items-center space-x-3">
+                                                    <div class="flex items-center px-4 py-2 bg-gray-50 rounded-xl border border-gray-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200 transition-all">
+                                                        <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest mr-2">Data Type:</span>
                                                         <select x-model="q.type" @change="syncToJson()" class="bg-transparent border-none p-0 text-[10px] font-black uppercase tracking-widest text-indigo-700 focus:ring-0 cursor-pointer">
-                                                            <option value="text">Short Text</option>
-                                                            <option value="textarea">Long Text</option>
-                                                            <option value="radio-group">Multiple Choice</option>
-                                                            <option value="checkbox-group">Checkboxes</option>
-                                                            <option value="select">Dropdown</option>
-                                                            <option value="number">Number</option>
+                                                            <option value="" disabled selected>Choose data type</option>
+                                                            <option value="text">Text (Short/Long)</option>
+                                                            <option value="select_one">Select One</option>
+                                                            <option value="select_many">Select Many</option>
+                                                            <option value="rating">Rating</option>
+                                                            <option value="range">Range</option>
+                                                            <option value="ranking">Ranking</option>
+                                                            <option value="photo">Photo</option>
+                                                            <option value="note">Note</option>
+                                                            <option value="time">Time</option>
+                                                            <option value="decimal">Decimal</option>
                                                             <option value="date">Date</option>
+                                                            <option value="number">Integer</option>
                                                             <option value="audio">Audio</option>
                                                             <option value="video">Video</option>
                                                             <option value="file">File Upload</option>
@@ -362,8 +353,6 @@
                                                         <span class="text-[9px] font-black text-red-500 bg-red-50 px-2 py-0.5 rounded uppercase tracking-widest">Required</span>
                                                     </template>
                                                 </div>
-                                                <input type="text" x-model="q.label" @input="syncToJson()" placeholder="What is your question?" 
-                                                    class="w-full text-lg font-bold text-gray-900 placeholder-gray-200 border-none p-0 focus:ring-0 bg-transparent">
                                             </div>
                                             
                                             <div class="flex items-center space-x-2" x-data="{ confirmingDelete: false }">
@@ -395,11 +384,11 @@
                                         </div>
 
                                         <div class="ml-6 border-t border-gray-50 pt-6">
-                                            <div x-show="['radio-group', 'checkbox-group', 'select'].includes(q.type)">
+                                            <div x-show="['select_one', 'select_many', 'select'].includes(q.type)">
                                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <template x-for="(opt, oIndex) in q.values" :key="oIndex">
                                                         <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl border border-gray-100 group/opt">
-                                                            <div class="w-1.5 h-1.5 rounded-full" :class="q.type === 'radio-group' ? 'bg-indigo-400' : 'bg-green-400'"></div>
+                                                            <div class="w-1.5 h-1.5 rounded-full" :class="q.type === 'select_one' ? 'bg-indigo-400' : 'bg-green-400'"></div>
                                                             <input type="text" x-model="opt.label" @input="syncToJson()" 
                                                                 class="flex-1 text-xs font-bold text-gray-600 border-none p-0 focus:ring-0 bg-transparent">
                                                             <button type="button" @click="q.values.splice(oIndex, 1); syncToJson()" x-show="q.values.length > 1" class="text-gray-300 hover:text-red-500 opacity-0 group-hover/opt:opacity-100 transition-all">
@@ -459,14 +448,6 @@
                                     </div>
                                 </template>
 
-                                <!-- Empty State -->
-                                <div x-show="questions.length === 0" class="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border-2 border-dashed border-gray-100">
-                                    <button type="button" @click="addQuestion('text')" class="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-300 mb-6 scale-110 shadow-inner hover:bg-indigo-600 hover:text-white transition-all group">
-                                        <i class="fa-solid fa-plus text-3xl group-hover:scale-125 transition-transform"></i>
-                                    </button>
-                                    <h5 class="text-lg font-black text-gray-900 uppercase tracking-tight">Your Canvas is Ready</h5>
-                                    <p class="text-sm text-gray-500 font-medium mt-1">Start adding questions from the toolbar above</p>
-                                </div>
                             </div>
 
                             <!-- REMOVED: Question Toolbar from bottom -->
@@ -616,7 +597,7 @@
             <div class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden" @click.away="showAiModal = false">
                 <div class="px-8 py-6 border-b border-gray-50 flex items-center justify-between bg-white">
                     <h3 class="text-xl font-black text-gray-900 flex items-center uppercase tracking-tight">
-                        <i class="fa-solid fa-wand-magic-sparkles mr-3 text-cyan-500 animate-pulse"></i> AI Architect
+                        <i class="fa-solid fa-wand-magic-sparkles mr-3 text-gray-900"></i> AI Architect
                     </h3>
                     <button type="button" @click="showAiModal = false" class="text-gray-500 hover:text-red-500 transition-colors">
                         <i class="fa-solid fa-times text-xl"></i>
@@ -625,15 +606,15 @@
                 <div class="p-8 bg-white">
                     <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4 font-bold">Describe your survey requirements</p>
                     <textarea id="aiPrompt" rows="6" 
-                        class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm text-gray-700 placeholder-slate-300 focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all shadow-inner"
+                        class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm text-gray-700 placeholder-slate-300 focus:ring-4 focus:ring-gray-900/10 focus:border-gray-900 outline-none transition-all shadow-inner"
                         placeholder="e.g., Generate a 5-question customer satisfaction survey for a coffee shop including multiple choice for visit frequency and a text area for feedback."></textarea>
                     
-                    <div id="aiLoader" class="hidden mt-6 bg-cyan-50 rounded-2xl p-6 border border-cyan-100 animate-in fade-in zoom-in">
+                    <div id="aiLoader" class="hidden mt-6 bg-gray-50 rounded-2xl p-6 border border-gray-100 animate-in fade-in zoom-in">
                         <div class="flex items-center">
-                            <i class="fa-solid fa-wand-magic-sparkles text-cyan-600 text-xl mr-4 animate-bounce"></i>
+                            <i class="fa-solid fa-wand-magic-sparkles text-gray-900 text-xl mr-4 animate-bounce"></i>
                             <div>
-                                <p class="text-xs font-black text-cyan-900 uppercase tracking-widest">Architect is thinking...</p>
-                                <p class="text-[10px] text-cyan-500 font-bold uppercase mt-0.5">Crafting your custom survey schema</p>
+                                <p class="text-xs font-black text-gray-900 uppercase tracking-widest">Architect is thinking...</p>
+                                <p class="text-[10px] text-gray-500 font-bold uppercase mt-0.5">Crafting your custom survey schema</p>
                             </div>
                         </div>
                     </div>
@@ -646,64 +627,55 @@
         </div>
 
         <!-- Preview Modal -->
-        <div id="previewModal" class="fixed inset-0 z-[100000] hidden flex-col md:items-center md:justify-center p-0 md:p-4 bg-slate-50 md:bg-transparent backdrop-blur-sm" x-cloak>
-            <div class="relative w-full h-full md:h-[90vh] max-w-5xl bg-slate-50 rounded-none md:rounded-[2rem] shadow-none md:shadow-2xl border-none md:border border-white/20 overflow-hidden flex flex-col scale-in-center">
-                <!-- Modal Top Header -->
-                <div class="px-10 py-6 bg-white border-b border-gray-100 flex items-center justify-between sticky top-0 z-[11000]">
-                    <div class="flex items-center space-x-4">
-                        <div class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 shadow-sm border border-amber-100">
-                            <i class="fa-solid fa-eye text-xl"></i>
-                        </div>
-                        <div>
-                            <h2 class="text-xl font-black text-gray-900 tracking-tight uppercase" id="previewSurveyTitle">Live Preview</h2>
-                            <div class="flex items-center mt-0.5">
-                                <span class="flex h-2 w-2 rounded-full bg-green-500 mr-2"></span>
-                                <p class="text-[10px] text-gray-500 font-black uppercase tracking-widest">Interactive Prototype</p>
-                            </div>
-                        </div>
+        <div id="previewModal" class="fixed inset-0 z-[100000] hidden flex-col bg-slate-50 overflow-hidden" x-cloak>
+            <!-- Modal Top Header -->
+            <div class="px-6 sm:px-10 py-4 sm:py-6 bg-white border-b border-gray-100 flex items-center justify-between sticky top-0 z-[11000]">
+                <div class="flex items-center space-x-4">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 shadow-sm border border-amber-100">
+                        <i class="fa-solid fa-eye text-lg sm:text-xl"></i>
                     </div>
-                    
-                    <div class="flex items-center space-x-3">
-                        <div class="hidden md:flex items-center px-4 py-2 bg-gray-50 rounded-xl border border-gray-100 mr-4">
-                            <i class="fa-solid fa-desktop text-gray-500 mr-2 text-xs"></i>
-                            <span class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Desktop View</span>
+                    <div>
+                        <h2 class="text-lg sm:text-xl font-black text-gray-900 tracking-tight uppercase" id="previewSurveyTitle">Live Preview</h2>
+                        <div class="flex items-center mt-0.5">
+                            <span class="flex h-1.5 w-1.5 rounded-full bg-green-500 mr-2"></span>
+                            <p class="text-[9px] text-gray-500 font-black uppercase tracking-widest">Interactive Prototype</p>
                         </div>
-                        <button type="button" onclick="closeFullScreenPreview()" 
-                            class="w-12 h-12 flex items-center justify-center bg-gray-900 text-white rounded-2xl hover:bg-red-600 hover:rotate-90 transition-all duration-300 shadow-xl group">
-                            <i class="fa-solid fa-times text-lg"></i>
-                        </button>
                     </div>
                 </div>
+                
+                <div class="flex items-center space-x-3">
+                    <button type="button" onclick="closeFullScreenPreview()" 
+                        class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-gray-900 text-white rounded-2xl hover:bg-red-600 hover:rotate-90 transition-all duration-300 shadow-xl group">
+                        <i class="fa-solid fa-times text-lg"></i>
+                    </button>
+                </div>
+            </div>
 
-                <!-- Preview Canvas -->
-                <div class="flex-1 overflow-y-auto p-4 sm:p-12 custom-scrollbar">
-                    <div class="max-w-7xl mx-auto">
-                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                            <!-- Left: Form Builder Area -->
-                            <div class="lg:col-span-8 order-2 lg:order-1">
-                                <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-indigo-100/40 border border-gray-100 overflow-hidden relative">
-                            <!-- Hero Banner in Preview -->
-                            <div class="h-32 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 relative overflow-hidden">
-                                <div class="absolute inset-0 opacity-10">
-                                    <div class="absolute top-0 left-0 w-24 h-24 bg-white rounded-full -translate-x-12 -translate-y-12"></div>
-                                    <div class="absolute bottom-0 right-0 w-32 h-32 bg-white rounded-full translate-x-16 translate-y-16"></div>
-                                </div>
-                                <div class="absolute inset-0 flex items-center justify-center">
-                                    <i class="fa-solid fa-vial-circle-check text-white/20 text-6xl"></i>
-                                </div>
+            <!-- Preview Canvas -->
+            <div class="flex-1 overflow-y-auto p-4 sm:p-12 custom-scrollbar bg-slate-50">
+                <div class="max-w-4xl mx-auto">
+                    <div class="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl shadow-indigo-100/40 border border-gray-100 overflow-hidden relative">
+                        <!-- Hero Banner in Preview -->
+                        <div class="h-24 sm:h-32 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 relative overflow-hidden">
+                            <div class="absolute inset-0 opacity-10">
+                                <div class="absolute top-0 left-0 w-24 h-24 bg-white rounded-full -translate-x-12 -translate-y-12"></div>
+                                <div class="absolute bottom-0 right-0 w-32 h-32 bg-white rounded-full translate-x-16 translate-y-16"></div>
+                            </div>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <i class="fa-solid fa-vial-circle-check text-white/20 text-4xl sm:text-6xl"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Question Area -->
+                        <div class="p-6 sm:p-12">
+                            <div id="previewRenderArea" class="fb-render space-y-6 sm:space-y-8"></div>
+                            
+                            <div class="mt-12 pt-10 border-t border-gray-50 flex justify-between items-center">
+                                <button type="button" disabled class="px-6 sm:px-8 py-3 sm:py-4 bg-gray-100 text-gray-500 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest cursor-not-allowed">Previous Page</button>
+                                <button type="button" onclick="alert('Success! This prototype works as expected.')" class="px-6 sm:px-10 py-3 sm:py-4 bg-indigo-600 text-white rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all hover:-translate-y-1 active:scale-95">Complete Survey</button>
                             </div>
                             
-                            <!-- Question Area -->
-                            <div class="p-6 sm:p-12">
-                                <div id="previewRenderArea" class="fb-render space-y-6 sm:space-y-8"></div>
-                                
-                                <div class="mt-12 pt-10 border-t border-gray-50 flex justify-between items-center">
-                                    <button type="button" disabled class="px-8 py-4 bg-gray-100 text-gray-500 rounded-2xl text-xs font-black uppercase tracking-widest cursor-not-allowed">Previous Page</button>
-                                    <button type="button" onclick="alert('Success! This prototype works as expected.')" class="px-10 py-4 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all hover:-translate-y-1 active:scale-95">Complete Survey</button>
-                                </div>
-                                
-                                <p class="text-[9px] text-gray-300 text-center mt-12 font-bold uppercase tracking-widest">Powered by KM Survey Architect Engine</p>
-                            </div>
+                            <p class="text-[9px] text-gray-300 text-center mt-12 font-bold uppercase tracking-widest">Powered by KM Survey Architect Engine</p>
                         </div>
                     </div>
                 </div>
@@ -729,12 +701,16 @@
                 showAiModal: false,
                 currentQuestionIndex: null,
                 jsonSchema: '',
+                surveyTitle: "{{ isset($survey) ? $survey->title : 'Untitled Survey' }}",
                 questions: [],
                 library: [],
                 selectedQuestions: [],
                 libTab: 'templates',
                 
                 init() {
+                    window.Laravel = window.Laravel || {};
+                    window.Laravel.alpineData = () => this;
+                    
                     this.$watch('activeMode', value => {
                         if (value === 'json') {
                             this.syncToJson();
@@ -773,22 +749,24 @@
                 mapFromLegacy(data) {
                     if (!Array.isArray(data)) return [];
                     return data.map(field => {
+                        let type = field.type || 'text';
+                        // Map legacy types to new ones if necessary
+                        if (type === 'radio-group') type = 'select_one';
+                        if (type === 'checkbox-group') type = 'select_many';
+                        if (type === 'textarea') type = 'text';
+
                         const q = {
-                            type: field.type || 'text',
+                            type: type,
                             subtype: field.subtype || '',
                             label: field.label || '',
                             name: field.name || 'field-' + Math.random().toString(36).substr(2, 9),
-                            id: 'q-' + Math.random().toString(36).substr(2, 9),
+                            id: field.id || 'q-' + Math.random().toString(36).substr(2, 9),
                             required: field.required || false,
-                            values: field.values || [{label: 'Option 1', value: 'option-1'}]
+                            values: field.values || [
+                                {label: 'Option 1', value: 'option-1'},
+                                {label: 'Option 2', value: 'option-2'}
+                            ]
                         };
-                        // Restore skip logic links if they exist in values
-                        if (Array.isArray(q.values)) {
-                            q.values = q.values.map((v, idx) => ({
-                                ...v,
-                                next: v.next || ''
-                            }));
-                        }
                         return q;
                     });
                 },
@@ -797,26 +775,24 @@
                     return this.questions.map(q => {
                         const legacy = {
                             type: q.type,
-                            label: q.label,
+                            label: q.label || '',
                             required: q.required,
-                            name: q.name || 'field-' + Math.random().toString(36).substr(2, 9)
+                            name: q.name || 'field-' + Math.random().toString(36).substr(2, 9),
+                            id: q.id
                         };
                         if (q.subtype) legacy.subtype = q.subtype;
-                        if (['radio-group', 'checkbox-group', 'select'].includes(q.type)) {
-                            legacy.values = q.values.map(v => {
-                                const val = { ...v };
-                                if (!val.next) delete val.next; // Clean up empty logic
-                                return val;
-                            });
+                        if (['select_one', 'select_many', 'select', 'ranking'].includes(q.type)) {
+                            legacy.values = q.values.map(v => ({ ...v }));
                         }
                         return legacy;
                     });
                 },
 
-                addQuestionBelow(index) {
+                addQuestion(type = '') {
                     const newQ = {
-                        type: 'text',
-                        label: 'New Question',
+                        type: type, // Explicitly empty for "Choose data type"
+                        id: 'q-' + Math.random().toString(36).substr(2, 9),
+                        label: '', 
                         name: 'field-' + Date.now(),
                         required: false,
                         values: [
@@ -824,17 +800,27 @@
                             {label: 'Option 2', value: 'option-2'}
                         ]
                     };
-                    const newQs = [...this.questions];
-                    newQs.splice(index + 1, 0, newQ);
-                    this.questions = newQs;
+                    if (type === 'header') {
+                        newQ.subtype = 'h1';
+                        newQ.label = 'New Section';
+                    }
+                    
+                    this.questions.push(newQ);
                     this.syncToJson();
+                    
+                    // Auto-scroll to the bottom
+                    this.$nextTick(() => {
+                        window.scrollTo({
+                            top: document.body.scrollHeight,
+                            behavior: 'smooth'
+                        });
+                    });
                 },
 
-                addQuestion(type) {
+                addQuestionBelow(index) {
                     const newQ = {
-                        type: type,
-                        id: 'q-' + Math.random().toString(36).substr(2, 9),
-                        label: type === 'group' ? 'New Survey Section' : 'New ' + type.charAt(0).toUpperCase() + type.slice(1) + ' Question',
+                        type: '', // Force selection
+                        label: '',
                         name: 'field-' + Date.now(),
                         required: false,
                         values: [
@@ -842,11 +828,16 @@
                             {label: 'Option 2', value: 'option-2'}
                         ]
                     };
-                    if (type === 'header') newQ.subtype = 'h1';
-                    const newQs = [...this.questions];
-                    newQs.push(newQ);
-                    this.questions = newQs;
+                    this.questions.splice(index + 1, 0, newQ);
                     this.syncToJson();
+
+                    // Auto-scroll to the new question
+                    this.$nextTick(() => {
+                        const questions = document.querySelectorAll('#questions-list > div');
+                        if (questions[index + 1]) {
+                            questions[index + 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    });
                 },
 
                 removeQuestion(index) {
@@ -871,11 +862,41 @@
                     const hasData = legacyData.length > 0;
                     const jsonString = hasData ? JSON.stringify(legacyData, null, 2) : '[]';
                     
-                    console.log('syncToJson: updating jsonSchema state');
                     this.jsonSchema = jsonString;
-                    
-                    // Update external prompt if needed
                     this.syncToPrompt();
+                    
+                    // Trigger Auto-save
+                    if (this.autoSaveTimeout) clearTimeout(this.autoSaveTimeout);
+                    this.autoSaveTimeout = setTimeout(() => {
+                        this.syncWithBackend();
+                    }, 2000); // 2 second debounce
+                },
+
+                syncWithBackend() {
+                    const payload = {
+                        survey_id: '{{ $survey->id }}',
+                        title: '{{ $survey->title }}',
+                        category: '{{ $survey->category }}',
+                        type: '{{ $survey->type }}',
+                        description: '{{ $survey->description }}',
+                        json_schema: this.jsonSchema,
+                        _token: '{{ csrf_token() }}'
+                    };
+
+                    fetch('{{ route('surveys.store') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        console.log('Auto-saved successfully');
+                    })
+                    .catch(err => console.error('Auto-save failed:', err));
                 },
 
                 validateJSONManual() {
@@ -1098,7 +1119,10 @@
 
         // Preview Functions
         function openFullScreenPreview() {
-            const schema = document.getElementById('json_schema').value;
+            // Pull data from Alpine state directly
+            const alpineData = Laravel.alpineData ? Laravel.alpineData() : (document.querySelector('[x-data]')?.__x?.$data);
+            const schema = alpineData ? alpineData.jsonSchema : document.getElementById('json_schema').value;
+            
             if (!schema || schema === '[]') {
                 alert('Please add some questions first.');
                 return;
@@ -1109,7 +1133,7 @@
                 
                 // FormRender doesn't natively handle 'audio' and 'video' types.
                 // Inject survey title
-                const titleVal = document.getElementById('title').value || 'Untitled Survey';
+                const titleVal = (alpineData && alpineData.surveyTitle) ? alpineData.surveyTitle : (document.getElementById('title')?.value || 'Live Preview');
                 document.getElementById('previewSurveyTitle').innerText = titleVal;
 
                 // FormRender enhancements

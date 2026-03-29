@@ -98,23 +98,18 @@
                             </div>
                         </div>
 
-                        <div id="jsonCaptchaContainer" class="bg-gray-50/50 p-8 rounded-2xl border border-gray-100 shadow-sm transition-all hidden">
-                            <label class="block text-lg font-bold text-gray-900 leading-snug mb-4">
-                                <i class="fa-solid fa-shield-halved text-indigo-500 mr-2"></i> Security Verification
-                                <span class="text-red-500 ml-1" title="Required">*</span>
+                        <!-- Data Privacy & Terms (GDPR/Data Privacy Laws Compliance) -->
+                        <div id="termsContainer" class="bg-gray-50/50 p-8 rounded-2xl border border-gray-100 shadow-sm transition-all mb-6">
+                            <label class="flex items-start cursor-pointer group">
+                                <div class="flex items-center h-6">
+                                    <input id="terms_and_conditions" name="terms_and_conditions" type="checkbox" required
+                                        class="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 transition-all cursor-pointer">
+                                </div>
+                                <div class="ml-4 text-sm">
+                                    <span class="font-bold text-gray-900 text-base group-hover:text-indigo-700 transition-colors">I agree to the Terms and Conditions</span>
+                                    <p class="text-gray-500 mt-1 leading-relaxed">By submitting this survey, you acknowledge that your responses will be recorded and processed in accordance with our <a href="#" class="text-indigo-600 hover:underline font-bold">Data Privacy Policy</a>. We value your privacy and ensure your data is stored securely.</p>
+                                </div>
                             </label>
-                            <div class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4">
-                                <div class="flex-shrink-0 bg-white p-2 rounded-xl border border-gray-200">
-                                    {!! captcha_img('flat') !!}
-                                </div>
-                                <div class="flex-grow w-full">
-                                    <input type="text" name="captcha" required placeholder="Enter the characters above"
-                                        class="w-full px-5 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all text-gray-700 shadow-sm font-medium" id="jsonCaptchaInput">
-                                     <p id="jsonCaptchaError" class="text-red-500 text-sm mt-2 font-medium hidden">
-                                         <i class="fa-solid fa-circle-exclamation mr-1"></i> Incorrect CAPTCHA, please try again.
-                                     </p>
-                                </div>
-                            </div>
                         </div>
                         <div id="submitContainer" class="pt-6 border-t border-gray-100 flex justify-end hidden">
                             <button type="submit" class="inline-flex items-center px-8 py-4 border border-transparent text-base font-bold rounded-xl shadow-lg text-white bg-gray-900 hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all transform hover:-translate-y-1">
@@ -199,8 +194,6 @@
                                 const submitBtn = $(this).find('button[type="submit"]');
                                 const originalText = submitBtn.html();
                                 submitBtn.html('<i class="fa-solid fa-spinner fa-spin mr-2"></i> Submitting...').prop('disabled', true);
-                                $('#jsonCaptchaError').addClass('hidden');
-                                $('#jsonCaptchaInput').removeClass('border-red-500');
 
                                 const formData = new FormData(this);
                                 formData.append('is_json_submission', '1');
@@ -230,9 +223,8 @@
                                 .then(res => {
                                     const data = res.body;
                                     if(res.status === 422 || !data.success) { // Catch Validation errors
-                                        if (data.message && data.message.includes('security')) {
-                                            $('#jsonCaptchaError').removeClass('hidden').text(data.message);
-                                            $('#jsonCaptchaInput').addClass('border-red-500');
+                                        if (data.message && data.message.includes('terms')) {
+                                            alert('Please agree to the Terms and Conditions to proceed.');
                                         } else {
                                              alert('Error submitting survey: ' + (data.message || 'Validation failed.'));
                                         }
@@ -368,26 +360,18 @@
                         @endforelse
 
                         @if($survey->questions()->count() > 0)
-                            <!-- Security CAPTCHA Check -->
-                            <div class="bg-gray-50/50 p-8 rounded-2xl border border-gray-100 shadow-sm transition-all">
-                                <label class="block text-lg font-bold text-gray-900 leading-snug mb-4">
-                                    <i class="fa-solid fa-shield-halved text-indigo-500 mr-2"></i> Security Verification
-                                    <span class="text-red-500 ml-1" title="Required">*</span>
+                            <!-- Data Privacy & Terms (GDPR/Data Privacy Laws Compliance) -->
+                            <div class="bg-gray-50/50 p-8 rounded-2xl border border-gray-100 shadow-sm transition-all mb-6">
+                                <label class="flex items-start cursor-pointer group">
+                                    <div class="flex items-center h-6">
+                                        <input id="terms_and_conditions_legacy" name="terms_and_conditions" type="checkbox" required
+                                            class="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 transition-all cursor-pointer shadow-sm">
+                                    </div>
+                                    <div class="ml-4 text-sm">
+                                        <span class="font-bold text-gray-900 text-base group-hover:text-indigo-700 transition-colors">I agree to the Terms and Conditions</span>
+                                        <p class="text-gray-500 mt-1 leading-relaxed">By submitting this survey, you acknowledge that your responses will be recorded and processed in accordance with our <a href="#" class="text-indigo-600 hover:underline font-bold">Data Privacy Policy</a>. We value your privacy and ensure your data is stored securely.</p>
+                                    </div>
                                 </label>
-                                <div class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4">
-                                    <div class="flex-shrink-0 bg-white p-2 rounded-xl border border-gray-200">
-                                        {!! captcha_img('flat') !!}
-                                    </div>
-                                    <div class="flex-grow w-full">
-                                        <input type="text" name="captcha" required placeholder="Enter the characters above"
-                                            class="w-full px-5 py-3 bg-white border @error('captcha') border-red-500 @else border-gray-200 @enderror rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all text-gray-700 shadow-sm">
-                                        @error('captcha')
-                                            <p class="text-red-500 text-sm mt-2 font-medium">
-                                                <i class="fa-solid fa-circle-exclamation mr-1"></i> Incorrect CAPTCHA, please try again.
-                                            </p>
-                                        @enderror
-                                    </div>
-                                </div>
                             </div>
 
                             <div class="pt-6 border-t border-gray-100 flex justify-end">

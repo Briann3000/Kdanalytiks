@@ -139,7 +139,6 @@
             top: 0;
             height: 100%;
             overflow-y: auto !important;
-            overflow-x: hidden !important;
             scrollbar-width: thin;
             transition: transform 0.3s ease-in-out, width 0.3s ease;
         }
@@ -153,23 +152,29 @@
                 width: 260px;
                 z-index: 1000;
                 background: white;
-                box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+                box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
                 transition: transform 0.3s ease-in-out;
                 transform: translateX(-100%);
             }
+
             .sidebar-pane[style*="display: none"] {
                 transform: translateX(-100%) !important;
+                opacity: 0;
             }
+
             .sidebar-pane:not([style*="display: none"]) {
                 transform: translateX(0) !important;
+                opacity: 1;
             }
+
             .sidebar-overlay {
                 position: fixed;
                 inset: 0;
-                background: rgba(0,0,0,0.5);
+                background: rgba(0, 0, 0, 0.5);
                 backdrop-filter: blur(2px);
                 z-index: 999;
             }
+
             .workspace-layout {
                 height: auto;
             }
@@ -178,9 +183,14 @@
         .sidebar-pane::-webkit-scrollbar {
             width: 4px;
         }
+
         .sidebar-pane::-webkit-scrollbar-thumb {
             background: #e2e8f0;
             border-radius: 20px;
+        }
+
+        .sidebar-item {
+            z-index: 10;
         }
 
         /* Remove wrapper scrollbar styles as we now apply them directly to sidebar-pane */
@@ -193,7 +203,7 @@
             background: white;
             border: 1px solid #e5e7eb;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            z-index: 9999;
+            z-index: 99999;
             border-radius: 0.5rem;
             pointer-events: auto;
         }
@@ -268,16 +278,17 @@
         .is-native-app {
             padding-top: env(safe-area-inset-top, 20px);
         }
+
         .is-native-app nav.sticky {
             top: env(safe-area-inset-top, 20px);
         }
     </style>
 </head>
 
-<body class="font-sans antialiased bg-gray-50 text-gray-900" x-data="{ mobileMenuOpen: false }" :class="Capacitor.isNativePlatform() ? 'is-native-app' : ''">
+<body class="font-sans antialiased bg-gray-50 text-gray-900" x-data="{ mobileMenuOpen: false }"
+    :class="Capacitor.isNativePlatform() ? 'is-native-app' : ''">
     <div class="min-h-screen flex flex-col" x-data="{ sidebarOpen: true, desktopSidebarOpen: window.innerWidth > 1024 }"
-        @close-sidebar.window="desktopSidebarOpen = false"
-        @open-sidebar.window="desktopSidebarOpen = true">
+        @close-sidebar.window="desktopSidebarOpen = false" @open-sidebar.window="desktopSidebarOpen = true">
         <!-- Navigation Bar -->
         <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
             <div class="max-w-full mx-auto px-4 sm:px-8 lg:px-12">
@@ -399,7 +410,10 @@
         @if($isWorkspace || View::hasSection('sidebar'))
             <div class="workspace-layout">
                 <!-- Sidebar Overlay (Mobile Only) -->
-                <div class="sidebar-overlay flex xl:hidden" id="sidebar-overlay" x-show="desktopSidebarOpen" x-cloak @click="desktopSidebarOpen = false" x-transition.opacity style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); z-index: 999;"></div>
+                <div class="sidebar-overlay flex xl:hidden" id="sidebar-overlay" x-show="desktopSidebarOpen" x-cloak
+                    @click="desktopSidebarOpen = false" x-transition.opacity
+                    style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); z-index: 999;">
+                </div>
 
                 <!-- Sidebar -->
                 <aside class="sidebar-pane custom-scrollbar" id="sidebar-pane" x-show="desktopSidebarOpen" x-transition>
@@ -417,35 +431,43 @@
 
                 <!-- Main Content -->
                 <main class="content-pane custom-scrollbar pb-16 md:pb-0 flex-1">
-                    @yield('content')
+                    <div class="flex-grow">
+                        @yield('content')
+                    </div>
                     @include('layouts.partials.footer')
                 </main>
 
                 <!-- Mobile Bottom Navigation (Visible only on small screens) -->
                 @auth
-                @php
-                    $roleValNav = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
-                @endphp
-                <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center h-16 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe pt-2">
-                    <a href="{{ route($roleValNav . '.dashboard') }}" class="flex flex-col items-center justify-center w-full text-gray-500 hover:text-indigo-600 {{ request()->routeIs($roleValNav . '.dashboard') ? 'text-indigo-600' : '' }} transition-colors">
-                        <i class="fa-solid fa-house mb-1 text-lg"></i>
-                        <span class="text-[10px] font-bold">Home</span>
-                    </a>
-                    <a href="{{ route('projects.active') }}" class="flex flex-col items-center justify-center w-full text-gray-500 hover:text-indigo-600 {{ request()->routeIs('projects.*') ? 'text-indigo-600' : '' }} transition-colors">
-                        <i class="fa-solid fa-layer-group mb-1 text-lg"></i>
-                        <span class="text-[10px] font-bold">Projects</span>
-                    </a>
-                    <a href="{{ route('surveys.create') }}" class="flex flex-col items-center justify-center w-full text-gray-500 hover:text-indigo-600 {{ request()->routeIs('surveys.create') ? 'text-indigo-600' : '' }} transition-colors relative">
-                        <div class="absolute -top-4 bg-indigo-600 text-white w-10 h-10 flex items-center justify-center rounded-full shadow-lg border-2 border-gray-50">
-                            <i class="fa-solid fa-plus text-lg"></i>
-                        </div>
-                        <span class="text-[10px] font-bold mt-5">Create</span>
-                    </a>
-                    <a href="{{ route('research-proposal.index') }}" class="flex flex-col items-center justify-center w-full text-gray-500 hover:text-indigo-600 {{ request()->routeIs('research-proposal.*') ? 'text-indigo-600' : '' }} transition-colors">
-                        <i class="fa-solid fa-file-signature mb-1 text-lg"></i>
-                        <span class="text-[10px] font-bold">Report</span>
-                    </a>
-                </nav>
+                    @php
+                        $roleValNav = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
+                    @endphp
+                    <nav
+                        class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center h-16 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe pt-2">
+                        <a href="{{ route($roleValNav . '.dashboard') }}"
+                            class="flex flex-col items-center justify-center w-full text-gray-500 hover:text-indigo-600 {{ request()->routeIs($roleValNav . '.dashboard') ? 'text-indigo-600' : '' }} transition-colors">
+                            <i class="fa-solid fa-house mb-1 text-lg"></i>
+                            <span class="text-[10px] font-bold">Home</span>
+                        </a>
+                        <a href="{{ route('projects.active') }}"
+                            class="flex flex-col items-center justify-center w-full text-gray-500 hover:text-indigo-600 {{ request()->routeIs('projects.*') ? 'text-indigo-600' : '' }} transition-colors">
+                            <i class="fa-solid fa-layer-group mb-1 text-lg"></i>
+                            <span class="text-[10px] font-bold">Projects</span>
+                        </a>
+                        <a href="{{ route('surveys.create') }}"
+                            class="flex flex-col items-center justify-center w-full text-gray-500 hover:text-indigo-600 {{ request()->routeIs('surveys.create') ? 'text-indigo-600' : '' }} transition-colors relative">
+                            <div
+                                class="absolute -top-4 bg-indigo-600 text-white w-10 h-10 flex items-center justify-center rounded-full shadow-lg border-2 border-gray-50">
+                                <i class="fa-solid fa-plus text-lg"></i>
+                            </div>
+                            <span class="text-[10px] font-bold mt-5">Create</span>
+                        </a>
+                        <a href="{{ route('research-proposal.index') }}"
+                            class="flex flex-col items-center justify-center w-full text-gray-500 hover:text-indigo-600 {{ request()->routeIs('research-proposal.*') ? 'text-indigo-600' : '' }} transition-colors">
+                            <i class="fa-solid fa-file-signature mb-1 text-lg"></i>
+                            <span class="text-[10px] font-bold">Report</span>
+                        </a>
+                    </nav>
                 @endauth
             </div>
         @else

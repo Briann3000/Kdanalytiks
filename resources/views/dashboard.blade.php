@@ -227,9 +227,9 @@
         <!-- Recent activity if not respondent -->
         @if($role !== 'respondent')
             <div class="bg-white shadow rounded-lg border border-gray-100 overflow-hidden">
-                <div class="px-6 py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/30">
-                    <h3 class="text-xl font-black text-gray-900 uppercase tracking-tight flex items-center">
-                        <i class="fa-solid fa-clock-rotate-left mr-3 text-indigo-500"></i> Recent Platform Activity
+                <div class="px-6 py-6 border-b border-gray-100 flex items-center justify-between">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">
+                        <i class="fa-solid fa-clock-rotate-left mr-2 text-indigo-500"></i> Recent Platform Activity
                     </h3>
                 </div>
                 <div class="p-8">
@@ -244,8 +244,8 @@
                                         <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest bg-white px-2 py-1 rounded-md border border-indigo-50 shadow-sm">{{ $activity->status }}</span>
                                     </div>
                                     <div class="flex-1 min-w-0 mb-6">
-                                        <p class="text-base font-black text-gray-900 mb-1 leading-tight">{{ $activity->title }}</p>
-                                        <p class="text-xs text-gray-400 font-bold uppercase tracking-tighter">{{ $activity->created_at->diffForHumans() }}</p>
+                                        <p class="text-base font-medium text-gray-900 mb-1 leading-tight">{{ $activity->title }}</p>
+                                        <p class="text-xs text-gray-400 font-medium tracking-tight">{{ $activity->created_at->diffForHumans() }}</p>
                                     </div>
                                     <div class="pt-4 border-t border-gray-100 flex justify-between items-center">
                                         <span class="text-[10px] text-gray-300 font-bold uppercase">Activity Log #{{ $activity->id }}</span>

@@ -3,10 +3,10 @@
   "appName": "kmsurveytool",
   "webDir": "public/build",
   "server": {
-    "url": "https://hee-veilless-tiddly.ngrok-free.dev",
+    "url": "https://kmsurveytool.com",
     "cleartext": false,
     "allowNavigation": [
-      "hee-veilless-tiddly.ngrok-free.dev"
+      "https://kmsurveytool.com"
     ]
   }
 }
