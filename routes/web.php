@@ -24,6 +24,10 @@ Route::get('/', function () {
     return view('welcome'); // Landing Page
 })->name('home');
 
+Route::get('/privacy-policy', function () {
+    return view('privacy');
+})->name('privacy');
+
 Route::get('/surveys/public', [SurveyController::class, 'publicIndex'])->name('surveys.public');
 
 // Quick login for previewing purposes
@@ -111,22 +115,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/surveys/{survey}/export', [SurveyController::class, 'exportResponses'])->name('surveys.export');
     Route::get('/surveys/{survey}/export-pdf', [SurveyController::class, 'exportPdf'])->name('surveys.export_pdf');
     Route::get('/surveys/{survey}/report', [SurveyController::class, 'report'])->name('surveys.report');
-    
+
     // Core Survey CRUD (Except Index, Show, Destroy handled separately)
     Route::resource('surveys', \App\Http\Controllers\SurveyController::class)->except(['index', 'show', 'destroy']);
     Route::delete('/surveys/{survey}', [SurveyController::class, 'destroy'])->name('surveys.destroy');
     Route::post('/surveys/initialize', [SurveyController::class, 'initialize'])->name('surveys.initialize');
-    
+
     // Quick-Access Project Lists
     // Projects & Library Overhaul (Kobo-style)
     Route::prefix('projects')->name('projects.')->group(function () {
         Route::get('/active', [SurveyController::class, 'index'])->name('active');
         Route::get('/archived', [SurveyController::class, 'archivedIndex'])->name('archived');
         Route::get('/drafts', [SurveyController::class, 'draftsIndex'])->name('drafts');
-        
+
         // Use /projects as the hub
         Route::get('/', [SurveyController::class, 'hub'])->name('index');
-        
+
         // Project Hub (Single Survey Management content)
         Route::prefix('{survey}')->group(function () {
             Route::get('/', [SurveyController::class, 'projectSummary'])->name('summary');
@@ -159,7 +163,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/research-proposal/generate', [\App\Http\Controllers\ResearchProposalController::class, 'generate'])->name('research-proposal.generate');
     Route::get('/research-proposal/preview/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'preview'])->name('research-proposal.preview');
     Route::post('/research-proposal/export/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'export'])->name('research-proposal.export');
-    
+
     Route::resource('research-proposal', \App\Http\Controllers\ResearchProposalController::class)->except(['store']);
 });
 
@@ -214,7 +218,7 @@ Route::middleware(['auth', 'role:respondent'])->prefix('respondent')->name('resp
 Route::middleware(['auth'])->group(function () {
     Route::post('/ai/generate-survey', [\App\Http\Controllers\AiController::class, 'generateSchema'])->name('ai.generate');
     Route::get('/ai/insights/question/{question}', [\App\Http\Controllers\InsightController::class, 'generateQuestionInsight'])->name('ai.insights.question');
-    
+
     // Qualitative Reports
     Route::get('/surveys/{survey}/qualitative-report', [\App\Http\Controllers\InsightController::class, 'showQualitativeReport'])->name('surveys.qualitative');
     Route::get('/surveys/{survey}/analyze/{question_id}', [\App\Http\Controllers\InsightController::class, 'analyze'])->name('surveys.analyze');

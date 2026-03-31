@@ -4,11 +4,12 @@
 
 @section('head')
     @if(!empty($survey->json_schema))
-        <!-- jQuery Form Builder CSS -->
-        <link href="https://formbuilder.online/assets/css/form-render.min.css" rel="stylesheet">
+        <!-- jQuery Form Builder CSS from cdnjs for reliability -->
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/jQuery-formBuilder/3.4.2/form-builder.min.css" rel="stylesheet">
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
-        <script src="https://formbuilder.online/assets/js/form-render.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jQuery-formBuilder/3.4.2/form-render.min.js"></script>
     @endif
     <style>
         /* formRender Styling Overrides */
@@ -33,13 +34,161 @@
             box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1) !important;
             outline: none !important;
         }
-        .rendered-form label {
+        .rendered-form > .form-group > label {
             display: block !important;
             font-size: 1.125rem !important;
             font-weight: 700 !important;
             color: #111827 !important;
             margin-bottom: 0.75rem !important;
             line-height: 1.5 !important;
+        }
+
+        /* Fix for inline labels in radio/checkbox groups */
+        .rendered-form .radio-inline label, .rendered-form .checkbox-inline label {
+            display: inline-block !important;
+            margin-bottom: 0 !important;
+            font-weight: 600 !important;
+            font-size: 0.95rem !important;
+            vertical-align: middle !important;
+            cursor: pointer !important;
+        }
+
+        /* Inline Radio/Checkbox Layout */
+        .preview-inline-group { 
+            display: flex !important; 
+            flex-wrap: wrap !important; 
+            gap: 1.5rem !important; 
+            padding: 0.5rem 0 !important;
+            background: rgba(249, 250, 251, 0.5) !important;
+            border-radius: 1rem !important;
+            padding: 1rem !important;
+        }
+        .preview-inline-group > .radio-inline, .preview-inline-group > .checkbox-inline { 
+            display: flex !important; 
+            align-items: center !important; 
+            margin: 0 !important;
+            cursor: pointer !important;
+            font-weight: 600 !important;
+            color: #374151 !important;
+        }
+        .preview-inline-group input { 
+            margin-right: 0.75rem !important; 
+            cursor: pointer !important; 
+            width: 1.25rem !important; 
+            height: 1.25rem !important;
+            accent-color: #4f46e5 !important;
+        }
+
+        /* Enketo/Kobo Styling */
+        .likert-container {
+            display: flex !important;
+            justify-content: space-between !important;
+            gap: 0.5rem !important;
+            margin-top: 1rem !important;
+        }
+        .likert-item {
+            flex: 1;
+            text-align: center;
+            padding: 0.75rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #64748b;
+            background: white;
+        }
+        .likert-item:hover { background: #f1f5f9; }
+        .likert-item.active {
+            background: #6366f1;
+            color: white;
+            border-color: #6366f1;
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.2);
+        }
+
+        .rank-pool, .rank-ordered {
+            min-height: 120px;
+            padding: 0.75rem;
+            background: #f8fafc;
+            border-radius: 1rem;
+            border: 2px dashed #e2e8f0;
+        }
+        .rank-item {
+            padding: 0.75rem 1rem;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            color: #334155;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .rank-item:hover { border-color: #6366f1; transform: translateY(-1px); }
+        .rank-badge {
+            width: 1.5rem;
+            height: 1.5rem;
+            background: #6366f1;
+            color: white;
+            border-radius: 99px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            margin-right: 0.75rem;
+            font-weight: 800;
+        }
+
+        .recorder-dashboard {
+            background: #1e293b;
+            color: white;
+            padding: 2rem;
+            border-radius: 1.5rem;
+            text-align: center;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .recorder-status {
+            font-size: 0.7rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: #94a3b8;
+            margin-bottom: 1.5rem;
+        }
+        .recorder-timer {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 1rem 0;
+            color: #f8fafc;
+            text-shadow: 0 0 20px rgba(99,102,241,0.3);
+        }
+        .record-btn {
+            width: 5rem;
+            height: 5rem;
+            background: #ef4444;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 6px solid rgba(255,255,255,0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .record-btn:hover { transform: scale(1.05); background: #f87171; }
+        .record-btn.recording {
+            animation: pulse-red 2s infinite;
+            border-radius: 1rem;
+            background: #dc2626;
+        }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
     </style>
 @endsection
@@ -146,12 +295,270 @@
                                 } catch (e) {}
                             }
 
+                            const typeMap = {
+                                'select_one': 'radio-group',
+                                'select_many': 'checkbox-group',
+                                'rating': 'starRating',
+                                'range': 'number',
+                                'photo': 'file',
+                                'note': 'paragraph',
+                                'time': 'text',
+                                'audio': 'audio_recorder',
+                                'video': 'video_recorder',
+                                'decimal': 'number',
+                                'ranking': 'ranking_list'
+                            };
+
+                            const processedSchema = surveyData.map(field => {
+                                const finalType = typeMap[field.type] || field.type;
+                                const fieldClone = { ...field, type: finalType };
+
+                                // Inline layout for radio/checkbox
+                                if (['select_one', 'select_many', 'radio-group', 'checkbox-group'].includes(field.type)) {
+                                    fieldClone.inline = true;
+                                    fieldClone.className = (fieldClone.className || '') + ' preview-inline-group';
+                                }
+
+                                if (field.type === 'range') fieldClone.subtype = 'range';
+                                if (field.type === 'time') fieldClone.subtype = 'time';
+                                if (field.type === 'photo') {
+                                    fieldClone.subtype = 'file';
+                                    fieldClone.accept = 'image/*';
+                                }
+                                if (field.type === 'decimal') {
+                                    fieldClone.subtype = 'number';
+                                    fieldClone.step = 'any';
+                                }
+                                if (field.type === 'ranking') {
+                                    fieldClone.className = (fieldClone.className || '') + ' ranking-list-container';
+                                }
+                                
+                                return fieldClone;
+                            });
+
                             const renderOptions = {
-                                formData: surveyData,
-                                dataType: 'json'
+                                formData: processedSchema,
+                                dataType: 'json',
+                                render: true,
+                                templates: {
+                                    'starRating': function(fieldData) {
+                                        const id = fieldData.name;
+                                        return {
+                                            field: `
+                                            <div class="rating-wrapper bg-white py-6 px-4 rounded-2xl mb-4 border border-gray-100 shadow-sm">
+                                                <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rating'}</label>
+                                                <div class="likert-container" id="likert_${id}" style="display: flex !important; justify-content: space-between !important; gap: 8px !important;">
+                                                    ${[1,2,3,4,5].map(i => `<div class="likert-item" data-value="${i}" onclick="setRendererLikertValue('${id}', ${i})" style="flex:1; text-align:center; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; font-weight:700;">${i}</div>`).join('')}
+                                                </div>
+                                                <input type="hidden" name="${id}" id="input_${id}" required="${fieldData.required ? 'true' : 'false'}" value="">
+                                            </div>`
+                                        };
+                                    },
+                                    'ranking_list': function(fieldData) {
+                                        const id = fieldData.name;
+                                        const options = fieldData.values || [];
+                                        return {
+                                            field: `
+                                            <div class="ranking-wrapper bg-white p-6 rounded-2xl mb-4 border border-gray-100 shadow-sm">
+                                                <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rank the following'}</label>
+                                                <div class="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest block mb-2">Choices</span>
+                                                        <div id="pool_${id}" class="rank-pool" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;">
+                                                            ${options.map(opt => `
+                                                                <div class="rank-item" data-value="${opt.value}" onclick="togglePublicRankItem('${id}', this)">
+                                                                    ${opt.label}
+                                                                </div>
+                                                            `).join('')}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <span class="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2">Your Order</span>
+                                                        <div id="ranked_${id}" class="rank-ordered" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;"></div>
+                                                    </div>
+                                                </div>
+                                                <input type="hidden" name="${id}" id="input_${id}" value="">
+                                            </div>`,
+                                            onRender: () => setupPublicRankingUI(id)
+                                        };
+                                    },
+                                    'audio_recorder': function(fieldData) {
+                                        const id = fieldData.name;
+                                        return {
+                                            field: `
+                                            <div class="recorder-dashboard mb-4" style="background:#1e293b; color:white; padding:24px; border-radius:24px; text-align:center;">
+                                                <div class="recorder-status" id="status_${id}" style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; margin-bottom:16px;">Voice Response</div>
+                                                <div class="recorder-timer" id="timer_${id}" style="font-family:monospace; font-size:32px; font-weight:700; margin:16px 0;">00:00</div>
+                                                <div class="flex items-center justify-center space-x-6 gap-6" style="display:flex; justify-content:center; align-items:center;">
+                                                    <div id="start_${id}" class="record-btn" style="width:64px; height:64px; background:#ef4444; border-radius:999px; display:flex !important; align-items:center; justify-content:center; cursor:pointer; border:4px solid rgba(255,255,255,0.1);">
+                                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+                                                    </div>
+                                                    <div id="stop_${id}" class="record-btn bg-gray-600 hidden" style="width:64px; height:64px; background:#4b5563; border-radius:12px; display:none; align-items:center; justify-content:center; cursor:pointer;">
+                                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 6h12v12H6z"/></svg>
+                                                    </div>
+                                                </div>
+                                                <audio id="player_${id}" controls class="hidden w-full mt-6" style="display:none; width:100%; margin-top:24px;"></audio>
+                                                <button type="button" id="retake_${id}" class="mt-4 text-[10px] uppercase font-black text-indigo-400 hidden" style="display:none; background:none; border:none; color:#818cf8; cursor:pointer;">Retake Recording</button>
+                                                <input type="hidden" name="${id}_blob" id="blob_${id}">
+                                            </div>`,
+                                            onRender: () => setupRecorder(id, 'audio')
+                                        };
+                                    },
+                                    'video_recorder': function(fieldData) {
+                                        const id = fieldData.name;
+                                        return {
+                                            field: `
+                                            <div class="recorder-dashboard mb-4" style="background:#1e293b; color:white; padding:0; border-radius:24px; overflow:hidden; position:relative;">
+                                                <div class="relative aspect-video bg-black" style="background:black; aspect-ratio:16/9; position:relative;">
+                                                    <video id="preview_${id}" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; opacity:0.5;"></video>
+                                                    <video id="player_${id}" controls style="display:none; width:100%; height:100%; object-fit:contain;"></video>
+                                                    <div class="absolute inset-0 flex flex-col items-center justify-center" style="position:absolute; inset:0; display:flex; flex-direction:column; items-center; justify-center;">
+                                                        <div class="recorder-status" id="status_${id}" style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; margin-bottom:8px;">Video Response</div>
+                                                        <div class="recorder-timer" id="timer_${id}" style="font-family:monospace; font-size:24px; font-weight:700; margin-bottom:16px;">00:00</div>
+                                                        <div id="start_${id}" class="record-btn" style="width:56px; height:56px; background:#ef4444; border-radius:999px; display:flex !important; align-items:center; justify-content:center; cursor:pointer; border:4px solid rgba(255,255,255,0.2);">
+                                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                                                        </div>
+                                                        <div id="stop_${id}" class="record-btn bg-gray-600 hidden" style="width:56px; height:56px; background:#4b5563; border-radius:12px; display:none; align-items:center; justify-content:center; cursor:pointer;">
+                                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 6h12v12H6z"/></svg>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button type="button" id="retake_${id}" class="absolute bottom-4 right-4" style="display:none; position:absolute; bottom:16px; right:16px; background:rgba(0,0,0,0.5); color:white; padding:8px 16px; border-radius:24px; border:none; font-size:10px; font-weight:900; text-transform:uppercase; cursor:pointer;">Retake</button>
+                                                <input type="hidden" name="${id}_blob" id="blob_${id}">
+                                            </div>`,
+                                            onRender: () => setupRecorder(id, 'video')
+                                        };
+                                    }
+                                }
                             };
 
                             const formRenderInstance = container.formRender(renderOptions);
+                            
+                            // Recorder Registry to store blobs
+                            const recorderBlobs = {};
+
+                            function setRendererLikertValue(id, value) {
+                                const container = jQuery(`#likert_${id}`);
+                                const input = jQuery(`#input_${id}`);
+                                container.find('.likert-item').removeClass('active');
+                                container.find(`.likert-item[data-value="${value}"]`).addClass('active');
+                                input.val(value);
+                            }
+
+                            function togglePublicRankItem(id, el) {
+                                const pool = document.getElementById(`pool_${id}`);
+                                const ranked = document.getElementById(`ranked_${id}`);
+                                
+                                if (el.parentElement.id === `pool_${id}`) {
+                                    const badge = document.createElement('span');
+                                    badge.className = 'rank-badge';
+                                    badge.innerText = ranked.children.length + 1;
+                                    el.prepend(badge);
+                                    ranked.appendChild(el);
+                                } else {
+                                    const badge = el.querySelector('.rank-badge');
+                                    if (badge) badge.remove();
+                                    pool.appendChild(el);
+                                    Array.from(ranked.children).forEach((child, index) => {
+                                        child.querySelector('.rank-badge').innerText = index + 1;
+                                    });
+                                }
+                                
+                                const values = Array.from(ranked.children).map(child => child.dataset.value);
+                                document.getElementById(`input_${id}`).value = values.join(',');
+                            }
+
+                            function setupRecorder(id, type) {
+                                let mediaRecorder;
+                                let chunks = [];
+                                let timerInterval;
+                                let seconds = 0;
+
+                                const startBtn = document.getElementById(`start_${id}`);
+                                const stopBtn = document.getElementById(`stop_${id}`);
+                                const retakeBtn = document.getElementById(`retake_${id}`);
+                                const player = document.getElementById(`player_${id}`);
+                                const preview = document.getElementById(`preview_${id}`);
+                                const statusLabel = document.getElementById(`status_${id}`);
+                                const timerLabel = document.getElementById(`timer_${id}`);
+                                const blobInput = document.getElementById(`blob_${id}`);
+
+                                if (!startBtn) return;
+
+                                function updateTimer() {
+                                    seconds++;
+                                    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+                                    const secs = (seconds % 60).toString().padStart(2, '0');
+                                    timerLabel.innerText = `${mins}:${secs}`;
+                                }
+
+                                retakeBtn.onclick = () => {
+                                    player.classList.add('hidden');
+                                    retakeBtn.classList.add('hidden');
+                                    startBtn.classList.remove('hidden');
+                                    if (preview) preview.classList.remove('hidden');
+                                    statusLabel.innerText = type === 'video' ? 'Video Ready' : 'Voice Ready';
+                                    timerLabel.innerText = '00:00';
+                                    seconds = 0;
+                                    blobInput.value = '';
+                                };
+
+                                startBtn.onclick = async () => {
+                                    try {
+                                        const constraints = { audio: true, video: type === 'video' };
+                                        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                                        
+                                        if (preview) { 
+                                            preview.srcObject = stream; 
+                                            preview.classList.remove('hidden'); 
+                                        }
+                                        player.classList.add('hidden');
+                                        
+                                        mediaRecorder = new MediaRecorder(stream);
+                                        mediaRecorder.ondataavailable = (e) => {
+                                            if (e.data.size > 0) chunks.push(e.data);
+                                        };
+                                        mediaRecorder.onstop = () => {
+                                            clearInterval(timerInterval);
+                                            const blob = new Blob(chunks, { type: type === 'audio' ? 'audio/ogg; codecs=opus' : 'video/webm' });
+                                            
+                                            // Handle saving blob data
+                                            const reader = new FileReader();
+                                            reader.readAsDataURL(blob);
+                                            reader.onloadend = () => {
+                                                blobInput.value = reader.result;
+                                            };
+
+                                            player.src = URL.createObjectURL(blob);
+                                            player.classList.remove('hidden');
+                                            if (preview) preview.classList.add('hidden');
+                                            
+                                            stream.getTracks().forEach(track => track.stop());
+                                            stopBtn.classList.add('hidden');
+                                            retakeBtn.classList.remove('hidden');
+                                            statusLabel.innerText = 'Response Captured';
+                                        };
+                                        
+                                        mediaRecorder.start();
+                                        startBtn.classList.add('hidden');
+                                        stopBtn.classList.remove('hidden');
+                                        stopBtn.classList.add('recording');
+                                        statusLabel.innerText = 'Now Recording...';
+                                        
+                                        seconds = 0;
+                                        timerInterval = setInterval(updateTimer, 1000);
+                                        chunks = [];
+                                    } catch (err) { 
+                                        alert("Permission denied or device error: " + err.message); 
+                                    }
+                                };
+                                stopBtn.onclick = () => { 
+                                    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                                        mediaRecorder.stop(); 
+                                    }
+                                    stopBtn.classList.remove('recording');
+                                };
+                            }
                             
                             // Restore DOM manually if we have a draft
                             if (userData && userData.length > 0) {
@@ -205,6 +612,14 @@
                                         formData.append(this.name, this.files[0]);
                                     }
                                 });
+
+                                // Append recorded blobs
+                                for (const id in recorderBlobs) {
+                                    if (recorderBlobs[id]) {
+                                        const ext = recorderBlobs[id].type.includes('audio') ? 'ogg' : 'webm';
+                                        formData.append(id, recorderBlobs[id], `${id}_recording.${ext}`);
+                                    }
+                                }
 
                                 fetch(this.action, {
                                     method: 'POST',
