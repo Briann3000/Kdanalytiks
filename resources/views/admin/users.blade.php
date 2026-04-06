@@ -53,10 +53,9 @@
                     <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
                     <select name="status" id="status"
                         class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                        <option value="all">All Status</option>
-                        @foreach(['active', 'suspended'] as $s)
-                            <option value="{{ $s }}" {{ request('status') == $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
-                        @endforeach
+                        <option value="active" {{ (!request()->filled('status') || request('status') == 'active') ? 'selected' : '' }}>Active Only</option>
+                        <option value="suspended" {{ request('status') == 'suspended' ? 'selected' : '' }}>Suspended</option>
+                        <option value="all" {{ request('status') == 'all' ? 'selected' : '' }}>All (Incl. Suspended)</option>
                     </select>
                 </div>
 
