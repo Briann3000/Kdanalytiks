@@ -14,6 +14,9 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('fetch', event => {
+    // Only intercept GET requests - do not interfere with POST, PUT, DELETE, etc.
+    if (event.request.method !== 'GET') return;
+
     // Network First Strategy
     event.respondWith(
         fetch(event.request)
@@ -30,7 +33,13 @@ self.addEventListener('fetch', event => {
             })
             .catch(() => {
                 // If network fetch fails (offline), return from cache
-                return caches.match(event.request);
+                return caches.match(event.request).then(cachedResponse => {
+                    if (cachedResponse) {
+                        return cachedResponse;
+                    }
+                    // If no cache, let it fail naturally or return a custom error page
+                    // return caches.match('/offline.html'); 
+                });
             })
     );
 });
