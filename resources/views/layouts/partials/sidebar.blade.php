@@ -23,8 +23,8 @@
         'baseline' => ['icon' => 'fa-clipboard-list', 'label' => 'Baseline'],
         'feasibility' => ['icon' => 'fa-vial', 'label' => 'Feasibility'],
         'market_research' => ['icon' => 'fa-chart-line', 'label' => 'Market Research'],
-        'others' => ['icon' => 'fa-folder-open', 'label' => 'Others'],
         'polls' => ['icon' => 'fa-square-poll-vertical', 'label' => 'Polls'],
+        'others' => ['icon' => 'fa-folder-open', 'label' => 'Others'],
     ];
 @endphp
 
@@ -116,7 +116,7 @@
                                 class="flex items-center justify-between py-1.5 text-xs font-bold {{ request()->routeIs('admin.users.index') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} cursor-pointer transition-colors relative">
                                 <div class="flex items-center">
                                     <i class="fa-solid fa-users mr-2 opacity-50"></i>
-                                    ALL USERS
+                                    ACTIVE USERS
                                 </div>
 
                                 <template x-teleport="body">
@@ -181,8 +181,8 @@
                                 <div class="relative" x-data="{ n1: false, n1Top: 0, n1Left: 0 }"
                                     @mouseenter="const r = $el.getBoundingClientRect(); n1Top = r.top; n1Left = r.right + 15; n1 = true"
                                     @mouseleave="n1 = false">
-                                    <a href="{{ route('admin.surveys.index') }}"
-                                        class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">All
+                                    <a href="{{ route('admin.surveys.index', ['status' => 'active']) }}"
+                                        class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Active
                                         Surveys</a>
                                     <!-- Nested Flyout -->
                                     <div class="flyout-menu shadow-2xl border border-gray-100 p-3 min-w-[140px]"
@@ -242,8 +242,8 @@
                         <div class="relative" x-data="{ n3: false, n3Top: 0, n3Left: 0 }"
                             @mouseenter="const r = $el.getBoundingClientRect(); n3Top = r.top - 8; n3Left = r.right + 15; n3 = true"
                             @mouseleave="n3 = false">
-                            <a href="{{ route('admin.surveys.index') }}"
-                                class="block py-1 text-xs font-bold uppercase tracking-wide {{ request()->routeIs('admin.surveys.index') && !request()->hasAny(['status', 'source']) ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">ALL
+                            <a href="{{ route('admin.surveys.index', ['status' => 'active']) }}"
+                                class="block py-1 text-xs font-bold uppercase tracking-wide {{ request()->has('status') && request('status') === 'active' ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">ACTIVE
                                 SURVEYS</a>
                             <template x-teleport="body">
                                 <!-- Nested Flyout -->
@@ -430,7 +430,7 @@
                         <div x-show="expandedItem === 'org_projects'" x-collapse class="sidebar-submenu"
                             x-data="{ hubSubExpanded: {{ request()->filled('category') ? 'true' : 'false' }} }">
                             <a href="{{ route('projects.active') }}"
-                                class="block py-1 text-xs font-bold uppercase tracking-wide {{ request()->routeIs('projects.active') && !request()->filled('category') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">ALL
+                                class="block py-1 text-xs font-bold uppercase tracking-wide {{ request()->routeIs('projects.active') && !request()->filled('category') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">ACTIVE
                                 SURVEYS</a>
 
                             <a href="{{ route('projects.drafts') }}"
@@ -509,6 +509,18 @@
                                 class="block py-1 text-xs font-bold {{ request()->routeIs('library.templates') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">Templates</a>
                         </div>
                     </div>
+
+                    @if($role === 'organization')
+                        <!-- Subscription Section -->
+                        <div class="sidebar-item relative">
+                            <a href="{{ route('subscriptions.index') }}"
+                                class="flex items-center px-3 py-2 text-sm font-bold uppercase tracking-wider {{ request()->routeIs('subscriptions.*') ? 'text-indigo-700 bg-indigo-50 border-l-2 border-indigo-600 shadow-sm' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg group transition-colors">
+                                <i
+                                    class="fa-solid fa-crown mr-3 {{ request()->routeIs('subscriptions.*') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
+                                SUBSCRIPTION
+                            </a>
+                        </div>
+                    @endif
                 @endif
             @endif
 
@@ -527,7 +539,7 @@
                 <template x-teleport="body">
                     <div class="flyout-menu shadow-xl border border-gray-100 p-2"
                         x-show="hoverItem === 'studio' && expandedItem !== 'studio'"
-                        :style="{ top: (flyoutTop > 400 ? flyoutTop - 80 : flyoutTop) + 'px', left: flyoutLeft + 'px' }"
+                        :style="{ top: (parseInt(flyoutTop) > 400 ? (parseInt(flyoutTop) - 80) : parseInt(flyoutTop)) + 'px', left: flyoutLeft + 'px' }"
                         style="display: none;" @mouseenter="hoverItem = 'studio'" @mouseleave="clearFlyout()">
                         <a href="{{ route('research-proposal.index') }}"
                             class="block px-3 py-1.5 text-xs font-bold font-bold {{ request()->routeIs('research-proposal.index') ? 'text-indigo-700 bg-gray-50' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg">Report
@@ -568,14 +580,22 @@
                 </div>
 
                 <template x-teleport="body">
-                    <!-- Flyout -->
                     <div class="flyout-menu shadow-xl border border-gray-100 p-4 min-w-[200px]"
                         x-show="hoverItem === 'public' && expandedItem !== 'public'"
-                        :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px' }" style="display: none;"
-                        @mouseenter="hoverItem = 'public'" @mouseleave="clearFlyout()">
+                        :style="{ top: (parseInt(flyoutTop) > 400 ? (parseInt(flyoutTop) - 120) : parseInt(flyoutTop)) + 'px', left: flyoutLeft + 'px' }"
+                        style="display: none;" @mouseenter="hoverItem = 'public'" @mouseleave="clearFlyout()">
                         <div class="mb-3">
-                            <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-3">Browse
-                                Categories</div>
+                            <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-3">
+                                Discover
+                            </div>
+                            <a href="{{ route('surveys.public') }}"
+                                class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">All
+                                Surveys</a>
+                        </div>
+                        <div class="border-t border-gray-50 pt-3">
+                            <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-3">By
+                                Category
+                            </div>
                             <div class="space-y-1">
                                 @foreach($categories as $key => $cat)
                                     <a href="{{ route('surveys.public', ['category' => $key]) }}"
@@ -586,39 +606,45 @@
                                 @endforeach
                             </div>
                         </div>
-                        <div class="border-t border-gray-50 pt-3 mt-3">
-                            <a href="{{ route('surveys.public') }}"
-                                class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">View
-                                All Public</a>
-                        </div>
                     </div>
                 </template>
 
-                <!-- Accordion -->
                 <div x-show="expandedItem === 'public'" x-collapse class="sidebar-submenu">
-                    <div class="mb-1">
-                        <div @click="publicExpanded = !publicExpanded"
-                            class="flex items-center justify-between py-1.5 text-xs font-bold {{ request()->routeIs('surveys.public') && request()->filled('category') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} cursor-pointer transition-colors">
-                            <div class="flex items-center">
+                    <a href="{{ route('surveys.public') }}"
+                        class="block py-1 text-xs font-bold uppercase tracking-wide {{ request()->routeIs('surveys.public') && !request()->filled('category') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">ACTIVE
+                        SURVEYS</a>
+
+                    <div class="mb-1 mt-1"
+                        x-data="{ publicCatsExpanded: {{ request()->filled('category') && request()->routeIs('surveys.public') ? 'true' : 'false' }} }">
+                        <div @click="publicCatsExpanded = !publicCatsExpanded"
+                            class="flex items-center justify-between py-1.5 text-xs font-bold {{ request()->filled('category') && request()->routeIs('surveys.public') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} cursor-pointer transition-colors">
+                            <div class="flex items-center uppercase">
                                 <i class="fa-solid fa-layer-group mr-2 opacity-50"></i>
-                                CATEGORIES
+                                BY CATEGORY
                             </div>
                         </div>
 
-                        <div x-show="publicExpanded" x-collapse
+                        <div x-show="publicCatsExpanded" x-collapse
                             class="pl-4 space-y-1 my-1 border-l-2 border-indigo-50/50 ml-1">
                             @foreach($categories as $key => $cat)
                                 <a href="{{ route('surveys.public', ['category' => $key]) }}"
-                                    class="block py-1 text-[10px] font-bold uppercase tracking-wider {{ request()->is('surveys/public*') && request('category') === $key ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600' }} transition-colors">
+                                    class="block py-1 text-[10px] font-bold uppercase tracking-wider {{ request('category') === $key && request()->routeIs('surveys.public') ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600' }} transition-colors">
                                     {{ $cat['label'] }}
                                 </a>
                             @endforeach
                         </div>
                     </div>
-                    <a href="{{ route('surveys.public') }}"
-                        class="block py-1 text-xs font-bold {{ request()->routeIs('surveys.public') && !request()->filled('category') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">All
-                        Public Surveys</a>
                 </div>
+            </div>
+
+            <!-- Wallet Section -->
+            <div class="sidebar-item relative">
+                <a href="{{ route('wallet.index') }}"
+                    class="flex items-center px-3 py-2 text-sm font-bold uppercase tracking-wider {{ request()->routeIs('wallet.*') ? 'text-indigo-700 bg-indigo-50 border-l-2 border-indigo-600 shadow-sm' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg group transition-colors">
+                    <i
+                        class="fa-solid fa-wallet mr-3 {{ request()->routeIs('wallet.*') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
+                    MY WALLET
+                </a>
             </div>
 
             @if($role !== 'respondent')

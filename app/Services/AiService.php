@@ -10,10 +10,40 @@ use Illuminate\Support\Facades\Log;
 class AiService
 {
     /**
+     * Check if an organization has reached its AI limit.
+     */
+    public function checkUsageLimit(\App\Models\Organization $org): bool
+    {
+        $tier = $org->subscriptionTier ?? \App\Models\SubscriptionTier::where('slug', 'free')->first();
+
+        if ($tier->ai_limit_per_month === -1) {
+            return true; // Unlimited
+        }
+
+        return $org->ai_usage_monthly < $tier->ai_limit_per_month;
+    }
+
+    /**
+     * Increment AI usage for an organization.
+     */
+    public function incrementUsage(\App\Models\Organization $org): void
+    {
+        $org->increment('ai_usage_monthly');
+    }
+
+    /**
      * Analyze sentiment of a specific response using Groq.
      */
     public function analyzeResponseSentiment(Response $response)
     {
+        $survey = $response->survey;
+        $org = $survey?->organization;
+
+        if ($org && !$this->checkUsageLimit($org)) {
+            Log::warning("AI Sentiment Analysis Skipped: Limit reached for Organization {$org->id}");
+            return null;
+        }
+
         $answers = $response->answers()->with('question')->get();
         $textData = "";
 
@@ -31,6 +61,9 @@ class AiService
         try {
             $responseJson = $this->callGroq($prompt, null, true);
             if ($responseJson) {
+                if ($org)
+                    $this->incrementUsage($org);
+
                 $metadata = json_decode($responseJson, true);
                 if ($metadata) {
                     $response->update(['ai_metadata' => array_merge($response->ai_metadata ?? [], $metadata)]);
@@ -49,6 +82,11 @@ class AiService
      */
     public function generateSurveySummary(Survey $survey)
     {
+        $org = $survey->organization;
+        if ($org && !$this->checkUsageLimit($org)) {
+            return "AI Summary is currently unavailable: Your monthly subscription limit has been reached.";
+        }
+
         // Reduced to 8 to stay well within Groq TPM limits (Free Tier)
         $responses = $survey->responses()->with('answers.question')->latest()->take(8)->get();
         if ($responses->isEmpty())
@@ -96,6 +134,10 @@ class AiService
             if (!$result) {
                 return "AI Summary is currently unavailable (Engine failed to respond).";
             }
+
+            if ($org)
+                $this->incrementUsage($org);
+
             return $result;
         } catch (\Exception $e) {
             Log::error("Groq Summary Error: " . $e->getMessage());
@@ -191,6 +233,13 @@ class AiService
      */
     public function generateSurveySchema($prompt)
     {
+        $user = auth()->user();
+        $org = $user?->organization;
+
+        if ($org && !$this->checkUsageLimit($org)) {
+            return $this->getMockSchema($prompt); // Fallback to mock if limit reached
+        }
+
         $systemPrompt = "You are an expert survey designer and researcher. Your goal is to generate high-quality survey schemas based on user descriptions. 
         You MUST return ONLY a JSON array of objects. Each object represents a question field compatible with 'jQuery FormBuilder'.
         
@@ -214,6 +263,9 @@ class AiService
         try {
             $groqData = $this->callGroq($prompt, $systemPrompt, true);
             if ($groqData) {
+                if ($org)
+                    $this->incrementUsage($org);
+
                 $decoded = json_decode($groqData, true);
                 return $this->formatSchemaResponse($decoded);
             }

@@ -25,6 +25,9 @@ class RegisterController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
+            'institution' => 'nullable|string|max:255',
+            'research_area' => 'nullable|string|max:255',
+            'organization_name' => 'nullable|string|max:255',
         ]);
 
         $user = User::create([
@@ -32,7 +35,7 @@ class RegisterController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $role,
-            'status' => 'active', 
+            'status' => 'active',
         ]);
 
         event(new Registered($user));

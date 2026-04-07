@@ -93,11 +93,29 @@
                                 {{ $statusVal }}
                             </span>
                         </td>
-                        <td class="px-6 py-6">
-                            <span class="inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-black bg-slate-100 text-slate-600 uppercase tracking-widest">
-                                <i class="fa-solid fa-layer-group mr-1.5 opacity-50"></i>
-                                {{ $survey->type->value === 'public' ? 'Public' : 'Invitation' }}
-                            </span>
+                        <td class="px-6 py-6 font-medium">
+                            <div class="flex flex-col gap-2">
+                                @if($survey->type === \App\Enums\SurveyType::Public || $survey->public_access === 'submit')
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-blue-500 text-white shadow-sm ring-1 ring-blue-600/20">
+                                        <i class="fa-solid fa-globe mr-1.5 leading-none"></i> Public Access
+                                    </span>
+                                @endif
+                                
+                                @if($survey->is_paid)
+                                    @php
+                                        $isExhausted = $survey->current_reward_spent >= $survey->reward_budget;
+                                    @endphp
+                                    @if($isExhausted)
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-orange-500 text-white shadow-sm ring-1 ring-orange-600/20">
+                                            <i class="fa-solid fa-circle-exclamation mr-1.5 leading-none"></i> Budget Exhausted
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-emerald-500 text-white shadow-sm ring-1 ring-emerald-600/20">
+                                            <i class="fa-solid fa-sack-dollar mr-1.5 leading-none"></i> Paid ({{ number_format($survey->reward_per_response, 0) }} KES)
+                                        </span>
+                                    @endif
+                                @endif
+                            </div>
                         </td>
                         <td class="px-6 py-6">
                             <div class="flex items-center">

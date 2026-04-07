@@ -80,16 +80,18 @@
                             </div>
                         @elseif($role == 'independent')
                             <div class="sm:col-span-6">
-                                <label for="institution" class="block text-sm font-medium text-gray-700">Institution</label>
+                                <label for="institution" class="block text-sm font-medium text-gray-700">Institution
+                                    (Optional)</label>
                                 <div class="mt-1">
-                                    <input id="institution" name="institution" type="text" required
+                                    <input id="institution" name="institution" type="text"
                                         class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                                 </div>
                             </div>
                             <div class="sm:col-span-6">
-                                <label for="research_area" class="block text-sm font-medium text-gray-700">Research Area</label>
+                                <label for="research_area" class="block text-sm font-medium text-gray-700">Research Area
+                                    (Optional)</label>
                                 <div class="mt-1">
-                                    <input id="research_area" name="research_area" type="text" required
+                                    <input id="research_area" name="research_area" type="text"
                                         class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                                 </div>
                             </div>

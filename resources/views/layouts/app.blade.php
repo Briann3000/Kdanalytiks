@@ -467,6 +467,31 @@
                 <!-- Main Content -->
                 <main class="content-pane custom-scrollbar pb-24 md:pb-0 flex-1">
                     <div class="flex-grow">
+                        <!-- Global Session Alerts -->
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+                            @if(session('success'))
+                                <div
+                                    class="mb-4 p-4 rounded-xl bg-green-50 border border-green-200 text-green-700 flex items-center shadow-sm animate-fade-in-down">
+                                    <i class="fa-solid fa-circle-check mr-3 text-lg"></i>
+                                    <span class="font-medium">{{ session('success') }}</span>
+                                </div>
+                            @endif
+
+                            @if(session('error'))
+                                <div
+                                    class="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 flex items-center shadow-sm animate-fade-in-down">
+                                    <i class="fa-solid fa-circle-exclamation mr-3 text-lg"></i>
+                                    <div class="flex-1">
+                                        <span class="font-medium">{{ session('error') }}</span>
+                                        @if(str_contains(session('error'), 'Upgrade Required'))
+                                            <a href="#" class="ml-2 underline font-bold hover:text-red-800">View Plans
+                                                &rightarrow;</a>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+
                         @yield('content')
                     </div>
                     @include('layouts.partials.footer')
@@ -521,8 +546,8 @@
                         +254 725 788 400 <span class="mx-2 text-gray-500">|</span>
                         Powered by <span class="font-semibold text-white">PRC™ Consulting</span> <span
                             class="mx-2 text-gray-500">|</span>
-                        <a href="mailto:kmsurveytool@gmail.com"
-                            class="hover:text-white transition-colors">kmsurveytool@gmail.com</a>
+                        <a href="mailto:info@kmsurveytool.com"
+                            class="hover:text-white transition-colors">info@kmsurveytool.com</a>
                         <span class="mx-2 text-gray-500">|</span>
                         <a href="{{ route('privacy') }}"
                             class="hover:text-white transition-colors font-medium underline">Privacy Policy</a>

@@ -29,9 +29,7 @@ class DashboardController extends Controller
                 $query->select('id')->from('surveys')->where('organization_id', $orgId);
             })->count();
 
-            $reportsGenerated = Survey::where('organization_id', $orgId)
-                ->whereHas('responses')
-                ->count();
+            $reportsGenerated = \App\Models\ResearchProposal::where('user_id', $user->id)->count();
 
             $recentActivity = Survey::where('organization_id', $orgId)
                 ->latest()
@@ -48,9 +46,7 @@ class DashboardController extends Controller
                 $query->select('id')->from('surveys')->where('independent_id', $indId);
             })->count();
 
-            $reportsGenerated = Survey::where('independent_id', $indId)
-                ->whereHas('responses')
-                ->count();
+            $reportsGenerated = \App\Models\ResearchProposal::where('user_id', $user->id)->count();
 
             $recentActivity = Survey::where('independent_id', $indId)
                 ->latest()
@@ -61,12 +57,9 @@ class DashboardController extends Controller
             $totalSurveys = Survey::where('status', \App\Enums\SurveyStatus::Active)
                 ->where('type', \App\Enums\SurveyType::Public)->count();
             $totalResponses = \App\Models\Response::where('respondent_id', $user->id)->count();
-            $pendingSurveys = 0; // Placeholder for invitations
+            $pendingSurveys = 0; // Invitations removed
 
-            // For respondents, reports generated could be surveys they completed that have analytics
-            $reportsGenerated = Survey::whereHas('responses', function ($q) use ($user) {
-                $q->where('respondent_id', $user->id);
-            })->count();
+            $reportsGenerated = \App\Models\ResearchProposal::where('user_id', $user->id)->count();
 
             $recentPublicSurveys = Survey::where('status', \App\Enums\SurveyStatus::Active)
                 ->where('type', \App\Enums\SurveyType::Public)
@@ -89,7 +82,9 @@ class DashboardController extends Controller
                 })
                 ->get();
 
-            return view('respondent.dashboard', compact('responses', 'availableSurveys'));
+            $wallet = $user->wallet ?: \App\Models\Wallet::firstOrCreate(['user_id' => $user->id], ['balance' => 0]);
+
+            return view('respondent.dashboard', compact('responses', 'availableSurveys', 'wallet', 'reportsGenerated'));
         }
 
         $displayName = $user->organization?->name ?? $user->independent?->name ?? $user->name;

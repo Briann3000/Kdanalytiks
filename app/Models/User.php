@@ -18,6 +18,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
+        'phone_number',
         'role',
         'status',
     ];
@@ -49,6 +50,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Response::class, 'respondent_id');
     }
 
+    public function wallet(): HasOne
+    {
+        return $this->hasOne(Wallet::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === \App\Enums\UserRole::Admin;
@@ -62,6 +68,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function hasVerifiedEmail(): bool
     {
-        return $this->isAdmin() || $this->email_verified_at !== null;
+        return $this->isAdmin() ||
+            $this->email_verified_at !== null;
     }
 }

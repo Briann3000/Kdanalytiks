@@ -21,6 +21,11 @@ use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
 // Public Routes
 Route::get('/', function () {
+    if (auth()->check()) {
+        $role = auth()->user()->role;
+        $roleName = $role instanceof \App\Enums\UserRole ? $role->value : $role;
+        return redirect()->route($roleName . '.dashboard');
+    }
     return view('welcome'); // Landing Page
 })->name('home');
 
@@ -94,13 +99,43 @@ Route::name('respondent.')->prefix('respondent')->group(function () {
 
 // Email Verification Routes
 Route::get('/email/verify', function () {
+    if (auth()->user()->hasVerifiedEmail()) {
+        $role = auth()->user()->role;
+        $roleName = $role instanceof \App\Enums\UserRole ? $role->value : $role;
+        return redirect()->route($roleName . '.dashboard');
+    }
     return view('auth.verify');
 })->middleware('auth')->name('verification.notice');
 
-Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-    $request->fulfill();
-    return redirect()->route('home');
-})->middleware(['auth', 'signed'])->name('verification.verify');
+Route::get('/email/verify/{id}/{hash}', function (Request $request, $id, $hash) {
+    // 1. Verify the URL signature is still valid and not expired
+    if (!$request->hasValidSignature()) {
+        abort(403, 'This verification link is invalid or has expired.');
+    }
+
+    $user = User::findOrFail($id);
+
+    // 2. Security check: Ensure the hash matches the user's email
+    if (!hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
+        abort(403, 'Invalid verification hash.');
+    }
+
+    // 3. User Handling: If not logged in as this user, log them in
+    if (Auth::id() != $id) {
+        Auth::login($user);
+    }
+
+    // 4. Mark as verified if needed
+    if (!$user->hasVerifiedEmail()) {
+        $user->markEmailAsVerified();
+        event(new \Illuminate\Auth\Events\Verified($user));
+    }
+
+    $role = $user->role;
+    $roleName = $role instanceof \App\Enums\UserRole ? $role->value : $role;
+
+    return redirect()->route($roleName . '.dashboard')->with('success', 'Your email has been successfully verified!');
+})->middleware(['signed'])->name('verification.verify');
 
 Route::post('/email/verification-notification', function (Request $request) {
     $request->user()->sendEmailVerificationNotification();
@@ -116,8 +151,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/surveys/{survey}/export-pdf', [SurveyController::class, 'exportPdf'])->name('surveys.export_pdf');
     Route::get('/surveys/{survey}/report', [SurveyController::class, 'report'])->name('surveys.report');
 
-    // Core Survey CRUD (Except Index, Show, Destroy handled separately)
-    Route::resource('surveys', \App\Http\Controllers\SurveyController::class)->except(['index', 'show', 'destroy']);
+    // Core Survey CRUD
+    Route::middleware(['subscribed:surveys'])->group(function () {
+        Route::get('/surveys/create', [SurveyController::class, 'create'])->name('surveys.create');
+        Route::post('/surveys', [SurveyController::class, 'store'])->name('surveys.store');
+    });
+    Route::resource('surveys', SurveyController::class)->except(['index', 'show', 'destroy', 'create', 'store']);
+
     Route::delete('/surveys/{survey}', [SurveyController::class, 'destroy'])->name('surveys.destroy');
     Route::post('/surveys/initialize', [SurveyController::class, 'initialize'])->name('surveys.initialize');
 
@@ -190,7 +230,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 });
 
 // Organization Routes
-Route::middleware(['auth', 'role:organization'])->prefix('organization')->name('organization.')->group(function () {
+Route::middleware(['auth', 'verified', 'role:organization'])->prefix('organization')->name('organization.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/surveys', [SurveyController::class, 'index'])->name('surveys.index');
 
@@ -199,7 +239,7 @@ Route::middleware(['auth', 'role:organization'])->prefix('organization')->name('
 });
 
 // Independent Researcher Routes
-Route::middleware(['auth', 'role:independent'])->prefix('independent')->name('independent.')->group(function () {
+Route::middleware(['auth', 'verified', 'role:independent'])->prefix('independent')->name('independent.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/surveys', [SurveyController::class, 'index'])->name('surveys.index');
 
@@ -207,16 +247,38 @@ Route::middleware(['auth', 'role:independent'])->prefix('independent')->name('in
     Route::get('/reports', [SurveyController::class, 'reportsIndex'])->name('reports.index');
 });
 
+// Organization & Subscription Routes
+Route::middleware(['auth', 'verified', 'role:organization'])->group(function () {
+    Route::get('/subscriptions', [\App\Http\Controllers\SubscriptionController::class, 'index'])->name('subscriptions.index');
+    Route::post('/subscriptions/checkout', [\App\Http\Controllers\SubscriptionController::class, 'checkout'])->name('subscriptions.checkout');
+    Route::post('/subscriptions/cancel', [\App\Http\Controllers\SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
+});
+
+// Webhook (Public)
+Route::post('/webhook/payment', [\App\Http\Controllers\SubscriptionController::class, 'webhook'])->name('webhook.payment');
+
+// Mock Payment Simulator (Development Only)
+
+// Respondent & Wallet Routes
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/wallet', [\App\Http\Controllers\WalletController::class, 'index'])->name('wallet.index');
+    Route::get('/wallet/history', [\App\Http\Controllers\WalletController::class, 'history'])->name('wallet.history');
+    Route::post('/wallet/withdraw', [\App\Http\Controllers\WalletController::class, 'withdraw'])->name('wallet.withdraw');
+});
+
 // Respondent Routes
-Route::middleware(['auth', 'role:respondent'])->prefix('respondent')->name('respondent.')->group(function () {
+Route::middleware(['auth', 'verified', 'role:respondent'])->prefix('respondent')->name('respondent.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/history', [\App\Http\Controllers\RespondentController::class, 'history'])->name('history');
     Route::get('/reports', [SurveyController::class, 'reportsIndex'])->name('reports.index');
 });
 
 // AI Integration Routes
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'verified', 'subscribed:ai'])->group(function () {
     Route::post('/ai/generate-survey', [\App\Http\Controllers\AiController::class, 'generateSchema'])->name('ai.generate');
+});
+
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/ai/insights/question/{question}', [\App\Http\Controllers\InsightController::class, 'generateQuestionInsight'])->name('ai.insights.question');
 
     // Qualitative Reports

@@ -205,6 +205,25 @@
                 <div>
                     <h1 class="text-3xl font-black text-white tracking-tight">{{ $survey->title }}</h1>
                     <p class="mt-3 text-indigo-100/90 font-medium leading-relaxed max-w-2xl">{{ $survey->description }}</p>
+                    
+                    @if($survey->is_paid)
+                        @if($budgetExhausted)
+                            <div class="mt-4 inline-flex items-center px-4 py-2 rounded-xl bg-amber-400 text-amber-950 shadow-lg shadow-amber-500/20 ring-1 ring-white/20">
+                                <i class="fa-solid fa-triangle-exclamation mr-2"></i>
+                                <span class="text-[10px] font-black uppercase tracking-widest leading-none">Reward Budget Exhausted</span>
+                            </div>
+                        @else
+                            <div class="mt-4 inline-flex items-center px-4 py-2 rounded-xl bg-emerald-400 text-emerald-950 shadow-lg shadow-emerald-500/20 ring-1 ring-white/20">
+                                <i class="fa-solid fa-sack-dollar mr-2"></i>
+                                <span class="text-[10px] font-black uppercase tracking-widest leading-none">Paid Survey: Earn {{ number_format($survey->reward_per_response, 0) }} {{ $survey->reward_currency ?? 'KES' }}</span>
+                            </div>
+                        @endif
+                    @elseif($survey->type === \App\Enums\SurveyType::Public)
+                        <div class="mt-4 inline-flex items-center px-4 py-2 rounded-xl bg-cyan-400 text-cyan-950 shadow-lg shadow-cyan-500/20 ring-1 ring-white/20">
+                            <i class="fa-solid fa-globe mr-2"></i>
+                            <span class="text-[10px] font-black uppercase tracking-widest leading-none">Public Survey</span>
+                        </div>
+                    @endif
                 </div>
                 <div class="hidden sm:block">
                     <span class="inline-flex items-center px-4 py-2 rounded-full text-xs font-bold bg-white/10 text-white border border-white/20 backdrop-blur-sm">
