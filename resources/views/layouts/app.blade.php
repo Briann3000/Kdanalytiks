@@ -26,6 +26,9 @@
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <!-- Alpine.js + Plugins -->
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -439,7 +442,7 @@
             // Show sidebar for all authenticated pages except specific full-width ones (like taking a survey)
             // Also explicitly hide on landing, login, register
             $excludedRoutes = ['home', 'login', 'register', 'login.role', 'password.request', 'password.reset', 'surveys.show', 'surveys.submit'];
-            $isWorkspace = !request()->routeIs($excludedRoutes);
+            $isWorkspace = auth()->check() && !request()->routeIs($excludedRoutes);
         @endphp
 
         @if($isWorkspace || View::hasSection('sidebar'))
@@ -649,12 +652,16 @@
 
     </script>
 
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <!-- PWA Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js?v=4').then(registration => {
+                navigator.serviceWorker.register('/sw.js?v=5').then(registration => {
                     console.log('SW registered: ', registration);
+                    registration.update(); // Force update check
                 }).catch(registrationError => {
                     console.log('SW registration failed: ', registrationError);
                 });

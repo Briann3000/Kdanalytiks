@@ -488,6 +488,8 @@
                                     class="fa-solid fa-book-bookmark mr-3 {{ request()->routeIs('projects.archived') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
                                 LIBRARY
                             </div>
+                            <i class="fa-solid fa-chevron-right text-[10px] text-gray-300 transition-transform duration-300"
+                                :class="expandedItem === 'org_library' ? 'rotate-90 text-indigo-500' : ''"></i>
                         </div>
 
                         <div class="flyout-menu shadow-xl border border-gray-100 p-2"
@@ -510,17 +512,7 @@
                         </div>
                     </div>
 
-                    @if($role === 'organization')
-                        <!-- Subscription Section -->
-                        <div class="sidebar-item relative">
-                            <a href="{{ route('subscriptions.index') }}"
-                                class="flex items-center px-3 py-2 text-sm font-bold uppercase tracking-wider {{ request()->routeIs('subscriptions.*') ? 'text-indigo-700 bg-indigo-50 border-l-2 border-indigo-600 shadow-sm' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg group transition-colors">
-                                <i
-                                    class="fa-solid fa-crown mr-3 {{ request()->routeIs('subscriptions.*') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
-                                SUBSCRIPTION
-                            </a>
-                        </div>
-                    @endif
+
                 @endif
             @endif
 
@@ -650,13 +642,13 @@
             @if($role !== 'respondent')
                 <div class="pt-6 border-t border-gray-100 px-3">
                     <h4 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Quick Links</h4>
-                    <div class="space-y-2">
+                    <div class="space-y-3">
                         <div x-data="{ qlOpen: false, qlTop: 0, qlLeft: 0 }"
                             @mouseenter="const r = $el.getBoundingClientRect(); qlTop = r.top - 100; qlLeft = r.right + 15; qlOpen = true"
                             @mouseleave="qlOpen = false" class="relative">
                             <a href="{{ route('surveys.create') }}"
                                 class="block w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-widest rounded-lg text-center shadow-lg shadow-indigo-100 transition-all">
-                                Create Survey
+                                <i class="fa-solid fa-plus-circle mr-2"></i> Create Survey
                             </a>
                             <template x-teleport="body">
                                 <!-- Flyout -->
@@ -674,6 +666,13 @@
                                 </div>
                             </template>
                         </div>
+
+                        @if(in_array($role, ['organization', 'independent']))
+                            <a href="{{ route('subscriptions.index') }}"
+                                class="block w-full py-2 px-4 bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 text-xs font-black uppercase tracking-widest rounded-lg text-center transition-all">
+                                <i class="fa-solid fa-crown mr-2"></i> Subscribe
+                            </a>
+                        @endif
                     </div>
                 </div>
             @endif

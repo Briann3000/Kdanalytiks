@@ -42,7 +42,7 @@ class IntasendGateway implements PaymentGatewayInterface
     /**
      * Initiate a subscription purchase via IntaSend Checkout.
      */
-    public function purchaseSubscription(Organization $organization, SubscriptionTier $tier): array
+    public function purchaseSubscription($entity, SubscriptionTier $tier): array
     {
         try {
             $checkout = new Checkout();
@@ -50,21 +50,24 @@ class IntasendGateway implements PaymentGatewayInterface
 
             $amount = $tier->monthly_price;
             $currency = 'KES';
+            
+            // Determine type for reference
+            $typeCode = ($entity instanceof Organization) ? 'ORG' : 'IND';
+            
             // Use a structured reference to pass context through the webhook
-            $reference = "SUB-ORG-{$organization->id}-TIER-{$tier->id}-" . strtoupper(\Illuminate\Support\Str::random(6));
+            $reference = "SUB-{$typeCode}-{$entity->id}-TIER-{$tier->id}-" . strtoupper(\Illuminate\Support\Str::random(6));
 
-            // We no longer bypass to the mock simulator. 
-            // The SDK will automatically use 'sandbox.intasend.com' when $this->testMode is true.
-
-            // Use customer details from the organization's primary user
-            $user = $organization->user;
+            // Use customer details from the entity's primary user
+            $user = $entity->user;
 
             // Create Customer object
             $customer = new Customer();
             $customer->email = $user->email ?? 'info@kmsurveytool.com';
-            $customer->first_name = explode(' ', $user->name ?? 'Organization')[0];
+            $customer->first_name = explode(' ', $user->name ?? 'Researcher')[0];
             $customer->last_name = explode(' ', $user->name ?? 'User')[1] ?? 'Admin';
             $customer->country = 'KE';
+
+            $redirectRoute = ($typeCode === 'ORG') ? 'organization.dashboard' : 'independent.dashboard';
 
             // Correct positional arguments for IntaSend Checkout::create
             $response = $checkout->create(
@@ -72,7 +75,7 @@ class IntasendGateway implements PaymentGatewayInterface
                 $currency,
                 $customer,
                 config('app.url'),
-                route('organization.dashboard'),
+                route($redirectRoute),
                 $reference,
                 null, // comment
                 null  // method

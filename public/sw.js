@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kmsurveytool-v4';
+const CACHE_NAME = 'kmsurveytool-v5';
 const urlsToCache = [
     '/',
     '/manifest.json'
@@ -14,10 +14,24 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('fetch', event => {
-    // Only intercept GET requests - do not interfere with POST, PUT, DELETE, etc.
+    const url = new URL(event.request.url);
+
+    // 1. Skip non-GET requests
     if (event.request.method !== 'GET') return;
 
-    // Network First Strategy
+    // 2. Skip dynamic routes that should never be handled by SW cache
+    const bypassRoutes = [
+        '/research-proposal/preview/',
+        '/subscriptions',
+        '/wallet',
+        '/admin/'
+    ];
+
+    if (bypassRoutes.some(path => url.pathname.includes(path))) {
+        return; // Let the browser handle it naturally
+    }
+
+    // Network First Strategy for other assets
     event.respondWith(
         fetch(event.request)
             .then(response => {
@@ -32,13 +46,14 @@ self.addEventListener('fetch', event => {
                 return response;
             })
             .catch(() => {
-                // If network fetch fails (offline), return from cache
+                // If network fetch fails (offline), try cache
                 return caches.match(event.request).then(cachedResponse => {
                     if (cachedResponse) {
                         return cachedResponse;
                     }
-                    // If no cache, let it fail naturally or return a custom error page
-                    // return caches.match('/offline.html'); 
+                    // CRITICAL FIX: If not in cache, we MUST return a Response object or just throw
+                    // Throwing here will let the browser show its own 'Offline' page.
+                    throw new Error('Network failed and no cache hit.');
                 });
             })
     );

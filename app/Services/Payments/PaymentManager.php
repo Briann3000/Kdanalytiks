@@ -27,9 +27,19 @@ class PaymentManager
     /**
      * Helper to process a subscription.
      */
-    public function subscribe(Organization $org, SubscriptionTier $tier): array
+    public function subscribe($entity, SubscriptionTier $tier): array
     {
-        return $this->gateway->purchaseSubscription($org, $tier);
+        // Bypass gateway for free tiers
+        if ($tier->monthly_price <= 0) {
+            $entity->update([
+                'subscription_tier_id' => $tier->id,
+                'subscription_expiry' => null,
+                'payment_status' => 'paid',
+            ]);
+            return ['status' => 'success', 'message' => 'Successfully upgraded to the ' . $tier->name . ' plan.'];
+        }
+
+        return $this->gateway->purchaseSubscription($entity, $tier);
     }
 
     /**

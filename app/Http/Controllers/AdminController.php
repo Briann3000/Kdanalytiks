@@ -145,9 +145,12 @@ class AdminController extends Controller
         }
 
         if ($request->filled('source')) {
-            if ($request->source === 'organization') $query->whereNotNull('organization_id');
-            elseif ($request->source === 'independent') $query->whereNotNull('independent_id');
-            elseif ($request->source === 'admin') $query->whereNull('organization_id')->whereNull('independent_id');
+            if ($request->source === 'organization')
+                $query->whereNotNull('organization_id');
+            elseif ($request->source === 'independent')
+                $query->whereNotNull('independent_id');
+            elseif ($request->source === 'admin')
+                $query->whereNull('organization_id')->whereNull('independent_id');
         }
 
         if ($request->filled('search')) {
@@ -191,5 +194,24 @@ class AdminController extends Controller
     {
         $survey->update(['status' => \App\Enums\SurveyStatus::Closed]);
         return back()->with('success', "Survey '{$survey->title}' has been deactivated.");
+    }
+
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'survey_ids' => 'required|array',
+            'survey_ids.*' => 'exists:surveys,id'
+        ]);
+
+        $count = \App\Models\Survey::whereIn('id', $request->survey_ids)->delete();
+
+        if ($request->expectsJson() || $request->isXmlHttpRequest()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully deleted {$count} surveys from inventory."
+            ]);
+        }
+
+        return back()->with('success', "Successfully deleted {$count} surveys.");
     }
 }

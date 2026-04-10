@@ -1,5 +1,4 @@
 @extends('layouts.app')
-
 @section('title', 'Report Preview - Research Studio')
 
 @section('sub_sidebar')
@@ -31,7 +30,6 @@
                 @if($isChapter)
                     <div class="mt-3 mb-1">
                         <a href="#section-{{ $loop->iteration }}" 
-                           title="{{ $cleanTitle }}"
                            class="flex items-center rounded-xl text-[10px] font-black text-indigo-700 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 transition-all group"
                            :class="sidebarOpen ? 'px-4 py-2.5' : 'p-2 justify-center'">
                             <span class="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded bg-indigo-600 text-white text-[8px]"
@@ -43,8 +41,7 @@
                     </div>
                 @elseif($isPrelim)
                     <a href="#section-{{ $loop->iteration }}" 
-                       title="{{ $cleanTitle }}"
-                       class="flex items-center rounded-xl text-[10px] font-bold text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all group border border-transparent hover:border-gray-100 italic"
+                       class="flex items-center rounded-xl text-[10px] font-bold text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all border border-transparent hover:border-gray-100 italic"
                        :class="sidebarOpen ? 'px-4 py-2' : 'p-2 justify-center'">
                         <span class="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded bg-gray-50 text-[8px] text-gray-400 group-hover:bg-gray-100 group-hover:text-gray-600 transition-colors"
                               :class="sidebarOpen ? 'mr-2' : ''">
@@ -54,8 +51,7 @@
                     </a>
                 @else
                     <a href="#section-{{ $loop->iteration }}" 
-                       title="{{ $cleanTitle }}"
-                       class="flex items-center rounded-xl text-xs font-bold text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 transition-all group border border-transparent hover:border-indigo-100"
+                       class="flex items-center rounded-xl text-xs font-bold text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 transition-all border border-transparent hover:border-indigo-100 group"
                        :class="sidebarOpen ? 'px-4 py-2.5' : 'p-2 justify-center'">
                         <span class="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-lg bg-gray-50 text-[9px] group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors"
                               :class="sidebarOpen ? 'mr-2' : ''">
@@ -136,8 +132,8 @@
     </div>
 
     <!-- Scrollable Draft Content Area -->
-    <div class="flex-1 p-10 overflow-y-auto custom-scrollbar">
-        <div class="max-w-4xl mx-auto bg-white shadow-2xl shadow-gray-200/50 rounded-lg border border-gray-100 p-16 min-h-screen mb-12">
+    <div class="flex-1 p-10 overflow-y-auto custom-scrollbar relative">
+        <div class="max-w-4xl mx-auto bg-white shadow-2xl shadow-gray-200/50 rounded-lg border border-gray-100 p-16 min-h-screen mb-12 relative overflow-hidden">
 
             <!-- Generated Sections -->
             <div class="space-y-12">
@@ -150,18 +146,18 @@
 
                     @if($content === '__chapter_header__')
                         {{-- Chapter Divider Page --}}
-                        <section id="section-{{ $loop->iteration }}" class="scroll-mt-32 py-24 text-center border-t-2 border-b-2 border-gray-100 my-16">
+                        <section id="section-{{ $loop->iteration }}" class="scroll-mt-32 py-24 text-center border-t-2 border-b-2 border-gray-100 my-16 relative">
                             <h2 class="text-2xl font-black text-gray-900 uppercase tracking-widest">{{ $cleanContentTitle }}</h2>
                             <div class="w-20 h-1 bg-indigo-600 mx-auto mt-4 rounded-full"></div>
                         </section>
                     @elseif($isTitlePage)
                         {{-- Title Page with raw HTML --}}
-                        <section id="section-{{ $loop->iteration }}" class="scroll-mt-32 py-16 border-b-2 border-gray-100">
+                        <section id="section-{{ $loop->iteration }}" class="scroll-mt-32 py-16 border-b-2 border-gray-100 relative">
                             {!! $content !!}
                         </section>
                     @elseif(str_contains($content, "<div class='data-table'") || str_contains($content, "<table"))
                         {{-- Section with embedded data table --}}
-                        <section id="section-{{ $loop->iteration }}" class="scroll-mt-32">
+                        <section id="section-{{ $loop->iteration }}" class="scroll-mt-32 relative">
                             @if($isChapter)
                                 <h2 class="text-xl font-black text-gray-900 mb-8 tracking-tight uppercase leading-none text-center">{{ $cleanContentTitle }}</h2>
                             @else
@@ -183,7 +179,7 @@
                         </section>
                     @else
                         {{-- Standard prose section --}}
-                        <section id="section-{{ $loop->iteration }}" class="scroll-mt-32">
+                        <section id="section-{{ $loop->iteration }}" class="scroll-mt-32 relative">
                             @if($isChapter)
                                 <h2 class="text-xl font-black text-gray-900 mb-8 tracking-tight uppercase leading-none text-center">{{ $cleanContentTitle }}</h2>
                             @elseif(in_array($title, ['Declaration', 'Acknowledgement', 'Abstract', 'Abbreviations', 'Definition of Key Terms']))
@@ -205,10 +201,11 @@
                     </div>
                 @endif
             </div>
+
         </div>
         
         <footer class="max-w-4xl mx-auto py-12 text-center">
-            <p class="text-[9px] text-gray-300 font-bold uppercase tracking-[0.3em]">&bull; END OF PREVIEW &bull;</p>
+                <p class="text-[9px] text-gray-300 font-bold uppercase tracking-[0.3em]">&bull; END OF REPORT &bull;</p>
         </footer>
     </div>
 </div>

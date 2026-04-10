@@ -39,14 +39,16 @@
     <div class="mb-8 bg-white/50 backdrop-blur-sm p-4 rounded-3xl border border-gray-100 shadow-sm">
         <form action="{{ route('surveys.public') }}" method="GET" class="flex flex-col md:flex-row gap-4 items-center">
             <div class="relative w-full md:w-96 group">
-                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 group-focus-within:text-indigo-600 transition-colors"></i>
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by title..." 
-                       class="w-full pl-12 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all shadow-sm">
+                <i
+                    class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 group-focus-within:text-indigo-600 transition-colors"></i>
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by title..."
+                    class="w-full pl-12 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all shadow-sm">
             </div>
             <div class="relative w-full md:w-64 group">
-                <i class="fa-solid fa-filter absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 group-focus-within:text-indigo-600 transition-colors"></i>
-                <select name="category" 
-                        class="w-full pl-12 pr-10 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 appearance-none transition-all shadow-sm">
+                <i
+                    class="fa-solid fa-filter absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 group-focus-within:text-indigo-600 transition-colors"></i>
+                <select name="category"
+                    class="w-full pl-12 pr-10 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 appearance-none transition-all shadow-sm">
                     <option value="">All Categories</option>
                     @foreach($categories as $category)
                         @php $val = $category instanceof \BackedEnum ? $category->value : $category; @endphp
@@ -56,11 +58,24 @@
                     @endforeach
                 </select>
             </div>
-            <button type="submit" class="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">
+            <div class="relative w-full md:w-64 group">
+                <i
+                    class="fa-solid fa-sack-dollar absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
+                <select name="paid_status"
+                    class="w-full pl-12 pr-10 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 appearance-none transition-all shadow-sm">
+                    <option value="">All Types</option>
+                    <option value="paid" {{ request('paid_status') === 'paid' ? 'selected' : '' }}>Paid Surveys Only</option>
+                    <option value="unpaid" {{ request('paid_status') === 'unpaid' ? 'selected' : '' }}>Free Surveys Only
+                    </option>
+                </select>
+            </div>
+            <button type="submit"
+                class="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">
                 Filter
             </button>
-            @if(request()->anyFilled(['search', 'category']))
-                <a href="{{ route('surveys.public') }}" class="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-red-500 transition-colors">
+            @if(request()->anyFilled(['search', 'category', 'paid_status']))
+                <a href="{{ route('surveys.public') }}"
+                    class="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-red-500 transition-colors">
                     Clear
                 </a>
             @endif
@@ -78,9 +93,17 @@
                                 class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-600">
                                 {{ $survey->category }}
                             </span>
+                            @if($survey->is_paid)
+                                <span
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700 shadow-sm border border-emerald-200">
+                                    <i class="fa-solid fa-sack-dollar mr-1"></i> {{ number_format($survey->reward_per_response, 0) }}
+                                    {{ $survey->reward_currency ?? 'KES' }}
+                                </span>
+                            @endif
                         </div>
                         <h3 class="text-xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors mb-3 line-clamp-2">
-                            {{ $survey->title }}</h3>
+                            {{ $survey->title }}
+                        </h3>
                         <p class="text-gray-500 text-sm mb-4 line-clamp-3">
                             {{ $survey->description ?? 'No description provided.' }}
                         </p>

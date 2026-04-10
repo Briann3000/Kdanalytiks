@@ -8,25 +8,20 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
-|
-*/
+
+// Admin redirect shortcut
+Route::get('/admin', function () {
+    if (auth()->check() && (auth()->user()->role === 'admin' || (optional(auth()->user()->role)->value === 'admin'))) {
+        return redirect()->route('admin.dashboard');
+    }
+    return redirect()->route('admin.login');
+});
+
+// Individual role login routes for redirects
 
 // Public Routes
 Route::get('/', function () {
-    if (auth()->check()) {
-        $role = auth()->user()->role;
-        $roleName = $role instanceof \App\Enums\UserRole ? $role->value : $role;
-        return redirect()->route($roleName . '.dashboard');
-    }
-    return view('welcome'); // Landing Page
+    return view('welcome'); // Landing Page (Always accessible)
 })->name('home');
 
 Route::get('/privacy-policy', function () {
@@ -159,6 +154,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('surveys', SurveyController::class)->except(['index', 'show', 'destroy', 'create', 'store']);
 
     Route::delete('/surveys/{survey}', [SurveyController::class, 'destroy'])->name('surveys.destroy');
+    Route::post('/surveys/bulk-destroy', [SurveyController::class, 'bulkDestroy'])->name('surveys.bulk-destroy');
     Route::post('/surveys/initialize', [SurveyController::class, 'initialize'])->name('surveys.initialize');
 
     // Quick-Access Project Lists
@@ -227,6 +223,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/analytics', [\App\Http\Controllers\AdminController::class, 'analytics'])->name('analytics.index');
     Route::post('/surveys/{survey}/approve', [\App\Http\Controllers\AdminController::class, 'approve'])->name('surveys.approve');
     Route::post('/surveys/{survey}/deactivate', [\App\Http\Controllers\AdminController::class, 'deactivate'])->name('surveys.deactivate');
+    Route::post('/surveys/bulk-destroy', [\App\Http\Controllers\AdminController::class, 'bulkDestroy'])->name('surveys.bulk-destroy');
 });
 
 // Organization Routes
@@ -248,7 +245,7 @@ Route::middleware(['auth', 'verified', 'role:independent'])->prefix('independent
 });
 
 // Organization & Subscription Routes
-Route::middleware(['auth', 'verified', 'role:organization'])->group(function () {
+Route::middleware(['auth', 'verified', 'role:organization,independent'])->group(function () {
     Route::get('/subscriptions', [\App\Http\Controllers\SubscriptionController::class, 'index'])->name('subscriptions.index');
     Route::post('/subscriptions/checkout', [\App\Http\Controllers\SubscriptionController::class, 'checkout'])->name('subscriptions.checkout');
     Route::post('/subscriptions/cancel', [\App\Http\Controllers\SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');

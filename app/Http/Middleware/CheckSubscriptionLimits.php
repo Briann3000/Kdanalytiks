@@ -23,33 +23,41 @@ class CheckSubscriptionLimits
     public function handle(Request $request, Closure $next, string $limitType): Response
     {
         $user = $request->user();
+        if (!$user) return $next($request);
+
         $role = $user->role instanceof \BackedEnum ? $user->role->value : $user->role;
 
-        // Strictly only check limits for organizations
-        if ($role !== 'organization' || !$user->organization) {
+        // Determine if they are in a subscription-bound role
+        $entity = null;
+        if ($role === 'organization') {
+            $entity = $user->organization;
+        } elseif ($role === 'independent') {
+            $entity = $user->independent;
+        }
+
+        if (!$entity) {
             return $next($request);
         }
 
-        $organization = $user->organization;
-
-        $tier = $organization->subscriptionTier ?? \App\Models\SubscriptionTier::where('slug', 'free')->first();
+        $tier = $entity->subscriptionTier ?? \App\Models\SubscriptionTier::where('slug', 'free')->first();
 
         if ($limitType === 'surveys') {
-            $currentCount = $organization->surveys()->count();
+            $currentCount = $entity->surveys()->count();
             if ($tier->max_surveys !== -1 && $currentCount >= $tier->max_surveys) {
                 // If it's a GET request to create, we allow it (so they can see the builder with a warning)
-                // If it's a POST request (store), we block it.
-                if ($request->isMethod('get') && $request->routeIs('surveys.create')) {
+                if ($request->isMethod('get') && ($request->routeIs('surveys.create') || $request->routeIs('surveys.initialize'))) {
                     return $next($request);
                 }
 
-                return redirect()->back()->with('error', "Upgrade Required: Your tier allows a maximum of {$tier->max_surveys} surveys.");
+                $limit = $tier->max_surveys === -1 ? 'Unlimited' : $tier->max_surveys;
+                return redirect()->back()->with('error', "Upgrade Required: Your current tier allows a maximum of {$limit} surveys.");
             }
         }
 
         if ($limitType === 'ai') {
-            if (!$this->aiService->checkUsageLimit($organization)) {
-                return response()->json(['error' => "Upgrade Required: Your monthly AI limit of {$tier->ai_limit_per_month} has been reached."], 403);
+            if (!$this->aiService->checkUsageLimit($entity)) {
+                $limit = $tier->ai_limit_per_month === -1 ? 'Unlimited' : $tier->ai_limit_per_month;
+                return response()->json(['error' => "Upgrade Required: Your monthly AI limit of {$limit} has been reached."], 403);
             }
         }
 

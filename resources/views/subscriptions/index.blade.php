@@ -5,23 +5,22 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
             <h2 class="text-base font-black text-indigo-600 tracking-widest uppercase mb-4">Pricing Plans</h2>
-            <p class="text-5xl font-black text-gray-900 mb-6 tracking-tight">Scale your research with <span class="text-indigo-600">Premium Tiers</span></p>
-            <p class="max-w-2xl mx-auto text-xl text-gray-500 font-medium">Choose the perfect plan for your organization and start gathering high-impact insights today.</p>
+            <p class="text-5xl font-black text-gray-900 mb-2 tracking-tight">Scale your research with <span class="text-indigo-600">Premium Tiers</span></p>
+            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">Account Type: Independent Researcher</p>
+            <p class="max-w-2xl mx-auto text-xl text-gray-500 font-medium">Choose the perfect plan for your research needs and start gathering high-impact insights today.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
             @php
-                $currentTier = $tiers->firstWhere('id', optional($organization)->subscription_tier_id) ?? $tiers->firstWhere('slug', 'free');
+                $currentTierId = $entity->subscription_tier_id ?? ($tiers->firstWhere('slug', 'free')->id ?? null);
             @endphp
             @foreach($tiers as $tier)
                 @php
-                    $isCurrent = $organization && $organization->subscription_tier_id == $tier->id;
+                    $isCurrent = $currentTierId == $tier->id;
                     $isPro = strtolower($tier->slug) === 'pro';
                     $btnLabel = 'Upgrade Now';
-                    if ($tier->monthly_price < $currentTier->monthly_price) {
+                    if ($tier->monthly_price < ($tiers->firstWhere('id', $currentTierId)->monthly_price ?? 0)) {
                         $btnLabel = 'Downgrade';
-                    } elseif ($tier->monthly_price == 0) {
-                        $btnLabel = 'Get Started';
                     }
                 @endphp
                 <div class="relative flex flex-col bg-white rounded-3xl shadow-xl transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl overflow-hidden {{ $isPro ? 'border-4 border-indigo-500 z-10' : 'border border-gray-100' }}">
@@ -44,6 +43,12 @@
                                     <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
                                 </div>
                                 <span class="text-gray-600 font-medium"><strong>{{ $tier->max_surveys === -1 ? 'Unlimited' : $tier->max_surveys }}</strong> Surveys per Month</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
+                                    <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
+                                </div>
+                                <span class="text-gray-600 font-medium"><strong>{{ $tier->max_responses_per_survey === -1 ? 'Unlimited' : $tier->max_responses_per_survey }}</strong> Responses per Survey</span>
                             </li>
                             <li class="flex items-start gap-3">
                                 <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
@@ -101,8 +106,8 @@
 
         <div class="mt-20 bg-white rounded-3xl p-10 border border-gray-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-8">
             <div class="max-w-xl">
-                <h4 class="text-2xl font-black text-gray-900 mb-2">Need a custom enterprise solution?</h4>
-                <p class="text-gray-500 font-medium">For large organizations with unique requirements, custom integrations, and unlimited scale, contact our sales team for a tailored quote.</p>
+                <h4 class="text-2xl font-black text-gray-900 mb-2">Need a custom research solution?</h4>
+                <p class="text-gray-500 font-medium">For large institutions with unique requirements, custom integrations, and unlimited scale, contact our team for a tailored quote.</p>
             </div>
             <a href="mailto:info@kmsurveytool.com" class="px-8 py-4 bg-indigo-50 text-indigo-700 font-black rounded-2xl hover:bg-indigo-100 transition-colors uppercase tracking-widest text-xs">
                 Contact Sales

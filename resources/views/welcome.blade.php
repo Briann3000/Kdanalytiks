@@ -22,7 +22,7 @@
                                 <p class="text-sm text-gray-500 mt-1">Select your account type to sign in or register.</p>
                             </div>
 
-                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                                 <!-- Organization -->
                                 <a href="{{ route('login.role', ['role' => 'organization']) }}"
                                     class="group relative bg-white rounded-2xl shadow-sm border border-gray-200 p-6 text-center transition-all hover:shadow-xl hover:-translate-y-1 hover:border-indigo-300">
@@ -49,7 +49,7 @@
 
                                 <!-- Respondent -->
                                 <a href="{{ route('login.role', ['role' => 'respondent']) }}"
-                                    class="group relative bg-white rounded-2xl shadow-sm border border-gray-200 p-6 text-center transition-all hover:shadow-xl hover:-translate-y-1 hover:border-green-300">
+                                    class="group relative bg-white rounded-2xl shadow-sm border border-gray-200 p-6 text-center transition-all hover:shadow-xl hover:-translate-y-1 hover:border-green-300 sm:col-span-2">
                                     <div
                                         class="mx-auto h-12 w-12 flex items-center justify-center rounded-xl bg-green-50 text-green-600 group-hover:bg-green-600 group-hover:text-white transition-colors mb-4">
                                         <i class="fa-solid fa-clipboard-check text-xl"></i>
@@ -57,18 +57,6 @@
                                     <h3 class="text-base font-bold text-gray-900">Respondent</h3>
                                     <p class="mt-1 text-[11px] text-gray-500 leading-tight font-medium">Share feedback &
                                         earn data.</p>
-                                </a>
-
-                                <!-- Admin -->
-                                <a href="{{ route('login.role', ['role' => 'admin']) }}"
-                                    class="group relative bg-white rounded-2xl shadow-sm border border-gray-200 p-6 text-center transition-all hover:shadow-xl hover:-translate-y-1 hover:border-gray-800">
-                                    <div
-                                        class="mx-auto h-12 w-12 flex items-center justify-center rounded-xl bg-gray-50 text-gray-600 group-hover:bg-gray-800 group-hover:text-white transition-colors mb-4">
-                                        <i class="fa-solid fa-user-shield text-xl"></i>
-                                    </div>
-                                    <h3 class="text-base font-bold text-gray-900">Administrator</h3>
-                                    <p class="mt-1 text-[11px] text-gray-500 leading-tight font-medium">Platform maintenance
-                                        & oversight.</p>
                                 </a>
                             </div>
                         </div>

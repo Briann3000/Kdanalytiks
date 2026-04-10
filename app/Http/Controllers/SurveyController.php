@@ -854,6 +854,40 @@ class SurveyController extends Controller
         return back()->with('success', 'Survey deleted successfully.');
     }
 
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'survey_ids' => 'required|array',
+            'survey_ids.*' => 'exists:surveys,id'
+        ]);
+
+        $user = auth()->user();
+        $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+
+        $query = \App\Models\Survey::whereIn('id', $request->survey_ids);
+
+        // Security: Ensure the user owns the surveys being deleted
+        if ($role === 'organization') {
+            $query->where('organization_id', $user->organization?->id);
+        } elseif ($role === 'independent') {
+            $query->where('independent_id', $user->independent?->id);
+        } else {
+            $query->where('created_by', $user->id);
+        }
+
+        $count = $query->count();
+        $query->delete();
+
+        if ($request->expectsJson() || $request->isXmlHttpRequest()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully deleted {$count} surveys."
+            ]);
+        }
+
+        return back()->with('success', "Successfully deleted {$count} surveys.");
+    }
+
     public function publicIndex(Request $request)
     {
         $query = \App\Models\Survey::where('status', \App\Enums\SurveyStatus::Active)
@@ -865,6 +899,14 @@ class SurveyController extends Controller
 
         if ($request->filled('category')) {
             $query->where('category', $request->category);
+        }
+
+        if ($request->filled('paid_status')) {
+            if ($request->paid_status === 'paid') {
+                $query->where('is_paid', true);
+            } elseif ($request->paid_status === 'unpaid') {
+                $query->where('is_paid', false);
+            }
         }
 
         $surveys = $query->latest()->paginate(12);

@@ -3,10 +3,103 @@
 @section('title', 'Survey Inventory - Admin')
 
 @section('content')
-<div class="px-4 sm:px-8 lg:px-12 py-8">
+<div x-data="{ 
+    selected: [], 
+    allSelected: false,
+    toggleAll() {
+        if (this.allSelected) {
+            const checkboxes = document.querySelectorAll('.survey-checkbox');
+            this.selected = Array.from(checkboxes).map(el => el.value);
+        } else {
+            this.selected = [];
+        }
+    },
+    updateSelectAll() {
+        const checkboxes = document.querySelectorAll('.survey-checkbox');
+        this.allSelected = checkboxes.length > 0 && this.selected.length === checkboxes.length;
+    },
+    async bulkDelete() {
+        if (this.selected.length === 0) {
+            Swal.fire('No Selection', 'Please select at least one survey to delete.', 'info');
+            return;
+        }
+        
+        const result = await Swal.fire({
+            title: 'Delete Selected Surveys?',
+            html: `You are about to delete <b>${this.selected.length}</b> surveys from the platform inventory.<br><br><span class='text-red-500 font-bold uppercase text-[10px] tracking-widest'>This action is irreversible.</span>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Delete All',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#1e293b',
+            reverseButtons: true,
+            customClass: {
+                popup: 'rounded-3xl',
+                confirmButton: 'rounded-xl font-bold px-6 py-3',
+                cancelButton: 'rounded-xl font-bold px-6 py-3'
+            }
+        });
+
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Processing...',
+                html: 'Mass deleting surveys from inventory...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            try {
+                const res = await fetch('{{ route('admin.surveys.bulk-destroy') }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ survey_ids: this.selected })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Deleted!',
+                        text: data.message,
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => window.location.reload());
+                } else {
+                    Swal.fire('Error', data.message || 'Bulk delete failed.', 'error');
+                }
+            } catch (err) {
+                Swal.fire('Error', 'An error occurred during bulk deletion.', 'error');
+            }
+        }
+    }
+}" class="px-4 sm:px-8 lg:px-12 py-8">
     <div class="mb-8">
         <h1 class="text-2xl font-black text-gray-900 tracking-tight uppercase">Survey Inventory</h1>
         <p class="text-sm text-gray-500 font-medium">Manage and monitor all surveys across the platform.</p>
+    </div>
+
+    <!-- Bulk Action Bar -->
+    <div x-show="selected.length > 0" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 -translate-y-4"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         class="mb-6 bg-red-600 p-4 rounded-2xl shadow-xl shadow-red-100 flex items-center justify-between" style="display: none">
+        <div class="flex items-center text-white">
+            <span class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center mr-3 text-sm font-black" x-text="selected.length"></span>
+            <span class="text-xs font-black uppercase tracking-widest">Surveys Selected for Deletion</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <button @click="selected = []; allSelected = false" class="text-white/70 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors mr-2">Deselect All</button>
+            <button @click="bulkDelete()" class="px-6 py-2 bg-white text-red-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:bg-red-50 transition-all transform hover:scale-105 active:scale-95">
+                <i class="fa-solid fa-trash-can mr-2"></i> Bulk Delete
+            </button>
+        </div>
     </div>
 
     <!-- Status Tabs -->
@@ -68,11 +161,17 @@
     </div>
 
     <!-- Surveys Table -->
-    <div class="bg-white shadow-xl shadow-gray-100/50 rounded-xl border border-gray-100 mb-8">
-        <div class="overflow-x-auto custom-scrollbar rounded-xl">
+    <div class="bg-white shadow-xl shadow-gray-100/50 rounded-xl border border-gray-100 mb-8 overflow-hidden">
+        <div class="overflow-x-auto custom-scrollbar">
             <table class="min-w-[1000px] w-full divide-y divide-gray-100">
                 <thead class="bg-gray-50/50">
                     <tr>
+                        <th class="px-6 py-4 text-left w-10">
+                            <input type="checkbox" 
+                                   @change="toggleAll()" 
+                                   x-model="allSelected"
+                                   class="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500 cursor-pointer transition-all">
+                        </th>
                         <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">Survey Detail</th>
                         <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">Owner</th>
                         <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">Type</th>
@@ -83,7 +182,18 @@
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-100">
                     @forelse($surveys as $survey)
-                    <tr class="hover:bg-gray-50/50 transition-colors group" x-data="{ deleted: false }" x-show="!deleted" x-transition.scale.origin.left.opacity.duration.500ms>
+                    <tr class="hover:bg-gray-50/50 transition-all group" 
+                        x-data="{ deleted: false }" 
+                        x-show="!deleted" 
+                        x-transition.scale.origin.left.opacity.duration.500ms
+                        :class="selected.includes('{{ $survey->id }}') ? 'bg-red-50/30' : ''">
+                        <td class="px-6 py-4">
+                            <input type="checkbox" 
+                                   value="{{ $survey->id }}" 
+                                   x-model="selected"
+                                   @change="updateSelectAll()"
+                                   class="survey-checkbox h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500 cursor-pointer transition-all">
+                        </td>
                         <td class="px-6 py-4">
                             <div class="text-sm font-bold text-gray-900">{{ $survey->title }}</div>
                             <div class="text-[10px] text-gray-400 font-black uppercase tracking-tighter">{{ $survey->category instanceof \BackedEnum ? $survey->category->value : $survey->category }}</div>
@@ -129,10 +239,6 @@
                                 <a href="{{ route('surveys.report', $survey) }}" class="w-7 h-7 bg-gray-50 text-gray-400 rounded-lg flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all">
                                     <i class="fa-solid fa-chart-line text-[10px]"></i>
                                 </a>
-                                <form id="delete-form-{{ $survey->id }}" action="{{ route('surveys.destroy', $survey) }}" method="POST" class="hidden">
-                                    @csrf
-                                    @method('DELETE')
-                                </form>
                                 <div x-data="{ confirming: false }" class="inline-flex items-center gap-1">
                                     <button type="button" 
                                             x-show="!confirming"
@@ -145,7 +251,6 @@
                                         <span class="text-[9px] font-black text-red-600 uppercase tracking-tighter mr-1 shadow-sm px-1.5 border border-red-200 bg-red-50 rounded">SURE?</span>
                                         <button type="button" 
                                                 @click.stop="
-                                                    console.log('AJAX Deleting Survey:', '{{ $survey->id }}');
                                                     fetch('{{ route('surveys.destroy', $survey) }}', {
                                                         method: 'POST',
                                                         headers: {
@@ -157,9 +262,8 @@
                                                     }).then(res => {
                                                         if(res.ok) {
                                                             deleted = true;
-                                                            console.log('AJAX Success for Survey:', '{{ $survey->id }}');
                                                         } else {
-                                                            alert('Error - survey could not be deleted from server.');
+                                                            Swal.fire('Error', 'Survey could not be deleted.', 'error');
                                                         }
                                                     });
                                                 "
@@ -174,7 +278,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="px-6 py-12 text-center text-gray-400 italic font-medium">No surveys found.</td>
+                        <td colspan="7" class="px-6 py-12 text-center text-gray-400 italic font-medium">No surveys found.</td>
                     </tr>
                     @endforelse
                 </tbody>

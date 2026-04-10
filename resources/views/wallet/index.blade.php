@@ -165,11 +165,11 @@
                     <div class="mb-6">
                         <label class="block text-sm font-bold text-gray-700 mb-2">Amount to Withdraw</label>
                         <div class="relative">
-                            <span
-                                class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold uppercase">{{ $wallet->currency ?? 'KES' }}</span>
-                            <input type="number" name="amount" min="50" step="0.01" max="{{ $wallet->balance }}"
-                                class="w-full pl-16 pr-4 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-black text-xl"
+                            <input type="number" name="amount" step="0.01"
+                                class="w-full pl-6 pr-16 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-black text-xl"
                                 placeholder="0.00" required>
+                            <span
+                                class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold uppercase">{{ $wallet->currency ?? 'KES' }}</span>
                         </div>
                         <p class="mt-2 text-[10px] text-gray-400 font-bold uppercase tracking-wider">Your max:
                             {{ number_format((float) $wallet->balance, 2) }}</p>
@@ -188,13 +188,7 @@
                         </p>
                     </div>
 
-                    <div class="bg-amber-50 border border-amber-100 p-4 rounded-2xl mb-8">
-                        <div class="flex gap-3">
-                            <i class="fa-solid fa-circle-info text-amber-600 mt-1"></i>
-                            <p class="text-xs text-amber-800 leading-relaxed font-medium"> Funds will be sent to your
-                                registered payment method (M-Pesa/Bank) linked to your profile via IntaSend Gateway.</p>
-                        </div>
-                    </div>
+
 
                     <button type="submit"
                         class="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl hover:bg-indigo-700 transition-all active:scale-95">

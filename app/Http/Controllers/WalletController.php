@@ -41,7 +41,7 @@ class WalletController extends Controller
             'amount' => "required|numeric|min:$minAmount",
             'phone_number' => 'required|string|min:10|max:15',
         ], [
-            'amount.min' => "The minimum withdrawal amount is KES $minAmount."
+            'amount.min' => "The minimum withdrawal amount is KES $minAmount. Please withdraw $minAmount or more."
         ]);
 
         $user = auth()->user();
@@ -54,7 +54,7 @@ class WalletController extends Controller
         $wallet = $user->wallet;
 
         if (!$wallet || $wallet->balance < $request->amount) {
-            return back()->with('error', 'Insufficient balance.');
+            return back()->with('error', "You don't have enough money in your wallet to withdraw this amount.");
         }
 
         try {

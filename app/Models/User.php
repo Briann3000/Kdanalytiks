@@ -60,6 +60,36 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->role === \App\Enums\UserRole::Admin;
     }
 
+    public function hasActiveSubscription(): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        $entity = null;
+        if ($this->role === \App\Enums\UserRole::Organization) {
+            $entity = $this->organization;
+        } elseif ($this->role === \App\Enums\UserRole::Independent) {
+            $entity = $this->independent;
+        }
+
+        if (!$entity) {
+            return false;
+        }
+
+        $tier = $entity->subscriptionTier;
+        if (!$tier || $tier->slug === 'free') {
+            return false;
+        }
+
+        // Check if expiry exists and is in the future
+        if ($entity->subscription_expiry && $entity->subscription_expiry->isPast()) {
+            return false;
+        }
+
+        return $entity->payment_status === 'paid' || $entity->payment_status === 'COMPLETE';
+    }
+
     /**
      * Determine if the user has verified their email address.
      * Admins are exempt from verification.
