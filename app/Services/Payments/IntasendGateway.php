@@ -42,20 +42,21 @@ class IntasendGateway implements PaymentGatewayInterface
     /**
      * Initiate a subscription purchase via IntaSend Checkout.
      */
-    public function purchaseSubscription($entity, SubscriptionTier $tier): array
+    public function purchaseSubscription($entity, SubscriptionTier $tier, bool $isYearly = false): array
     {
         try {
             $checkout = new Checkout();
             $checkout->init($this->getCredentials());
 
-            $amount = $tier->monthly_price;
+            $amount = $isYearly ? $tier->yearly_price : $tier->monthly_price;
             $currency = 'KES';
-            
+
             // Determine type for reference
             $typeCode = ($entity instanceof Organization) ? 'ORG' : 'IND';
-            
+            $cycleCode = $isYearly ? 'YEAR' : 'MONTH';
+
             // Use a structured reference to pass context through the webhook
-            $reference = "SUB-{$typeCode}-{$entity->id}-TIER-{$tier->id}-" . strtoupper(\Illuminate\Support\Str::random(6));
+            $reference = "SUB-{$typeCode}-{$entity->id}-TIER-{$tier->id}-{$cycleCode}-" . strtoupper(\Illuminate\Support\Str::random(6));
 
             // Use customer details from the entity's primary user
             $user = $entity->user;

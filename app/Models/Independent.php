@@ -51,7 +51,7 @@ class Independent extends Model
         $currentCount = $this->surveys()->count();
         $tier = $this->subscriptionTier ?? \App\Models\SubscriptionTier::where('slug', 'free')->first();
 
-        if (!$tier || $tier->max_surveys === -1) {
+        if (!$tier || $tier->max_surveys == -1) {
             return false;
         }
 

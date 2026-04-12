@@ -11,7 +11,7 @@ interface PaymentGatewayInterface
     /**
      * Initiate a subscription purchase.
      */
-    public function purchaseSubscription(Organization $organization, SubscriptionTier $tier): array;
+    public function purchaseSubscription($entity, SubscriptionTier $tier, bool $isYearly = false): array;
 
     /**
      * Process a withdrawal (payout) to a respondent.

@@ -25,6 +25,7 @@ class SubscriptionController extends Controller
     {
         $request->validate([
             'tier_id' => 'required|exists:subscription_tiers,id',
+            'cycle' => 'required|in:monthly,yearly',
         ]);
 
         $tier = \App\Models\SubscriptionTier::find($request->tier_id);
@@ -35,8 +36,11 @@ class SubscriptionController extends Controller
         }
 
         try {
+            // Determine price and pass as metadata/reference component
+            $isYearly = $request->cycle === 'yearly';
+
             // 1. Call Payment Manager Helper
-            $result = $paymentManager->subscribe($entity, $tier);
+            $result = $paymentManager->subscribe($entity, $tier, $isYearly);
 
             if ($result['status'] === 'success') {
                 if (isset($result['checkout_url'])) {
@@ -79,15 +83,17 @@ class SubscriptionController extends Controller
         $amount = $payload['value'] ?? 0;
         $method = $payload['provider'] ?? 'IntaSend';
 
-        // Parse structured reference to get Entity Type, ID and Tier ID
+        // Parse structured reference to get Entity Type, ID, Tier ID and Cycle
         $type = null; // 'ORG' or 'IND'
         $entityId = null;
         $tierId = null;
+        $cycle = 'MONTH'; // Default to month if not found
 
-        if ($reference && preg_match('/SUB-(ORG|IND)-(\d+)-TIER-(\d+)/', $reference, $matches)) {
+        if ($reference && preg_match('/SUB-(ORG|IND)-(\d+)-TIER-(\d+)-(MONTH|YEAR)/', $reference, $matches)) {
             $type = $matches[1];
             $entityId = $matches[2];
             $tierId = $matches[3];
+            $cycle = $matches[4];
         }
 
         if ($status !== 'COMPLETE' || !$entityId || !$tierId || !$type) {
@@ -98,14 +104,14 @@ class SubscriptionController extends Controller
         try {
             \Illuminate\Support\Facades\DB::beginTransaction();
 
-            $entity = ($type === 'ORG') 
+            $entity = ($type === 'ORG')
                 ? \App\Models\Organization::findOrFail($entityId)
                 : \App\Models\Independent::findOrFail($entityId);
 
             $tier = \App\Models\SubscriptionTier::findOrFail($tierId);
 
             // 1. Update Entity Tier
-            $duration = $payload['duration_days'] ?? 30;
+            $duration = ($cycle === 'YEAR') ? 365 : 30;
             $entity->update([
                 'subscription_tier_id' => $tier->id,
                 'subscription_expiry' => now()->addDays($duration),
@@ -120,7 +126,7 @@ class SubscriptionController extends Controller
                 'status' => 'success',
                 'transaction_id' => $invoiceId, // IntaSend Invoice ID
             ];
-            
+
             if ($type === 'ORG') {
                 $paymentData['organization_id'] = $entity->id;
             } else {
@@ -130,17 +136,18 @@ class SubscriptionController extends Controller
 
             // 3. Create Transaction Record
             \App\Models\Transaction::create([
-                'wallet_id' => null, 
+                'wallet_id' => null,
                 'organization_id' => ($type === 'ORG' ? $entity->id : null),
+                'independent_id' => ($type === 'IND' ? $entity->id : null),
                 'amount' => $amount,
                 'type' => 'debit',
                 'status' => 'completed',
                 'reference' => 'SUB-' . strtoupper(\Illuminate\Support\Str::random(10)),
-                'external_reference' => $invoiceId, 
+                'external_reference' => $invoiceId,
                 'description' => "Subscription Upgrade: {$tier->name} Plan (Ref: {$invoiceId})",
                 'metadata' => [
-                    'method' => $method, 
-                    'entity_name' => $entity->name, 
+                    'method' => $method,
+                    'entity_name' => $entity->name ?? 'Researcher',
                     'api_ref' => $reference,
                     'type' => $type
                 ]
@@ -191,10 +198,16 @@ class SubscriptionController extends Controller
 
     private function resolveEntity()
     {
+        /** @var \App\Models\User $user */
         $user = auth()->user();
-        if ($user->role === \App\Enums\UserRole::Organization || $user->role->value === 'organization') {
+        if (!$user)
+            return null;
+
+        $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+
+        if ($role === 'organization') {
             return $user->organization;
-        } elseif ($user->role === \App\Enums\UserRole::Independent || $user->role->value === 'independent') {
+        } elseif ($role === 'independent' || $role === 'researcher') {
             return $user->independent;
         }
         return null;

@@ -27,10 +27,12 @@ class PaymentManager
     /**
      * Helper to process a subscription.
      */
-    public function subscribe($entity, SubscriptionTier $tier): array
+    public function subscribe($entity, SubscriptionTier $tier, bool $isYearly = false): array
     {
+        $amount = $isYearly ? $tier->yearly_price : $tier->monthly_price;
+
         // Bypass gateway for free tiers
-        if ($tier->monthly_price <= 0) {
+        if ($amount <= 0) {
             $entity->update([
                 'subscription_tier_id' => $tier->id,
                 'subscription_expiry' => null,
@@ -39,7 +41,7 @@ class PaymentManager
             return ['status' => 'success', 'message' => 'Successfully upgraded to the ' . $tier->name . ' plan.'];
         }
 
-        return $this->gateway->purchaseSubscription($entity, $tier);
+        return $this->gateway->purchaseSubscription($entity, $tier, $isYearly);
     }
 
     /**

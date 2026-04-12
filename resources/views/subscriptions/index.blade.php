@@ -1,12 +1,28 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="py-12 bg-gray-50 min-h-screen">
+<div x-data="{ billingCycle: 'monthly' }" class="py-12 bg-gray-50 min-h-screen">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
             <h2 class="text-base font-black text-indigo-600 tracking-widest uppercase mb-4">Pricing Plans</h2>
             <p class="text-5xl font-black text-gray-900 mb-2 tracking-tight">Scale your research with <span class="text-indigo-600">Premium Tiers</span></p>
-            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">Account Type: Independent Researcher</p>
+            
+            <!-- Billing Toggle -->
+            <div class="flex items-center justify-center mt-10 gap-4">
+                <span class="text-sm font-black uppercase tracking-widest" :class="billingCycle === 'monthly' ? 'text-gray-900' : 'text-gray-400'">Monthly</span>
+                <button @click="billingCycle = billingCycle === 'monthly' ? 'yearly' : 'monthly'" 
+                        class="relative w-16 h-8 rounded-full transition-colors duration-300 focus:outline-none"
+                        :class="billingCycle === 'yearly' ? 'bg-indigo-600' : 'bg-gray-300'">
+                    <div class="absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform duration-300"
+                         :class="billingCycle === 'yearly' ? 'translate-x-8' : 'translate-x-0'"></div>
+                </button>
+                <span class="text-sm font-black uppercase tracking-widest flex items-center gap-2" :class="billingCycle === 'yearly' ? 'text-gray-900' : 'text-gray-400'">
+                    Yearly
+                    <span class="bg-green-100 text-green-700 text-[10px] px-2 py-1 rounded-full animate-bounce">Save 20%</span>
+                </span>
+            </div>
+
+            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-8 mb-4">Account Type: Independent Researcher</p>
             <p class="max-w-2xl mx-auto text-xl text-gray-500 font-medium">Choose the perfect plan for your research needs and start gathering high-impact insights today.</p>
         </div>
 
@@ -32,8 +48,8 @@
                         <div class="mb-8">
                             <h3 class="text-2xl font-black text-gray-900 uppercase tracking-tighter mb-2">{{ $tier->name }}</h3>
                             <div class="flex items-baseline gap-1">
-                                <span class="text-4xl font-black text-gray-900 tracking-tight">KES {{ number_format($tier->monthly_price, 0) }}</span>
-                                <span class="text-gray-400 font-bold uppercase text-[10px] tracking-widest">/ Month</span>
+                                <span class="text-4xl font-black text-gray-900 tracking-tight" x-text="billingCycle === 'monthly' ? 'KES {{ number_format($tier->monthly_price, 0) }}' : 'KES {{ number_format($tier->yearly_price, 0) }}'"></span>
+                                <span class="text-gray-400 font-bold uppercase text-[10px] tracking-widest" x-text="billingCycle === 'monthly' ? '/ Month' : '/ Year'"></span>
                             </div>
                         </div>
 
@@ -42,19 +58,19 @@
                                 <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
                                     <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
                                 </div>
-                                <span class="text-gray-600 font-medium"><strong>{{ $tier->max_surveys === -1 ? 'Unlimited' : $tier->max_surveys }}</strong> Surveys per Month</span>
+                                <span class="text-gray-600 font-medium"><strong>{{ $tier->max_surveys == -1 ? 'Unlimited' : $tier->max_surveys }}</strong> Surveys per Month</span>
                             </li>
                             <li class="flex items-start gap-3">
                                 <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
                                     <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
                                 </div>
-                                <span class="text-gray-600 font-medium"><strong>{{ $tier->max_responses_per_survey === -1 ? 'Unlimited' : $tier->max_responses_per_survey }}</strong> Responses per Survey</span>
+                                <span class="text-gray-600 font-medium"><strong>{{ $tier->max_responses_per_survey == -1 ? 'Unlimited' : $tier->max_responses_per_survey }}</strong> Responses per Survey</span>
                             </li>
                             <li class="flex items-start gap-3">
                                 <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
                                     <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
                                 </div>
-                                <span class="text-gray-600 font-medium"><strong>{{ $tier->ai_limit_per_month === -1 ? 'Unlimited' : $tier->ai_limit_per_month }}</strong> AI Generations</span>
+                                <span class="text-gray-600 font-medium"><strong>{{ $tier->ai_limit_per_month == -1 ? 'Unlimited' : $tier->ai_limit_per_month }}</strong> AI Generations</span>
                             </li>
                             <li class="flex items-start gap-3">
                                 <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
@@ -74,6 +90,7 @@
                             <form action="{{ route('subscriptions.checkout') }}" method="POST">
                                 @csrf
                                 <input type="hidden" name="tier_id" value="{{ $tier->id }}">
+                                <input type="hidden" name="cycle" x-model="billingCycle">
                                 
                                 @if($isCurrent)
                                     <button type="button" disabled class="w-full bg-indigo-50 text-indigo-600 font-black py-5 rounded-2xl cursor-not-allowed uppercase tracking-widest text-xs border border-indigo-100">
