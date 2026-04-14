@@ -12,10 +12,21 @@ class SubscriptionController extends Controller
      */
     public function index()
     {
-        $tiers = \App\Models\SubscriptionTier::all();
+        $user = auth()->user();
+        $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+
+        // Filter tiers based on role
+        if ($role === 'respondent') {
+            $tiers = \App\Models\SubscriptionTier::whereIn('slug', ['free', 'respondent-pro'])->get();
+            $accountTypeLabel = 'Respondent (Reader)';
+        } else {
+            $tiers = \App\Models\SubscriptionTier::whereNotIn('slug', ['respondent-pro'])->get();
+            $accountTypeLabel = ($role === 'organization') ? 'Organization' : 'Independent Researcher';
+        }
+
         $entity = $this->resolveEntity();
 
-        return view('subscriptions.index', compact('tiers', 'entity'));
+        return view('subscriptions.index', compact('tiers', 'entity', 'accountTypeLabel'));
     }
 
     /**
@@ -47,7 +58,13 @@ class SubscriptionController extends Controller
                     return redirect($result['checkout_url']);
                 }
 
-                $redirect = (auth()->user()->role->value === 'organization') ? 'organization.dashboard' : 'independent.dashboard';
+                $roleValue = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
+                $redirect = match ($roleValue) {
+                    'organization' => 'organization.dashboard',
+                    'independent', 'researcher' => 'independent.dashboard',
+                    'respondent' => 'surveys.public',
+                    default => 'home'
+                };
                 return redirect(route($redirect, [], false))->with('success', 'Subscription upgraded successfully!');
             } else {
                 return back()->with('error', 'Payment failed: ' . ($result['message'] ?? 'Unknown error'));
@@ -83,13 +100,12 @@ class SubscriptionController extends Controller
         $amount = $payload['value'] ?? 0;
         $method = $payload['provider'] ?? 'IntaSend';
 
-        // Parse structured reference to get Entity Type, ID, Tier ID and Cycle
-        $type = null; // 'ORG' or 'IND'
+        $type = null; // 'ORG', 'IND', or 'RES'
         $entityId = null;
         $tierId = null;
         $cycle = 'MONTH'; // Default to month if not found
 
-        if ($reference && preg_match('/SUB-(ORG|IND)-(\d+)-TIER-(\d+)-(MONTH|YEAR)/', $reference, $matches)) {
+        if ($reference && preg_match('/SUB-(ORG|IND|RES)-(\d+)-TIER-(\d+)-(MONTH|YEAR)/', $reference, $matches)) {
             $type = $matches[1];
             $entityId = $matches[2];
             $tierId = $matches[3];
@@ -104,9 +120,11 @@ class SubscriptionController extends Controller
         try {
             \Illuminate\Support\Facades\DB::beginTransaction();
 
-            $entity = ($type === 'ORG')
-                ? \App\Models\Organization::findOrFail($entityId)
-                : \App\Models\Independent::findOrFail($entityId);
+            $entity = match ($type) {
+                'ORG' => \App\Models\Organization::findOrFail($entityId),
+                'IND' => \App\Models\Independent::findOrFail($entityId),
+                'RES' => \App\Models\User::findOrFail($entityId),
+            };
 
             $tier = \App\Models\SubscriptionTier::findOrFail($tierId);
 
@@ -129,8 +147,10 @@ class SubscriptionController extends Controller
 
             if ($type === 'ORG') {
                 $paymentData['organization_id'] = $entity->id;
-            } else {
+            } elseif ($type === 'IND') {
                 $paymentData['independent_id'] = $entity->id;
+            } else {
+                $paymentData['user_id'] = $entity->id; // For Respondents
             }
             \App\Models\Payment::create($paymentData);
 
@@ -139,6 +159,7 @@ class SubscriptionController extends Controller
                 'wallet_id' => null,
                 'organization_id' => ($type === 'ORG' ? $entity->id : null),
                 'independent_id' => ($type === 'IND' ? $entity->id : null),
+                'user_id' => ($type === 'RES' ? $entity->id : null),
                 'amount' => $amount,
                 'type' => 'debit',
                 'status' => 'completed',
@@ -209,6 +230,8 @@ class SubscriptionController extends Controller
             return $user->organization;
         } elseif ($role === 'independent' || $role === 'researcher') {
             return $user->independent;
+        } elseif ($role === 'respondent') {
+            return $user;
         }
         return null;
     }

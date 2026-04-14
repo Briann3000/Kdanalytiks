@@ -21,6 +21,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'phone_number',
         'role',
         'status',
+        'subscription_tier_id',
+        'subscription_expiry',
+        'payment_status',
     ];
 
     protected $hidden = [
@@ -33,6 +36,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password' => 'hashed',
         'role' => \App\Enums\UserRole::class,
         'status' => \App\Enums\UserStatus::class,
+        'subscription_expiry' => 'datetime',
     ];
 
     public function organization(): HasOne
@@ -55,6 +59,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(Wallet::class);
     }
 
+    public function subscriptionTier(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(SubscriptionTier::class, 'subscription_tier_id');
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === \App\Enums\UserRole::Admin;
@@ -71,6 +80,9 @@ class User extends Authenticatable implements MustVerifyEmail
             $entity = $this->organization;
         } elseif ($this->role === \App\Enums\UserRole::Independent) {
             $entity = $this->independent;
+        } elseif ($this->role === \App\Enums\UserRole::Respondent) {
+            // Respondents have subscription data directly on the user model
+            $entity = $this;
         }
 
         if (!$entity) {
@@ -78,7 +90,7 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         $tier = $entity->subscriptionTier;
-        if (!$tier || $tier->slug === 'free') {
+        if (!$tier || str_contains(strtolower($tier->slug), 'free')) {
             return false;
         }
 

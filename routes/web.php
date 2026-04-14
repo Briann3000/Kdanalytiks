@@ -30,25 +30,6 @@ Route::get('/privacy-policy', function () {
 
 Route::get('/surveys/public', [SurveyController::class, 'publicIndex'])->name('surveys.public');
 
-// Quick login for previewing purposes
-Route::get('/login-preview/{role}', function ($role) {
-    $enumRole = \App\Enums\UserRole::tryFrom($role);
-    if (!$enumRole)
-        abort(404);
-
-    $user = User::firstOrCreate(
-        ['email' => "{$role}@example.com"],
-        [
-            'name' => ucfirst($role) . ' User',
-            'password' => bcrypt('password'),
-            'role' => $enumRole->value,
-            'status' => \App\Enums\UserStatus::Active->value
-        ]
-    );
-
-    Auth::login($user);
-    return redirect()->route($role . '.dashboard');
-});
 Route::post('/logout', function () {
     \Illuminate\Support\Facades\Auth::logout();
     return redirect('/');
@@ -244,8 +225,8 @@ Route::middleware(['auth', 'verified', 'role:independent'])->prefix('independent
     Route::get('/reports', [SurveyController::class, 'reportsIndex'])->name('reports.index');
 });
 
-// Organization & Subscription Routes
-Route::middleware(['auth', 'verified', 'role:organization,independent'])->group(function () {
+// Organization, Independent & Respondent Subscription Routes
+Route::middleware(['auth', 'verified', 'role:organization,independent,respondent'])->group(function () {
     Route::get('/subscriptions', [\App\Http\Controllers\SubscriptionController::class, 'index'])->name('subscriptions.index');
     Route::post('/subscriptions/checkout', [\App\Http\Controllers\SubscriptionController::class, 'checkout'])->name('subscriptions.checkout');
     Route::post('/subscriptions/cancel', [\App\Http\Controllers\SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
@@ -271,15 +252,16 @@ Route::middleware(['auth', 'verified', 'role:respondent'])->prefix('respondent')
 });
 
 // AI Integration Routes
-Route::middleware(['auth', 'verified', 'subscribed:ai'])->group(function () {
+Route::middleware(['auth', 'verified', 'subscribed:ai', 'throttle:5,1'])->group(function () {
     Route::post('/ai/generate-survey', [\App\Http\Controllers\AiController::class, 'generateSchema'])->name('ai.generate');
 });
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'throttle:10,1'])->group(function () {
     Route::get('/ai/insights/question/{question}', [\App\Http\Controllers\InsightController::class, 'generateQuestionInsight'])->name('ai.insights.question');
 
     // Qualitative Reports
     Route::get('/surveys/{survey}/qualitative-report', [\App\Http\Controllers\InsightController::class, 'showQualitativeReport'])->name('surveys.qualitative');
     Route::get('/surveys/{survey}/analyze/{question_id}', [\App\Http\Controllers\InsightController::class, 'analyze'])->name('surveys.analyze');
 });
-Route::post('/api/agent/chat', [\App\Http\Controllers\AgentController::class, 'chat'])->name('api.agent.chat');
+
+Route::middleware(['throttle:10,1'])->post('/api/agent/chat', [\App\Http\Controllers\AgentController::class, 'chat'])->name('api.agent.chat');

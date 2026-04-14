@@ -639,17 +639,19 @@
                 </a>
             </div>
 
-            @if($role !== 'respondent')
+            @if($role !== 'guest')
                 <div class="pt-6 border-t border-gray-100 px-3">
                     <h4 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Quick Links</h4>
                     <div class="space-y-3">
                         <div x-data="{ qlOpen: false, qlTop: 0, qlLeft: 0 }"
                             @mouseenter="const r = $el.getBoundingClientRect(); qlTop = r.top - 100; qlLeft = r.right + 15; qlOpen = true"
                             @mouseleave="qlOpen = false" class="relative">
-                            <a href="{{ route('surveys.create') }}"
-                                class="block w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-widest rounded-lg text-center shadow-lg shadow-indigo-100 transition-all">
-                                <i class="fa-solid fa-plus-circle mr-2"></i> Create Survey
-                            </a>
+                            @if(in_array($role, ['organization', 'independent']))
+                                <a href="{{ route('surveys.create') }}"
+                                    class="block w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-widest rounded-lg text-center shadow-lg shadow-indigo-100 transition-all">
+                                    <i class="fa-solid fa-plus-circle mr-2"></i> Create Survey
+                                </a>
+                            @endif
                             <template x-teleport="body">
                                 <!-- Flyout -->
                                 <div class="flyout-menu shadow-2xl border border-gray-100 p-3 min-w-[140px]"
@@ -667,7 +669,7 @@
                             </template>
                         </div>
 
-                        @if(in_array($role, ['organization', 'independent']))
+                        @if(in_array($role, ['organization', 'independent', 'respondent']))
                             <a href="{{ route('subscriptions.index') }}"
                                 class="block w-full py-2 px-4 bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 text-xs font-black uppercase tracking-widest rounded-lg text-center transition-all">
                                 <i class="fa-solid fa-crown mr-2"></i> Subscribe

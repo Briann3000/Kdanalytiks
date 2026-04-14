@@ -53,6 +53,20 @@ class SubscriptionTierSeeder extends Seeder
                 'has_data_export' => true,
                 'has_advanced_analytics' => true,
             ],
+            [
+                'name' => 'Respondent Pro',
+                'slug' => 'respondent-pro',
+                'description' => 'Unlimited access to deep qualitative insights and advanced reporting.',
+                'monthly_price' => 500,
+                'yearly_price' => 5000,
+                'currency' => 'KES',
+                'max_surveys' => 0,
+                'max_responses_per_survey' => 0,
+                'ai_limit_per_month' => -1,
+                'has_custom_branding' => false,
+                'has_data_export' => true,
+                'has_advanced_analytics' => true,
+            ],
         ];
 
         foreach ($tiers as $tier) {

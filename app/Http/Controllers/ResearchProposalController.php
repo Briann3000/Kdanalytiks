@@ -40,14 +40,14 @@ class ResearchProposalController extends Controller
     public function history()
     {
         $user = auth()->user();
-        
+
         // Proposals from the database
         $proposals = ResearchProposal::where('user_id', $user->id)->latest()->get();
-        
+
         // We'll also show any 'reports' generated in this session (or if we had a reports table, from there)
         // For now, let's look for any session-based reports or simulated past reports
         $reports = []; // If there was a GeneratedReport model, we'd query it here.
-        
+
         return view('admin.research-proposal.history', compact('proposals', 'reports'));
     }
 
@@ -122,7 +122,7 @@ class ResearchProposalController extends Controller
         $manualReferences = $request->input('references', []);
 
         // Filter out empty references
-        $manualReferences = array_filter($manualReferences, function($ref) {
+        $manualReferences = array_filter($manualReferences, function ($ref) {
             return !empty($ref['author']) || !empty($ref['title']);
         });
 
@@ -149,8 +149,17 @@ class ResearchProposalController extends Controller
             return redirect()->route('research-proposal.index')->with('error', 'Report draft not found or expired.');
         }
 
+        $user = auth()->user();
+        $isTruncated = false;
+
+        // Admins always see the full preview.
+        // Others see truncated preview if they don't have an active subscription (Pro/Enterprise).
+        if ($user && !$user->isAdmin()) {
+            $isTruncated = !$user->hasActiveSubscription();
+        }
+
         $format = $request->input('format', 'pdf');
-        return view('admin.research-proposal.preview', compact('reportData', 'reportId', 'format'));
+        return view('admin.research-proposal.preview', compact('reportData', 'reportId', 'format', 'isTruncated'));
     }
 
     /**
@@ -200,7 +209,7 @@ class ResearchProposalController extends Controller
             return;
         }
 
-        if ((int)$research_proposal->user_id !== (int)auth()->id()) {
+        if ((int) $research_proposal->user_id !== (int) auth()->id()) {
             abort(403);
         }
     }

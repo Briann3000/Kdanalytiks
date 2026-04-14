@@ -331,20 +331,27 @@ class SurveyController extends Controller
         $this->authorizeOwner($survey);
 
         $request->validate([
-            'emails' => 'required|string',
+            'emails' => 'required|string'
         ]);
 
-        $emails = array_map('trim', explode(',', $request->emails));
-        $count = 0;
+        // Parse comma, semicolon or newline separated emails
+        $emailString = str_replace([';', "\n", "\r"], ',', $request->emails);
+        $emailArray = array_map('trim', explode(',', $emailString));
+        $validEmails = array_filter($emailArray, function ($email) {
+            return filter_var($email, FILTER_VALIDATE_EMAIL);
+        });
 
-        foreach ($emails as $email) {
-            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                // In a real app, you would send an email here
-                $count++;
-            }
+        if (empty($validEmails)) {
+            return back()->with('error', 'No valid email addresses provided.');
         }
 
-        return back()->with('success', "Invitations sent to {$count} participants.");
+        $inviteUrl = route('surveys.show', $survey);
+
+        foreach ($validEmails as $email) {
+            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\SurveyInvitation($survey, $inviteUrl));
+        }
+
+        return back()->with('success', 'Invitations sent successfully to ' . count($validEmails) . ' recipients.');
     }
 
     public function responsesIndex()
@@ -743,33 +750,6 @@ class SurveyController extends Controller
         return $pdf->download($filename);
     }
 
-    public function sendInvitation(Request $request, \App\Models\Survey $survey)
-    {
-        $this->authorizeOwner($survey);
-
-        $request->validate([
-            'emails' => 'required|string'
-        ]);
-
-        // Parse comma, semicolon or newline separated emails
-        $emailString = str_replace([';', "\n", "\r"], ',', $request->emails);
-        $emailArray = array_map('trim', explode(',', $emailString));
-        $validEmails = array_filter($emailArray, function ($email) {
-            return filter_var($email, FILTER_VALIDATE_EMAIL);
-        });
-
-        if (empty($validEmails)) {
-            return back()->with('error', 'No valid email addresses provided.');
-        }
-
-        $inviteUrl = route('surveys.show', $survey);
-
-        foreach ($validEmails as $email) {
-            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\SurveyInvitation($survey, $inviteUrl));
-        }
-
-        return back()->with('success', 'Invitations sent successfully to ' . count($validEmails) . ' recipients.');
-    }
 
     public function publish(Request $request, \App\Models\Survey $survey)
     {
@@ -954,7 +934,8 @@ class SurveyController extends Controller
     public function submit(Request $request, \App\Models\Survey $survey)
     {
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'terms_and_conditions' => 'required|accepted'
+            'terms_and_conditions' => 'required|accepted',
+            'json_data' => 'nullable|string|max:65535'
         ]);
 
         if ($validator->fails()) {
@@ -987,29 +968,34 @@ class SurveyController extends Controller
                     ->where('description', 'like', "%Survey ID: {$survey->id}%")
                     ->exists();
 
-                if (!$alreadyRewarded && ($survey->current_reward_spent + (float) $survey->reward_per_response <= (float) $survey->reward_budget)) {
-                    // 1. Update Survey Spent
-                    $survey->increment('current_reward_spent', (float) $survey->reward_per_response);
+                if (!$alreadyRewarded) {
+                    // Lock the survey record to prevent concurrent budget exhaustion Race Condition
+                    $surveyLocked = \App\Models\Survey::where('id', $survey->id)->lockForUpdate()->first();
 
-                    // Auto-close removed as per user request to allow continued unpaid submissions
+                    if ($surveyLocked && ($surveyLocked->current_reward_spent + (float) $surveyLocked->reward_per_response <= (float) $surveyLocked->reward_budget)) {
+                        // 1. Update Survey Spent
+                        $surveyLocked->increment('current_reward_spent', (float) $surveyLocked->reward_per_response);
 
-                    // 2. Get or Create Wallet
-                    $wallet = $user->wallet ?: \App\Models\Wallet::create(['user_id' => $user->id, 'balance' => 0]);
+                        // Auto-close removed as per user request to allow continued unpaid submissions
 
-                    // 3. Increment Wallet Balance
-                    $wallet->increment('balance', (float) $survey->reward_per_response);
+                        // 2. Get or Create Wallet
+                        $wallet = $user->wallet ?: \App\Models\Wallet::create(['user_id' => $user->id, 'balance' => 0]);
 
-                    // 4. Record Transaction
-                    \App\Models\Transaction::create([
-                        'wallet_id' => $wallet->id,
-                        'amount' => (float) $survey->reward_per_response,
-                        'type' => 'credit',
-                        'status' => 'completed',
-                        'reference' => 'REW-' . strtoupper(Str::random(10)),
-                        'description' => "Reward for completing Survey ID: {$survey->id}"
-                    ]);
+                        // 3. Increment Wallet Balance
+                        $wallet->increment('balance', (float) $surveyLocked->reward_per_response);
 
-                    $rewardMessage = " You earned " . number_format((float) $survey->reward_per_response, 2) . " " . ($wallet->currency ?? 'KES') . "!";
+                        // 4. Record Transaction
+                        \App\Models\Transaction::create([
+                            'wallet_id' => $wallet->id,
+                            'amount' => (float) $surveyLocked->reward_per_response,
+                            'type' => 'credit',
+                            'status' => 'completed',
+                            'reference' => 'REW-' . strtoupper(Str::random(10)),
+                            'description' => "Reward for completing Survey ID: {$surveyLocked->id}"
+                        ]);
+
+                        $rewardMessage = " You earned " . number_format((float) $surveyLocked->reward_per_response, 2) . " " . ($wallet->currency ?? 'KES') . "!";
+                    }
                 }
             }
             // --- Reward Logic End ---
@@ -1037,11 +1023,11 @@ class SurveyController extends Controller
             ];
 
             if ($request->has('is_json_submission')) {
-                $jsonData = json_decode($request->input('json_data'), true) ?? [];
+                $jsonData = json_decode($request->input('json_data'), true, 20) ?? [];
 
                 foreach ($request->allFiles() as $name => $file) {
                     if ($file->isValid() && in_array($file->getMimeType(), $allowedMimeTypes)) {
-                        $newFileName = uniqid('media_') . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension();
+                        $newFileName = uniqid('media_') . '_' . bin2hex(random_bytes(4)) . '.' . $file->extension();
                         $file->move($uploadDir, $newFileName);
                         $storagePath = 'uploads/' . $newFileName;
 
@@ -1081,7 +1067,7 @@ class SurveyController extends Controller
                 if (in_array($question->type, ['video', 'audio']) && $request->hasFile($inputName)) {
                     $file = $request->file($inputName);
                     if ($file->isValid() && in_array($file->getMimeType(), $allowedMimeTypes)) {
-                        $newFileName = uniqid('media_') . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension();
+                        $newFileName = uniqid('media_') . '_' . bin2hex(random_bytes(4)) . '.' . $file->extension();
                         $file->move($uploadDir, $newFileName);
                         $finalAnswerValue = 'uploads/' . $newFileName;
                     }
@@ -1160,39 +1146,7 @@ class SurveyController extends Controller
 
     private function authorizeOwner(\App\Models\Survey $survey)
     {
-        $user = auth()->user();
-        if (!$user)
-            abort(403, 'Unauthorized action.');
-
-        // Admins can do everything
-        if ($user->isAdmin())
-            return;
-
-        // Check if the user is the direct creator
-        if ((int) $survey->created_by === (int) $user->id) {
-            return;
-        }
-
-        // Check for Collaborator Permission
-        $permission = \App\Models\SurveyPermission::where('survey_id', $survey->id)
-            ->where('user_id', $user->id)
-            ->first();
-
-        if ($permission && in_array($permission->role, ['edit-survey', 'manage-access'])) {
-            return;
-        }
-
-        // Check organization ownership
-        if ($survey->organization_id && $user->organization && (int) $survey->organization_id === (int) $user->organization->id) {
-            return;
-        }
-
-        // Check independent ownership
-        if ($survey->independent_id && $user->independent && (int) $survey->independent_id === (int) $user->independent->id) {
-            return;
-        }
-
-        abort(403, 'You do not have permission to manage this survey.');
+        \Illuminate\Support\Facades\Gate::authorize('view', $survey);
     }
 
     public function getLibraryQuestions()

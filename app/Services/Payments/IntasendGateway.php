@@ -52,14 +52,25 @@ class IntasendGateway implements PaymentGatewayInterface
             $currency = 'KES';
 
             // Determine type for reference
-            $typeCode = ($entity instanceof Organization) ? 'ORG' : 'IND';
+            if ($entity instanceof Organization) {
+                $typeCode = 'ORG';
+                $user = $entity->user;
+                $redirectRoute = 'organization.dashboard';
+            } elseif ($entity instanceof \App\Models\Independent) {
+                $typeCode = 'IND';
+                $user = $entity->user;
+                $redirectRoute = 'independent.dashboard';
+            } else {
+                $typeCode = 'RES';
+                $user = $entity; // Respondent is the User object itself
+                $redirectRoute = 'surveys.public';
+            }
             $cycleCode = $isYearly ? 'YEAR' : 'MONTH';
 
             // Use a structured reference to pass context through the webhook
             $reference = "SUB-{$typeCode}-{$entity->id}-TIER-{$tier->id}-{$cycleCode}-" . strtoupper(\Illuminate\Support\Str::random(6));
 
-            // Use customer details from the entity's primary user
-            $user = $entity->user;
+            // Use customer details from the user
 
             // Create Customer object
             $customer = new Customer();
@@ -68,7 +79,6 @@ class IntasendGateway implements PaymentGatewayInterface
             $customer->last_name = explode(' ', $user->name ?? 'User')[1] ?? 'Admin';
             $customer->country = 'KE';
 
-            $redirectRoute = ($typeCode === 'ORG') ? 'organization.dashboard' : 'independent.dashboard';
 
             // Correct positional arguments for IntaSend Checkout::create
             $response = $checkout->create(
