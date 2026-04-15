@@ -8,43 +8,28 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
-|
-*/
+
+// Admin redirect shortcut
+Route::get('/admin', function () {
+    if (auth()->check() && (auth()->user()->role === 'admin' || (optional(auth()->user()->role)->value === 'admin'))) {
+        return redirect()->route('admin.dashboard');
+    }
+    return redirect()->route('admin.login');
+});
+
+// Individual role login routes for redirects
 
 // Public Routes
 Route::get('/', function () {
-    return view('welcome'); // Landing Page
+    return view('welcome'); // Landing Page (Always accessible)
 })->name('home');
+
+Route::get('/privacy-policy', function () {
+    return view('privacy');
+})->name('privacy');
 
 Route::get('/surveys/public', [SurveyController::class, 'publicIndex'])->name('surveys.public');
 
-// Quick login for previewing purposes
-Route::get('/login-preview/{role}', function ($role) {
-    $enumRole = \App\Enums\UserRole::tryFrom($role);
-    if (!$enumRole)
-        abort(404);
-
-    $user = User::firstOrCreate(
-        ['email' => "{$role}@example.com"],
-        [
-            'name' => ucfirst($role) . ' User',
-            'password' => bcrypt('password'),
-            'role' => $enumRole->value,
-            'status' => \App\Enums\UserStatus::Active->value
-        ]
-    );
-
-    Auth::login($user);
-    return redirect()->route($role . '.dashboard');
-});
 Route::post('/logout', function () {
     \Illuminate\Support\Facades\Auth::logout();
     return redirect('/');
@@ -90,13 +75,43 @@ Route::name('respondent.')->prefix('respondent')->group(function () {
 
 // Email Verification Routes
 Route::get('/email/verify', function () {
+    if (auth()->user()->hasVerifiedEmail()) {
+        $role = auth()->user()->role;
+        $roleName = $role instanceof \App\Enums\UserRole ? $role->value : $role;
+        return redirect()->route($roleName . '.dashboard');
+    }
     return view('auth.verify');
 })->middleware('auth')->name('verification.notice');
 
-Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-    $request->fulfill();
-    return redirect()->route('home');
-})->middleware(['auth', 'signed'])->name('verification.verify');
+Route::get('/email/verify/{id}/{hash}', function (Request $request, $id, $hash) {
+    // 1. Verify the URL signature is still valid and not expired
+    if (!$request->hasValidSignature()) {
+        abort(403, 'This verification link is invalid or has expired.');
+    }
+
+    $user = User::findOrFail($id);
+
+    // 2. Security check: Ensure the hash matches the user's email
+    if (!hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
+        abort(403, 'Invalid verification hash.');
+    }
+
+    // 3. User Handling: If not logged in as this user, log them in
+    if (Auth::id() != $id) {
+        Auth::login($user);
+    }
+
+    // 4. Mark as verified if needed
+    if (!$user->hasVerifiedEmail()) {
+        $user->markEmailAsVerified();
+        event(new \Illuminate\Auth\Events\Verified($user));
+    }
+
+    $role = $user->role;
+    $roleName = $role instanceof \App\Enums\UserRole ? $role->value : $role;
+
+    return redirect()->route($roleName . '.dashboard')->with('success', 'Your email has been successfully verified!');
+})->middleware(['signed'])->name('verification.verify');
 
 Route::post('/email/verification-notification', function (Request $request) {
     $request->user()->sendEmailVerificationNotification();
@@ -111,22 +126,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/surveys/{survey}/export', [SurveyController::class, 'exportResponses'])->name('surveys.export');
     Route::get('/surveys/{survey}/export-pdf', [SurveyController::class, 'exportPdf'])->name('surveys.export_pdf');
     Route::get('/surveys/{survey}/report', [SurveyController::class, 'report'])->name('surveys.report');
-    
-    // Core Survey CRUD (Except Index, Show, Destroy handled separately)
-    Route::resource('surveys', \App\Http\Controllers\SurveyController::class)->except(['index', 'show', 'destroy']);
+
+    // Core Survey CRUD
+    Route::middleware(['subscribed:surveys'])->group(function () {
+        Route::get('/surveys/create', [SurveyController::class, 'create'])->name('surveys.create');
+        Route::post('/surveys', [SurveyController::class, 'store'])->name('surveys.store');
+    });
+    Route::resource('surveys', SurveyController::class)->except(['index', 'show', 'destroy', 'create', 'store']);
+
     Route::delete('/surveys/{survey}', [SurveyController::class, 'destroy'])->name('surveys.destroy');
+    Route::post('/surveys/bulk-destroy', [SurveyController::class, 'bulkDestroy'])->name('surveys.bulk-destroy');
     Route::post('/surveys/initialize', [SurveyController::class, 'initialize'])->name('surveys.initialize');
-    
+
     // Quick-Access Project Lists
     // Projects & Library Overhaul (Kobo-style)
     Route::prefix('projects')->name('projects.')->group(function () {
         Route::get('/active', [SurveyController::class, 'index'])->name('active');
         Route::get('/archived', [SurveyController::class, 'archivedIndex'])->name('archived');
         Route::get('/drafts', [SurveyController::class, 'draftsIndex'])->name('drafts');
-        
+
         // Use /projects as the hub
         Route::get('/', [SurveyController::class, 'hub'])->name('index');
-        
+
         // Project Hub (Single Survey Management content)
         Route::prefix('{survey}')->group(function () {
             Route::get('/', [SurveyController::class, 'projectSummary'])->name('summary');
@@ -159,7 +180,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/research-proposal/generate', [\App\Http\Controllers\ResearchProposalController::class, 'generate'])->name('research-proposal.generate');
     Route::get('/research-proposal/preview/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'preview'])->name('research-proposal.preview');
     Route::post('/research-proposal/export/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'export'])->name('research-proposal.export');
-    
+
     Route::resource('research-proposal', \App\Http\Controllers\ResearchProposalController::class)->except(['store']);
 });
 
@@ -183,10 +204,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/analytics', [\App\Http\Controllers\AdminController::class, 'analytics'])->name('analytics.index');
     Route::post('/surveys/{survey}/approve', [\App\Http\Controllers\AdminController::class, 'approve'])->name('surveys.approve');
     Route::post('/surveys/{survey}/deactivate', [\App\Http\Controllers\AdminController::class, 'deactivate'])->name('surveys.deactivate');
+    Route::post('/surveys/bulk-destroy', [\App\Http\Controllers\AdminController::class, 'bulkDestroy'])->name('surveys.bulk-destroy');
 });
 
 // Organization Routes
-Route::middleware(['auth', 'role:organization'])->prefix('organization')->name('organization.')->group(function () {
+Route::middleware(['auth', 'verified', 'role:organization'])->prefix('organization')->name('organization.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/surveys', [SurveyController::class, 'index'])->name('surveys.index');
 
@@ -195,7 +217,7 @@ Route::middleware(['auth', 'role:organization'])->prefix('organization')->name('
 });
 
 // Independent Researcher Routes
-Route::middleware(['auth', 'role:independent'])->prefix('independent')->name('independent.')->group(function () {
+Route::middleware(['auth', 'verified', 'role:independent'])->prefix('independent')->name('independent.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/surveys', [SurveyController::class, 'index'])->name('surveys.index');
 
@@ -203,20 +225,43 @@ Route::middleware(['auth', 'role:independent'])->prefix('independent')->name('in
     Route::get('/reports', [SurveyController::class, 'reportsIndex'])->name('reports.index');
 });
 
+// Organization, Independent & Respondent Subscription Routes
+Route::middleware(['auth', 'verified', 'role:organization,independent,respondent'])->group(function () {
+    Route::get('/subscriptions', [\App\Http\Controllers\SubscriptionController::class, 'index'])->name('subscriptions.index');
+    Route::post('/subscriptions/checkout', [\App\Http\Controllers\SubscriptionController::class, 'checkout'])->name('subscriptions.checkout');
+    Route::post('/subscriptions/cancel', [\App\Http\Controllers\SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
+});
+
+// Webhook (Public)
+Route::post('/webhook/payment', [\App\Http\Controllers\SubscriptionController::class, 'webhook'])->name('webhook.payment');
+
+// Mock Payment Simulator (Development Only)
+
+// Respondent & Wallet Routes
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/wallet', [\App\Http\Controllers\WalletController::class, 'index'])->name('wallet.index');
+    Route::get('/wallet/history', [\App\Http\Controllers\WalletController::class, 'history'])->name('wallet.history');
+    Route::post('/wallet/withdraw', [\App\Http\Controllers\WalletController::class, 'withdraw'])->name('wallet.withdraw');
+});
+
 // Respondent Routes
-Route::middleware(['auth', 'role:respondent'])->prefix('respondent')->name('respondent.')->group(function () {
+Route::middleware(['auth', 'verified', 'role:respondent'])->prefix('respondent')->name('respondent.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/history', [\App\Http\Controllers\RespondentController::class, 'history'])->name('history');
     Route::get('/reports', [SurveyController::class, 'reportsIndex'])->name('reports.index');
 });
 
 // AI Integration Routes
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'verified', 'subscribed:ai', 'throttle:5,1'])->group(function () {
     Route::post('/ai/generate-survey', [\App\Http\Controllers\AiController::class, 'generateSchema'])->name('ai.generate');
+});
+
+Route::middleware(['auth', 'verified', 'throttle:10,1'])->group(function () {
     Route::get('/ai/insights/question/{question}', [\App\Http\Controllers\InsightController::class, 'generateQuestionInsight'])->name('ai.insights.question');
-    
+
     // Qualitative Reports
     Route::get('/surveys/{survey}/qualitative-report', [\App\Http\Controllers\InsightController::class, 'showQualitativeReport'])->name('surveys.qualitative');
     Route::get('/surveys/{survey}/analyze/{question_id}', [\App\Http\Controllers\InsightController::class, 'analyze'])->name('surveys.analyze');
 });
-Route::post('/api/agent/chat', [\App\Http\Controllers\AgentController::class, 'chat'])->name('api.agent.chat');
+
+Route::middleware(['throttle:10,1'])->post('/api/agent/chat', [\App\Http\Controllers\AgentController::class, 'chat'])->name('api.agent.chat');

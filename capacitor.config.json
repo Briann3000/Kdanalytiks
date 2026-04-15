@@ -1,12 +1,26 @@
 {
   "appId": "com.prc.kmsurveytool",
-  "appName": "kmsurveytool",
+  "appName": "KMSurveyTool",
   "webDir": "public/build",
   "server": {
-    "url": "https://kmsurveytool.com",
-    "cleartext": false,
+    "url": "http://localhost:8000",
+    "cleartext": true,
     "allowNavigation": [
-      "https://kmsurveytool.com"
+      "http://localhost:8000"
     ]
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2500,
+      "launchAutoHide": true,
+      "backgroundColor": "#ffffff",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "androidSplashResourceName": "splash",
+      "iosSplashResourceName": "splash"
+    },
+    "Keyboard": {
+      "resize": "body"
+    }
   }
 }

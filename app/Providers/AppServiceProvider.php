@@ -12,7 +12,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(
+            \App\Interfaces\PaymentGatewayInterface::class,
+            \App\Services\Payments\IntasendGateway::class
+        );
     }
 
     /**
@@ -24,5 +27,10 @@ class AppServiceProvider extends ServiceProvider
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
         \Illuminate\Support\Facades\Schema::defaultStringLength(191);
+
+        \Illuminate\Support\Facades\Event::listen(
+            \Illuminate\Auth\Events\Registered::class,
+            \Illuminate\Auth\Listeners\SendEmailVerificationNotification::class
+        );
     }
 }

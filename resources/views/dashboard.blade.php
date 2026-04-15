@@ -11,6 +11,49 @@
                     {{ $role }} DASHBOARD &bull; <span class="text-green-600">SYSTEM ONLINE</span>
                 </p>
             </div>
+            @if(in_array($role, ['organization', 'independent']) && isset($subscriptionTier))
+                @php
+                    $tierSlug = $subscriptionTier->slug ?? 'free';
+                    $tierName = $subscriptionTier->name ?? 'Free';
+                    $tierConfig = match (true) {
+                        str_contains(strtolower($tierSlug), 'enterprise') => [
+                            'bg' => 'bg-amber-50',
+                            'text' => 'text-amber-700',
+                            'border' => 'border-amber-300',
+                            'dot' => 'bg-amber-500',
+                            'icon' => 'fa-crown',
+                            'label' => 'Enterprise',
+                        ],
+                        str_contains(strtolower($tierSlug), 'pro') => [
+                            'bg' => 'bg-indigo-50',
+                            'text' => 'text-indigo-700',
+                            'border' => 'border-indigo-300',
+                            'dot' => 'bg-indigo-500',
+                            'icon' => 'fa-bolt',
+                            'label' => 'Pro',
+                        ],
+                        default => [
+                            'bg' => 'bg-gray-100',
+                            'text' => 'text-gray-500',
+                            'border' => 'border-gray-300',
+                            'dot' => 'bg-gray-400',
+                            'icon' => 'fa-circle-check',
+                            'label' => 'Free',
+                        ],
+                    };
+                @endphp
+                <div class="flex flex-col items-end gap-1">
+                    <span
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest border shadow-sm {{ $tierConfig['bg'] }} {{ $tierConfig['text'] }} {{ $tierConfig['border'] }}">
+                        <i class="fa-solid {{ $tierConfig['icon'] }} text-[11px]"></i>
+                        {{ $tierName }} Plan
+                    </span>
+                    <a href="{{ route('subscriptions.index') }}"
+                        class="text-[10px] font-bold text-indigo-500 hover:text-indigo-700 tracking-wide transition-colors">
+                        @if($tierSlug === 'free') Upgrade Plan &rsaquo; @else Manage Subscription &rsaquo; @endif
+                    </a>
+                </div>
+            @endif
         </div>
     </div>
 
@@ -25,7 +68,7 @@
                         class="w-12 h-12 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors mb-3">
                         <i class="fa-solid fa-plus text-xl"></i>
                     </div>
-                    <span class="text-sm font-medium text-gray-900">Create Project</span>
+                    <span class="text-sm font-medium text-gray-900">Create Survey</span>
                 </a>
 
                 <a href="{{ route('projects.active') }}"
@@ -46,7 +89,7 @@
                     <span class="text-sm font-medium text-gray-900">View Responses</span>
                 </a>
 
-                <a href="{{ route($role . '.reports.index') }}"
+                <a href="{{ route('research-proposal.index') }}"
                     class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-purple-500 hover:ring-1 hover:ring-purple-500 transition-all">
                     <div
                         class="w-12 h-12 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors mb-3">
@@ -121,7 +164,7 @@
             <div class="bg-gray-50 px-5 py-3 text-xs">
                 @if(in_array($role, ['organization', 'independent']))
                     <a href="{{ route('projects.active') }}" class="font-bold text-indigo-600 hover:text-indigo-500">
-                        Manage surveys <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i></a>
+                        Manage active surveys <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i></a>
                 @else
                     <a href="{{ route('surveys.public') }}" class="font-bold text-indigo-600 hover:text-indigo-500"> Browse all
                         <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i></a>
@@ -162,44 +205,40 @@
             </div>
         </div>
 
-        <!-- Pending Responses Widget (Respondent specific logic) -->
-        <div class="bg-white overflow-hidden shadow rounded-lg border-t-4 {{ $role === 'respondent' ? 'border-yellow-400' : 'border-yellow-400' }} transform hover:scale-[1.02] transition-all">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        @if($role === 'respondent')
-                            <i class="fa-solid fa-hourglass-half text-3xl text-yellow-400"></i>
-                        @else
+        @if($role !== 'respondent')
+            <!-- Draft Surveys Widget -->
+            <div
+                class="bg-white overflow-hidden shadow rounded-lg border-t-4 border-yellow-400 transform hover:scale-[1.02] transition-all">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
                             <i class="fa-regular fa-file-lines text-3xl text-yellow-500"></i>
-                        @endif
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">
-                                {{ $role === 'respondent' ? 'Pending Invitations' : 'Pending / Draft Surveys' }}
-                            </dt>
-                            <dd>
-                                <div class="text-2xl font-bold text-gray-900">
-                                    {{ $pendingSurveys ?? 0 }}
-                                </div>
-                            </dd>
-                        </dl>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">
+                                    Draft Surveys
+                                </dt>
+                                <dd>
+                                    <div class="text-2xl font-bold text-gray-900">
+                                        {{ $pendingSurveys ?? 0 }}
+                                    </div>
+                                </dd>
+                            </dl>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="bg-gray-50 px-5 py-3 text-xs">
-                @if($role === 'respondent')
-                    <span class="text-gray-400 font-medium italic">Check email for invites</span>
-                @else
-                    <a href="{{ route('projects.active') }}" class="font-bold text-yellow-600 hover:text-yellow-500">
+                <div class="bg-gray-50 px-5 py-3 text-xs">
+                    <a href="{{ route('projects.drafts') }}" class="font-bold text-yellow-600 hover:text-yellow-500">
                         Manage drafts <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
                     </a>
-                @endif
+                </div>
             </div>
-        </div>
+        @endif
 
         <!-- Generated Reports Widget -->
-        <div class="bg-white overflow-hidden shadow rounded-lg border-t-4 border-purple-400 transform hover:scale-[1.02] transition-all text-center">
+        <div
+            class="bg-white overflow-hidden shadow rounded-lg border-t-4 border-purple-400 transform hover:scale-[1.02] transition-all text-center">
             <div class="p-5">
                 <dl>
                     <dt class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Reports Generated</dt>
@@ -209,15 +248,10 @@
                 </dl>
             </div>
             <div class="bg-gray-50 px-5 py-3 text-xs">
-                @if($role === 'respondent')
-                    <a href="{{ route('respondent.history') }}" class="font-bold text-purple-600 hover:text-purple-500 uppercase tracking-tighter">
-                        My Reports <i class="fa-solid fa-chevron-right ml-1"></i>
-                    </a>
-                @else
-                    <a href="{{ route($role . '.reports.index') }}" class="font-bold text-purple-600 hover:text-purple-500 uppercase tracking-tighter">
-                        Reports Gallery <i class="fa-solid fa-chevron-right ml-1"></i>
-                    </a>
-                @endif
+                <a href="{{ route('research-proposal.history') }}"
+                    class="font-bold text-purple-600 hover:text-purple-500 uppercase tracking-tighter">
+                    Reports Gallery <i class="fa-solid fa-chevron-right ml-1"></i>
+                </a>
             </div>
         </div>
     </div>
@@ -236,20 +270,27 @@
                     @if(count($recentActivity) > 0)
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             @foreach($recentActivity as $activity)
-                                <div class="flex flex-col p-6 hover:bg-white rounded-2xl transition-all border border-gray-50 hover:border-indigo-200 hover:shadow-xl group bg-gray-50/50">
+                                <div
+                                    class="flex flex-col p-6 hover:bg-white rounded-2xl transition-all border border-gray-50 hover:border-indigo-200 hover:shadow-xl group bg-gray-50/50">
                                     <div class="flex items-center justify-between mb-4">
-                                        <div class="p-3 bg-indigo-100 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                        <div
+                                            class="p-3 bg-indigo-100 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                                             <i class="fa-solid fa-file-signature text-lg"></i>
                                         </div>
-                                        <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest bg-white px-2 py-1 rounded-md border border-indigo-50 shadow-sm">{{ $activity->status }}</span>
+                                        <span
+                                            class="text-[9px] font-black text-indigo-400 uppercase tracking-widest bg-white px-2 py-1 rounded-md border border-indigo-50 shadow-sm">{{ $activity->status }}</span>
                                     </div>
                                     <div class="flex-1 min-w-0 mb-6">
                                         <p class="text-base font-medium text-gray-900 mb-1 leading-tight">{{ $activity->title }}</p>
-                                        <p class="text-xs text-gray-400 font-medium tracking-tight">{{ $activity->created_at->diffForHumans() }}</p>
+                                        <p class="text-xs text-gray-400 font-medium tracking-tight">
+                                            {{ $activity->created_at->diffForHumans() }}
+                                        </p>
                                     </div>
                                     <div class="pt-4 border-t border-gray-100 flex justify-between items-center">
-                                        <span class="text-[10px] text-gray-300 font-bold uppercase">Activity Log #{{ $activity->id }}</span>
-                                        <a href="{{ route('projects.active') }}" class="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase flex items-center">
+                                        <span class="text-[10px] text-gray-300 font-bold uppercase">Activity Log
+                                            #{{ $activity->id }}</span>
+                                        <a href="{{ route('projects.active') }}"
+                                            class="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase flex items-center">
                                             Manage <i class="fa-solid fa-chevron-right ml-1 text-[8px]"></i>
                                         </a>
                                     </div>
@@ -262,7 +303,8 @@
                                 <i class="fa-solid fa-timeline text-gray-200 text-4xl"></i>
                             </div>
                             <p class="text-gray-900 text-lg font-black">Waiting for your first move.</p>
-                            <p class="text-sm text-gray-400 font-bold uppercase tracking-widest mt-1">Activities will appear here once you interact with the system.</p>
+                            <p class="text-sm text-gray-400 font-bold uppercase tracking-widest mt-1">Activities will appear here
+                                once you interact with the system.</p>
                         </div>
                     @endif
                 </div>
@@ -307,9 +349,11 @@
                                     <td class="px-6 py-5">
                                         <div class="flex flex-col">
                                             <div class="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
-                                                {{ $survey->title }}</div>
+                                                {{ $survey->title }}
+                                            </div>
                                             <div class="text-[11px] font-medium text-gray-400">Created
-                                                {{ $survey->created_at->format('M d, Y') }}</div>
+                                                {{ $survey->created_at->format('M d, Y') }}
+                                            </div>
                                         </div>
                                     </td>
                                     <td class="px-6 py-5 whitespace-nowrap">

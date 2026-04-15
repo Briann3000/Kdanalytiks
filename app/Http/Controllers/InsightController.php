@@ -23,15 +23,7 @@ class InsightController extends Controller
      */
     public function showQualitativeReport(\App\Models\Survey $survey)
     {
-        // Reuse authorizeOwner from SurveyController if possible or implement here
-        // For simplicity, we'll assume the middleware handles basic auth, 
-        // but we should check ownership.
-        if (auth()->user()->role->value !== 'admin' && 
-            $survey->created_by !== auth()->id() && 
-            $survey->organization_id !== auth()->user()->organization?->id &&
-            $survey->independent_id !== auth()->user()->independent?->id) {
-            abort(403);
-        }
+        \Illuminate\Support\Facades\Gate::authorize('view', $survey);
 
         $questions = [];
         if (!empty($survey->json_schema)) {
@@ -79,9 +71,9 @@ class InsightController extends Controller
             } else {
                 // JSON format
                 $surveyId = $survey->id;
-                $rawAnswers = Answer::whereHas('response', function($q) use ($surveyId) {
-                        $q->where('survey_id', $surveyId);
-                    })
+                $rawAnswers = Answer::whereHas('response', function ($q) use ($surveyId) {
+                    $q->where('survey_id', $surveyId);
+                })
                     ->whereNull('question_id')
                     ->pluck('value')
                     ->toArray();
@@ -104,60 +96,34 @@ class InsightController extends Controller
             return $this->analysisService->analyzeResponses($responses);
         });
 
+        // Backend Paywall Truncation Logic
+        $user = auth()->user();
+        $isTruncated = false;
+
+        if ($user && $user->role === \App\Enums\UserRole::Respondent && !$user->hasActiveSubscription()) {
+            $isTruncated = true;
+            if (isset($insight['key_themes']) && is_array($insight['key_themes'])) {
+                $insight['key_themes'] = array_slice($insight['key_themes'], 0, 1);
+            }
+            if (isset($insight['representative_quotes']) && is_array($insight['representative_quotes'])) {
+                $insight['representative_quotes'] = array_slice($insight['representative_quotes'], 0, 1);
+            }
+        }
+
+        $insight['is_truncated'] = $isTruncated;
+
         return response()->json($insight);
     }
 
     /**
      * Generate AI insights for a specific open-ended question or JSON field.
+     * (Preserved as a wrapper for the 'ai.insights.question' route)
      */
     public function generateQuestionInsight(Request $request, $questionId)
     {
-        // Existing method preserved for compatibility
         $surveyId = $request->query('survey_id');
-        $cacheKey = "ai_insight_q_{$questionId}_s_{$surveyId}";
-        $forceRefresh = $request->has('refresh');
+        $survey = \App\Models\Survey::findOrFail($surveyId);
 
-        if ($forceRefresh) {
-            Cache::forget($cacheKey);
-        }
-
-        $insight = Cache::remember($cacheKey, 86400, function () use ($questionId, $surveyId) {
-            $responses = [];
-
-            if (is_numeric($questionId)) {
-                // Legacy Question format
-                $responses = Answer::where('question_id', $questionId)
-                    ->whereNotNull('value')
-                    ->where('value', '!=', '')
-                    ->pluck('value')
-                    ->toArray();
-            } else {
-                // JSON Survey field format
-                $rawAnswers = Answer::whereHas('response', function($q) use ($surveyId) {
-                        $q->where('survey_id', $surveyId);
-                    })
-                    ->whereNull('question_id')
-                    ->pluck('value')
-                    ->toArray();
-
-                foreach ($rawAnswers as $jsonBlob) {
-                    $parsed = json_decode($jsonBlob, true) ?? [];
-                    foreach ($parsed as $entry) {
-                        if (isset($entry['name']) && $entry['name'] === $questionId && isset($entry['userData'])) {
-                            $val = $entry['userData'];
-                            if ($val !== null && $val !== '') {
-                                $responses[] = is_array($val) ? implode(', ', $val) : $val;
-                            }
-                        }
-                    }
-                }
-            }
-
-            \Log::info("Qualitative Analysis: Found " . count($responses) . " responses for Question ID: {$questionId} in Survey: {$surveyId}");
-            
-            return $this->analysisService->analyzeResponses($responses);
-        });
-
-        return response()->json($insight);
+        return $this->analyze($request, $survey, $questionId);
     }
 }

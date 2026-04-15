@@ -57,7 +57,7 @@
                                                 $parsed = json_decode($jsonAnswer->value, true) ?? [];
                                                 foreach ($parsed as $item) {
                                                     if (isset($item['name']) && $item['name'] === $header['id']) {
-                                                        $val = is_array($item['userData']) ? implode(', ', $item['userData']) : $item['userData'];
+                                                        $val = isset($item['userData']) ? (is_array($item['userData']) ? implode(', ', $item['userData']) : $item['userData']) : '—';
                                                         break;
                                                     }
                                                 }

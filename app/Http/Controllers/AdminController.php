@@ -90,8 +90,12 @@ class AdminController extends Controller
             $query->where('role', $request->role);
         }
 
-        if ($request->filled('status') && $request->status !== 'all') {
-            $query->where('status', $request->status);
+        if ($request->filled('status')) {
+            if ($request->status !== 'all') {
+                $query->where('status', $request->status);
+            }
+        } else {
+            $query->where('status', 'active');
         }
 
         $users = $query->orderBy('created_at', 'desc')->paginate(20);
@@ -141,13 +145,28 @@ class AdminController extends Controller
         }
 
         if ($request->filled('source')) {
-            if ($request->source === 'organization') $query->whereNotNull('organization_id');
-            elseif ($request->source === 'independent') $query->whereNotNull('independent_id');
-            elseif ($request->source === 'admin') $query->whereNull('organization_id')->whereNull('independent_id');
+            if ($request->source === 'organization')
+                $query->whereNotNull('organization_id');
+            elseif ($request->source === 'independent')
+                $query->whereNotNull('independent_id');
+            elseif ($request->source === 'admin')
+                $query->whereNull('organization_id')->whereNull('independent_id');
         }
 
         if ($request->filled('search')) {
-            $query->where('title', 'like', "%{$request->search}%");
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhereHas('creator', function ($sq) use ($search) {
+                        $sq->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('organization', function ($sq) use ($search) {
+                        $sq->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('independent', function ($sq) use ($search) {
+                        $sq->where('name', 'like', "%{$search}%");
+                    });
+            });
         }
 
         $surveys = $query->orderBy('created_at', 'desc')->paginate(20);
@@ -175,5 +194,24 @@ class AdminController extends Controller
     {
         $survey->update(['status' => \App\Enums\SurveyStatus::Closed]);
         return back()->with('success', "Survey '{$survey->title}' has been deactivated.");
+    }
+
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'survey_ids' => 'required|array',
+            'survey_ids.*' => 'exists:surveys,id'
+        ]);
+
+        $count = \App\Models\Survey::whereIn('id', $request->survey_ids)->delete();
+
+        if ($request->expectsJson() || $request->isXmlHttpRequest()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully deleted {$count} surveys from inventory."
+            ]);
+        }
+
+        return back()->with('success', "Successfully deleted {$count} surveys.");
     }
 }

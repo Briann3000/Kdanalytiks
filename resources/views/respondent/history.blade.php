@@ -34,11 +34,18 @@
                                     <span>Submitted on {{ $response->created_at->format('M j, Y g:i A') }}</span>
                                 </div>
                             </div>
-                            <div class="ml-4 flex-shrink-0">
+                            <div class="flex flex-col items-end gap-1">
                                 <span
                                     class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">
                                     <i class="fa-solid fa-check mr-1.5"></i> Completed
                                 </span>
+                                @if($response->survey && $response->survey->reward_per_response > 0)
+                                    <span
+                                        class="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
+                                        Earned: {{ number_format((float) $response->survey->reward_per_response, 2) }}
+                                        {{ $response->survey->currency ?? 'KES' }}
+                                    </span>
+                                @endif
                             </div>
                         </div>
                     </li>
@@ -61,9 +68,9 @@
                 @endforelse
             </ul>
 
-            @if($responses->hasPages())
+            @if(method_exists($responses, 'hasPages') && $responses->hasPages())
                 <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
-                    {{ $responses->links() }}
+                    {!! method_exists($responses, 'links') ? $responses->links() : '' !!}
                 </div>
             @endif
         </div>

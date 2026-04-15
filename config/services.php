@@ -40,4 +40,12 @@ return [
         'model' => env('GROQ_MODEL', 'llama-3.1-8b-instant'),
     ],
 
+    'intasend' => [
+        'publishable_key' => env('INTASEND_PUBLISHABLE_KEY'),
+        'secret_key' => env('INTASEND_SECRET_KEY'),
+        'private_key' => env('INTASEND_PRIVATE_KEY'),
+        'webhook_secret' => env('INTASEND_WEBHOOK_SECRET'),
+        'test_mode' => env('INTASEND_TEST_MODE', true),
+    ],
+
 ];
