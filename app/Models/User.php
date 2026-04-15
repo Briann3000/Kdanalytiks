@@ -18,8 +18,12 @@ class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
+        'phone_number',
         'role',
         'status',
+        'subscription_tier_id',
+        'subscription_expiry',
+        'payment_status',
     ];
 
     protected $hidden = [
@@ -32,6 +36,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password' => 'hashed',
         'role' => \App\Enums\UserRole::class,
         'status' => \App\Enums\UserStatus::class,
+        'subscription_expiry' => 'datetime',
     ];
 
     public function organization(): HasOne
@@ -49,9 +54,52 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Response::class, 'respondent_id');
     }
 
+    public function wallet(): HasOne
+    {
+        return $this->hasOne(Wallet::class);
+    }
+
+    public function subscriptionTier(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(SubscriptionTier::class, 'subscription_tier_id');
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === \App\Enums\UserRole::Admin;
+    }
+
+    public function hasActiveSubscription(): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        $entity = null;
+        if ($this->role === \App\Enums\UserRole::Organization) {
+            $entity = $this->organization;
+        } elseif ($this->role === \App\Enums\UserRole::Independent) {
+            $entity = $this->independent;
+        } elseif ($this->role === \App\Enums\UserRole::Respondent) {
+            // Respondents have subscription data directly on the user model
+            $entity = $this;
+        }
+
+        if (!$entity) {
+            return false;
+        }
+
+        $tier = $entity->subscriptionTier;
+        if (!$tier || str_contains(strtolower($tier->slug), 'free')) {
+            return false;
+        }
+
+        // Check if expiry exists and is in the future
+        if ($entity->subscription_expiry && $entity->subscription_expiry->isPast()) {
+            return false;
+        }
+
+        return $entity->payment_status === 'paid' || $entity->payment_status === 'COMPLETE';
     }
 
     /**
@@ -62,6 +110,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function hasVerifiedEmail(): bool
     {
-        return $this->isAdmin() || $this->email_verified_at !== null;
+        return $this->isAdmin() ||
+            $this->email_verified_at !== null;
     }
 }

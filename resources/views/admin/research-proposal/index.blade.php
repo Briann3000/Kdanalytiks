@@ -142,8 +142,8 @@
 
                         <div class="flex flex-col sm:flex-row items-center justify-between sm:justify-end space-y-4 sm:space-y-0 sm:space-x-4 pt-6 border-t border-gray-100">
                             <div class="flex items-center space-x-2 text-gray-400 w-full sm:w-auto justify-center sm:justify-start">
-                                <i class="fa-solid fa-shield-halved text-sm"></i>
-                                <span class="text-[10px] font-bold uppercase tracking-widest">Secure Processing</span>
+                                
+                                <span class="text-[10px] font-bold uppercase tracking-widest">This may take a while</span>
                             </div>
                             <button type="submit" class="w-full sm:w-auto min-h-[48px] px-10 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-md shadow-indigo-100 hover:bg-indigo-700 hover:shadow-lg transition-all transform active:scale-95 flex items-center justify-center border-none">
                                 <span class="whitespace-nowrap">Generate Full Report</span> <i class="fa-solid fa-arrow-right ml-2 bg-transparent text-white border-0"></i>

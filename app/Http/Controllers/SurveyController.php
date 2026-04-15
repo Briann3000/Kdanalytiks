@@ -18,7 +18,18 @@ class SurveyController extends Controller
 
     public function hub()
     {
-        return view('projects.hub', ['role' => auth()->user()->role]);
+        $user = auth()->user();
+        $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+
+        if ($role === 'admin') {
+            return redirect()->route('admin.surveys.index');
+        } elseif ($role === 'organization') {
+            return redirect()->route('organization.surveys.index');
+        } elseif ($role === 'independent') {
+            return redirect()->route('independent.surveys.index');
+        }
+
+        return redirect()->route('surveys.public');
     }
 
     public function archivedIndex()
@@ -110,6 +121,11 @@ class SurveyController extends Controller
             $survey->independent_id = $user->independent?->id;
         }
 
+        if ($user->organization?->hasReachedSurveyLimit()) {
+            // We allow creation of the DRAFT via GET (relaxed middleware),
+            // but we ensure any critical actions are aware of the limit state.
+        }
+
         $survey->save();
 
         return redirect()->route('surveys.edit', $survey);
@@ -133,6 +149,7 @@ class SurveyController extends Controller
         $survey->category = $validated['category'];
         $survey->status = \App\Enums\SurveyStatus::Draft;
         $survey->type = \App\Enums\SurveyType::Public;
+        $survey->public_access = 'submit';
         $survey->created_by = $user->id;
 
         if ($role === 'organization') {
@@ -157,53 +174,59 @@ class SurveyController extends Controller
     {
         $this->authorizeOwner($survey);
         $survey->load('collaborators.user');
-        
+
         if (!$survey->share_token) {
             $survey->update(['share_token' => Str::random(32)]);
         }
-        
+
         return view('surveys.project_settings', compact('survey'));
     }
 
     public function updateProjectSettings(Request $request, \App\Models\Survey $survey)
     {
         $this->authorizeOwner($survey);
-        
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'is_anonymous' => 'nullable',
             'public_access' => 'nullable|string|in:none,view,submit,edit',
         ]);
-        
+
         $survey->update([
             'title' => $validated['title'],
             'description' => $validated['description'],
             'is_anonymous' => $request->has('is_anonymous'),
             'public_access' => $validated['public_access'] ?? 'none'
         ]);
-        
+
         return back()->with('success', 'Settings updated successfully.');
     }
 
     public function addCollaborator(Request $request, \App\Models\Survey $survey)
     {
         $this->authorizeOwner($survey);
-        
+
         $request->validate([
             'email' => 'required|email|exists:users,email',
         ]);
-        
+
         $user = \App\Models\User::where('email', $request->email)->first();
-        
-        if ($user->id === (int)$survey->created_by) {
+
+        if ($user->id === (int) $survey->created_by) {
             return back()->with('error', 'Owner already has full access.');
         }
 
         // Available permission keys after simplification
         $permissionKeys = [
-            'view_form', 'edit_form', 'view_submissions', 'add_submissions', 
-            'edit_submissions', 'validate_submissions', 'delete_submissions', 'manage_project'
+            'view_form',
+            'edit_form',
+            'view_submissions',
+            'add_submissions',
+            'edit_submissions',
+            'validate_submissions',
+            'delete_submissions',
+            'manage_project'
         ];
 
         $permissions = [];
@@ -216,12 +239,12 @@ class SurveyController extends Controller
             $permissions['view_form'] = true;
             $permissions['add_submissions'] = true;
         }
-        
+
         \App\Models\SurveyPermission::updateOrCreate(
             ['survey_id' => $survey->id, 'user_id' => $user->id],
             ['permissions' => $permissions]
         );
-        
+
         return back()->with('success', 'Collaborator updated with granular permissions.');
     }
 
@@ -236,11 +259,31 @@ class SurveyController extends Controller
     {
         $this->authorizeOwner($survey);
         $survey->update(['status' => \App\Enums\SurveyStatus::Archived]);
-        return redirect()->route('projects.index')->with('success', 'Project archived successfully.');
+
+        $user = auth()->user();
+        $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+
+        if ($role === 'admin') {
+            return redirect()->route('admin.surveys.index')->with('success', 'Project archived successfully.');
+        } elseif ($role === 'organization') {
+            return redirect()->route('organization.surveys.index')->with('success', 'Project archived successfully.');
+        } elseif ($role === 'independent') {
+            return redirect()->route('independent.surveys.index')->with('success', 'Project archived successfully.');
+        }
+
+        return redirect()->route('projects.active')->with('success', 'Project archived successfully.');
     }
 
     public function store(Request $request)
     {
+        $user = $request->user();
+        if ($user->organization?->hasReachedSurveyLimit()) {
+            if ($request->expectsJson() || $request->isXmlHttpRequest()) {
+                return response()->json(['errors' => ['limit' => ["Your subscription plan survey limit has been reached. Please upgrade to create more."]]], 422);
+            }
+            return redirect()->back()->with('error', "Your subscription plan survey limit has been reached. Please upgrade to create more.");
+        }
+
         // This is now mainly called by the builder to update the draft/active survey
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -248,11 +291,14 @@ class SurveyController extends Controller
             'category' => 'required|string',
             'type' => 'required|string|in:public,invitation',
             'json_schema' => 'required|string',
+            'is_paid' => 'nullable|boolean',
+            'reward_per_response' => 'nullable|numeric|min:0',
+            'reward_budget' => 'nullable|numeric|min:0',
         ]);
 
         $user = auth()->user();
         $surveyId = $request->input('survey_id');
-        
+
         if ($surveyId) {
             $survey = \App\Models\Survey::findOrFail($surveyId);
             $this->authorizeOwner($survey);
@@ -265,10 +311,19 @@ class SurveyController extends Controller
         $survey->description = $validated['description'];
         $survey->category = $validated['category'];
         $survey->type = \App\Enums\SurveyType::tryFrom($validated['type']) ?? \App\Enums\SurveyType::Public;
+        $survey->public_access = ($survey->type === \App\Enums\SurveyType::Public) ? 'submit' : 'none';
         $survey->json_schema = $validated['json_schema'];
+        $survey->is_paid = $request->has('is_paid');
+        $survey->reward_per_response = $request->input('reward_per_response', 0);
+        $survey->reward_budget = $request->input('reward_budget', 0);
+
+        if ($request->filled('status')) {
+            $survey->status = \App\Enums\SurveyStatus::tryFrom($request->status) ?? $survey->status;
+        } elseif (!$survey->exists) {
+            $survey->status = \App\Enums\SurveyStatus::Draft;
+        }
 
         if (!$survey->exists) {
-            $survey->status = \App\Enums\SurveyStatus::Draft;
             $userRoleValue = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
             if ($userRoleValue === 'organization') {
                 $survey->organization_id = $user->organization?->id;
@@ -279,11 +334,19 @@ class SurveyController extends Controller
 
         $survey->save();
 
-        return response()->json([
-            'success' => true,
-            'survey_id' => $survey->id,
-            'message' => 'Project saved successfully'
-        ]);
+        if ($request->expectsJson() || $request->isXmlHttpRequest() || $request->header('Accept') == 'application/json') {
+            return response()->json([
+                'success' => true,
+                'survey_id' => $survey->id,
+                'message' => 'Project saved successfully'
+            ]);
+        }
+
+        $message = ($survey->status === \App\Enums\SurveyStatus::Active)
+            ? 'Survey published successfully and is now LIVE!'
+            : 'Survey saved as draft.';
+
+        return redirect()->route('projects.summary', $survey)->with('success', $message);
     }
 
     public function invite(Request $request, \App\Models\Survey $survey)
@@ -291,20 +354,27 @@ class SurveyController extends Controller
         $this->authorizeOwner($survey);
 
         $request->validate([
-            'emails' => 'required|string',
+            'emails' => 'required|string'
         ]);
 
-        $emails = array_map('trim', explode(',', $request->emails));
-        $count = 0;
+        // Parse comma, semicolon or newline separated emails
+        $emailString = str_replace([';', "\n", "\r"], ',', $request->emails);
+        $emailArray = array_map('trim', explode(',', $emailString));
+        $validEmails = array_filter($emailArray, function ($email) {
+            return filter_var($email, FILTER_VALIDATE_EMAIL);
+        });
 
-        foreach ($emails as $email) {
-            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                // In a real app, you would send an email here
-                $count++;
-            }
+        if (empty($validEmails)) {
+            return back()->with('error', 'No valid email addresses provided.');
         }
 
-        return back()->with('success', "Invitations sent to {$count} participants.");
+        $inviteUrl = route('surveys.show', $survey);
+
+        foreach ($validEmails as $email) {
+            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\SurveyInvitation($survey, $inviteUrl));
+        }
+
+        return back()->with('success', 'Invitations sent successfully to ' . count($validEmails) . ' recipients.');
     }
 
     public function responsesIndex()
@@ -312,31 +382,27 @@ class SurveyController extends Controller
         $user = auth()->user();
         $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
 
-        $responses = \App\Models\Response::with('survey', 'respondent');
+        $surveys = \App\Models\Survey::withCount('responses')->has('responses');
 
         if ($role === 'organization') {
             $orgId = $user->organization?->id;
             if ($orgId) {
-                $responses = $responses->whereHas('survey', function ($query) use ($orgId) {
-                    $query->where('organization_id', $orgId);
-                });
+                $surveys->where('organization_id', $orgId);
             } else {
-                $responses->whereRaw('1 = 0'); // Return nothing if no org linked
+                $surveys->whereRaw('1 = 0');
             }
         } elseif ($role === 'independent') {
             $indId = $user->independent?->id;
             if ($indId) {
-                $responses = $responses->whereHas('survey', function ($query) use ($indId) {
-                    $query->where('independent_id', $indId);
-                });
+                $surveys->where('independent_id', $indId);
             } else {
-                $responses->whereRaw('1 = 0');
+                $surveys->whereRaw('1 = 0');
             }
         }
 
-        $responses = $responses->orderBy('created_at', 'desc')->paginate(10);
+        $surveys = $surveys->orderBy('updated_at', 'desc')->paginate(10);
 
-        return view('responses.index', compact('responses', 'role'));
+        return view('responses.index', compact('surveys', 'role'));
     }
 
     public function reportsIndex()
@@ -449,7 +515,8 @@ class SurveyController extends Controller
 
         // Save for History
         $exportDir = storage_path('app/public/exports/' . $survey->id . '/');
-        if (!is_dir($exportDir)) mkdir($exportDir, 0755, true);
+        if (!is_dir($exportDir))
+            mkdir($exportDir, 0755, true);
         file_put_contents($exportDir . $filename, $csv);
 
         return response($csv)
@@ -508,7 +575,8 @@ class SurveyController extends Controller
                             }
                         }
                     }
-                    if ($found) $answeredCount++;
+                    if ($found)
+                        $answeredCount++;
                 }
 
                 $missingCount = $totalResponses - $answeredCount;
@@ -519,12 +587,12 @@ class SurveyController extends Controller
                 $stats = [];
                 foreach ($frequencyCount as $val => $count) {
                     $stats[] = [
-                        'value' => (string)$val,
-                        'count' => (int)$count,
+                        'value' => (string) $val,
+                        'count' => (int) $count,
                         'percentage' => $totalResponses > 0 ? round(($count / $totalResponses) * 100, 1) : 0
                     ];
                 }
-                
+
                 // Add Missing data to stats for completeness
                 $stats[] = [
                     'value' => '[Missing / Skipped]',
@@ -694,47 +762,26 @@ class SurveyController extends Controller
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.pdf', compact('survey', 'responses', 'analysis'));
         $filename = "Analytical_Report_" . Str::slug($survey->title) . "_" . date('Ymd_His') . ".pdf";
-        
+
         // Save for History
         $exportDir = storage_path('app/public/exports/' . $survey->id . '/');
-        if (!is_dir($exportDir)) mkdir($exportDir, 0755, true);
+        if (!is_dir($exportDir))
+            mkdir($exportDir, 0755, true);
         $output = $pdf->output();
         file_put_contents($exportDir . $filename, $output);
 
         return $pdf->download($filename);
     }
 
-    public function sendInvitation(Request $request, \App\Models\Survey $survey)
-    {
-        $this->authorizeOwner($survey);
-
-        $request->validate([
-            'emails' => 'required|string'
-        ]);
-
-        // Parse comma, semicolon or newline separated emails
-        $emailString = str_replace([';', "\n", "\r"], ',', $request->emails);
-        $emailArray = array_map('trim', explode(',', $emailString));
-        $validEmails = array_filter($emailArray, function ($email) {
-            return filter_var($email, FILTER_VALIDATE_EMAIL);
-        });
-
-        if (empty($validEmails)) {
-            return back()->with('error', 'No valid email addresses provided.');
-        }
-
-        $inviteUrl = route('surveys.show', $survey);
-
-        foreach ($validEmails as $email) {
-            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\SurveyInvitation($survey, $inviteUrl));
-        }
-
-        return back()->with('success', 'Invitations sent successfully to ' . count($validEmails) . ' recipients.');
-    }
 
     public function publish(Request $request, \App\Models\Survey $survey)
     {
         $this->authorizeOwner($survey);
+
+        $user = auth()->user();
+        if ($survey->status !== \App\Enums\SurveyStatus::Active && $user->organization?->hasReachedSurveyLimit()) {
+            return back()->with('error', 'Limit Reached: You cannot publish more surveys on your current plan. Please upgrade.');
+        }
 
         $survey->update(['status' => \App\Enums\SurveyStatus::Active]);
         return back()->with('success', 'Project deployed successfully and is now live!');
@@ -743,7 +790,17 @@ class SurveyController extends Controller
     public function edit(\App\Models\Survey $survey)
     {
         $this->authorizeOwner($survey);
-        return view('surveys.builder', compact('survey'));
+
+        $limitReached = false;
+        $user = auth()->user();
+        if ($user->organization) {
+            $tier = $user->organization->subscriptionTier ?? \App\Models\SubscriptionTier::where('slug', 'free')->first();
+            if ($tier->max_surveys !== -1 && $user->organization->surveys()->count() >= $tier->max_surveys) {
+                $limitReached = true;
+            }
+        }
+
+        return view('surveys.builder', compact('survey', 'limitReached'));
     }
 
     public function update(Request $request, \App\Models\Survey $survey)
@@ -755,6 +812,9 @@ class SurveyController extends Controller
             'category' => 'required|string',
             'type' => 'required|string|in:public,invitation',
             'json_schema' => 'required|string',
+            'is_paid' => 'nullable|boolean',
+            'reward_per_response' => 'nullable|numeric|min:0',
+            'reward_budget' => 'nullable|numeric|min:0',
         ]);
 
         $survey->update([
@@ -762,11 +822,32 @@ class SurveyController extends Controller
             'description' => $validated['description'],
             'category' => $validated['category'],
             'type' => $validated['type'],
+            'public_access' => ($validated['type'] === 'public') ? 'submit' : 'none',
             'json_schema' => $validated['json_schema'],
-            'status' => $survey->is_template ? $survey->status : \App\Enums\SurveyStatus::Draft
+            'is_paid' => $request->has('is_paid'),
+            'reward_per_response' => $request->input('reward_per_response', 0),
+            'reward_budget' => $request->input('reward_budget', 0),
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Survey updated successfully']);
+        if ($request->filled('status')) {
+            $survey->status = \App\Enums\SurveyStatus::tryFrom($request->status) ?? $survey->status;
+        }
+
+        $survey->save();
+
+        if ($request->expectsJson() || $request->isXmlHttpRequest() || $request->header('Accept') == 'application/json') {
+            return response()->json([
+                'success' => true,
+                'survey_id' => $survey->id,
+                'message' => 'Survey updated successfully'
+            ]);
+        }
+
+        $message = ($survey->status === \App\Enums\SurveyStatus::Active)
+            ? 'Survey published successfully and is now LIVE!'
+            : 'Survey updated successfully.';
+
+        return redirect()->route('projects.summary', $survey)->with('success', $message);
     }
 
     public function destroy(\App\Models\Survey $survey)
@@ -774,6 +855,40 @@ class SurveyController extends Controller
         $this->authorizeOwner($survey);
         $survey->delete();
         return back()->with('success', 'Survey deleted successfully.');
+    }
+
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'survey_ids' => 'required|array',
+            'survey_ids.*' => 'exists:surveys,id'
+        ]);
+
+        $user = auth()->user();
+        $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+
+        $query = \App\Models\Survey::whereIn('id', $request->survey_ids);
+
+        // Security: Ensure the user owns the surveys being deleted
+        if ($role === 'organization') {
+            $query->where('organization_id', $user->organization?->id);
+        } elseif ($role === 'independent') {
+            $query->where('independent_id', $user->independent?->id);
+        } else {
+            $query->where('created_by', $user->id);
+        }
+
+        $count = $query->count();
+        $query->delete();
+
+        if ($request->expectsJson() || $request->isXmlHttpRequest()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully deleted {$count} surveys."
+            ]);
+        }
+
+        return back()->with('success', "Successfully deleted {$count} surveys.");
     }
 
     public function publicIndex(Request $request)
@@ -789,6 +904,18 @@ class SurveyController extends Controller
             $query->where('category', $request->category);
         }
 
+        if ($request->filled('paid_status')) {
+            if ($request->paid_status === 'paid') {
+                $query->where('is_paid', true)
+                    ->whereRaw('(reward_budget - current_reward_spent) >= reward_per_response');
+            } elseif ($request->paid_status === 'unpaid') {
+                $query->where('is_paid', false);
+            } elseif ($request->paid_status === 'exhausted') {
+                $query->where('is_paid', true)
+                    ->whereRaw('(reward_budget - current_reward_spent) < reward_per_response');
+            }
+        }
+
         $surveys = $query->latest()->paginate(12);
 
         $categories = \App\Enums\SurveyCategory::cases();
@@ -801,14 +928,16 @@ class SurveyController extends Controller
         // Public view for taking the survey
         $user = auth()->user();
         $token = request('token');
-        
+
         $isOwner = $user && ($survey->created_by == $user->id);
         $isAdmin = $user && $user->isAdmin();
         $isCollaborator = $user && $survey->collaborators()->where('user_id', $user->id)->exists();
-        
+
         // Handle Sharing Token Access
         $hasToken = $token && $survey->share_token === $token;
-        $publicCanView = $survey->public_access !== 'none' || $hasToken;
+
+        // A survey is viewable if it is public, has explicit view permissions, or has a valid token
+        $publicCanView = ($survey->type === \App\Enums\SurveyType::Public) || ($survey->public_access !== 'none') || $hasToken;
 
         $isActive = ($survey->status === \App\Enums\SurveyStatus::Active) || $survey->is_template;
 
@@ -820,22 +949,26 @@ class SurveyController extends Controller
         // Check if user is forbidden from viewing based on public_access
         // Templates are publically viewable by authenticated users
         if (!$isOwner && !$isAdmin && !$isCollaborator && !$publicCanView && !$survey->is_template) {
-             abort(403, 'Access denied. You need permission to view this survey.');
+            abort(403, 'Access denied. You need permission to view this survey.');
         }
 
-        return view('surveys.show_public', compact('survey'));
+        // Check if monetization budget is exhausted (for warnings)
+        $budgetExhausted = $survey->is_paid && ($survey->current_reward_spent >= $survey->reward_budget);
+
+        return view('surveys.show_public', compact('survey', 'budgetExhausted'));
     }
 
     public function submit(Request $request, \App\Models\Survey $survey)
     {
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'terms_and_conditions' => 'required|accepted'
+            'terms_and_conditions' => 'required|accepted',
+            'json_data' => 'nullable|string|max:65535'
         ]);
 
         if ($validator->fails()) {
             if ($request->has('is_json_submission')) {
                 return response()->json([
-                    'success' => false, 
+                    'success' => false,
                     'message' => 'You must agree to the Terms and Conditions to proceed.'
                 ], 422);
             }
@@ -843,35 +976,88 @@ class SurveyController extends Controller
         }
 
         try {
+            \Illuminate\Support\Facades\DB::beginTransaction();
+
             // Create response record
             $response = new \App\Models\Response();
             $response->survey_id = $survey->id;
             $response->respondent_id = auth()->id(); // Will be null for guests
             $response->save();
 
+            // --- Reward Logic Start ---
+            $rewardMessage = '';
+            if ($survey->is_paid && $survey->reward_per_response > 0 && auth()->check()) {
+                $user = auth()->user();
+
+                // Check if user already responded to this survey to prevent double reward
+                $alreadyRewarded = \App\Models\Transaction::where('wallet_id', $user->wallet?->id)
+                    ->where('type', 'credit')
+                    ->where('description', 'like', "%Survey ID: {$survey->id}%")
+                    ->exists();
+
+                if (!$alreadyRewarded) {
+                    // Lock the survey record to prevent concurrent budget exhaustion Race Condition
+                    $surveyLocked = \App\Models\Survey::where('id', $survey->id)->lockForUpdate()->first();
+
+                    if ($surveyLocked && ($surveyLocked->current_reward_spent + (float) $surveyLocked->reward_per_response <= (float) $surveyLocked->reward_budget)) {
+                        // 1. Update Survey Spent
+                        $surveyLocked->increment('current_reward_spent', (float) $surveyLocked->reward_per_response);
+
+                        // Auto-close removed as per user request to allow continued unpaid submissions
+
+                        // 2. Get or Create Wallet
+                        $wallet = $user->wallet ?: \App\Models\Wallet::create(['user_id' => $user->id, 'balance' => 0]);
+
+                        // 3. Increment Wallet Balance
+                        $wallet->increment('balance', (float) $surveyLocked->reward_per_response);
+
+                        // 4. Record Transaction
+                        \App\Models\Transaction::create([
+                            'wallet_id' => $wallet->id,
+                            'amount' => (float) $surveyLocked->reward_per_response,
+                            'type' => 'credit',
+                            'status' => 'completed',
+                            'reference' => 'REW-' . strtoupper(Str::random(10)),
+                            'description' => "Reward for completing Survey ID: {$surveyLocked->id}"
+                        ]);
+
+                        $rewardMessage = " You earned " . number_format((float) $surveyLocked->reward_per_response, 2) . " " . ($wallet->currency ?? 'KES') . "!";
+                    }
+                }
+            }
+            // --- Reward Logic End ---
+
             $uploadDir = storage_path('app/public/uploads/');
             if (!is_dir($uploadDir)) {
-                // Non-braking directory creation check (to avoid Permission denied crash)
                 @mkdir($uploadDir, 0755, true);
             }
 
             $allowedMimeTypes = [
-                'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
-                'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/aac', 'audio/mp4',
-                'image/jpeg', 'image/png', 'image/gif', 'image/webp'
+                'video/mp4',
+                'video/webm',
+                'video/ogg',
+                'video/quicktime',
+                'audio/mpeg',
+                'audio/ogg',
+                'audio/wav',
+                'audio/webm',
+                'audio/aac',
+                'audio/mp4',
+                'image/jpeg',
+                'image/png',
+                'image/gif',
+                'image/webp'
             ];
 
             if ($request->has('is_json_submission')) {
-                $jsonData = json_decode($request->input('json_data'), true) ?? [];
-                
-                // Handle File Uploads for JSON Surveys
+                $jsonData = json_decode($request->input('json_data'), true, 20) ?? [];
+
                 foreach ($request->allFiles() as $name => $file) {
                     if ($file->isValid() && in_array($file->getMimeType(), $allowedMimeTypes)) {
-                        $newFileName = uniqid('media_') . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension();
+                        $newFileName = uniqid('media_') . '_' . bin2hex(random_bytes(4)) . '.' . $file->extension();
                         $file->move($uploadDir, $newFileName);
                         $storagePath = 'uploads/' . $newFileName;
-                        
-                        // Update the JSON data with the storage path
+
                         foreach ($jsonData as &$item) {
                             if (isset($item['name']) && $item['name'] === $name) {
                                 $item['userData'] = $storagePath;
@@ -883,17 +1069,19 @@ class SurveyController extends Controller
                 $answer = new \App\Models\Answer();
                 $answer->response_id = $response->id;
                 $answer->question_id = null;
-                $answer->value = json_encode($jsonData); 
+                $answer->value = json_encode($jsonData);
                 $answer->save();
 
-                // AI Sentiment Analysis Trigger
+                \Illuminate\Support\Facades\DB::commit();
+
+                // AI Sentiment Analysis (Background-ish)
                 try {
                     (new \App\Services\AiService())->analyzeResponseSentiment($response);
                 } catch (\Exception $e) {
                     \Log::error("AI Background Error: " . $e->getMessage());
                 }
 
-                session()->flash('success', 'Thank you for completing the survey!');
+                session()->flash('success', 'Thank you for completing the survey!' . $rewardMessage);
                 return response()->json(['success' => true]);
             }
 
@@ -903,19 +1091,14 @@ class SurveyController extends Controller
                 $inputName = 'question_' . $question->id;
                 $finalAnswerValue = '';
 
-                // Handle File Uploads
                 if (in_array($question->type, ['video', 'audio']) && $request->hasFile($inputName)) {
                     $file = $request->file($inputName);
-
                     if ($file->isValid() && in_array($file->getMimeType(), $allowedMimeTypes)) {
-                        $newFileName = uniqid('media_') . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension();
+                        $newFileName = uniqid('media_') . '_' . bin2hex(random_bytes(4)) . '.' . $file->extension();
                         $file->move($uploadDir, $newFileName);
                         $finalAnswerValue = 'uploads/' . $newFileName;
-                    } else {
-                        \Log::warning("Blocked invalid file upload for question " . $question->id);
                     }
                 } else {
-                    // Handle Standard Inputs
                     $answerValue = $request->input($inputName, '');
                     if (is_array($answerValue)) {
                         $answerValue = implode(', ', $answerValue);
@@ -923,36 +1106,34 @@ class SurveyController extends Controller
                     $finalAnswerValue = htmlspecialchars($answerValue);
                 }
 
-                // IMPORTANT: Fixed missing save() for legacy answers
                 if ($finalAnswerValue !== '') {
                     $answer = new \App\Models\Answer();
                     $answer->response_id = $response->id;
                     $answer->question_id = $question->id;
                     $answer->value = $finalAnswerValue;
-                    $answer->save(); // Fix applied here
+                    $answer->save();
                 }
             }
 
-            // AI Sentiment Analysis Trigger for legacy forms
+            \Illuminate\Support\Facades\DB::commit();
+
             try {
                 (new \App\Services\AiService())->analyzeResponseSentiment($response);
             } catch (\Exception $e) {
                 \Log::error("AI Background Error: " . $e->getMessage());
             }
 
-            return redirect()->back()->with('success', 'Thank you for completing the survey!');
+            return redirect()->back()->with('success', 'Thank you for completing the survey!' . $rewardMessage);
 
         } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
             \Log::error("Submission Error: " . $e->getMessage());
-            
+
             if ($request->has('is_json_submission')) {
-                return response()->json([
-                    'success' => false, 
-                    'message' => 'Critical Error: ' . $e->getMessage()
-                ], 500);
+                return response()->json(['success' => false, 'message' => 'Critical Error: ' . $e->getMessage()], 500);
             }
-            
-            return redirect()->back()->withErrors(['submission' => 'A critical error occurred while saving your responses. Please contact the administrator.'])->withInput();
+
+            return redirect()->back()->withErrors(['submission' => 'An error occurred. ' . $e->getMessage()])->withInput();
         }
     }
 
@@ -992,39 +1173,7 @@ class SurveyController extends Controller
 
     private function authorizeOwner(\App\Models\Survey $survey)
     {
-        $user = auth()->user();
-        if (!$user)
-            abort(403, 'Unauthorized action.');
-
-        // Admins can do everything
-        if ($user->isAdmin())
-            return;
-
-        // Check if the user is the direct creator
-        if ((int) $survey->created_by === (int) $user->id) {
-            return;
-        }
-
-        // Check for Collaborator Permission
-        $permission = \App\Models\SurveyPermission::where('survey_id', $survey->id)
-            ->where('user_id', $user->id)
-            ->first();
-            
-        if ($permission && in_array($permission->role, ['edit-survey', 'manage-access'])) {
-            return;
-        }
-
-        // Check organization ownership
-        if ($survey->organization_id && $user->organization && (int) $survey->organization_id === (int) $user->organization->id) {
-            return;
-        }
-
-        // Check independent ownership
-        if ($survey->independent_id && $user->independent && (int) $survey->independent_id === (int) $user->independent->id) {
-            return;
-        }
-
-        abort(403, 'You do not have permission to manage this survey.');
+        \Illuminate\Support\Facades\Gate::authorize('view', $survey);
     }
 
     public function getLibraryQuestions()
@@ -1032,7 +1181,7 @@ class SurveyController extends Controller
         $questions = QuestionLibrary::where('user_id', auth()->id())
             ->orWhere('is_public', true)
             ->get()
-            ->map(function($item) {
+            ->map(function ($item) {
                 return [
                     'id' => $item->id,
                     'title' => $item->title,
@@ -1041,14 +1190,14 @@ class SurveyController extends Controller
                     'is_template' => false
                 ];
             });
-            
+
         $dbTemplates = \App\Models\Survey::where('is_template', true)
             ->get()
-            ->map(function($item) {
+            ->map(function ($item) {
                 return [
                     'id' => 'db-tpl-' . $item->id,
                     'title' => $item->title,
-                    'type' => $item->category instanceof \UnitEnum ? $item->category->name : (string)$item->category,
+                    'type' => $item->category instanceof \UnitEnum ? $item->category->name : (string) $item->category,
                     'is_template' => true,
                     'content' => is_string($item->json_schema) ? json_decode($item->json_schema, true) : $item->json_schema
                 ];
@@ -1080,16 +1229,16 @@ class SurveyController extends Controller
     public function showGallery(\App\Models\Survey $survey)
     {
         $this->authorizeOwner($survey);
-        
+
         $mediaFiles = [];
         $responses = $survey->responses()->with('answers')->get();
-        
+
         foreach ($responses as $response) {
             foreach ($response->answers as $answer) {
                 // Legacy / Direct Uploads
                 if (str_starts_with($answer->value, 'uploads/')) {
                     $mediaFiles[] = $this->formatMediaItem($answer->value, $response->created_at);
-                } 
+                }
                 // JSON Uploads (need to parse JSON if question_id is null)
                 elseif ($answer->question_id === null) {
                     $data = json_decode($answer->value, true) ?? [];
@@ -1109,9 +1258,12 @@ class SurveyController extends Controller
     {
         $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
         $type = 'file';
-        if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'])) $type = 'image';
-        elseif (in_array($ext, ['mp4', 'webm', 'ogg', 'mov'])) $type = 'video';
-        elseif (in_array($ext, ['mp3', 'wav', 'aac'])) $type = 'audio';
+        if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']))
+            $type = 'image';
+        elseif (in_array($ext, ['mp4', 'webm', 'ogg', 'mov']))
+            $type = 'video';
+        elseif (in_array($ext, ['mp3', 'wav', 'aac']))
+            $type = 'audio';
 
         return [
             'path' => $path,
@@ -1124,10 +1276,10 @@ class SurveyController extends Controller
     public function showDownloads(\App\Models\Survey $survey)
     {
         $this->authorizeOwner($survey);
-        
+
         $exports = [];
         $exportDir = storage_path('app/public/exports/' . $survey->id . '/');
-        
+
         if (is_dir($exportDir)) {
             $fileEntries = array_diff(scandir($exportDir, SCANDIR_SORT_DESCENDING), ['.', '..']);
             foreach ($fileEntries as $file) {
@@ -1150,16 +1302,16 @@ class SurveyController extends Controller
     public function deleteDownload(\App\Models\Survey $survey, $filename)
     {
         $this->authorizeOwner($survey);
-        
+
         // Sanitize filename to prevent directory traversal
         $filename = basename($filename);
         $filePath = storage_path('app/public/exports/' . $survey->id . '/' . $filename);
-        
+
         if (file_exists($filePath) && is_file($filePath)) {
             unlink($filePath);
             return response()->json(['success' => true]);
         }
-        
+
         return response()->json(['success' => false, 'message' => 'File not found'], 404);
     }
 }

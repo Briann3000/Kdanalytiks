@@ -11,6 +11,49 @@
                     {{ $role }} DASHBOARD &bull; <span class="text-green-600">SYSTEM ONLINE</span>
                 </p>
             </div>
+            @if(in_array($role, ['organization', 'independent']) && isset($subscriptionTier))
+                @php
+                    $tierSlug = $subscriptionTier->slug ?? 'free';
+                    $tierName = $subscriptionTier->name ?? 'Free';
+                    $tierConfig = match (true) {
+                        str_contains(strtolower($tierSlug), 'enterprise') => [
+                            'bg' => 'bg-amber-50',
+                            'text' => 'text-amber-700',
+                            'border' => 'border-amber-300',
+                            'dot' => 'bg-amber-500',
+                            'icon' => 'fa-crown',
+                            'label' => 'Enterprise',
+                        ],
+                        str_contains(strtolower($tierSlug), 'pro') => [
+                            'bg' => 'bg-indigo-50',
+                            'text' => 'text-indigo-700',
+                            'border' => 'border-indigo-300',
+                            'dot' => 'bg-indigo-500',
+                            'icon' => 'fa-bolt',
+                            'label' => 'Pro',
+                        ],
+                        default => [
+                            'bg' => 'bg-gray-100',
+                            'text' => 'text-gray-500',
+                            'border' => 'border-gray-300',
+                            'dot' => 'bg-gray-400',
+                            'icon' => 'fa-circle-check',
+                            'label' => 'Free',
+                        ],
+                    };
+                @endphp
+                <div class="flex flex-col items-end gap-1">
+                    <span
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest border shadow-sm {{ $tierConfig['bg'] }} {{ $tierConfig['text'] }} {{ $tierConfig['border'] }}">
+                        <i class="fa-solid {{ $tierConfig['icon'] }} text-[11px]"></i>
+                        {{ $tierName }} Plan
+                    </span>
+                    <a href="{{ route('subscriptions.index') }}"
+                        class="text-[10px] font-bold text-indigo-500 hover:text-indigo-700 tracking-wide transition-colors">
+                        @if($tierSlug === 'free') Upgrade Plan &rsaquo; @else Manage Subscription &rsaquo; @endif
+                    </a>
+                </div>
+            @endif
         </div>
     </div>
 
@@ -240,7 +283,8 @@
                                     <div class="flex-1 min-w-0 mb-6">
                                         <p class="text-base font-medium text-gray-900 mb-1 leading-tight">{{ $activity->title }}</p>
                                         <p class="text-xs text-gray-400 font-medium tracking-tight">
-                                            {{ $activity->created_at->diffForHumans() }}</p>
+                                            {{ $activity->created_at->diffForHumans() }}
+                                        </p>
                                     </div>
                                     <div class="pt-4 border-t border-gray-100 flex justify-between items-center">
                                         <span class="text-[10px] text-gray-300 font-bold uppercase">Activity Log

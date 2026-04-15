@@ -8,8 +8,7 @@
             <span class="hidden md:inline text-gray-500">|</span>
             <span>Powered by <span class="font-semibold text-white">PRC™ Consulting</span></span>
             <span class="hidden md:inline text-gray-500">|</span>
-            <a href="mailto:kmsurveytool@gmail.com"
-                class="hover:text-white transition-colors">kmsurveytool@gmail.com</a>
+            <a href="mailto:info@kmsurveytool.com" class="hover:text-white transition-colors">info@kmsurveytool.com</a>
             <span class="hidden md:inline text-gray-500">|</span>
             <a href="{{ route('privacy') }}" class="hover:text-white transition-colors font-medium">Privacy Policy</a>
         </div>

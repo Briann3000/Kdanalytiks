@@ -23,8 +23,13 @@ class Survey extends Model
         'json_schema',
         'created_by',
         'is_anonymous',
+        'is_paid',
         'public_access',
         'share_token',
+        'reward_per_response',
+        'reward_budget',
+        'current_reward_spent',
+        'reward_currency',
     ];
 
     protected $casts = [
@@ -33,6 +38,10 @@ class Survey extends Model
         'category' => \App\Enums\SurveyCategory::class,
         'is_template' => 'boolean',
         'is_anonymous' => 'boolean',
+        'is_paid' => 'boolean',
+        'reward_per_response' => 'decimal:2',
+        'reward_budget' => 'decimal:2',
+        'current_reward_spent' => 'decimal:2',
     ];
 
     public function collaborators(): HasMany
