@@ -136,12 +136,16 @@ class IntasendGateway implements PaymentGatewayInterface
 
             $response = $transfer->mpesa($currency, $transactions);
 
+            // Step 2: Auto-approve the payout batch 
+            // This moves the status from BP103 (Preview and approve) to processing
+            $approveResponse = $transfer->approve($response);
+
             return [
                 'status' => 'success',
                 'amount' => $amount,
                 'currency' => $currency,
-                'reference' => $response->tracking_id ?? $response['tracking_id'] ?? 'TS-' . strtoupper(\Illuminate\Support\Str::random(10)),
-                'message' => 'Payout initiated successfully via IntaSend.'
+                'reference' => $approveResponse->tracking_id ?? $response->tracking_id ?? $response['tracking_id'] ?? 'TS-' . strtoupper(\Illuminate\Support\Str::random(10)),
+                'message' => 'Payout initiated and approved successfully via IntaSend.'
             ];
 
         } catch (\Exception $e) {

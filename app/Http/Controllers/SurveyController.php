@@ -18,7 +18,18 @@ class SurveyController extends Controller
 
     public function hub()
     {
-        return view('projects.hub', ['role' => auth()->user()->role]);
+        $user = auth()->user();
+        $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+
+        if ($role === 'admin') {
+            return redirect()->route('admin.surveys.index');
+        } elseif ($role === 'organization') {
+            return redirect()->route('organization.surveys.index');
+        } elseif ($role === 'independent') {
+            return redirect()->route('independent.surveys.index');
+        }
+
+        return redirect()->route('surveys.public');
     }
 
     public function archivedIndex()
@@ -248,7 +259,19 @@ class SurveyController extends Controller
     {
         $this->authorizeOwner($survey);
         $survey->update(['status' => \App\Enums\SurveyStatus::Archived]);
-        return redirect()->route('projects.index')->with('success', 'Project archived successfully.');
+
+        $user = auth()->user();
+        $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+
+        if ($role === 'admin') {
+            return redirect()->route('admin.surveys.index')->with('success', 'Project archived successfully.');
+        } elseif ($role === 'organization') {
+            return redirect()->route('organization.surveys.index')->with('success', 'Project archived successfully.');
+        } elseif ($role === 'independent') {
+            return redirect()->route('independent.surveys.index')->with('success', 'Project archived successfully.');
+        }
+
+        return redirect()->route('projects.active')->with('success', 'Project archived successfully.');
     }
 
     public function store(Request $request)
@@ -883,9 +906,13 @@ class SurveyController extends Controller
 
         if ($request->filled('paid_status')) {
             if ($request->paid_status === 'paid') {
-                $query->where('is_paid', true);
+                $query->where('is_paid', true)
+                    ->whereRaw('(reward_budget - current_reward_spent) >= reward_per_response');
             } elseif ($request->paid_status === 'unpaid') {
                 $query->where('is_paid', false);
+            } elseif ($request->paid_status === 'exhausted') {
+                $query->where('is_paid', true)
+                    ->whereRaw('(reward_budget - current_reward_spent) < reward_per_response');
             }
         }
 

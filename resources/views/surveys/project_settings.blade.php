@@ -73,28 +73,6 @@
                             project.</p>
                     </div>
                     <div class="md:col-span-2 space-y-6">
-                        <form action="{{ route('projects.settings.update', $survey) }}" method="POST" class="space-y-4">
-                            @csrf
-                            <div>
-                                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Public
-                                    Access Level</label>
-                                <select name="public_access"
-                                    class="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none">
-                                    <option value="none" {{ $survey->public_access === 'none' ? 'selected' : '' }}>Private
-                                        (Internal only)</option>
-                                    <option value="submit" {{ $survey->public_access === 'submit' ? 'selected' : '' }}>Public
-                                        Submission (Anyone can fill)</option>
-                                    <option value="view" {{ $survey->public_access === 'view' ? 'selected' : '' }}>Publicly
-                                        Viewable (Anyone can see results)</option>
-                                    <option value="edit" {{ $survey->public_access === 'edit' ? 'selected' : '' }}>Publicly
-                                        Editable (WARNING: Anyone can edit schema)</option>
-                                </select>
-                            </div>
-                            <button type="submit"
-                                class="px-6 py-2 bg-gray-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-800 transition-all">
-                                Save Access Mode
-                            </button>
-                        </form>
 
                         <div class="p-6 rounded-2xl border border-indigo-100 bg-indigo-50/20">
                             <label

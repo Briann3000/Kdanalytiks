@@ -125,9 +125,20 @@
         }
 
         .likert-item.active {
-            background: #6366f1 !important;
+            background: #4f46e5 !important;
             color: white !important;
-            border-color: #6366f1 !important;
+            border-color: #4f46e5 !important;
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4) !important;
+            transform: scale(1.05);
+        }
+
+        /* Choice Highlighting */
+        .radio-inline.active-choice,
+        .checkbox-inline.active-choice {
+            background: #eef2ff !important;
+            border-color: #4f46e5 !important;
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1) !important;
+            color: #4f46e5 !important;
         }
 
         .recorder-dashboard {
@@ -603,27 +614,27 @@
                         </div>
 
                         <div class="p-8 space-y-6 min-h-[500px] bg-slate-50/20" id="questions-list" x-init="
-                                        new Sortable($el, {
-                                            handle: '.drag-handle',
-                                            animation: 150,
-                                            ghostClass: 'sortable-ghost',
-                                            delay: 150, // Delay to allow scrolling on mobile
-                                            delayOnTouchOnly: true, // Only apply delay on touch
-                                            onEnd: (evt) => {
-                                                const newQs = [...questions];
-                                                const [movedItem] = newQs.splice(evt.oldIndex, 1);
-                                                newQs.splice(evt.newIndex, 0, movedItem);
-                                                questions = newQs;
-                                                syncToJson();
-                                            }
-                                        })
-                                    ">
+                                            new Sortable($el, {
+                                                handle: '.drag-handle',
+                                                animation: 150,
+                                                ghostClass: 'sortable-ghost',
+                                                delay: 150, // Delay to allow scrolling on mobile
+                                                delayOnTouchOnly: true, // Only apply delay on touch
+                                                onEnd: (evt) => {
+                                                    const newQs = [...questions];
+                                                    const [movedItem] = newQs.splice(evt.oldIndex, 1);
+                                                    newQs.splice(evt.newIndex, 0, movedItem);
+                                                    questions = newQs;
+                                                    syncToJson();
+                                                }
+                                            })
+                                        ">
                             <template x-for="(q, index) in questions" :key="q.id || index">
                                 <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 relative group hover:border-indigo-400 hover:shadow-indigo-100 transition-all ml-16"
                                     :class="[
-                                                    q.type === 'group' ? 'border-l-4 border-l-rose-400' : '',
-                                                    selectedQuestions.includes(index) ? 'ring-2 ring-indigo-500 bg-indigo-50/10' : ''
-                                                 ]">
+                                                        q.type === 'group' ? 'border-l-4 border-l-rose-400' : '',
+                                                        selectedQuestions.includes(index) ? 'ring-2 ring-indigo-500 bg-indigo-50/10' : ''
+                                                     ]">
 
                                     <!-- Sidebar: Selection, Number, Drag -->
                                     <div class="absolute -left-14 top-4 h-full flex flex-col items-center space-y-4 z-20">
@@ -1662,13 +1673,13 @@
                             const id = fieldData.name;
                             return {
                                 field: `
-                                        <div class="rating-wrapper bg-white py-6 px-4 rounded-2xl mb-4 border border-gray-100 shadow-sm">
-                                            <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rating'}</label>
-                                            <div class="likert-container" id="likert_${id}" style="display: flex !important; justify-content: space-between !important; gap: 8px !important;">
-                                                ${[1, 2, 3, 4, 5].map(i => `<div class="likert-item" data-value="${i}" onclick="setLikertValue('${id}', ${i})" style="flex:1; text-align:center; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; font-weight:700;">${i}</div>`).join('')}
-                                            </div>
-                                            <input type="hidden" name="${id}" id="input_${id}" value="">
-                                        </div>`
+                                            <div class="rating-wrapper bg-white py-6 px-4 rounded-2xl mb-4 border border-gray-100 shadow-sm">
+                                                <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rating'}</label>
+                                                <div class="likert-container" id="likert_${id}" style="display: flex !important; justify-content: space-between !important; gap: 8px !important;">
+                                                    ${[1, 2, 3, 4, 5].map(i => `<div class="likert-item" data-value="${i}" onclick="setLikertValue('${id}', ${i})" style="flex:1; text-align:center; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; font-weight:700;">${i}</div>`).join('')}
+                                                </div>
+                                                <input type="hidden" name="${id}" id="input_${id}" value="">
+                                            </div>`
                             };
                         },
                         'ranking_list': function (fieldData) {
@@ -1676,26 +1687,26 @@
                             const options = fieldData.values || [];
                             return {
                                 field: `
-                                        <div class="ranking-wrapper bg-white p-6 rounded-2xl mb-4 border border-gray-100 shadow-sm">
-                                            <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rank the following'}</label>
-                                            <div class="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest block mb-2">Choices</span>
-                                                    <div id="pool_${id}" class="rank-pool" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;">
-                                                        ${options.map(opt => `
-                                                            <div class="rank-item" data-value="${opt.value}" onclick="toggleRankItem('${id}', this)">
-                                                                ${opt.label}
-                                                            </div>
-                                                        `).join('')}
+                                            <div class="ranking-wrapper bg-white p-6 rounded-2xl mb-4 border border-gray-100 shadow-sm">
+                                                <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rank the following'}</label>
+                                                <div class="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest block mb-2">Choices</span>
+                                                        <div id="pool_${id}" class="rank-pool" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;">
+                                                            ${options.map(opt => `
+                                                                <div class="rank-item" data-value="${opt.value}" onclick="toggleRankItem('${id}', this)">
+                                                                    ${opt.label}
+                                                                </div>
+                                                            `).join('')}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <span class="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2">Your Order</span>
+                                                        <div id="ranked_${id}" class="rank-ordered" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;"></div>
                                                     </div>
                                                 </div>
-                                                <div>
-                                                    <span class="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2">Your Order</span>
-                                                    <div id="ranked_${id}" class="rank-ordered" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;"></div>
-                                                </div>
-                                            </div>
-                                            <input type="hidden" name="${id}" id="input_${id}" value="">
-                                        </div>`,
+                                                <input type="hidden" name="${id}" id="input_${id}" value="">
+                                            </div>`,
                                 onRender: () => setupRankingUI(id)
                             };
                         },
@@ -1703,20 +1714,20 @@
                             const id = fieldData.name + '_preview';
                             return {
                                 field: `
-                                        <div class="recorder-dashboard mb-4" style="background:#1e293b; color:white; padding:24px; border-radius:24px; text-align:center;">
-                                            <div class="recorder-status" id="status_${id}" style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; margin-bottom:16px;">Audio Ready</div>
-                                            <div class="recorder-timer" id="timer_${id}" style="font-family:monospace; font-size:32px; font-weight:700; margin:16px 0;">00:00</div>
-                                            <div class="flex items-center justify-center space-x-6 gap-6" style="display:flex; justify-content:center; align-items:center;">
-                                                <div id="start_${id}" class="record-btn" style="width:64px; height:64px; background:#ef4444; border-radius:999px; display:flex !important; align-items:center; justify-content:center; cursor:pointer; border:4px solid rgba(255,255,255,0.1);">
-                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+                                            <div class="recorder-dashboard mb-4" style="background:#1e293b; color:white; padding:24px; border-radius:24px; text-align:center;">
+                                                <div class="recorder-status" id="status_${id}" style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; margin-bottom:16px;">Audio Ready</div>
+                                                <div class="recorder-timer" id="timer_${id}" style="font-family:monospace; font-size:32px; font-weight:700; margin:16px 0;">00:00</div>
+                                                <div class="flex items-center justify-center space-x-6 gap-6" style="display:flex; justify-content:center; align-items:center;">
+                                                    <div id="start_${id}" class="record-btn" style="width:64px; height:64px; background:#ef4444; border-radius:999px; display:flex !important; align-items:center; justify-content:center; cursor:pointer; border:4px solid rgba(255,255,255,0.1);">
+                                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+                                                    </div>
+                                                    <div id="stop_${id}" class="record-btn bg-gray-600 hidden" style="width:64px; height:64px; background:#4b5563; border-radius:12px; display:none; align-items:center; justify-content:center; cursor:pointer;">
+                                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 6h12v12H6z"/></svg>
+                                                    </div>
                                                 </div>
-                                                <div id="stop_${id}" class="record-btn bg-gray-600 hidden" style="width:64px; height:64px; background:#4b5563; border-radius:12px; display:none; align-items:center; justify-content:center; cursor:pointer;">
-                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 6h12v12H6z"/></svg>
-                                                </div>
-                                            </div>
-                                            <audio id="player_${id}" controls class="hidden w-full mt-6" style="display:none; width:100%; margin-top:24px;"></audio>
-                                            <button type="button" id="retake_${id}" class="mt-4 text-[10px] uppercase font-black text-indigo-400 hidden" style="display:none; background:none; border:none; color:#818cf8; cursor:pointer;">Retake Recording</button>
-                                        </div>`,
+                                                <audio id="player_${id}" controls class="hidden w-full mt-6" style="display:none; width:100%; margin-top:24px;"></audio>
+                                                <button type="button" id="retake_${id}" class="mt-4 text-[10px] uppercase font-black text-indigo-400 hidden" style="display:none; background:none; border:none; color:#818cf8; cursor:pointer;">Retake Recording</button>
+                                            </div>`,
                                 onRender: () => setupPreviewRecorder(id, 'audio')
                             };
                         },
@@ -1724,23 +1735,23 @@
                             const id = fieldData.name + '_preview';
                             return {
                                 field: `
-                                        <div class="recorder-dashboard mb-4" style="background:#1e293b; color:white; padding:0; border-radius:24px; overflow:hidden; position:relative;">
-                                            <div class="relative aspect-video bg-black" style="background:black; aspect-ratio:16/9; position:relative;">
-                                                <video id="preview_${id}" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; opacity:0.5;"></video>
-                                                <video id="player_${id}" controls style="display:none; width:100%; height:100%; object-fit:contain;"></video>
-                                                <div class="absolute inset-0 flex flex-col items-center justify-center" style="position:absolute; inset:0; display:flex; flex-direction:column; items-center; justify-center;">
-                                                    <div class="recorder-status" id="status_${id}" style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; margin-bottom:8px;">Camera Ready</div>
-                                                    <div class="recorder-timer" id="timer_${id}" style="font-family:monospace; font-size:24px; font-weight:700; margin-bottom:16px;">00:00</div>
-                                                    <div id="start_${id}" class="record-btn" style="width:56px; height:56px; background:#ef4444; border-radius:999px; display:flex !important; align-items:center; justify-content:center; cursor:pointer; border:4px solid rgba(255,255,255,0.2);">
-                                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
-                                                    </div>
-                                                    <div id="stop_${id}" class="record-btn bg-gray-600 hidden" style="width:56px; height:56px; background:#4b5563; border-radius:12px; display:none; align-items:center; justify-content:center; cursor:pointer;">
-                                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 6h12v12H6z"/></svg>
+                                            <div class="recorder-dashboard mb-4" style="background:#1e293b; color:white; padding:0; border-radius:24px; overflow:hidden; position:relative;">
+                                                <div class="relative aspect-video bg-black" style="background:black; aspect-ratio:16/9; position:relative;">
+                                                    <video id="preview_${id}" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; opacity:0.5;"></video>
+                                                    <video id="player_${id}" controls style="display:none; width:100%; height:100%; object-fit:contain;"></video>
+                                                    <div class="absolute inset-0 flex flex-col items-center justify-center" style="position:absolute; inset:0; display:flex; flex-direction:column; items-center; justify-center;">
+                                                        <div class="recorder-status" id="status_${id}" style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; margin-bottom:8px;">Camera Ready</div>
+                                                        <div class="recorder-timer" id="timer_${id}" style="font-family:monospace; font-size:24px; font-weight:700; margin-bottom:16px;">00:00</div>
+                                                        <div id="start_${id}" class="record-btn" style="width:56px; height:56px; background:#ef4444; border-radius:999px; display:flex !important; align-items:center; justify-content:center; cursor:pointer; border:4px solid rgba(255,255,255,0.2);">
+                                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                                                        </div>
+                                                        <div id="stop_${id}" class="record-btn bg-gray-600 hidden" style="width:56px; height:56px; background:#4b5563; border-radius:12px; display:none; align-items:center; justify-content:center; cursor:pointer;">
+                                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 6h12v12H6z"/></svg>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <button type="button" id="retake_${id}" class="absolute bottom-4 right-4" style="display:none; position:absolute; bottom:16px; right:16px; background:rgba(0,0,0,0.5); color:white; padding:8px 16px; border-radius:24px; border:none; font-size:10px; font-weight:900; text-transform:uppercase; cursor:pointer;">Retake</button>
-                                        </div>`,
+                                                <button type="button" id="retake_${id}" class="absolute bottom-4 right-4" style="display:none; position:absolute; bottom:16px; right:16px; background:rgba(0,0,0,0.5); color:white; padding:8px 16px; border-radius:24px; border:none; font-size:10px; font-weight:900; text-transform:uppercase; cursor:pointer;">Retake</button>
+                                            </div>`,
                                 onRender: () => setupPreviewRecorder(id, 'video')
                             };
                         }
@@ -1990,5 +2001,21 @@
                 validateJSON();
             }
         }
+
+        // Global Selection Highlighting Logic for Preview
+        jQuery(function ($) {
+            $(document).on('change', 'input[type="radio"], input[type="checkbox"]', function () {
+                const name = $(this).attr('name');
+                if ($(this).attr('type') === 'radio') {
+                    $(`input[name="${name}"], [name="${name}[]"]`).closest('label').removeClass('active-choice');
+                }
+
+                if ($(this).is(':checked')) {
+                    $(this).closest('label').addClass('active-choice');
+                } else {
+                    $(this).closest('label').removeClass('active-choice');
+                }
+            });
+        });
     </script>
 @endpush

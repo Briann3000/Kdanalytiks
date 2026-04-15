@@ -9,7 +9,7 @@
 
     // Determine default expanded section based on active route
     $initialExpanded = null;
-    if (request()->routeIs(['projects.index', 'projects.active', 'projects.summary', 'projects.data', 'projects.reports', 'projects.settings', 'surveys.create', 'surveys.edit', 'projects.drafts']))
+    if (request()->routeIs(['projects.active', 'projects.summary', 'projects.data', 'projects.reports', 'projects.settings', 'surveys.create', 'surveys.edit', 'projects.drafts']))
         $initialExpanded = 'projects';
     if (request()->routeIs(['projects.archived']))
         $initialExpanded = 'library';
@@ -41,7 +41,7 @@
         this.hoverItem = type;
         const r = e.getBoundingClientRect();
         this.flyoutTop = r.top;
-        this.flyoutLeft = r.right;
+        this.flyoutLeft = r.right - 5;
     },
     clearFlyout() {
         this.hoverItem = null;
@@ -111,7 +111,7 @@
                         <div class="mb-1">
                             <div @click="allUsersExpanded = !allUsersExpanded"
                                 x-data="{ nestSub: false, nestTop: 0, nestLeft: 0 }"
-                                @mouseenter="const r = $el.getBoundingClientRect(); nestTop = r.top; nestLeft = r.right + 15; nestSub = true"
+                                @mouseenter="const r = $el.getBoundingClientRect(); nestTop = r.top; nestLeft = r.right - 5; nestSub = true"
                                 @mouseleave="nestSub = false"
                                 class="flex items-center justify-between py-1.5 text-xs font-bold {{ request()->routeIs('admin.users.index') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} cursor-pointer transition-colors relative">
                                 <div class="flex items-center">
@@ -179,10 +179,10 @@
                                 <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-3">
                                     Inventory</div>
                                 <div class="relative" x-data="{ n1: false, n1Top: 0, n1Left: 0 }"
-                                    @mouseenter="const r = $el.getBoundingClientRect(); n1Top = r.top; n1Left = r.right + 15; n1 = true"
+                                    @mouseenter="const r = $el.getBoundingClientRect(); n1Top = r.top; n1Left = r.right - 5; n1 = true"
                                     @mouseleave="n1 = false">
-                                    <a href="{{ route('admin.surveys.index', ['status' => 'active']) }}"
-                                        class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Active
+                                    <a href="{{ route('admin.surveys.index') }}"
+                                        class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">All
                                         Surveys</a>
                                     <!-- Nested Flyout -->
                                     <div class="flyout-menu shadow-2xl border border-gray-100 p-3 min-w-[140px]"
@@ -212,7 +212,7 @@
                                 <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-3">
                                     Actions</div>
                                 <div class="relative" x-data="{ n2: false, n2Top: 0, n2Left: 0 }"
-                                    @mouseenter="const r = $el.getBoundingClientRect(); n2Top = r.top; n2Left = r.right + 15; n2 = true"
+                                    @mouseenter="const r = $el.getBoundingClientRect(); n2Top = r.top; n2Left = r.right - 5; n2 = true"
                                     @mouseleave="n2 = false">
                                     <a href="{{ route('surveys.create') }}"
                                         class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Create
@@ -240,10 +240,10 @@
                     <div x-show="expandedItem === 'surveys'" x-collapse class="sidebar-submenu"
                         x-data="{ roleFiltersExpanded: {{ request()->has('source') ? 'true' : 'false' }} }">
                         <div class="relative" x-data="{ n3: false, n3Top: 0, n3Left: 0 }"
-                            @mouseenter="const r = $el.getBoundingClientRect(); n3Top = r.top - 8; n3Left = r.right + 15; n3 = true"
+                            @mouseenter="const r = $el.getBoundingClientRect(); n3Top = r.top - 8; n3Left = r.right - 5; n3 = true"
                             @mouseleave="n3 = false">
-                            <a href="{{ route('admin.surveys.index', ['status' => 'active']) }}"
-                                class="block py-1 text-xs font-bold uppercase tracking-wide {{ request()->has('status') && request('status') === 'active' ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">ACTIVE
+                            <a href="{{ route('admin.surveys.index') }}"
+                                class="block py-1 text-xs font-bold uppercase tracking-wide {{ !request()->has('status') && request()->routeIs('admin.surveys.index') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">ALL
                                 SURVEYS</a>
                             <template x-teleport="body">
                                 <!-- Nested Flyout -->
@@ -265,9 +265,8 @@
                         </div>
 
                         <a href="{{ route('admin.surveys.index', ['status' => 'active']) }}"
-                            class="block py-1 text-xs font-bold uppercase tracking-wide {{ request('status') === 'active' ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} mt-1">ACTIVE</a>
-
-                        {{-- Removed PENDING --}}
+                            class="block py-1 text-xs font-bold uppercase tracking-wide {{ request('status') === 'active' ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} mt-1">ACTIVE
+                            SURVEYS</a>
 
                         <a href="{{ route('admin.surveys.index', ['status' => 'draft']) }}"
                             class="block py-1 text-xs font-bold uppercase tracking-wide {{ request('status') === 'draft' ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} mt-1">DRAFTS</a>
@@ -294,7 +293,7 @@
                         </div>
 
                         <div class="relative mt-1" x-data="{ n4: false, n4Top: 0, n4Left: 0 }"
-                            @mouseenter="const r = $el.getBoundingClientRect(); n4Top = r.top - 8; n4Left = r.right + 15; n4 = true"
+                            @mouseenter="const r = $el.getBoundingClientRect(); n4Top = r.top - 8; n4Left = r.right - 5; n4 = true"
                             @mouseleave="n4 = false">
                             <a href="{{ route('surveys.create') }}"
                                 class="block py-1 text-xs font-bold uppercase tracking-wide {{ request()->routeIs('surveys.create') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">CREATE
@@ -366,7 +365,7 @@
                             class="flex items-center justify-between px-3 py-2 text-sm font-bold {{ (request()->routeIs('projects.active') || request()->routeIs('surveys.create') || request()->routeIs('projects.drafts')) ? 'text-indigo-700 bg-indigo-50 border-l-2 border-indigo-600 shadow-sm' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg group transition-colors cursor-pointer">
                             <div class="flex items-center">
                                 <i
-                                    class="fa-solid fa-diagram-project mr-3 {{ (request()->routeIs(['projects.index', 'projects.active', 'surveys.create', 'projects.drafts'])) ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
+                                    class="fa-solid fa-diagram-project mr-3 {{ (request()->routeIs(['projects.active', 'surveys.create', 'projects.drafts'])) ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
                                 MANAGE SURVEYS
                             </div>
                             <i class="fa-solid fa-chevron-right text-[10px] text-gray-300 transition-transform duration-300"
@@ -402,7 +401,7 @@
                                     <a href="{{ route('projects.drafts') }}"
                                         class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Drafts</a>
                                     <div class="relative" x-data="{ nHubCreate: false, nHubTop: 0, nHubLeft: 0 }"
-                                        @mouseenter="const r = $el.getBoundingClientRect(); nHubTop = r.top; nHubLeft = r.right + 15; nHubCreate = true"
+                                        @mouseenter="const r = $el.getBoundingClientRect(); nHubTop = r.top; nHubLeft = r.right - 5; nHubCreate = true"
                                         @mouseleave="nHubCreate = false">
                                         <a href="{{ route('surveys.create') }}"
                                             class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Create
@@ -458,7 +457,7 @@
                             </div>
 
                             <div class="relative mt-1" x-data="{ nHubSubCreate: false, nHubSubTop: 0, nHubSubLeft: 0 }"
-                                @mouseenter="const r = $el.getBoundingClientRect(); nHubSubTop = r.top - 8; nHubSubLeft = r.right + 15; nHubSubCreate = true"
+                                @mouseenter="const r = $el.getBoundingClientRect(); nHubSubTop = r.top - 8; nHubSubLeft = r.right - 5; nHubSubCreate = true"
                                 @mouseleave="nHubSubCreate = false;">
                                 <a href="{{ route('surveys.create') }}"
                                     class="block py-1 text-xs font-bold uppercase tracking-wide {{ request()->routeIs('surveys.create') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">CREATE
@@ -644,9 +643,9 @@
                     <h4 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Quick Links</h4>
                     <div class="space-y-3">
                         <div x-data="{ qlOpen: false, qlTop: 0, qlLeft: 0 }"
-                            @mouseenter="const r = $el.getBoundingClientRect(); qlTop = r.top - 100; qlLeft = r.right + 15; qlOpen = true"
+                            @mouseenter="const r = $el.getBoundingClientRect(); qlTop = r.top - 100; qlLeft = r.right - 5; qlOpen = true"
                             @mouseleave="qlOpen = false" class="relative">
-                            @if(in_array($role, ['organization', 'independent']))
+                            @if(in_array($role, ['organization', 'independent', 'admin']))
                                 <a href="{{ route('surveys.create') }}"
                                     class="block w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-widest rounded-lg text-center shadow-lg shadow-indigo-100 transition-all">
                                     <i class="fa-solid fa-plus-circle mr-2"></i> Create Survey

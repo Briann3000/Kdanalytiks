@@ -19,7 +19,7 @@
                         <div class="mt-10 max-w-lg lg:mx-0 sm:mx-auto">
                             <div class="mb-6">
                                 <h3 class="text-xl font-bold text-gray-900">Get Started</h3>
-                                <p class="text-sm text-gray-500 mt-1">Select your account type to sign in or register.</p>
+                                <p class="text-sm text-gray-500 mt-1">Select your account type to sign in or register</p>
                             </div>
 
                             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -32,7 +32,7 @@
                                     </div>
                                     <h3 class="text-base font-bold text-gray-900">Organization</h3>
                                     <p class="mt-1 text-[11px] text-gray-500 leading-tight font-medium">For companies &
-                                        institutions.</p>
+                                        institutions</p>
                                 </a>
 
                                 <!-- Independent Researcher -->
@@ -44,7 +44,7 @@
                                     </div>
                                     <h3 class="text-base font-bold text-gray-900">Researcher</h3>
                                     <p class="mt-1 text-[11px] text-gray-500 leading-tight font-medium">For academic or
-                                        project work.</p>
+                                        project work</p>
                                 </a>
 
                                 <!-- Respondent -->
@@ -56,7 +56,7 @@
                                     </div>
                                     <h3 class="text-base font-bold text-gray-900">Respondent</h3>
                                     <p class="mt-1 text-[11px] text-gray-500 leading-tight font-medium">Share feedback &
-                                        earn data.</p>
+                                        earn</p>
                                 </a>
                             </div>
                         </div>

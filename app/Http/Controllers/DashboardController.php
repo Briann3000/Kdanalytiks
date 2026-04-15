@@ -89,13 +89,19 @@ class DashboardController extends Controller
 
         $displayName = $user->organization?->name ?? $user->independent?->name ?? $user->name;
 
+        // Resolve subscription tier for org/independent users
+        $entity = $user->organization ?? $user->independent ?? null;
+        $subscriptionTier = $entity?->subscriptionTier
+            ?? \App\Models\SubscriptionTier::where('slug', 'free')->first();
+
         return view('dashboard', array_merge(compact(
             'role',
             'displayName',
             'totalSurveys',
             'totalResponses',
             'pendingSurveys',
-            'reportsGenerated'
+            'reportsGenerated',
+            'subscriptionTier'
         ), [
             'recentPublicSurveys' => $recentPublicSurveys ?? collect(),
             'recentActivity' => $recentActivity ?? collect()

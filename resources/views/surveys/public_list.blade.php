@@ -67,6 +67,8 @@
                     <option value="paid" {{ request('paid_status') === 'paid' ? 'selected' : '' }}>Paid Surveys Only</option>
                     <option value="unpaid" {{ request('paid_status') === 'unpaid' ? 'selected' : '' }}>Free Surveys Only
                     </option>
+                    <option value="exhausted" {{ request('paid_status') === 'exhausted' ? 'selected' : '' }}>Paid (Budget
+                        Exhausted)</option>
                 </select>
             </div>
             <button type="submit"
@@ -94,11 +96,22 @@
                                 {{ $survey->category }}
                             </span>
                             @if($survey->is_paid)
-                                <span
-                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700 shadow-sm border border-emerald-200">
-                                    <i class="fa-solid fa-sack-dollar mr-1"></i> {{ number_format($survey->reward_per_response, 0) }}
-                                    {{ $survey->reward_currency ?? 'KES' }}
-                                </span>
+                                @php
+                                    $budgetExhausted = ($survey->reward_budget - $survey->current_reward_spent) < $survey->reward_per_response;
+                                @endphp
+                                @if($budgetExhausted)
+                                    <span
+                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-700 shadow-sm border border-red-200"
+                                        title="The reward budget for this survey has been exhausted.">
+                                        <i class="fa-solid fa-sack-xmark mr-1"></i> Budget Exhausted
+                                    </span>
+                                @else
+                                    <span
+                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700 shadow-sm border border-emerald-200">
+                                        <i class="fa-solid fa-sack-dollar mr-1"></i> {{ number_format($survey->reward_per_response, 0) }}
+                                        {{ $survey->reward_currency ?? 'KES' }}
+                                    </span>
+                                @endif
                             @endif
                         </div>
                         <h3 class="text-xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors mb-3 line-clamp-2">
