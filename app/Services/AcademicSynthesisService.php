@@ -16,7 +16,7 @@ class AcademicSynthesisService
     protected $dataAggregator;
 
     public function __construct(
-        AiService $aiService, 
+        AiService $aiService,
         AcademicReferencingService $referencingService,
         DataAggregatorService $dataAggregator
     ) {
@@ -30,7 +30,7 @@ class AcademicSynthesisService
      */
     public function generateIterativeReport(Survey $survey, string $style = 'apa7', array $manualReferences = [])
     {
-        set_time_limit(600); 
+        set_time_limit(600);
         $aggregatedData = $this->dataAggregator->aggregate($survey);
         $referencePrompt = $this->prepareReferencePrompt($manualReferences, $style);
         $currentYear = date('Y');
@@ -100,7 +100,7 @@ class AcademicSynthesisService
         // ── 6. CHAPTER 4: RESULTS AND DISCUSSION (Data Heavy - Segmented) ──
         $sections['CHAPTER 4: RESULTS AND DISCUSSION'] = '__chapter_header__';
         $sections['4.0 Introduction'] = "This chapter presents the analysis and interpretation of data collected from {$totalResponses} respondents for the survey '{$survey->title}'.";
-        
+
         // We still iterate questions to ensure tables are embedded correctly
         $questionGroups = array_chunk($aggregatedData['questions'], 5); // Process in groups of 5 to stay fast
         $qIdx = 1;
@@ -109,11 +109,11 @@ class AcademicSynthesisService
             foreach ($group as $q) {
                 $groupContext .= "Q" . ($qIdx++) . ": {$q['label']}\nData: " . json_encode($q['stats'] ?? $q['insights']) . "\n\n";
             }
-            
+
             $qPrompt = "Write an academic discussion for the following 5 survey findings. " .
                 "Use the marker [SECTION: 4.X Title] for each. " .
                 "Mention specific percentages and counts in your prose.\n\nFINDINGS:\n{$groupContext}";
-            
+
             $this->batchProcess($qPrompt, $sections, $survey, $style, $currentYear);
         }
 
@@ -184,7 +184,7 @@ class AcademicSynthesisService
         if ($response) {
             // More resilient regex: handles optional spaces and case sensitivity
             $parts = preg_split('/\[SECTION:\s*([^\]]+)\]/i', $response, -1, PREG_SPLIT_DELIM_CAPTURE);
-            
+
             for ($i = 1; $i < count($parts); $i += 2) {
                 $title = trim($parts[$i]);
                 $content = trim($parts[$i + 1] ?? '');
@@ -240,29 +240,34 @@ class AcademicSynthesisService
     // ... (Keep existing Title Page, Declaration, Acknowledgement, Appendices, Export methods from previous version) ...
     // Note: I will merge the rest of the existing methods below.
 
-    private function generateTitlePage($survey, $year, $style) {
+    private function generateTitlePage($survey, $year, $style)
+    {
         $user = auth()->user();
         $name = $user ? $user->name : 'Researcher';
         return "<div class='title-page' style='text-align:center; padding-top:100px;'><h1>" . strtoupper($survey->title) . "</h1><p>A Research Report</p><br><p>By</p><h3>{$name}</h3><br><p>Style: " . strtoupper($style) . "</p><p>{$year}</p></div>";
     }
 
-    private function generateDeclaration($survey, $year) {
+    private function generateDeclaration($survey, $year)
+    {
         return "I declare that this report is my original work based on survey data '{$survey->title}' collected in {$year}.";
     }
 
-    private function generateAcknowledgement($survey) {
+    private function generateAcknowledgement($survey)
+    {
         return "I acknowledge the contributions of all respondents to the '{$survey->title}' survey.";
     }
 
-    private function generateAppendices($survey, $aggregatedData) {
+    private function generateAppendices($survey, $aggregatedData)
+    {
         $app = "Appendix A: Questionnaire\n\n";
         foreach ($aggregatedData['questions'] as $idx => $q) {
-            $app .= ($idx+1) . ". " . $q['label'] . "\n";
+            $app .= ($idx + 1) . ". " . $q['label'] . "\n";
         }
         return $app;
     }
 
-    private function prepareReferencePrompt(array $references, string $style) {
+    private function prepareReferencePrompt(array $references, string $style)
+    {
         $p = "";
         foreach ($references as $r) {
             $p .= "Author: {$r['author']}, Title: {$r['title']}, Year: {$r['year']}\n";
@@ -270,26 +275,136 @@ class AcademicSynthesisService
         return $p ?: "General academic knowledge.";
     }
 
-    public function exportToDocx(array $content, string $filename) {
-        $phpWord = new PhpWord(); $section = $phpWord->addSection();
-        foreach ($content as $title => $text) {
-            if ($text === '__chapter_header__') { $section->addTitle($title, 1); continue; }
-            $section->addTitle($title, 2); $section->addText($text); $section->addTextBreak(1);
+    public function exportToDocx(array $content, string $filename, array $branding = [])
+    {
+        $phpWord = new \PhpOffice\PhpWord\PhpWord();
+        $section = $phpWord->addSection();
+
+        // Handle Branding for DOCX
+        if (!empty($branding)) {
+            if ($branding['showKmBranding']) {
+                $footer = $section->addFooter();
+                $footer->addPreserveText('Generated by KMSurveyTool - Page {PAGE} of {NUMPAGES}', ['bold' => true, 'size' => 10, 'color' => '999999'], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
+            } else {
+                $header = $section->addHeader();
+                if ($branding['customLogo']) {
+                    $logoPath = storage_path('app/public/' . $branding['customLogo']);
+                    if (file_exists($logoPath)) {
+                        $header->addImage($logoPath, [
+                            'width' => 80,
+                            'height' => 80,
+                            'alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER
+                        ]);
+                    }
+                }
+                if ($branding['customOrgName']) {
+                    $header->addTextBreak(1);
+                    $header->addText($branding['customOrgName'], ['bold' => true, 'size' => 14], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
+                }
+                $footer = $section->addFooter();
+                $footer->addPreserveText('Page {PAGE} of {NUMPAGES}', null, ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
+            }
         }
-        $writer = IOFactory::createWriter($phpWord, 'Word2007');
-        $path = storage_path('app/public/reports/'.$filename.'.docx'); $writer->save($path);
+
+        foreach ($content as $title => $text) {
+            if ($text === '__chapter_header__') {
+                $section->addPageBreak();
+                $section->addTitle($title, 1);
+                continue;
+            }
+
+            // Skip title for the Title Page as it's usually inside the content
+            if ($title !== 'Title Page') {
+                $section->addTitle($title, 2);
+            }
+
+            // If the content looks like HTML, use the HTML parser
+            if (str_contains($text, '<') && str_contains($text, '>')) {
+                try {
+                    // Strip problematic elements that PhpWord might not like
+                    $safeHtml = preg_replace('/<div[^>]*>/i', '', $text);
+                    $safeHtml = str_replace('</div>', '<br>', $safeHtml);
+                    \PhpOffice\PhpWord\Shared\Html::addHtml($section, $safeHtml, false, false);
+                } catch (\Exception $e) {
+                    Log::error("DOCX HTML Export error: " . $e->getMessage());
+                    $section->addText(strip_tags($text));
+                }
+            } else {
+                $section->addText($text);
+            }
+
+            $section->addTextBreak(1);
+        }
+        $writer = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'Word2007');
+        $path = storage_path('app/public/reports/' . $filename . '.docx');
+        $writer->save($path);
         return $path;
     }
 
-    public function exportToPdf(array $content, string $filename) {
+    public function exportToPdf(array $content, string $filename, array $branding = [])
+    {
         $html = "";
         foreach ($content as $title => $text) {
-            if ($text === '__chapter_header__') { $html .= "<h1 style='page-break-before:always; text-align:center;'>{$title}</h1>"; continue; }
-            if (str_contains($text, 'title-page')) { $html .= $text; continue; }
-            $html .= "<h2>{$title}</h2><div>".nl2br(e($text))."</div>";
+            if ($text === '__chapter_header__') {
+                $html .= "<h1 style='page-break-before:always; text-align:center;'>{$title}</h1>";
+                continue;
+            }
+            if (str_contains($text, 'title-page')) {
+                $html .= $text;
+                continue;
+            }
+            $html .= "<h2>{$title}</h2><div>" . nl2br(e($text)) . "</div>";
         }
-        $mpdf = new Mpdf(); $mpdf->WriteHTML($html);
-        $path = storage_path('app/public/reports/'.$filename.'.pdf');
+
+        $mpdf = new \Mpdf\Mpdf([
+            'margin_left' => 20,
+            'margin_right' => 20,
+            'margin_top' => 50,
+            'margin_bottom' => 25,
+            'margin_header' => 10,
+            'margin_footer' => 10,
+        ]);
+
+        // Handle Branding for PDF
+        if (!empty($branding)) {
+            if ($branding['showKmBranding']) {
+                // BIGGER BRANDING for Free Tier
+                $mpdf->SetWatermarkText('KMSurveyTool');
+                $mpdf->showWatermarkText = true;
+                $mpdf->watermark_font = 'DejaVuSansCondensed';
+                $mpdf->watermarkTextAlpha = 0.1;
+
+                $footerHtml = '
+                <div style="border-top: 1px solid #eee; padding-top: 10px; font-size: 10px; color: #666; text-align: center; font-weight: bold;">
+                    THIS RESEARCH PROPOSAL WAS AI-GENERATED VIA KMSURVEYTOOL.COM. UPGRADE TO REMOVE THIS NOTICE.
+                    <br/>
+                    <span style="font-size: 8px;">Page {PAGENO} of {nbpg}</span>
+                </div>';
+                $mpdf->SetHTMLFooter($footerHtml);
+            } else {
+                // Professional branding for Pro/Enterprise - CENTERED & BIGGER
+                $headerHtml = '<div style="text-align: center; border-bottom: 2px solid #f3f4f6; padding-bottom: 15px; margin-bottom: 20px;">';
+
+                if ($branding['customLogo']) {
+                    $logoPath = storage_path('app/public/' . $branding['customLogo']);
+                    if (file_exists($logoPath)) {
+                        $headerHtml .= '<img src="' . $logoPath . '" style="height: 70px; width: auto; margin-bottom: 10px;"><br>';
+                    }
+                }
+
+                if ($branding['customOrgName']) {
+                    $headerHtml .= '<div style="font-size: 16px; color: #111; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">' . e($branding['customOrgName']) . '</div>';
+                }
+                $headerHtml .= '</div>';
+                $mpdf->SetHTMLHeader($headerHtml);
+
+                $footerHtml = '<div style="text-align: center; font-size: 9px; color: #999;">Page {PAGENO} of {nbpg}</div>';
+                $mpdf->SetHTMLFooter($footerHtml);
+            }
+        }
+
+        $mpdf->WriteHTML($html);
+        $path = storage_path('app/public/reports/' . $filename . '.pdf');
         $mpdf->Output($path, \Mpdf\Output\Destination::FILE);
         return $path;
     }

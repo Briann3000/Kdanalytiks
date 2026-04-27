@@ -169,7 +169,16 @@ class AdminController extends Controller
             });
         }
 
-        $surveys = $query->orderBy('created_at', 'desc')->paginate(20);
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortDir = $request->get('sort_dir', 'desc');
+
+        $validSorts = ['title', 'type', 'status', 'responses_count', 'created_at', 'created_by'];
+        if (!in_array($sortBy, $validSorts))
+            $sortBy = 'created_at';
+        if (!in_array($sortDir, ['asc', 'desc']))
+            $sortDir = 'desc';
+
+        $surveys = $query->orderBy($sortBy, $sortDir)->paginate(20)->withQueryString();
 
         return view('admin.surveys', compact('surveys'));
     }

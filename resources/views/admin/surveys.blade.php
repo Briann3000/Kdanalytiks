@@ -97,7 +97,7 @@
         <div class="flex items-center gap-3">
             <button @click="selected = []; allSelected = false" class="text-white/70 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors mr-2">Deselect All</button>
             <button @click="bulkDelete()" class="px-6 py-2 bg-white text-red-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:bg-red-50 transition-all transform hover:scale-105 active:scale-95">
-                <i class="fa-solid fa-trash-can mr-2"></i> Bulk Delete
+                <i class="fa-solid fa-trash-can mr-2"></i>Delete Selected
             </button>
         </div>
     </div>
@@ -165,6 +165,11 @@
         <div class="overflow-x-auto custom-scrollbar">
             <table class="min-w-[1000px] w-full divide-y divide-gray-100">
                 <thead class="bg-gray-50/50">
+                    @php
+                        $sortBy = request('sort_by', 'created_at');
+                        $sortDir = request('sort_dir', 'desc');
+                        $nextDir = $sortDir === 'asc' ? 'desc' : 'asc';
+                    @endphp
                     <tr>
                         <th class="px-6 py-4 text-left w-10">
                             <input type="checkbox" 
@@ -172,17 +177,73 @@
                                    x-model="allSelected"
                                    class="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500 cursor-pointer transition-all">
                         </th>
-                        <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">Survey Detail</th>
-                        <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">Owner</th>
-                        <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">Type</th>
-                        <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">Responses</th>
+                        <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">
+                            <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'title', 'sort_dir' => $sortBy === 'title' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-indigo-600 transition-colors">
+                                Survey Detail
+                                @if($sortBy === 'title')
+                                    <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-indigo-600"></i>
+                                @else
+                                    <i class="fa-solid fa-sort ml-1.5 text-gray-300"></i>
+                                @endif
+                            </a>
+                        </th>
+                        <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">
+                            <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'created_by', 'sort_dir' => $sortBy === 'created_by' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-indigo-600 transition-colors">
+                                Owner
+                                @if($sortBy === 'created_by')
+                                    <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-indigo-600"></i>
+                                @else
+                                    <i class="fa-solid fa-sort ml-1.5 text-gray-300"></i>
+                                @endif
+                            </a>
+                        </th>
+                        <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">
+                            <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'type', 'sort_dir' => $sortBy === 'type' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-indigo-600 transition-colors">
+                                Type
+                                @if($sortBy === 'type')
+                                    <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-indigo-600"></i>
+                                @else
+                                    <i class="fa-solid fa-sort ml-1.5 text-gray-300"></i>
+                                @endif
+                            </a>
+                        </th>
+                        <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">
+                            <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'status', 'sort_dir' => $sortBy === 'status' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-indigo-600 transition-colors">
+                                Status
+                                @if($sortBy === 'status')
+                                    <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-indigo-600"></i>
+                                @else
+                                    <i class="fa-solid fa-sort ml-1.5 text-gray-300"></i>
+                                @endif
+                            </a>
+                        </th>
+                        <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">
+                            <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'responses_count', 'sort_dir' => $sortBy === 'responses_count' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-indigo-600 transition-colors">
+                                Responses
+                                @if($sortBy === 'responses_count')
+                                    <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-indigo-600"></i>
+                                @else
+                                    <i class="fa-solid fa-sort ml-1.5 text-gray-300"></i>
+                                @endif
+                            </a>
+                        </th>
+                        <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">
+                            <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'created_at', 'sort_dir' => $sortBy === 'created_at' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-indigo-600 transition-colors">
+                                Date Created
+                                @if($sortBy === 'created_at')
+                                    <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-indigo-600"></i>
+                                @else
+                                    <i class="fa-solid fa-sort ml-1.5 text-gray-300"></i>
+                                @endif
+                            </a>
+                        </th>
                         <th class="px-6 py-4 text-right text-[11px] font-bold text-gray-900 uppercase tracking-wider pr-20">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-100">
                     @forelse($surveys as $survey)
-                    <tr class="hover:bg-gray-50/50 transition-all group" 
+                    <tr class="hover:bg-gray-50/50 transition-all group cursor-pointer" 
+                        @click="if(!['A', 'BUTTON', 'INPUT', 'I'].includes($event.target.tagName) && !$event.target.closest('a, button, input')) window.location = '{{ route('surveys.summary', $survey) }}'"
                         x-data="{ deleted: false }" 
                         x-show="!deleted" 
                         x-transition.scale.origin.left.opacity.duration.500ms
@@ -234,6 +295,10 @@
                         <td class="px-6 py-4 text-sm font-bold text-indigo-600">
                             {{ $survey->responses_count }}
                         </td>
+                        <td class="px-6 py-4">
+                            <div class="text-xs font-bold text-gray-600">{{ $survey->created_at->format('M d, Y') }}</div>
+                            <div class="text-[10px] text-gray-400 font-medium lowercase">{{ $survey->created_at->diffForHumans() }}</div>
+                        </td>
                         <td class="px-6 py-4 text-right pr-20">
                             <div class="flex items-center justify-end gap-2">
                                 <a href="{{ route('surveys.report', $survey) }}" class="w-7 h-7 bg-gray-50 text-gray-400 rounded-lg flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all">
@@ -278,7 +343,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="px-6 py-12 text-center text-gray-400 italic font-medium">No surveys found.</td>
+                        <td colspan="8" class="px-6 py-12 text-center text-gray-400 italic font-medium">No surveys found.</td>
                     </tr>
                     @endforelse
                 </tbody>

@@ -28,6 +28,10 @@ Route::get('/privacy-policy', function () {
     return view('privacy');
 })->name('privacy');
 
+Route::get('/terms-and-conditions', function () {
+    return view('terms');
+})->name('terms');
+
 Route::get('/surveys/public', [SurveyController::class, 'publicIndex'])->name('surveys.public');
 
 Route::post('/logout', function () {
@@ -122,12 +126,20 @@ Route::post('/email/verification-notification', function (Request $request) {
 Route::middleware(['auth', 'verified'])->group(function () {
     // Survey Hub & Core Actions
     Route::get('/surveys/{survey}/responses', [SurveyController::class, 'showResponses'])->name('surveys.responses');
-    Route::get('/surveys/{survey}/responses/{response}', [SurveyController::class, 'showResponseDetail'])->name('surveys.responses.show');
+    Route::get('/surveys/{survey_id}/responses/{response_id}', [SurveyController::class, 'showResponseDetail'])->name('surveys.responses.show');
     Route::get('/surveys/{survey}/export', [SurveyController::class, 'exportResponses'])->name('surveys.export');
+    Route::get('/surveys/{survey}/export-xlsx', [SurveyController::class, 'exportXlsx'])->name('surveys.export_xlsx');
+    Route::get('/surveys/{survey}/export-json', [SurveyController::class, 'exportJson'])->name('surveys.export_json');
+    Route::get('/surveys/{survey}/export-xml', [SurveyController::class, 'exportXml'])->name('surveys.export_xml');
+    Route::get('/surveys/{survey}/export-spss', [SurveyController::class, 'exportSpss'])->name('surveys.export_spss');
+    Route::get('/surveys/{survey}/export-google-sheets', [SurveyController::class, 'exportGoogleSheets'])->name('surveys.export_google_sheets');
+    Route::get('/auth/google', [\App\Http\Controllers\GoogleController::class, 'redirectToGoogle'])->name('auth.google');
+    Route::get('/auth/google/callback', [\App\Http\Controllers\GoogleController::class, 'handleGoogleCallback']);
     Route::get('/surveys/{survey}/export-pdf', [SurveyController::class, 'exportPdf'])->name('surveys.export_pdf');
     Route::get('/surveys/{survey}/report', [SurveyController::class, 'report'])->name('surveys.report');
 
     // Core Survey CRUD
+    Route::get('/surveys', [SurveyController::class, 'index'])->name('surveys.index');
     Route::middleware(['subscribed:surveys'])->group(function () {
         Route::get('/surveys/create', [SurveyController::class, 'create'])->name('surveys.create');
         Route::post('/surveys', [SurveyController::class, 'store'])->name('surveys.store');
@@ -138,31 +150,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/surveys/bulk-destroy', [SurveyController::class, 'bulkDestroy'])->name('surveys.bulk-destroy');
     Route::post('/surveys/initialize', [SurveyController::class, 'initialize'])->name('surveys.initialize');
 
-    // Quick-Access Project Lists
-    // Projects & Library Overhaul (Kobo-style)
-    Route::prefix('projects')->name('projects.')->group(function () {
-        Route::get('/active', [SurveyController::class, 'index'])->name('active');
-        Route::get('/archived', [SurveyController::class, 'archivedIndex'])->name('archived');
-        Route::get('/drafts', [SurveyController::class, 'draftsIndex'])->name('drafts');
+    // Legacy Project Redirects
+    Route::redirect('/projects/active', '/surveys?status=active', 301);
+    Route::redirect('/projects/archived', '/surveys?status=archived', 301);
+    Route::redirect('/projects/drafts', '/surveys?status=draft', 301);
+    Route::redirect('/projects', '/surveys', 301);
 
-        // Use /projects as the hub
-        Route::get('/', [SurveyController::class, 'hub'])->name('index');
-
-        // Project Hub (Single Survey Management content)
-        Route::prefix('{survey}')->group(function () {
-            Route::get('/', [SurveyController::class, 'projectSummary'])->name('summary');
-            Route::get('/data', [SurveyController::class, 'showResponses'])->name('data');
-            Route::get('/reports', [SurveyController::class, 'report'])->name('reports');
-            Route::get('/gallery', [SurveyController::class, 'showGallery'])->name('gallery');
-            Route::get('/downloads', [SurveyController::class, 'showDownloads'])->name('downloads');
-            Route::delete('/downloads/{filename}', [SurveyController::class, 'deleteDownload'])->name('downloads.delete');
-            Route::get('/settings', [SurveyController::class, 'projectSettings'])->name('settings');
-            Route::post('/settings', [SurveyController::class, 'updateProjectSettings'])->name('settings.update');
-            Route::post('/collaborators', [SurveyController::class, 'addCollaborator'])->name('collaborators.add');
-            Route::delete('/collaborators/{permission}', [SurveyController::class, 'removeCollaborator'])->name('collaborators.remove');
-            Route::post('/publish', [SurveyController::class, 'publish'])->name('publish');
-            Route::post('/archive', [SurveyController::class, 'archive'])->name('archive');
-        });
+    // Project Management Hub (Unified under surveys)
+    Route::prefix('surveys/{survey}')->name('surveys.')->group(function () {
+        Route::get('/summary', [SurveyController::class, 'projectSummary'])->name('summary');
+        Route::get('/data', [SurveyController::class, 'showResponses'])->name('data');
+        Route::get('/reports', [SurveyController::class, 'report'])->name('reports');
+        Route::get('/gallery', [SurveyController::class, 'showGallery'])->name('gallery');
+        Route::get('/downloads', [SurveyController::class, 'showDownloads'])->name('downloads');
+        Route::get('/downloads/history', [SurveyController::class, 'downloadsHistory'])->name('downloads.history');
+        Route::delete('/downloads/{filename}', [SurveyController::class, 'deleteDownload'])->name('downloads.delete');
+        Route::get('/settings', [SurveyController::class, 'projectSettings'])->name('settings');
+        Route::post('/settings', [SurveyController::class, 'updateProjectSettings'])->name('settings.update');
+        Route::get('/branding-logo', [SurveyController::class, 'serveBrandingLogo'])->name('branding.logo');
+        Route::post('/collaborators', [SurveyController::class, 'addCollaborator'])->name('collaborators.add');
+        Route::delete('/collaborators/{permission}', [SurveyController::class, 'removeCollaborator'])->name('collaborators.remove');
+        Route::post('/publish', [SurveyController::class, 'publish'])->name('publish');
+        Route::post('/archive', [SurveyController::class, 'archive'])->name('archive');
     });
 
 
@@ -182,6 +191,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/research-proposal/export/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'export'])->name('research-proposal.export');
 
     Route::resource('research-proposal', \App\Http\Controllers\ResearchProposalController::class)->except(['store']);
+
+    // Unified Account Settings
+    Route::get('/account/settings', [\App\Http\Controllers\AccountController::class, 'index'])->name('account.settings');
+    Route::post('/account/settings/profile', [\App\Http\Controllers\AccountController::class, 'updateProfile'])->name('account.settings.profile');
+    Route::post('/account/settings/branding', [\App\Http\Controllers\AccountController::class, 'updateBranding'])->name('account.settings.branding');
 });
 
 // Public Survey Views
@@ -210,7 +224,6 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 // Organization Routes
 Route::middleware(['auth', 'verified', 'role:organization'])->prefix('organization')->name('organization.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/surveys', [SurveyController::class, 'index'])->name('surveys.index');
 
     Route::get('/responses', [SurveyController::class, 'responsesIndex'])->name('responses.index');
     Route::get('/reports', [SurveyController::class, 'reportsIndex'])->name('reports.index');
@@ -219,7 +232,6 @@ Route::middleware(['auth', 'verified', 'role:organization'])->prefix('organizati
 // Independent Researcher Routes
 Route::middleware(['auth', 'verified', 'role:independent'])->prefix('independent')->name('independent.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/surveys', [SurveyController::class, 'index'])->name('surveys.index');
 
     Route::get('/responses', [SurveyController::class, 'responsesIndex'])->name('responses.index');
     Route::get('/reports', [SurveyController::class, 'reportsIndex'])->name('reports.index');

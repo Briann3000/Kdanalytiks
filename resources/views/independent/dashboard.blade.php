@@ -52,6 +52,7 @@
 
         <div class="w3-margin-top">
             <a href="{{ route('independent.create-survey') }}" class="w3-button w3-purple w3-round">Create New Survey</a>
+            <a href="{{ route('account.settings') }}" class="w3-button w3-indigo w3-round">Account Settings</a>
         </div>
     @else
         <div class="w3-panel w3-yellow w3-round">

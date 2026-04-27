@@ -115,7 +115,7 @@ class IntasendGateway implements PaymentGatewayInterface
     /**
      * Process a payout to a respondent via IntaSend B2C.
      */
-    public function withdrawToRespondent(User $user, float $amount, string $currency): array
+    public function withdrawToRespondent(User $user, float $amount, string $currency, string $reference = null): array
     {
         try {
             if (!$user->phone_number) {
@@ -134,7 +134,10 @@ class IntasendGateway implements PaymentGatewayInterface
                 ]
             ];
 
-            $response = $transfer->mpesa($currency, $transactions);
+            // If a reference was provided (e.g. from our DB), use it
+            $apiRef = $reference ?? 'WD-' . strtoupper(\Illuminate\Support\Str::random(10));
+
+            $response = $transfer->mpesa($currency, $transactions, $apiRef);
 
             // Step 2: Auto-approve the payout batch 
             // This moves the status from BP103 (Preview and approve) to processing
@@ -144,15 +147,29 @@ class IntasendGateway implements PaymentGatewayInterface
                 'status' => 'success',
                 'amount' => $amount,
                 'currency' => $currency,
-                'reference' => $approveResponse->tracking_id ?? $response->tracking_id ?? $response['tracking_id'] ?? 'TS-' . strtoupper(\Illuminate\Support\Str::random(10)),
+                'reference' => $approveResponse->tracking_id ?? $response->tracking_id ?? $response['tracking_id'] ?? $apiRef,
                 'message' => 'Payout initiated and approved successfully via IntaSend.'
             ];
 
         } catch (\Exception $e) {
-            Log::error('IntaSend Payout Error: ' . $e->getMessage());
+            // Check if it's a request error with a body
+            $errorDetail = $e->getMessage();
+            if (isset($e->response) && method_exists($e->response, 'getBody')) {
+                $errorDetail .= " | Body: " . (string) $e->response->getBody();
+            }
+
+            Log::error('IntaSend Payout Error:', [
+                'error' => $errorDetail,
+                'user_id' => $user->id,
+                'keys_used' => [
+                    'publishable' => substr($this->publishableKey, 0, 15) . '...',
+                    'test_mode' => $this->testMode
+                ]
+            ]);
+
             return [
                 'status' => 'error',
-                'message' => 'Payout failed: ' . $e->getMessage(),
+                'message' => 'Payout failed: ' . $errorDetail,
             ];
         }
     }

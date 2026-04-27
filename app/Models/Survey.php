@@ -30,6 +30,11 @@ class Survey extends Model
         'reward_budget',
         'current_reward_spent',
         'reward_currency',
+        'logo_url',
+        'brand_color',
+        'remove_km_branding',
+        'export_logo_url',
+        'export_org_name',
     ];
 
     protected $casts = [

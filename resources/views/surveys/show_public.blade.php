@@ -3,13 +3,13 @@
 @section('title', $survey->title)
 
 @section('head')
-    @if(!empty($survey->json_schema))
+    @if(!empty($survey->json_schema) && $survey->json_schema !== '[]')
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jQuery-formBuilder/3.4.2/form-render.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @endif
+
     <style>
         /* formRender Styling Overrides */
         .rendered-form input[type="text"],
@@ -182,6 +182,37 @@
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
+        /* Generated Header Styling */
+        .rendered-form h1 {
+            font-size: 1.875rem !important;
+            font-weight: 900 !important;
+            color: #111827 !important;
+            padding-left: 2.5rem !important;
+            border-left: 6px solid #6366f1 !important;
+            margin-top: 3.5rem !important;
+            margin-bottom: 2rem !important;
+            line-height: 1.2 !important;
+        }
+
+        .rendered-form h2 {
+            font-size: 1.5rem !important;
+            font-weight: 800 !important;
+            color: #1f2937 !important;
+            padding-left: 1.5rem !important;
+            margin-top: 2.5rem !important;
+            margin-bottom: 1.5rem !important;
+            line-height: 1.3 !important;
+        }
+
+        .rendered-form h3 {
+            font-size: 1.125rem !important;
+            font-weight: 800 !important;
+            color: #1f2937 !important;
+            padding-left: 1rem !important;
+            margin-top: 2rem !important;
+            margin-bottom: 1rem !important;
+        }
+
         .recorder-status {
             font-size: 0.7rem;
             font-weight: 900;
@@ -257,15 +288,15 @@
                         @if($survey->is_paid)
                             @if($budgetExhausted)
                                 <div
-                                    class="mt-4 inline-flex items-center px-4 py-2 rounded-xl bg-amber-400 text-amber-950 shadow-lg shadow-amber-500/20 ring-1 ring-white/20">
-                                    <i class="fa-solid fa-triangle-exclamation mr-2"></i>
+                                    class="mt-4 inline-flex items-center px-4 py-2 rounded-xl bg-red-600 text-white shadow-lg shadow-red-600/20 ring-1 ring-white/30">
+                                    <i class="fa-solid fa-triangle-exclamation mr-2 text-red-200"></i>
                                     <span class="text-[10px] font-black uppercase tracking-widest leading-none">Reward Budget
                                         Exhausted</span>
                                 </div>
                             @else
                                 <div
-                                    class="mt-4 inline-flex items-center px-4 py-2 rounded-xl bg-emerald-400 text-emerald-950 shadow-lg shadow-emerald-500/20 ring-1 ring-white/20">
-                                    <i class="fa-solid fa-sack-dollar mr-2"></i>
+                                    class="mt-4 inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 ring-1 ring-white/30">
+                                    <i class="fa-solid fa-sack-dollar mr-2 text-emerald-200"></i>
                                     <span class="text-[10px] font-black uppercase tracking-widest leading-none">Paid Survey: Earn
                                         {{ number_format($survey->reward_per_response, 0) }}
                                         {{ $survey->reward_currency ?? 'KES' }}</span>
@@ -273,8 +304,8 @@
                             @endif
                         @elseif($survey->type === \App\Enums\SurveyType::Public)
                             <div
-                                class="mt-4 inline-flex items-center px-4 py-2 rounded-xl bg-cyan-400 text-cyan-950 shadow-lg shadow-cyan-500/20 ring-1 ring-white/20">
-                                <i class="fa-solid fa-globe mr-2"></i>
+                                class="mt-4 inline-flex items-center px-4 py-2 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20 ring-1 ring-white/30 transition-all hover:scale-105">
+                                <i class="fa-solid fa-globe mr-2 text-blue-200"></i>
                                 <span class="text-[10px] font-black uppercase tracking-widest leading-none">Public Survey</span>
                             </div>
                         @endif
@@ -340,7 +371,7 @@
                 <!-- Survey Content Area -->
                 <div class="p-6 sm:p-10 min-h-[500px]">
 
-                    @if(!empty($survey->json_schema))
+                    @if(!empty($survey->json_schema) && $survey->json_schema !== '[]')
                         {{-- JSON Schema Survey (formRender) --}}
                         <form id="jsonSurveyForm" action="{{ route('surveys.submit', $survey->id) }}" method="POST"
                             enctype="multipart/form-data" class="space-y-6">
@@ -362,10 +393,14 @@
                                     </div>
                                     <div class="ml-4 text-sm">
                                         <span
-                                            class="font-bold text-gray-900 text-base group-hover:text-indigo-700 transition-colors">I
-                                            agree to the Terms and Conditions</span>
+                                            class="font-bold text-gray-900 text-base group-hover:text-indigo-700 transition-colors">
+                                            I agree to the <a href="{{ route('terms') }}" target="_blank"
+                                                onclick="event.stopPropagation();"
+                                                class="text-indigo-600 hover:underline font-bold">Terms and Conditions</a>
+                                        </span>
                                         <p class="text-gray-500 mt-1 leading-relaxed">By submitting this survey, you acknowledge
-                                            that your responses will be recorded and processed in accordance with our <a href="#"
+                                            that your responses will be recorded and processed in accordance with our <a
+                                                href="{{ route('privacy') }}" target="_blank" onclick="event.stopPropagation();"
                                                 class="text-indigo-600 hover:underline font-bold">Data Privacy Policy</a>. We value
                                             your privacy and ensure your data is stored securely.</p>
                                     </div>
@@ -381,15 +416,29 @@
 
                         <script>
                             jQuery(function ($) {
-                                let surveyData = {!! $survey->json_schema !!};
+                                let surveyData = @json($survey->json_schema);
 
-                                // Sometimes the database schema string contains already-serialized JSON which forms a string in Javascript instead of an array.
-                                if (typeof surveyData === 'string') {
+                                if (typeof surveyData === 'string' && surveyData.trim() !== '') {
                                     try {
                                         surveyData = JSON.parse(surveyData);
+                                        // Handle potential double-parsing if Blade escaped a JSON string
+                                        if (typeof surveyData === 'string' && surveyData.trim() !== '') {
+                                            surveyData = JSON.parse(surveyData);
+                                        }
                                     } catch (e) {
                                         console.error("Failed to parse stringified surveyData:", e);
+                                        surveyData = [];
                                     }
+                                }
+
+                                // Handle case where data might be wrapped in an object {fields: [...]}
+                                if (surveyData && !Array.isArray(surveyData) && Array.isArray(surveyData.fields)) {
+                                    surveyData = surveyData.fields;
+                                }
+
+                                if (!Array.isArray(surveyData)) {
+                                    console.warn("surveyData is not an array, defaulting to empty list", surveyData);
+                                    surveyData = [];
                                 }
 
                                 const container = $('#surveyContainer');
@@ -410,6 +459,7 @@
                                 const typeMap = {
                                     'select_one': 'radio-group',
                                     'select_many': 'checkbox-group',
+                                    'textarea': 'textarea',
                                     'rating': 'starRating',
                                     'range': 'number',
                                     'photo': 'file',
@@ -426,7 +476,7 @@
                                     const fieldClone = { ...field, type: finalType };
 
                                     // Inline layout for radio/checkbox
-                                    if (['select_one', 'select_many', 'radio-group', 'checkbox-group'].includes(field.type)) {
+                                    if (field.type && ['select_one', 'select_many', 'radio-group', 'checkbox-group'].includes(field.type)) {
                                         fieldClone.inline = true;
                                         fieldClone.className = (fieldClone.className || '') + ' preview-inline-group';
                                     }
@@ -445,6 +495,20 @@
                                         fieldClone.className = (fieldClone.className || '') + ' ranking-list-container';
                                     }
 
+                                    if (['text', 'textarea', 'number', 'date', 'email', 'tel'].includes(fieldClone.type)) {
+                                        fieldClone.className = (fieldClone.className || '') + ' form-control preview-input';
+                                        if (fieldClone.type === 'text' && !fieldClone.subtype) {
+                                            fieldClone.subtype = 'text';
+                                        }
+                                        if (fieldClone.type === 'textarea') {
+                                            fieldClone.rows = 3;
+                                        }
+                                    }
+
+                                    if (field.visible_if && field.visible_if.field) {
+                                        fieldClone.className = (fieldClone.className || '') + ' conditional-field';
+                                    }
+
                                     return fieldClone;
                                 });
 
@@ -457,13 +521,13 @@
                                             const id = fieldData.name;
                                             return {
                                                 field: `
-                                                                    <div class="rating-wrapper bg-white py-6 px-4 rounded-2xl mb-4 border border-gray-100 shadow-sm">
-                                                                        <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rating'}</label>
-                                                                        <div class="likert-container" id="likert_${id}" style="display: flex !important; justify-content: space-between !important; gap: 8px !important;">
-                                                                            ${[1, 2, 3, 4, 5].map(i => `<div class="likert-item" data-value="${i}" onclick="setRendererLikertValue('${id}', ${i})" style="flex:1; text-align:center; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; font-weight:700;">${i}</div>`).join('')}
-                                                                        </div>
-                                                                        <input type="hidden" name="${id}" id="input_${id}" required="${fieldData.required ? 'true' : 'false'}" value="">
-                                                                    </div>`
+                                                                                                                    <div class="rating-wrapper bg-white py-6 px-4 rounded-2xl mb-4 border border-gray-100 shadow-sm">
+                                                                                                                        <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rating'}</label>
+                                                                                                                        <div class="likert-container" id="likert_${id}" style="display: flex !important; justify-content: space-between !important; gap: 8px !important;">
+                                                                                                                            ${[1, 2, 3, 4, 5].map(i => `<div class="likert-item" data-value="${i}" onclick="setRendererLikertValue('${id}', ${i})" style="flex:1; text-align:center; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; font-weight:700;">${i}</div>`).join('')}
+                                                                                                                        </div>
+                                                                                                                        <input type="hidden" name="${id}" id="input_${id}" required="${fieldData.required ? 'true' : 'false'}" value="">
+                                                                                                                    </div>`
                                             };
                                         },
                                         'ranking_list': function (fieldData) {
@@ -471,26 +535,26 @@
                                             const options = fieldData.values || [];
                                             return {
                                                 field: `
-                                                                    <div class="ranking-wrapper bg-white p-6 rounded-2xl mb-4 border border-gray-100 shadow-sm">
-                                                                        <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rank the following'}</label>
-                                                                        <div class="grid grid-cols-2 gap-4">
-                                                                            <div>
-                                                                                <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest block mb-2">Choices</span>
-                                                                                <div id="pool_${id}" class="rank-pool" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;">
-                                                                                    ${options.map(opt => `
-                                                                                        <div class="rank-item" data-value="${opt.value}" onclick="togglePublicRankItem('${id}', this)">
-                                                                                            ${opt.label}
-                                                                                        </div>
-                                                                                    `).join('')}
-                                                                                </div>
-                                                                            </div>
-                                                                            <div>
-                                                                                <span class="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2">Your Order</span>
-                                                                                <div id="ranked_${id}" class="rank-ordered" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;"></div>
-                                                                            </div>
-                                                                        </div>
-                                                                        <input type="hidden" name="${id}" id="input_${id}" value="">
-                                                                    </div>`,
+                                                                                                                    <div class="ranking-wrapper bg-white p-6 rounded-2xl mb-4 border border-gray-100 shadow-sm">
+                                                                                                                        <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rank the following'}</label>
+                                                                                                                        <div class="grid grid-cols-2 gap-4">
+                                                                                                                            <div>
+                                                                                                                                <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest block mb-2">Choices</span>
+                                                                                                                                <div id="pool_${id}" class="rank-pool" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;">
+                                                                                                                                    ${options.map(opt => `
+                                                                                                                                        <div class="rank-item" data-value="${opt.value}" onclick="togglePublicRankItem('${id}', this)">
+                                                                                                                                            ${opt.label}
+                                                                                                                                        </div>
+                                                                                                                                    `).join('')}
+                                                                                                                                </div>
+                                                                                                                            </div>
+                                                                                                                            <div>
+                                                                                                                                <span class="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2">Your Order</span>
+                                                                                                                                <div id="ranked_${id}" class="rank-ordered" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;"></div>
+                                                                                                                            </div>
+                                                                                                                        </div>
+                                                                                                                        <input type="hidden" name="${id}" id="input_${id}" value="">
+                                                                                                                    </div>`,
                                                 onRender: () => setupPublicRankingUI(id)
                                             };
                                         },
@@ -498,21 +562,21 @@
                                             const id = fieldData.name;
                                             return {
                                                 field: `
-                                                                    <div class="recorder-dashboard mb-4" style="background:#1e293b; color:white; padding:24px; border-radius:24px; text-align:center;">
-                                                                        <div class="recorder-status" id="status_${id}" style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; margin-bottom:16px;">Voice Response</div>
-                                                                        <div class="recorder-timer" id="timer_${id}" style="font-family:monospace; font-size:32px; font-weight:700; margin:16px 0;">00:00</div>
-                                                                        <div class="flex items-center justify-center space-x-6 gap-6" style="display:flex; justify-content:center; align-items:center;">
-                                                                            <div id="start_${id}" class="record-btn" style="width:64px; height:64px; background:#ef4444; border-radius:999px; display:flex !important; align-items:center; justify-content:center; cursor:pointer; border:4px solid rgba(255,255,255,0.1);">
-                                                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-                                                                            </div>
-                                                                            <div id="stop_${id}" class="record-btn bg-gray-600 hidden" style="width:64px; height:64px; background:#4b5563; border-radius:12px; display:none; align-items:center; justify-content:center; cursor:pointer;">
-                                                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 6h12v12H6z"/></svg>
-                                                                            </div>
-                                                                        </div>
-                                                                        <audio id="player_${id}" controls class="hidden w-full mt-6" style="display:none; width:100%; margin-top:24px;"></audio>
-                                                                        <button type="button" id="retake_${id}" class="mt-4 text-[10px] uppercase font-black text-indigo-400 hidden" style="display:none; background:none; border:none; color:#818cf8; cursor:pointer;">Retake Recording</button>
-                                                                        <input type="hidden" name="${id}_blob" id="blob_${id}">
-                                                                    </div>`,
+                                                                                                                    <div class="recorder-dashboard mb-4" style="background:#1e293b; color:white; padding:24px; border-radius:24px; text-align:center;">
+                                                                                                                        <div class="recorder-status" id="status_${id}" style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; margin-bottom:16px;">Voice Response</div>
+                                                                                                                        <div class="recorder-timer" id="timer_${id}" style="font-family:monospace; font-size:32px; font-weight:700; margin:16px 0;">00:00</div>
+                                                                                                                        <div class="flex items-center justify-center space-x-6 gap-6" style="display:flex; justify-content:center; align-items:center;">
+                                                                                                                            <div id="start_${id}" class="record-btn" style="width:64px; height:64px; background:#ef4444; border-radius:999px; display:flex !important; align-items:center; justify-content:center; cursor:pointer; border:4px solid rgba(255,255,255,0.1);">
+                                                                                                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+                                                                                                                            </div>
+                                                                                                                            <div id="stop_${id}" class="record-btn bg-gray-600 hidden" style="width:64px; height:64px; background:#4b5563; border-radius:12px; display:none; align-items:center; justify-content:center; cursor:pointer;">
+                                                                                                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 6h12v12H6z"/></svg>
+                                                                                                                            </div>
+                                                                                                                        </div>
+                                                                                                                        <audio id="player_${id}" controls class="hidden w-full mt-6" style="display:none; width:100%; margin-top:24px;"></audio>
+                                                                                                                        <button type="button" id="retake_${id}" class="mt-4 text-[10px] uppercase font-black text-indigo-400 hidden" style="display:none; background:none; border:none; color:#818cf8; cursor:pointer;">Retake Recording</button>
+                                                                                                                        <input type="hidden" name="${id}_blob" id="blob_${id}">
+                                                                                                                    </div>`,
                                                 onRender: () => setupRecorder(id, 'audio')
                                             };
                                         },
@@ -520,24 +584,24 @@
                                             const id = fieldData.name;
                                             return {
                                                 field: `
-                                                                    <div class="recorder-dashboard mb-4" style="background:#1e293b; color:white; padding:0; border-radius:24px; overflow:hidden; position:relative;">
-                                                                        <div class="relative aspect-video bg-black" style="background:black; aspect-ratio:16/9; position:relative;">
-                                                                            <video id="preview_${id}" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; opacity:0.5;"></video>
-                                                                            <video id="player_${id}" controls style="display:none; width:100%; height:100%; object-fit:contain;"></video>
-                                                                            <div class="absolute inset-0 flex flex-col items-center justify-center" style="position:absolute; inset:0; display:flex; flex-direction:column; items-center; justify-center;">
-                                                                                <div class="recorder-status" id="status_${id}" style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; margin-bottom:8px;">Video Response</div>
-                                                                                <div class="recorder-timer" id="timer_${id}" style="font-family:monospace; font-size:24px; font-weight:700; margin-bottom:16px;">00:00</div>
-                                                                                <div id="start_${id}" class="record-btn" style="width:56px; height:56px; background:#ef4444; border-radius:999px; display:flex !important; align-items:center; justify-content:center; cursor:pointer; border:4px solid rgba(255,255,255,0.2);">
-                                                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
-                                                                                </div>
-                                                                                <div id="stop_${id}" class="record-btn bg-gray-600 hidden" style="width:56px; height:56px; background:#4b5563; border-radius:12px; display:none; align-items:center; justify-content:center; cursor:pointer;">
-                                                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 6h12v12H6z"/></svg>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                        <button type="button" id="retake_${id}" class="absolute bottom-4 right-4" style="display:none; position:absolute; bottom:16px; right:16px; background:rgba(0,0,0,0.5); color:white; padding:8px 16px; border-radius:24px; border:none; font-size:10px; font-weight:900; text-transform:uppercase; cursor:pointer;">Retake</button>
-                                                                        <input type="hidden" name="${id}_blob" id="blob_${id}">
-                                                                    </div>`,
+                                                                                                                    <div class="recorder-dashboard mb-4" style="background:#1e293b; color:white; padding:0; border-radius:24px; overflow:hidden; position:relative;">
+                                                                                                                        <div class="relative aspect-video bg-black" style="background:black; aspect-ratio:16/9; position:relative;">
+                                                                                                                            <video id="preview_${id}" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; opacity:0.5;"></video>
+                                                                                                                            <video id="player_${id}" controls style="display:none; width:100%; height:100%; object-fit:contain;"></video>
+                                                                                                                            <div class="absolute inset-0 flex flex-col items-center justify-center" style="position:absolute; inset:0; display:flex; flex-direction:column; items-center; justify-center;">
+                                                                                                                                <div class="recorder-status" id="status_${id}" style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; margin-bottom:8px;">Video Response</div>
+                                                                                                                                <div class="recorder-timer" id="timer_${id}" style="font-family:monospace; font-size:24px; font-weight:700; margin-bottom:16px;">00:00</div>
+                                                                                                                                <div id="start_${id}" class="record-btn" style="width:56px; height:56px; background:#ef4444; border-radius:999px; display:flex !important; align-items:center; justify-content:center; cursor:pointer; border:4px solid rgba(255,255,255,0.2);">
+                                                                                                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                                                                                                                                </div>
+                                                                                                                                <div id="stop_${id}" class="record-btn bg-gray-600 hidden" style="width:56px; height:56px; background:#4b5563; border-radius:12px; display:none; align-items:center; justify-content:center; cursor:pointer;">
+                                                                                                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 6h12v12H6z"/></svg>
+                                                                                                                                </div>
+                                                                                                                            </div>
+                                                                                                                        </div>
+                                                                                                                        <button type="button" id="retake_${id}" class="absolute bottom-4 right-4" style="display:none; position:absolute; bottom:16px; right:16px; background:rgba(0,0,0,0.5); color:white; padding:8px 16px; border-radius:24px; border:none; font-size:10px; font-weight:900; text-transform:uppercase; cursor:pointer;">Retake</button>
+                                                                                                                        <input type="hidden" name="${id}_blob" id="blob_${id}">
+                                                                                                                    </div>`,
                                                 onRender: () => setupRecorder(id, 'video')
                                             };
                                         }
@@ -545,6 +609,102 @@
                                 };
 
                                 const formRenderInstance = container.formRender(renderOptions);
+
+                                // --- Display Logic (Conditional Visibility) Engine ---
+                                function updateVisibility() {
+                                    processedSchema.forEach(field => {
+                                        let group = $(`.field-${field.name}`).closest('.form-group');
+                                        if (!group.length) {
+                                            group = $(`[name="${field.name}"], [name="${field.name}[]"]`).closest('.form-group');
+                                        }
+
+                                        let shouldShow = true;
+
+                                        if (field.visible_if && field.visible_if.field) {
+                                            const triggerFieldName = field.visible_if.field;
+                                            const operator = field.visible_if.operator;
+                                            const targetValue = field.visible_if.value;
+
+                                            let currentValues = [];
+                                            const triggerInputs = $(`[name="${triggerFieldName}"], [name="${triggerFieldName}[]"]`);
+
+                                            if (triggerInputs.length > 0) {
+                                                const type = triggerInputs.attr('type');
+                                                if (type === 'radio') {
+                                                    const checked = triggerInputs.filter(':checked');
+                                                    if (checked.length > 0) currentValues = [checked.val()];
+                                                } else if (type === 'checkbox') {
+                                                    currentValues = triggerInputs.filter(':checked').map((i, el) => el.value).get();
+                                                } else {
+                                                    const val = triggerInputs.val();
+                                                    if (val) currentValues = [val];
+                                                }
+                                            }
+
+                                            if (operator === '==') {
+                                                if (!currentValues.includes(targetValue)) shouldShow = false;
+                                            } else if (operator === '!=') {
+                                                if (currentValues.includes(targetValue) || currentValues.length === 0) shouldShow = false;
+                                            }
+                                        }
+
+                                        // Apply Visibility
+                                        if (shouldShow) {
+                                            if (group.is(':hidden')) group.slideDown(200);
+                                        } else {
+                                            if (group.is(':visible')) group.slideUp(200);
+                                        }
+                                    });
+                                }
+
+                                // Initial evaluation after a short delay
+                                setTimeout(() => {
+                                    processedSchema.forEach(field => {
+                                        if (field.visible_if && field.visible_if.field) {
+                                            $(`.field-${field.name}`).closest('.form-group').hide();
+                                        }
+                                    });
+                                    updateVisibility();
+                                }, 300);
+
+                                // Listen for any changes in the form
+                                $(document).off('change.public').on('change.public', '#jsonSurveyForm :input', function (e) {
+                                    updateVisibility();
+
+                                    // --- Skip Logic Scroll Behavior ---
+                                    const inputName = $(this).attr('name');
+                                    if (!inputName) return;
+
+                                    const fieldName = inputName.replace('[]', '');
+                                    const field = processedSchema.find(f => f.name === fieldName);
+
+                                    if (field && field.values && ['select_one', 'radio-group', 'select_many', 'checkbox-group'].includes(field.type)) {
+                                        const type = $(this).attr('type');
+                                        if ((type === 'radio' || type === 'checkbox') && $(this).is(':checked')) {
+                                            const val = $(this).val();
+                                            const opt = field.values.find(o => (o.value || o) === val);
+                                            if (opt && opt.next) {
+                                                if (opt.next === 'submit') {
+                                                    // Scroll to submit button
+                                                    const btn = $('button[type="submit"]');
+                                                    if (btn.length) {
+                                                        $('html, body').animate({ scrollTop: btn.offset().top - 100 }, 500);
+                                                    }
+                                                } else {
+                                                    let targetGroup = $(`.field-${opt.next}`).closest('.form-group');
+                                                    if (!targetGroup.length) targetGroup = $(`[name="${opt.next}"]`).closest('.form-group');
+                                                    if (targetGroup.length) {
+                                                        $('html, body').animate({ scrollTop: targetGroup.offset().top - 100 }, 500);
+                                                        const origBg = targetGroup.css('background-color');
+                                                        targetGroup.css('background-color', '#eef2ff');
+                                                        setTimeout(() => targetGroup.css('background-color', origBg), 1000);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
+                                // --- End Visibility Engine ---
 
                                 const recorderBlobs = {};
 
@@ -935,10 +1095,14 @@
                                         </div>
                                         <div class="ml-4 text-sm">
                                             <span
-                                                class="font-bold text-gray-900 text-base group-hover:text-indigo-700 transition-colors">I
-                                                agree to the Terms and Conditions</span>
+                                                class="font-bold text-gray-900 text-base group-hover:text-indigo-700 transition-colors">
+                                                I agree to the <a href="{{ route('terms') }}" target="_blank"
+                                                    onclick="event.stopPropagation();"
+                                                    class="text-indigo-600 hover:underline font-bold">Terms and Conditions</a>
+                                            </span>
                                             <p class="text-gray-500 mt-1 leading-relaxed">By submitting this survey, you acknowledge
-                                                that your responses will be recorded and processed in accordance with our <a href="#"
+                                                that your responses will be recorded and processed in accordance with our <a
+                                                    href="{{ route('privacy') }}" target="_blank" onclick="event.stopPropagation();"
                                                     class="text-indigo-600 hover:underline font-bold">Data Privacy Policy</a>. We value
                                                 your privacy and ensure your data is stored securely.</p>
                                         </div>

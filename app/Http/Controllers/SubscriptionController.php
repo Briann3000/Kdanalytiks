@@ -94,11 +94,17 @@ class SubscriptionController extends Controller
         }
 
         // IntaSend payload mapping
-        $status = $payload['state'] ?? 'FAILED';
+        // Logic for BOTH Collection (invoice_id) and Send Money (tracking_id)
+        $status = $payload['state'] ?? $payload['status'] ?? 'FAILED';
         $reference = $payload['api_ref'] ?? null;
-        $invoiceId = $payload['invoice_id'] ?? null;
-        $amount = $payload['value'] ?? 0;
+        $invoiceId = $payload['invoice_id'] ?? $payload['tracking_id'] ?? $payload['file_id'] ?? null;
+        $amount = $payload['value'] ?? $payload['amount'] ?? 0;
         $method = $payload['provider'] ?? 'IntaSend';
+
+        // Check if it's a Withdrawal (WD-) or Subscription (SUB-)
+        if ($reference && str_starts_with($reference, 'WD-')) {
+            return $this->handleWithdrawalWebhook($reference, $status, $payload);
+        }
 
         $type = null; // 'ORG', 'IND', or 'RES'
         $entityId = null;
@@ -112,8 +118,15 @@ class SubscriptionController extends Controller
             $cycle = $matches[4];
         }
 
-        if ($status !== 'COMPLETE' || !$entityId || !$tierId || !$type) {
-            \Log::info('Webhook ignored: Status not COMPLETE or missing context.', ['payload' => $payload, 'entityId' => $entityId, 'tier' => $tierId]);
+        // Standard status for collections is 'COMPLETE', for payouts it's 'Completed'
+        $isComplete = in_array(strtoupper($status), ['COMPLETE', 'COMPLETED']);
+
+        if (!$isComplete || !$entityId || !$tierId || !$type) {
+            \Log::info('Webhook ignored: Status not COMPLETE or missing context.', [
+                'status' => $status,
+                'reference' => $reference,
+                'payload' => $payload
+            ]);
             return response()->json(['message' => 'Webhook received but not processed']);
         }
 
@@ -215,6 +228,47 @@ class SubscriptionController extends Controller
         ]);
 
         return back()->with('success', 'Your subscription has been cancelled. You have been reverted to the Free tier.');
+    }
+
+    /**
+     * Handle webhook for respondent withdrawals (Send Money).
+     */
+    protected function handleWithdrawalWebhook(string $reference, string $status, array $payload)
+    {
+        $transaction = \App\Models\Transaction::where('reference', $reference)
+            ->orWhere('external_reference', $payload['tracking_id'] ?? null)
+            ->first();
+
+        if (!$transaction) {
+            \Log::warning('Withdrawal Webhook: Transaction not found.', ['reference' => $reference, 'payload' => $payload]);
+            return response()->json(['message' => 'Transaction not found'], 404);
+        }
+
+        $upperStatus = strtoupper($status);
+
+        if ($upperStatus === 'COMPLETED' || $upperStatus === 'COMPLETE') {
+            $transaction->update([
+                'status' => 'completed',
+                'external_reference' => $payload['tracking_id'] ?? $payload['file_id'] ?? null,
+                'description' => $transaction->description . ' (Confirmed via Webhook)'
+            ]);
+            \Log::info("Withdrawal Webhook: Transaction {$reference} marked as completed.");
+        } elseif (in_array($upperStatus, ['FAILED', 'REJECTED', 'CANCELLED'])) {
+            // If it failed, we might need to refund the wallet
+            if ($transaction->status !== 'failed') {
+                $wallet = $transaction->wallet;
+                if ($wallet) {
+                    $wallet->increment('balance', $transaction->amount);
+                    \Log::info("Withdrawal Webhook: Transaction {$reference} failed. Refunded {$transaction->amount} to wallet {$wallet->id}");
+                }
+                $transaction->update([
+                    'status' => 'failed',
+                    'description' => $transaction->description . ' (Failed: ' . ($payload['status_description'] ?? $status) . ')'
+                ]);
+            }
+        }
+
+        return response()->json(['status' => 'success', 'message' => 'Withdrawal status updated']);
     }
 
     private function resolveEntity()

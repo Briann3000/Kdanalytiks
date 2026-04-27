@@ -129,9 +129,9 @@ class ResearchProposalController extends Controller
         // Generate the academic sections using the NEW iterative pipeline
         $reportData = $this->synthesisService->generateIterativeReport($survey, $style, $manualReferences);
 
-        // Store the report in the session temporarily for the preview
+        // Store the report and survey_id in the session
         $reportId = uniqid('report_');
-        session([$reportId => $reportData]);
+        session([$reportId => array_merge($reportData, ['survey_id' => $survey->id])]);
 
         return redirect()->route('research-proposal.preview', [
             'reportId' => $reportId,
@@ -159,7 +159,10 @@ class ResearchProposalController extends Controller
         }
 
         $format = $request->input('format', 'pdf');
-        return view('admin.research-proposal.preview', compact('reportData', 'reportId', 'format', 'isTruncated'));
+        $canExport = !$isTruncated || $user->free_export_count < 2;
+        $remainingExports = max(0, 2 - $user->free_export_count);
+
+        return view('admin.research-proposal.preview', compact('reportData', 'reportId', 'format', 'isTruncated', 'canExport', 'remainingExports'));
     }
 
     /**
@@ -175,10 +178,29 @@ class ResearchProposalController extends Controller
         $format = $request->input('format', 'pdf');
         $filename = 'research_report_' . time();
 
+        $user = auth()->user();
+        if (!$user->hasActiveSubscription() && $user->free_export_count >= 2) {
+            return redirect()->route('research-proposal.preview', $reportId)->with('error', 'You have reached your limit of 2 free exports. Please upgrade to continue.');
+        }
+
+        $survey = isset($reportData['survey_id']) ? \App\Models\Survey::find($reportData['survey_id']) : null;
+        $branding = $this->resolveBrandingContext($survey);
+
+        \Illuminate\Support\Facades\Log::info('Export Branding Context', [
+            'user_id' => auth()->id(),
+            'is_pro' => auth()->user()->hasActiveSubscription(),
+            'branding' => $branding
+        ]);
+
         if ($format === 'docx') {
-            $path = $this->synthesisService->exportToDocx($reportData['sections'], $filename);
+            $path = $this->synthesisService->exportToDocx($reportData['sections'], $filename, $branding);
         } else {
-            $path = $this->synthesisService->exportToPdf($reportData['sections'], $filename);
+            $path = $this->synthesisService->exportToPdf($reportData['sections'], $filename, $branding);
+        }
+
+        // Increment free export count if not subscribed
+        if (!$user->hasActiveSubscription()) {
+            $user->increment('free_export_count');
         }
 
         return response()->download($path);
@@ -191,9 +213,50 @@ class ResearchProposalController extends Controller
     {
         $research_proposal = ResearchProposal::findOrFail($id);
         $this->authorizeOwner($research_proposal);
+
+        $user = auth()->user();
+        if (!$user->hasActiveSubscription() && $user->free_export_count >= 2) {
+            return back()->with('error', 'You have reached your limit of 2 free exports. Please upgrade to continue.');
+        }
+
         $filename = 'research_proposal_' . str($research_proposal->title)->slug() . '_' . time();
-        $path = $this->synthesisService->exportToDocx($research_proposal->content, $filename);
+        $branding = $this->resolveBrandingContext(); // Global user branding for standalone proposals
+
+        $path = $this->synthesisService->exportToDocx($research_proposal->content, $filename, $branding);
+
+        if (!$user->hasActiveSubscription()) {
+            $user->increment('free_export_count');
+        }
+
         return response()->download($path);
+    }
+
+    /**
+     * Resolve branding context based on User tier and Survey settings.
+     */
+    private function resolveBrandingContext(?\App\Models\Survey $survey = null): array
+    {
+        $user = auth()->user();
+        $canRemove = $user->hasActiveSubscription();
+
+        // Global User Settings
+        $userRemoveBranding = $user->remove_km_branding;
+        $userOrgName = $user->export_org_name;
+        $userLogo = $user->export_logo_url;
+
+        if ($survey) {
+            return [
+                'showKmBranding' => !($canRemove && ($userRemoveBranding || $survey->remove_km_branding)),
+                'customLogo' => ($canRemove) ? ($survey->export_logo_url ?: $userLogo) : null,
+                'customOrgName' => ($canRemove) ? ($survey->export_org_name ?: $userOrgName) : null,
+            ];
+        }
+
+        return [
+            'showKmBranding' => !($canRemove && $userRemoveBranding),
+            'customLogo' => ($canRemove && $userLogo) ? $userLogo : null,
+            'customOrgName' => ($canRemove && $userOrgName) ? $userOrgName : null,
+        ];
     }
 
     public function destroy(ResearchProposal $research_proposal)

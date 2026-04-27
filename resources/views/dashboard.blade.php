@@ -71,7 +71,7 @@
                     <span class="text-sm font-medium text-gray-900">Create Survey</span>
                 </a>
 
-                <a href="{{ route('projects.active') }}"
+                <a href="{{ route('surveys.index', ['status' => 'active']) }}"
                     class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-blue-500 hover:ring-1 hover:ring-blue-500 transition-all">
                     <div
                         class="w-12 h-12 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors mb-3">
@@ -163,7 +163,8 @@
             </div>
             <div class="bg-gray-50 px-5 py-3 text-xs">
                 @if(in_array($role, ['organization', 'independent']))
-                    <a href="{{ route('projects.active') }}" class="font-bold text-indigo-600 hover:text-indigo-500">
+                    <a href="{{ route('surveys.index', ['status' => 'active']) }}"
+                        class="font-bold text-indigo-600 hover:text-indigo-500">
                         Manage active surveys <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i></a>
                 @else
                     <a href="{{ route('surveys.public') }}" class="font-bold text-indigo-600 hover:text-indigo-500"> Browse all
@@ -229,7 +230,8 @@
                     </div>
                 </div>
                 <div class="bg-gray-50 px-5 py-3 text-xs">
-                    <a href="{{ route('projects.drafts') }}" class="font-bold text-yellow-600 hover:text-yellow-500">
+                    <a href="{{ route('surveys.index', ['status' => 'draft']) }}"
+                        class="font-bold text-yellow-600 hover:text-yellow-500">
                         Manage drafts <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
                     </a>
                 </div>
@@ -289,7 +291,7 @@
                                     <div class="pt-4 border-t border-gray-100 flex justify-between items-center">
                                         <span class="text-[10px] text-gray-300 font-bold uppercase">Activity Log
                                             #{{ $activity->id }}</span>
-                                        <a href="{{ route('projects.active') }}"
+                                        <a href="{{ route('surveys.index', ['status' => 'active']) }}"
                                             class="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase flex items-center">
                                             Manage <i class="fa-solid fa-chevron-right ml-1 text-[8px]"></i>
                                         </a>

@@ -325,7 +325,8 @@
     <div id="ptr-indicator">
         <i class="fa-solid fa-arrows-rotate animate-spin-slow"></i>
     </div>
-    <div class="min-h-screen flex flex-col" x-data="{ sidebarOpen: true, desktopSidebarOpen: window.innerWidth > 1024 }"
+    <div class="min-h-screen flex flex-col"
+        x-data="{ sidebarOpen: true, desktopSidebarOpen: window.innerWidth > 1024 && !{{ request()->routeIs('surveys.create', 'surveys.edit') ? 'true' : 'false' }} }"
         @close-sidebar.window="desktopSidebarOpen = false" @open-sidebar.window="desktopSidebarOpen = true">
         <!-- Navigation Bar -->
         <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -512,8 +513,8 @@
                             <i class="fa-solid fa-house mb-1 text-lg"></i>
                             <span class="text-[10px] font-bold">Home</span>
                         </a>
-                        <a href="{{ route('projects.active') }}"
-                            class="flex flex-col items-center justify-center w-full text-gray-500 hover:text-indigo-600 {{ request()->routeIs('projects.*') ? 'text-indigo-600' : '' }} transition-colors">
+                        <a href="{{ route('surveys.index', ['status' => 'active']) }}"
+                            class="flex flex-col items-center justify-center w-full text-gray-500 hover:text-indigo-600 {{ (request()->routeIs('surveys.index') && request('status') === 'active') ? 'text-indigo-600' : '' }} transition-colors">
                             <i class="fa-solid fa-layer-group mb-1 text-lg"></i>
                             <span class="text-[10px] font-bold">Projects</span>
                         </a>

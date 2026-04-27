@@ -78,7 +78,7 @@ class WalletController extends Controller
             $transaction->update(['status' => 'processing']);
 
             // 4. Trigger Payment Gateway
-            $result = $paymentManager->payout($user, (float) $request->amount, $wallet->currency ?? 'KES');
+            $result = $paymentManager->payout($user, (float) $request->amount, $wallet->currency ?? 'KES', $transaction->reference);
 
             if ($result['status'] === 'success') {
                 $transaction->update([

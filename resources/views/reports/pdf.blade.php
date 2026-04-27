@@ -135,6 +135,19 @@
 <body>
 
     <div class="header">
+        @if(isset($branding) && ($branding['customLogo'] || $branding['customOrgName']))
+            <div style="margin-bottom: 20px;">
+                @if($branding['customLogo'])
+                    @php $logoPath = storage_path('app/public/' . $branding['customLogo']); @endphp
+                    <img src="{{ $logoPath }}" style="max-height: 60px; max-width: 200px; object-fit: contain;">
+                @endif
+                @if($branding['customOrgName'])
+                    <div style="font-size: 18px; font-weight: bold; color: #4b5563; margin-top: 5px;">
+                        {{ $branding['customOrgName'] }}
+                    </div>
+                @endif
+            </div>
+        @endif
         <h1>{{ $survey->title }}</h1>
         <p>Analytical Executive Report - Generated {{ now()->format('M d, Y H:i') }}</p>
     </div>
@@ -208,9 +221,11 @@
         </div>
     @endforeach
 
-    <div class="footer">
-        Powered by KMSurveyTool™ | Executive Analytics Export
-    </div>
+    @if(!isset($branding) || $branding['showKmBranding'])
+        <div class="footer">
+            Powered by KMSurveyTool™ | Executive Analytics Export
+        </div>
+    @endif
 
 </body>
 

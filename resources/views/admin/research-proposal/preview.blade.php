@@ -120,7 +120,7 @@
                 </form>
             </div>
 
-            @if($isTruncated)
+            @if(!$canExport)
                 <div class="flex items-center space-x-2 px-3 py-1.5 bg-amber-50 rounded-xl border border-amber-100">
                     <i class="fa-solid fa-lock text-amber-500 text-[10px]"></i>
                     <span class="text-[8px] font-black text-amber-700 uppercase tracking-wider">Upgrade for Export</span>
@@ -130,6 +130,12 @@
                     x-data="{ format: '{{ $format }}' }" class="flex items-center space-x-3">
                     @csrf
                     <input type="hidden" name="format" :value="format">
+
+                    @if($isTruncated)
+                        <div class="flex items-center px-3 py-1.5 bg-indigo-50 rounded-lg border border-indigo-100 mr-2">
+                            <span class="text-[8px] font-black text-indigo-600 uppercase tracking-wider">{{ $remainingExports }} Free {{ \Illuminate\Support\Str::plural('Export', $remainingExports) }} Left</span>
+                        </div>
+                    @endif
 
                     <div class="flex p-1 bg-gray-100 rounded-xl border border-gray-200/50">
                         <button type="button" @click="format = 'pdf'"

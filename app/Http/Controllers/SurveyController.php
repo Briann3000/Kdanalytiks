@@ -8,12 +8,21 @@ use App\Models\Survey;
 use App\Models\Response;
 use App\Models\Answer;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\SurveyResponsesExport;
 
 class SurveyController extends Controller
 {
     public function index(Request $request)
     {
-        return $this->filteredIndex(\App\Enums\SurveyStatus::Active, 'surveys.index');
+        $statusParam = $request->get('status', 'active');
+        $status = match ($statusParam) {
+            'draft' => \App\Enums\SurveyStatus::Draft,
+            'archived' => \App\Enums\SurveyStatus::Archived,
+            default => \App\Enums\SurveyStatus::Active,
+        };
+
+        return $this->filteredIndex($status, 'surveys.index');
     }
 
     public function hub()
@@ -23,10 +32,8 @@ class SurveyController extends Controller
 
         if ($role === 'admin') {
             return redirect()->route('admin.surveys.index');
-        } elseif ($role === 'organization') {
-            return redirect()->route('organization.surveys.index');
-        } elseif ($role === 'independent') {
-            return redirect()->route('independent.surveys.index');
+        } elseif ($role === 'organization' || $role === 'independent') {
+            return redirect()->route('surveys.index', ['status' => 'active']);
         }
 
         return redirect()->route('surveys.public');
@@ -167,7 +174,7 @@ class SurveyController extends Controller
     {
         $this->authorizeOwner($survey);
         $survey->loadCount('responses');
-        return view('surveys.project_summary', compact('survey'));
+        return view('surveys.summary', compact('survey'));
     }
 
     public function projectSettings(\App\Models\Survey $survey)
@@ -179,7 +186,7 @@ class SurveyController extends Controller
             $survey->update(['share_token' => Str::random(32)]);
         }
 
-        return view('surveys.project_settings', compact('survey'));
+        return view('surveys.settings', compact('survey'));
     }
 
     public function updateProjectSettings(Request $request, \App\Models\Survey $survey)
@@ -187,20 +194,94 @@ class SurveyController extends Controller
         $this->authorizeOwner($survey);
 
         $validated = $request->validate([
-            'title' => 'required|string|max:255',
+            'title' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'is_anonymous' => 'nullable',
             'public_access' => 'nullable|string|in:none,view,submit,edit',
+            'logo' => 'nullable|image|max:2048',
+            'brand_color' => 'nullable|string|max:7',
+            'remove_km_branding' => 'nullable',
+            'export_logo' => 'nullable|image|max:2048',
+            'export_org_name' => 'nullable|string|max:255',
         ]);
 
-        $survey->update([
-            'title' => $validated['title'],
-            'description' => $validated['description'],
-            'is_anonymous' => $request->has('is_anonymous'),
-            'public_access' => $validated['public_access'] ?? 'none'
-        ]);
+        $updateData = [];
+
+        if ($request->has('title'))
+            $updateData['title'] = $validated['title'];
+        if ($request->has('description'))
+            $updateData['description'] = $validated['description'];
+        if ($request->has('is_anonymous_present')) { // We should use a hidden field to detect checkbox presence or just handle it
+            $updateData['is_anonymous'] = $request->has('is_anonymous');
+        } else if ($request->has('title')) {
+            // If title is present, we assume it's the general settings form
+            $updateData['is_anonymous'] = $request->has('is_anonymous');
+        }
+
+        if ($request->has('public_access'))
+            $updateData['public_access'] = $validated['public_access'];
+        if ($request->has('brand_color'))
+            $updateData['brand_color'] = $validated['brand_color'];
+
+        if ($request->has('remove_km_branding_present') || $request->has('export_org_name')) {
+            $updateData['remove_km_branding'] = $request->has('remove_km_branding');
+            $updateData['export_org_name'] = $validated['export_org_name'] ?? null;
+        }
+
+        if ($request->hasFile('logo')) {
+            // Delete old logo if exists
+            if ($survey->logo_url) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($survey->logo_url);
+            }
+            $path = $request->file('logo')->store('survey_logos', 'public');
+            $updateData['logo_url'] = $path;
+        }
+
+        if ($request->hasFile('export_logo')) {
+            // Delete old export logo if exists
+            if ($survey->export_logo_url) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($survey->export_logo_url);
+            }
+            $path = $request->file('export_logo')->store('export_logos', 'public');
+            $updateData['export_logo_url'] = $path;
+        }
+
+        if (!empty($updateData)) {
+            $survey->update($updateData);
+        }
 
         return back()->with('success', 'Settings updated successfully.');
+    }
+
+    private function getBrandingContext(\App\Models\Survey $survey): array
+    {
+        $user = auth()->user();
+        $tier = $this->getCurrentTier();
+        $canControl = in_array($tier, ['pro', 'enterprise', 'respondent-pro']);
+
+        return [
+            'showKmBranding' => !($canControl && ($user->remove_km_branding || $survey->remove_km_branding)),
+            'customLogo' => ($canControl) ? ($survey->export_logo_url ?: $user->export_logo_url) : null,
+            'customOrgName' => ($canControl) ? ($survey->export_org_name ?: $user->export_org_name) : null,
+            'logoUrl' => ($canControl && $survey->export_logo_url) ? route('surveys.branding.logo', $survey) : null,
+        ];
+    }
+
+    public function serveBrandingLogo(\App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+
+        if (!$survey->export_logo_url) {
+            abort(404);
+        }
+
+        $path = storage_path('app/public/' . $survey->export_logo_url);
+
+        if (!file_exists($path)) {
+            abort(404);
+        }
+
+        return response()->file($path);
     }
 
     public function addCollaborator(Request $request, \App\Models\Survey $survey)
@@ -265,13 +346,9 @@ class SurveyController extends Controller
 
         if ($role === 'admin') {
             return redirect()->route('admin.surveys.index')->with('success', 'Project archived successfully.');
-        } elseif ($role === 'organization') {
-            return redirect()->route('organization.surveys.index')->with('success', 'Project archived successfully.');
-        } elseif ($role === 'independent') {
-            return redirect()->route('independent.surveys.index')->with('success', 'Project archived successfully.');
         }
 
-        return redirect()->route('projects.active')->with('success', 'Project archived successfully.');
+        return redirect()->route('surveys.index', ['status' => 'archived'])->with('success', 'Project archived successfully.');
     }
 
     public function store(Request $request)
@@ -313,7 +390,7 @@ class SurveyController extends Controller
         $survey->type = \App\Enums\SurveyType::tryFrom($validated['type']) ?? \App\Enums\SurveyType::Public;
         $survey->public_access = ($survey->type === \App\Enums\SurveyType::Public) ? 'submit' : 'none';
         $survey->json_schema = $validated['json_schema'];
-        $survey->is_paid = $request->has('is_paid');
+        $survey->is_paid = $request->boolean('is_paid');
         $survey->reward_per_response = $request->input('reward_per_response', 0);
         $survey->reward_budget = $request->input('reward_budget', 0);
 
@@ -346,7 +423,7 @@ class SurveyController extends Controller
             ? 'Survey published successfully and is now LIVE!'
             : 'Survey saved as draft.';
 
-        return redirect()->route('projects.summary', $survey)->with('success', $message);
+        return redirect()->route('surveys.summary', $survey)->with('success', $message);
     }
 
     public function invite(Request $request, \App\Models\Survey $survey)
@@ -450,18 +527,365 @@ class SurveyController extends Controller
         $this->authorizeOwner($survey);
         $responses = $survey->responses()->with('respondent', 'answers')->orderBy('created_at', 'desc')->paginate(15);
         $headers = $this->getSurveyAnalysisMetadata($survey);
-        return view('surveys.project_data', compact('survey', 'responses', 'headers'));
+        return view('surveys.data', compact('survey', 'responses', 'headers'));
     }
 
-    public function showResponseDetail(\App\Models\Survey $survey, \App\Models\Response $response)
+    public function showResponseDetail($survey_id, $response_id)
     {
+        $survey = \App\Models\Survey::findOrFail($survey_id);
+        $response = \App\Models\Response::findOrFail($response_id);
+
         $this->authorizeOwner($survey);
 
-        if ($response->survey_id !== $survey->id) {
-            abort(404);
+        if ($response->survey_id != $survey->id) {
+            abort(404, 'Response does not belong to this survey');
         }
 
         return view('responses.detail', compact('survey', 'response'));
+    }
+
+    public function exportJson(\App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+
+        $tier = $this->getCurrentTier();
+        if (!in_array($tier, ['pro', 'enterprise'])) {
+            return back()->with('error', 'JSON Export is a Pro/Enterprise feature.');
+        }
+
+        $responses = $survey->responses()->with(['answers.question', 'respondent'])->get();
+
+        $data = $responses->map(function ($response) use ($survey) {
+            $answers = [];
+            if (!empty($survey->json_schema)) {
+                $jsonAnswer = $response->answers->first();
+                $answers = $jsonAnswer ? json_decode($jsonAnswer->value, true) : [];
+            } else {
+                foreach ($response->answers as $answer) {
+                    $answers[] = [
+                        'question_id' => $answer->question_id,
+                        'question_text' => $answer->question ? $answer->question->text : 'N/A',
+                        'value' => $answer->value
+                    ];
+                }
+            }
+
+            return [
+                'response_id' => $response->id,
+                'timestamp' => $response->created_at->format('Y-m-d H:i:s'),
+                'respondent' => [
+                    'name' => $response->respondent ? $response->respondent->name : 'Anonymous',
+                    'email' => $response->respondent ? $response->respondent->email : 'N/A'
+                ],
+                'answers' => $answers
+            ];
+        });
+
+        $branding = $this->getBrandingContext($survey);
+
+        $output = [
+            'generated_by' => $branding['showKmBranding'] ? 'KMSurveyTool' : ($branding['customOrgName'] ?? 'Export System'),
+            'survey_id' => $survey->id,
+            'data' => $data
+        ];
+
+        $json = json_encode($output, JSON_PRETTY_PRINT);
+        $filename = "survey_{$survey->id}_responses.json";
+
+        // Save for History
+        $exportDir = storage_path('app/public/exports/' . $survey->id . '/');
+        if (!is_dir($exportDir))
+            mkdir($exportDir, 0755, true);
+        file_put_contents($exportDir . $filename, $json);
+
+        return response($json)
+            ->header('Content-Type', 'application/json')
+            ->header('Content-Disposition', "attachment; filename=\"{$filename}\"");
+    }
+
+    public function exportXml(\App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+
+        $tier = $this->getCurrentTier();
+        if ($tier !== 'enterprise') {
+            return back()->with('error', 'XML Export is an Enterprise feature.');
+        }
+
+        $responses = $survey->responses()->with(['answers.question', 'respondent'])->get();
+
+        $branding = $this->getBrandingContext($survey);
+
+        $xml = new \XMLWriter();
+        $xml->openMemory();
+        $xml->setIndent(true);
+        $xml->startDocument('1.0', 'UTF-8');
+        if ($branding['showKmBranding']) {
+            $xml->writeComment(' Generated by KMSurveyTool | kmsurveytool.com ');
+        } elseif ($branding['customOrgName']) {
+            $xml->writeComment(' Generated for ' . $branding['customOrgName'] . ' ');
+        }
+        $xml->startElement('responses');
+        $xml->writeAttribute('survey_id', $survey->id);
+        $xml->writeAttribute('survey_title', $survey->title);
+
+        foreach ($responses as $response) {
+            $xml->startElement('response');
+            $xml->writeElement('id', $response->id);
+            $xml->writeElement('timestamp', $response->created_at->format('Y-m-d H:i:s'));
+
+            $xml->startElement('respondent');
+            $xml->writeElement('name', $response->respondent ? $response->respondent->name : 'Anonymous');
+            $xml->writeElement('email', $response->respondent ? $response->respondent->email : 'N/A');
+            $xml->endElement();
+
+            $xml->startElement('answers');
+            if (!empty($survey->json_schema)) {
+                $jsonAnswer = $response->answers->first();
+                $answers = $jsonAnswer ? json_decode($jsonAnswer->value, true) : [];
+                foreach ($answers as $ans) {
+                    $xml->startElement('answer');
+                    $xml->writeElement('name', $ans['name'] ?? 'N/A');
+                    $xml->writeElement('label', $ans['label'] ?? 'N/A');
+                    $val = $ans['userData'] ?? '';
+                    $xml->writeElement('value', is_array($val) ? implode(', ', $val) : $val);
+                    $xml->endElement();
+                }
+            } else {
+                foreach ($response->answers as $answer) {
+                    $xml->startElement('answer');
+                    $xml->writeElement('question_id', $answer->question_id);
+                    $xml->writeElement('question_text', $answer->question ? $answer->question->text : 'N/A');
+                    $xml->writeElement('value', $answer->value);
+                    $xml->endElement();
+                }
+            }
+            $xml->endElement(); // answers
+            $xml->endElement(); // response
+        }
+
+        $xml->endElement(); // responses
+        $xml->endDocument();
+
+        $content = $xml->outputMemory();
+        $filename = "survey_{$survey->id}_responses.xml";
+
+        // Save for History
+        $exportDir = storage_path('app/public/exports/' . $survey->id . '/');
+        if (!is_dir($exportDir))
+            mkdir($exportDir, 0755, true);
+        file_put_contents($exportDir . $filename, $content);
+
+        return response($content)
+            ->header('Content-Type', 'application/xml')
+            ->header('Content-Disposition', "attachment; filename=\"{$filename}\"");
+    }
+
+    public function exportXlsx(\App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+
+        $tier = $this->getCurrentTier();
+        if (!in_array($tier, ['pro', 'enterprise'])) {
+            return back()->with('error', 'Excel Export is a Pro/Enterprise feature.');
+        }
+
+        $responses = $survey->responses()->with(['answers.question', 'respondent'])->get();
+        $filename = "survey_{$survey->id}_responses.xlsx";
+        $exportPath = 'exports/' . $survey->id . '/' . $filename;
+
+        // Save for History & Download
+        \Maatwebsite\Excel\Facades\Excel::store(new \App\Exports\SurveyResponsesExport($survey, $responses), $exportPath, 'public');
+
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\SurveyResponsesExport($survey, $responses), $filename);
+    }
+
+    public function exportSpss(\App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+
+        $tier = $this->getCurrentTier();
+        if ($tier !== 'enterprise') {
+            return back()->with('error', 'SPSS Export is an Enterprise feature.');
+        }
+
+        $responses = $survey->responses()->with(['answers.question', 'respondent'])->get();
+
+        $filename = "survey_{$survey->id}_responses.sav";
+        $exportDir = storage_path('app/public/exports/' . $survey->id . '/');
+        if (!is_dir($exportDir))
+            mkdir($exportDir, 0755, true);
+        $exportPath = $exportDir . $filename;
+
+        // Prepare variables and data
+        $variables = [
+            [
+                'name' => 'res_id',
+                'format' => \SPSS\Sav\Variable::FORMAT_TYPE_F,
+                'width' => 10,
+                'label' => 'Response ID',
+                'data' => $responses->pluck('id')->toArray()
+            ],
+            [
+                'name' => 'date',
+                'format' => \SPSS\Sav\Variable::FORMAT_TYPE_A,
+                'width' => 20,
+                'label' => 'Submission Date',
+                'data' => $responses->map(fn($r) => $r->created_at->format('Y-m-d H:i:s'))->toArray()
+            ],
+            [
+                'name' => 'name',
+                'format' => \SPSS\Sav\Variable::FORMAT_TYPE_A,
+                'width' => 100,
+                'label' => 'Respondent Name',
+                'data' => $responses->map(fn($r) => $r->respondent ? $r->respondent->name : 'Anonymous')->toArray()
+            ],
+            [
+                'name' => 'email',
+                'format' => \SPSS\Sav\Variable::FORMAT_TYPE_A,
+                'width' => 100,
+                'label' => 'Respondent Email',
+                'data' => $responses->map(fn($r) => $r->respondent ? $r->respondent->email : 'N/A')->toArray()
+            ],
+        ];
+
+        // Add questions as variables
+        if (empty($survey->json_schema)) {
+            foreach ($survey->questions()->orderBy('position')->get() as $q) {
+                $varData = [];
+                foreach ($responses as $response) {
+                    $answer = $response->answers->where('question_id', $q->id)->first();
+                    $varData[] = $answer ? (string) $answer->value : '';
+                }
+                $variables[] = [
+                    'name' => 'q' . $q->id,
+                    'format' => \SPSS\Sav\Variable::FORMAT_TYPE_A,
+                    'width' => 255,
+                    'label' => $q->text ?? $q->title,
+                    'data' => $varData
+                ];
+            }
+        }
+
+        $branding = $this->getBrandingContext($survey);
+
+        $writer = new \SPSS\Sav\Writer([
+            'header' => [
+                'prodName' => $branding['showKmBranding'] ? 'KMSurveyTool' : ($branding['customOrgName'] ?? ''),
+                'creationDate' => date('d M y'),
+                'creationTime' => date('H:i:s'),
+            ],
+            'variables' => $variables
+        ]);
+
+        $writer->save($exportPath);
+
+        return response()->download($exportPath);
+    }
+
+    public function exportGoogleSheets(\App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+
+        $tier = $this->getCurrentTier();
+        if ($tier !== 'enterprise') {
+            return back()->with('error', 'Google Sheets Export is an Enterprise feature.');
+        }
+
+        if (!session()->has('google_token')) {
+            session(['google_export_url' => url()->current()]);
+            return redirect()->route('auth.google');
+        }
+
+        $token = session('google_token');
+
+        // Refresh token if expired
+        if (time() >= (($token['created'] ?? 0) + ($token['expires_in'] ?? 3600))) {
+            if (isset($token['refresh_token'])) {
+                $response = \Illuminate\Support\Facades\Http::asForm()->post('https://oauth2.googleapis.com/token', [
+                    'refresh_token' => $token['refresh_token'],
+                    'client_id' => config('services.google.client_id'),
+                    'client_secret' => config('services.google.client_secret'),
+                    'grant_type' => 'refresh_token',
+                ]);
+
+                if ($response->successful()) {
+                    $newToken = $response->json();
+                    $token = array_merge($token, $newToken);
+                    $token['created'] = time();
+                    session(['google_token' => $token]);
+                } else {
+                    session(['google_export_url' => url()->current()]);
+                    return redirect()->route('auth.google');
+                }
+            } else {
+                session(['google_export_url' => url()->current()]);
+                return redirect()->route('auth.google');
+            }
+        }
+
+        $responses = $survey->responses()->with(['answers.question', 'respondent'])->get();
+
+        $branding = $this->getBrandingContext($survey);
+        $titleSuffix = $branding['showKmBranding'] ? ' (via KMSurveyTool)' : ($branding['customOrgName'] ? ' (for ' . $branding['customOrgName'] . ')' : '');
+
+        // 1. Create Spreadsheet
+        $createResponse = \Illuminate\Support\Facades\Http::withToken($token['access_token'])->post('https://sheets.googleapis.com/v4/spreadsheets', [
+            'properties' => [
+                'title' => 'Survey Export: ' . $survey->title . ' (' . date('Y-m-d H:i') . ')' . $titleSuffix
+            ]
+        ]);
+
+        if ($createResponse->failed()) {
+            return back()->with('error', 'Failed to create Google Sheet: ' . ($createResponse->json()['error']['message'] ?? 'Unknown error'));
+        }
+
+        $spreadsheetId = $createResponse->json()['spreadsheetId'];
+
+        // 2. Prepare Data
+        $values = [];
+        $headers = ['Response ID', 'Date', 'Respondent Name', 'Respondent Email'];
+        if (!empty($survey->json_schema)) {
+            $headers[] = 'Raw JSON Data';
+        } else {
+            foreach ($survey->questions()->orderBy('position')->get() as $q) {
+                $headers[] = $q->text;
+            }
+        }
+        $values[] = $headers;
+
+        foreach ($responses as $response) {
+            $row = [
+                (string) $response->id,
+                $response->created_at->format('Y-m-d H:i:s'),
+                $response->respondent ? $response->respondent->name : 'Anonymous',
+                $response->respondent ? $response->respondent->email : 'N/A'
+            ];
+            if (!empty($survey->json_schema)) {
+                $jsonAnswer = $response->answers->first();
+                $row[] = $jsonAnswer ? $jsonAnswer->value : '{}';
+            } else {
+                foreach ($survey->questions()->orderBy('position')->get() as $q) {
+                    $answer = $response->answers->where('question_id', $q->id)->first();
+                    $row[] = $answer ? (string) $answer->value : '';
+                }
+            }
+            $values[] = $row;
+        }
+
+        // 3. Update Data
+        $updateResponse = \Illuminate\Support\Facades\Http::withToken($token['access_token'])
+            ->withQueryParameters(['valueInputOption' => 'RAW'])
+            ->put("https://sheets.googleapis.com/v4/spreadsheets/{$spreadsheetId}/values/Sheet1!A1", [
+                'values' => $values
+            ]);
+
+        if ($updateResponse->failed()) {
+            return back()->with('success', 'Sheet created but failed to upload data. Sheet ID: ' . $spreadsheetId);
+        }
+
+        return redirect()->away('https://docs.google.com/spreadsheets/d/' . $spreadsheetId)
+            ->with('success', 'Survey data synced to Google Sheets successfully!');
     }
 
     public function exportResponses(\App\Models\Survey $survey)
@@ -473,8 +897,16 @@ class SurveyController extends Controller
         $filename = "survey_{$survey->id}_responses.csv";
         $handle = fopen('php://temp', 'w+');
 
+        $branding = $this->getBrandingContext($survey);
+
+        if ($branding['showKmBranding']) {
+            fputcsv($handle, ['# Exported via KMSurveyTool — kmsurveytool.com']);
+        } elseif ($branding['customOrgName']) {
+            fputcsv($handle, ['# Exported for ' . $branding['customOrgName']]);
+        }
+
         $headers = ['Response ID', 'Date', 'Respondent Email', 'Respondent Name'];
-        $isJson = !empty($survey->json_schema);
+        $isJson = !empty($survey->json_schema) && $survey->json_schema !== '[]';
         $questions = [];
 
         if ($isJson) {
@@ -496,6 +928,7 @@ class SurveyController extends Controller
                 $response->respondent ? $response->respondent->name : 'Anonymous'
             ];
 
+            $isJson = !empty($survey->json_schema) && $survey->json_schema !== '[]';
             if ($isJson) {
                 $jsonAnswer = $response->answers->first();
                 $row[] = $jsonAnswer ? $jsonAnswer->value : '{}';
@@ -528,7 +961,7 @@ class SurveyController extends Controller
         $this->authorizeOwner($survey);
 
         $responses = $survey->responses()->with('answers.question')->get();
-        $isJson = !empty($survey->json_schema);
+        $isJson = !empty($survey->json_schema) && $survey->json_schema !== '[]';
 
         $totalResponses = $responses->count();
         $analysis = [];
@@ -692,7 +1125,7 @@ class SurveyController extends Controller
             \Log::error("AI Summary Error: " . $e->getMessage());
         }
 
-        return view('surveys.project_reports', compact('survey', 'responses', 'analysis', 'chartConfigs', 'aiSummary'));
+        return view('surveys.reports', compact('survey', 'responses', 'analysis', 'chartConfigs', 'aiSummary'));
     }
 
     public function exportPdf(\App\Models\Survey $survey)
@@ -700,7 +1133,7 @@ class SurveyController extends Controller
         $this->authorizeOwner($survey);
 
         $responses = $survey->responses()->with('answers.question')->get();
-        $isJson = !empty($survey->json_schema);
+        $isJson = !empty($survey->json_schema) && $survey->json_schema !== '[]';
         $analysis = [];
 
         if ($isJson) {
@@ -760,7 +1193,8 @@ class SurveyController extends Controller
             }
         }
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.pdf', compact('survey', 'responses', 'analysis'));
+        $branding = $this->getBrandingContext($survey);
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.pdf', compact('survey', 'responses', 'analysis', 'branding'));
         $filename = "Analytical_Report_" . Str::slug($survey->title) . "_" . date('Ymd_His') . ".pdf";
 
         // Save for History
@@ -824,7 +1258,7 @@ class SurveyController extends Controller
             'type' => $validated['type'],
             'public_access' => ($validated['type'] === 'public') ? 'submit' : 'none',
             'json_schema' => $validated['json_schema'],
-            'is_paid' => $request->has('is_paid'),
+            'is_paid' => $request->boolean('is_paid'),
             'reward_per_response' => $request->input('reward_per_response', 0),
             'reward_budget' => $request->input('reward_budget', 0),
         ]);
@@ -847,14 +1281,22 @@ class SurveyController extends Controller
             ? 'Survey published successfully and is now LIVE!'
             : 'Survey updated successfully.';
 
-        return redirect()->route('projects.summary', $survey)->with('success', $message);
+        return redirect()->route('surveys.summary', $survey)->with('success', $message);
     }
 
     public function destroy(\App\Models\Survey $survey)
     {
         $this->authorizeOwner($survey);
         $survey->delete();
-        return back()->with('success', 'Survey deleted successfully.');
+
+        $user = auth()->user();
+        $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+
+        if ($role === 'admin') {
+            return redirect()->route('admin.surveys.index')->with('success', 'Survey deleted successfully.');
+        }
+
+        return redirect()->route('surveys.index', ['status' => 'active'])->with('success', 'Survey deleted successfully.');
     }
 
     public function bulkDestroy(Request $request)
@@ -1053,11 +1495,9 @@ class SurveyController extends Controller
                 $jsonData = json_decode($request->input('json_data'), true, 20) ?? [];
 
                 foreach ($request->allFiles() as $name => $file) {
-                    if ($file->isValid() && in_array($file->getMimeType(), $allowedMimeTypes)) {
-                        $newFileName = uniqid('media_') . '_' . bin2hex(random_bytes(4)) . '.' . $file->extension();
-                        $file->move($uploadDir, $newFileName);
-                        $storagePath = 'uploads/' . $newFileName;
+                    $storagePath = $this->handleSecureUpload($file, $uploadDir, $allowedMimeTypes);
 
+                    if ($storagePath) {
                         foreach ($jsonData as &$item) {
                             if (isset($item['name']) && $item['name'] === $name) {
                                 $item['userData'] = $storagePath;
@@ -1091,13 +1531,9 @@ class SurveyController extends Controller
                 $inputName = 'question_' . $question->id;
                 $finalAnswerValue = '';
 
-                if (in_array($question->type, ['video', 'audio']) && $request->hasFile($inputName)) {
+                if (in_array($question->type, ['video', 'audio', 'image', 'file']) && $request->hasFile($inputName)) {
                     $file = $request->file($inputName);
-                    if ($file->isValid() && in_array($file->getMimeType(), $allowedMimeTypes)) {
-                        $newFileName = uniqid('media_') . '_' . bin2hex(random_bytes(4)) . '.' . $file->extension();
-                        $file->move($uploadDir, $newFileName);
-                        $finalAnswerValue = 'uploads/' . $newFileName;
-                    }
+                    $finalAnswerValue = $this->handleSecureUpload($file, $uploadDir, $allowedMimeTypes) ?? '';
                 } else {
                     $answerValue = $request->input($inputName, '');
                     if (is_array($answerValue)) {
@@ -1140,7 +1576,7 @@ class SurveyController extends Controller
     private function getSurveyAnalysisMetadata(\App\Models\Survey $survey)
     {
         $analysis = [];
-        $isJson = !empty($survey->json_schema);
+        $isJson = !empty($survey->json_schema) && $survey->json_schema !== '[]';
 
         if ($isJson) {
             $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
@@ -1251,7 +1687,7 @@ class SurveyController extends Controller
             }
         }
 
-        return view('surveys.project_gallery', compact('survey', 'mediaFiles'));
+        return view('surveys.gallery', compact('survey', 'mediaFiles'));
     }
 
     private function formatMediaItem($path, $date)
@@ -1296,7 +1732,67 @@ class SurveyController extends Controller
             }
         }
 
-        return view('surveys.project_downloads', compact('survey', 'exports'));
+        $currentTier = $this->getCurrentTier();
+        return view('surveys.downloads', compact('survey', 'exports', 'currentTier'));
+    }
+
+    public function downloadsHistory(\App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+
+        $exports = [];
+        $exportDir = storage_path('app/public/exports/' . $survey->id . '/');
+
+        if (is_dir($exportDir)) {
+            $fileEntries = array_diff(scandir($exportDir, SCANDIR_SORT_DESCENDING), ['.', '..']);
+            foreach ($fileEntries as $file) {
+                $filePath = $exportDir . $file;
+                if (is_file($filePath)) {
+                    $exports[] = [
+                        'filename' => $file,
+                        'name' => $file,
+                        'extension' => strtoupper(pathinfo($file, PATHINFO_EXTENSION)),
+                        'date' => date('M d, Y H:i', filemtime($filePath)),
+                        'size' => round(filesize($filePath) / 1024, 2) . ' KB',
+                        'download_url' => asset('storage/exports/' . $survey->id . '/' . $file),
+                        'delete_url' => route('surveys.downloads.delete', [$survey->id, $file])
+                    ];
+                }
+            }
+        }
+
+        return response()->json($exports);
+    }
+
+    private function getCurrentTier()
+    {
+        $user = auth()->user();
+        if (!$user)
+            return 'free';
+
+        // Admin always has full access
+        if (method_exists($user, 'isAdmin') && $user->isAdmin()) {
+            return 'enterprise';
+        }
+
+        $org = $user->organization;
+        if ($org && $org->subscriptionTier) {
+            return $org->subscriptionTier->slug;
+        }
+
+        $independent = $user->independent;
+        if ($independent && $independent->subscriptionTier) {
+            return $independent->subscriptionTier->slug;
+        }
+
+        // Respondent role check
+        if ($user->role === \App\Enums\UserRole::Respondent || $user->role === 'respondent') {
+            if ($user->subscriptionTier) {
+                return $user->subscriptionTier->slug;
+            }
+        }
+
+        return 'free';
     }
 
     public function deleteDownload(\App\Models\Survey $survey, $filename)
@@ -1313,5 +1809,50 @@ class SurveyController extends Controller
         }
 
         return response()->json(['success' => false, 'message' => 'File not found'], 404);
+    }
+
+    /**
+     * Securely handle file uploads for survey responses.
+     * Prevents malicious uploads by validating MIME types, file size, and sanitizing names.
+     */
+    private function handleSecureUpload($file, $uploadDir, $allowedMimeTypes)
+    {
+        if (!$file->isValid()) {
+            return null;
+        }
+
+        $mimeType = $file->getMimeType();
+        if (!in_array($mimeType, $allowedMimeTypes)) {
+            \Log::warning("Security: Blocked unauthorized file type attempt: " . $mimeType);
+            return null;
+        }
+
+        // 10MB limit for images, 50MB for video/audio/other media
+        $isImage = str_starts_with($mimeType, 'image/');
+        $maxSize = $isImage ? 10 * 1024 * 1024 : 50 * 1024 * 1024;
+
+        if ($file->getSize() > $maxSize) {
+            \Log::warning("Security: Blocked file exceeding size limit. Size: " . $file->getSize() . " bytes");
+            return null;
+        }
+
+        // Sanitize extension and generate random filename
+        $extension = $file->getClientOriginalExtension();
+        // Fallback or override if extension is missing or too long
+        if (empty($extension) || strlen($extension) > 5) {
+            $extension = $file->extension();
+        }
+
+        // Block executable or dangerous extensions just in case (redundant due to MIME whitelist)
+        $dangerous = ['php', 'php5', 'phtml', 'exe', 'sh', 'js', 'html', 'htm'];
+        if (in_array(strtolower($extension), $dangerous)) {
+            \Log::error("Security: Blocked suspicious extension: " . $extension);
+            return null;
+        }
+
+        $safeFileName = 'res_' . bin2hex(random_bytes(16)) . '.' . $extension;
+        $file->move($uploadDir, $safeFileName);
+
+        return 'uploads/' . $safeFileName;
     }
 }

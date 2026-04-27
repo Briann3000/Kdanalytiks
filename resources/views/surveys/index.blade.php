@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title')
-    @if($status->value === 'active') Manage Projects @elseif($status->value === 'archived') Archived Projects @else Library - Drafts @endif
+    @if($status->value === 'active') Manage Surveys @elseif($status->value === 'archived') Archived Surveys @else Library - Drafts @endif
 @endsection
 
 @section('content')
@@ -84,12 +84,12 @@
     <div class="flex items-center justify-between mb-8 px-4 sm:px-0">
         <div>
             <h2 class="text-2xl font-black text-gray-900 tracking-tight uppercase">
-                @if($status->value === 'active') Active Projects @elseif($status->value === 'archived') Archived Projects @else Project Drafts @endif
+                @if($status->value === 'active') Active Surveys @elseif($status->value === 'archived') Archived Surveys @else Survey Drafts @endif
             </h2>
             <p class="mt-1 text-sm text-gray-500 font-medium">
                 @if($status->value === 'active') View and manage your currently deployed data collection surveys.
                 @elseif($status->value === 'archived') Access historical data and reports from completed surveys.
-                @else Manage your survey schemas before they are deployed to projects. @endif
+                @else Manage your survey schemas before they are deployed to surveys. @endif
             </p>
         </div>
         @if($status->value !== 'archived')
@@ -173,7 +173,8 @@
                         @php 
                             $statusVal = $survey->status instanceof \BackedEnum ? $survey->status->value : $survey->status;
                         @endphp
-                        <tr class="hover:bg-gray-50/50 transition-all group" 
+                        <tr class="hover:bg-gray-50/50 transition-all group cursor-pointer" 
+                            @click="if(!['A', 'BUTTON', 'INPUT', 'I'].includes($event.target.tagName) && !$event.target.closest('a, button, input')) window.location = '{{ route('surveys.summary', $survey) }}'"
                             x-data="{ deleted: false }" 
                             x-show="!deleted" 
                             x-transition.scale.origin.left.opacity.duration.500ms
@@ -186,7 +187,7 @@
                                        class="survey-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer transition-all">
                             </td>
                             <td class="px-8 py-6">
-                                <a href="{{ route('projects.summary', $survey) }}" class="block group-hover:translate-x-1 transition-transform">
+                                <a href="{{ route('surveys.summary', $survey) }}" class="block group-hover:translate-x-1 transition-transform">
                                     <span class="text-sm font-black text-gray-900 uppercase tracking-tight block mb-0.5 group-hover:text-indigo-600">{{ $survey->title }}</span>
                                     <span class="text-[10px] text-gray-400 font-bold uppercase italic">{{ $survey->category->value ?? 'General' }}</span>
                                 </a>
@@ -241,7 +242,7 @@
                             </td>
                             <td class="px-8 py-6 text-right pr-20">
                                 <div class="flex items-center justify-end gap-2">
-                                    <a href="{{ route('projects.summary', $survey) }}" class="w-8 h-8 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm" title="Open Project Hub">
+                                    <a href="{{ route('surveys.summary', $survey) }}" class="w-8 h-8 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm" title="Open Project Hub">
                                          <i class="fa-solid fa-arrow-right text-[10px]"></i>
                                      </a>
                                     <div x-data="{ confirming: false }" class="inline-flex items-center gap-1">

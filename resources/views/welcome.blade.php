@@ -92,7 +92,7 @@
                             </div>
                         </div>
                         <p class="text-sm text-gray-600 leading-relaxed mb-8">Contribute to community knowledge. Browse
-                            active research projects, share your insights, and make your voice count.</p>
+                            active research surveys, share your insights, and make your voice count.</p>
                         <a href="{{ route('surveys.public') }}"
                             class="group w-full inline-flex items-center justify-center px-8 py-4 bg-gray-900 text-white font-bold rounded-2xl hover:bg-indigo-600 transition-all shadow-lg active:scale-95">
                             Browse All Surveys <i

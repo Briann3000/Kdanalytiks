@@ -47,8 +47,8 @@ class PaymentManager
     /**
      * Helper to process a respondent payout.
      */
-    public function payout(User $user, float $amount, string $currency): array
+    public function payout(User $user, float $amount, string $currency, string $reference = null): array
     {
-        return $this->gateway->withdrawToRespondent($user, $amount, $currency);
+        return $this->gateway->withdrawToRespondent($user, $amount, $currency, $reference);
     }
 }

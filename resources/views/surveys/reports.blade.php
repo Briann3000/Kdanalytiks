@@ -1,6 +1,6 @@
-@extends('surveys.project_hub')
+@extends('surveys.hub')
 
-@section('project-content')
+@section('survey-content')
 <div class="space-y-12" x-data="{ reportTab: 'quantitative' }">
     <!-- Report Sub-Navigation -->
     <div class="flex items-center gap-2 bg-gray-100/50 p-1 rounded-xl w-fit mb-8">

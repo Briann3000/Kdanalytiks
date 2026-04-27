@@ -11,7 +11,7 @@
                     @php 
                         $userRoleVal = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
                     @endphp
-                    <li><a href="{{ route($userRoleVal . '.surveys.index') }}" class="hover:text-indigo-600">Surveys</a></li>
+                    <li><a href="{{ $userRoleVal === 'admin' ? route('admin.surveys.index') : route('surveys.index') }}" class="hover:text-indigo-600">Surveys</a></li>
                     <li><i class="fa-solid fa-chevron-right text-[10px]"></i></li>
                     <li><a href="{{ route('surveys.responses', $survey) }}" class="hover:text-indigo-600">{{ $survey->title }}</a></li>
                     <li><i class="fa-solid fa-chevron-right text-[10px]"></i></li>

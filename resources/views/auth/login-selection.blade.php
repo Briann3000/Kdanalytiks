@@ -22,7 +22,7 @@
                     </div>
                     <h3 class="text-xl font-black text-gray-900 uppercase tracking-tight">Organization</h3>
                     <p class="mt-4 text-sm text-gray-500 leading-relaxed font-medium">For companies and institutions
-                        managing large-scale research projects</p>
+                        managing large-scale research surveys</p>
                     <div class="mt-8 flex justify-center">
                         <span
                             class="text-indigo-600 text-xs font-black uppercase tracking-widest group-hover:translate-x-2 transition-transform">Get
@@ -38,7 +38,7 @@
                         <i class="fa-solid fa-user-graduate text-3xl"></i>
                     </div>
                     <h3 class="text-xl font-black text-gray-900 uppercase tracking-tight">Researcher</h3>
-                    <p class="mt-4 text-sm text-gray-500 leading-relaxed font-medium">For academic and project work</p>
+                    <p class="mt-4 text-sm text-gray-500 leading-relaxed font-medium">For academic and survey work</p>
                     <div class="mt-8 flex justify-center">
                         <span
                             class="text-purple-600 text-xs font-black uppercase tracking-widest group-hover:translate-x-2 transition-transform">Get

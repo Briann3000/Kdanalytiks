@@ -32,7 +32,7 @@
                     <div class="grid grid-cols-1 gap-6 border-b border-gray-50 pb-8">
                         <div>
                             <label for="title"
-                                class="block text-[11px] font-black text-gray-700 uppercase tracking-[0.2em] mb-2">Report
+                                class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">Report
                                 Title</label>
                             <input type="text" name="title" id="title" required
                                 class="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-gray-900 font-bold placeholder-gray-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
@@ -41,7 +41,7 @@
 
                         <div>
                             <label for="research_question"
-                                class="block text-[11px] font-black text-gray-700 uppercase tracking-[0.2em] mb-2">Primary
+                                class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">Primary
                                 Research Question</label>
                             <textarea name="research_question" id="research_question" rows="3" required
                                 class="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
@@ -53,7 +53,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-gray-50 pb-8">
                         <div>
                             <label for="objectives"
-                                class="block text-[11px] font-black text-gray-700 uppercase tracking-[0.2em] mb-2">Objectives
+                                class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">Objectives
                                 & Scope</label>
                             <textarea name="objectives" id="objectives" rows="5" required
                                 class="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
@@ -63,7 +63,7 @@
                         </div>
                         <div>
                             <label for="scope"
-                                class="block text-[11px] font-black text-gray-700 uppercase tracking-[0.2em] mb-2">Target
+                                class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">Target
                                 Population / Context</label>
                             <textarea name="scope" id="scope" rows="5"
                                 class="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
@@ -75,7 +75,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
                             <label for="methodology_type"
-                                class="block text-[11px] font-black text-gray-700 uppercase tracking-[0.2em] mb-2">Proposed
+                                class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">Proposed
                                 Methodology</label>
                             <div class="grid grid-cols-1 gap-4">
                                 @php
@@ -104,7 +104,7 @@
                                                 class="text-[11px] font-black text-gray-900 group-hover:text-indigo-600 transition-colors uppercase tracking-widest mb-1">
                                                 {{ $data['label'] }}</p>
                                             <p
-                                                class="text-[10px] text-gray-400 font-bold leading-relaxed line-clamp-2 uppercase italic">
+                                                class="text-[10px] text-gray-400 font-bold leading-relaxed line-clamp-2 uppercase">
                                                 {{ $data['desc'] }}</p>
                                         </div>
                                         <div
@@ -120,7 +120,7 @@
 
                         <div>
                             <label for="style"
-                                class="block text-[11px] font-black text-gray-700 uppercase tracking-[0.2em] mb-2">Academic
+                                class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">Academic
                                 Standard</label>
                             <select name="style" id="style"
                                 class="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-gray-900 font-bold uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none">

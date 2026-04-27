@@ -96,19 +96,43 @@
                                     <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
                                         <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
                                     </div>
-                                    <span class="text-gray-600 font-medium"><strong>{{ $tier->ai_limit_per_month == -1 ? 'Unlimited' : $tier->ai_limit_per_month }}</strong> AI Generations</span>
+                                    <span class="text-gray-600 font-medium"><strong>{{ $tier->ai_limit_per_month == -1 ? 'Unlimited' : $tier->ai_limit_per_month }}</strong> AI Generations / mo</span>
                                 </li>
                                 <li class="flex items-start gap-3">
                                     <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
                                         <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
                                     </div>
-                                    <span class="text-gray-600 font-medium">Multi-user Collaborations</span>
+                                    <span class="text-gray-600 font-medium">Project Sharing & Team Collaboration</span>
                                 </li>
+                                @if($tier->slug !== 'free')
+                                    <li class="flex items-start gap-3">
+                                        <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
+                                            <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
+                                        </div>
+                                        <span class="text-gray-600 font-medium">Custom Branding (Use your logo)</span>
+                                    </li>
+                                @endif
+                                @if(strtolower($tier->slug) === 'enterprise')
+                                    <li class="flex items-start gap-3">
+                                        <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
+                                            <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
+                                        </div>
+                                        <span class="text-gray-600 font-medium">24/7 Priority VIP Support</span>
+                                    </li>
+                                @endif
                                 <li class="flex items-start gap-3">
                                     <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
                                         <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
                                     </div>
-                                    <span class="text-gray-600 font-medium">Advanced Analytics & Exports</span>
+                                    <span class="text-gray-600 font-medium">
+                                        @if(strtolower($tier->slug) === 'free')
+                                            Basic Exports (CSV, PDF)
+                                        @elseif(strtolower($tier->slug) === 'pro')
+                                            Pro Exports (Excel, JSON, PDF)
+                                        @else
+                                            Full Export Suite (SPSS, Google Sheets, XML)
+                                        @endif
+                                    </span>
                                 </li>
                             @endif
                         </ul>

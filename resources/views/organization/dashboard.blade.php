@@ -39,5 +39,6 @@
     <div class="w3-margin-top">
         <a href="{{ route('organization.create-survey') }}" class="w3-button w3-blue">Create New Survey</a>
         <a href="{{ route('organization.surveys') }}" class="w3-button w3-green">Manage Surveys</a>
+        <a href="{{ route('account.settings') }}" class="w3-button w3-indigo">Account Settings</a>
     </div>
 @endsection

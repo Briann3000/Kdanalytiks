@@ -47,7 +47,7 @@
                                 {{ $survey->updated_at->diffForHumans() }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <a href="{{ route('projects.data', $survey) }}"
+                                <a href="{{ route('surveys.data', $survey) }}"
                                     class="inline-flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-all">
                                     <i class="fa-solid fa-list-ul mr-2"></i> View All
                                 </a>
@@ -67,7 +67,7 @@
                 <p class="text-gray-900 font-black text-lg uppercase tracking-tight">No responses captured</p>
                 <p class="text-gray-500 text-sm mt-1 max-w-sm">Share your surveys to start collecting data. Once someone fills
                     them, they will appear here grouped by survey.</p>
-                <a href="{{ route('projects.active') }}"
+                <a href="{{ route('surveys.index', ['status' => 'active']) }}"
                     class="mt-6 inline-flex items-center px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all">
                     Go to active surveys
                 </a>

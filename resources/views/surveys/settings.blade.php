@@ -1,6 +1,6 @@
-@extends('surveys.project_hub')
+@extends('surveys.hub')
 
-@section('project-content')
+@section('survey-content')
     <div class="max-w-4xl">
         <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
             <div class="p-8 border-b border-gray-50">
@@ -8,9 +8,73 @@
                 <p class="text-xs text-gray-400 font-medium mt-1">Manage survey metadata and lifecycle.</p>
             </div>
 
+            <style>
+                .km-toggle-container {
+                    display: inline-block;
+                    position: relative;
+                }
+
+                .km-toggle-checkbox {
+                    display: none;
+                }
+
+                .km-toggle-bg {
+                    width: 44px;
+                    height: 24px;
+                    background-color: #d1d5db;
+                    border-radius: 999px;
+                    position: relative;
+                    cursor: pointer;
+                    transition: background-color 0.2s;
+                    display: inline-block;
+                    vertical-align: middle;
+                }
+
+                .km-toggle-dot {
+                    width: 18px;
+                    height: 18px;
+                    background-color: white;
+                    border-radius: 50%;
+                    position: absolute;
+                    top: 3px;
+                    left: 3px;
+                    transition: transform 0.2s;
+                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                }
+
+                .km-toggle-checkbox:checked+.km-toggle-bg {
+                    background-color: #4f46e5;
+                }
+
+                .km-toggle-checkbox:checked+.km-toggle-bg .km-toggle-dot {
+                    transform: translateX(20px);
+                }
+            </style>
+
+            @if(session('success'))
+                <div class="m-8 p-4 bg-green-50 border border-green-100 rounded-2xl">
+                    <p class="text-xs text-green-700 font-bold uppercase tracking-widest">
+                        <i class="fa-solid fa-circle-check mr-2"></i> {{ session('success') }}
+                    </p>
+                </div>
+            @endif
+
+            @if($errors->any())
+                <div class="m-8 p-4 bg-red-50 border border-red-100 rounded-2xl">
+                    <p class="text-xs text-red-700 font-bold uppercase tracking-widest mb-2">
+                        <i class="fa-solid fa-circle-exclamation mr-2"></i> There were errors with your submission:
+                    </p>
+                    <ul class="list-disc list-inside text-[10px] text-red-600 font-bold uppercase tracking-tighter">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <div class="p-8 space-y-12">
                 <!-- Project Identification -->
-                <form action="{{ route('projects.settings.update', $survey) }}" method="POST">
+                <form id="details-form" action="{{ route('surveys.settings.update', $survey) }}" method="POST">
                     @csrf
                     <section class="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <div>
@@ -34,14 +98,12 @@
 
                             <div class="p-6 rounded-2xl border border-gray-100 bg-gray-50/50">
                                 <label class="flex items-center space-x-3 cursor-pointer group">
-                                    <div class="relative">
-                                        <input type="checkbox" name="is_anonymous" value="1" {{ $survey->is_anonymous ? 'checked' : '' }} class="sr-only peer">
-                                        <div
-                                            class="w-10 h-6 bg-gray-200 rounded-full peer peer-checked:bg-indigo-600 transition-all peer-focus:ring-2 peer-focus:ring-indigo-500/20">
-                                        </div>
-                                        <div
-                                            class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-all peer-checked:translate-x-4">
-                                        </div>
+                                    <div class="km-toggle-container">
+                                        <input type="hidden" name="is_anonymous_present" value="1">
+                                        <input type="checkbox" name="is_anonymous" value="1" {{ $survey->is_anonymous ? 'checked' : '' }} class="km-toggle-checkbox" id="anon_toggle">
+                                        <label for="anon_toggle" class="km-toggle-bg">
+                                            <div class="km-toggle-dot"></div>
+                                        </label>
                                     </div>
                                     <div>
                                         <span class="text-xs font-black text-gray-900 uppercase tracking-widest">Allow
@@ -132,7 +194,7 @@
                         <!-- Add Collaborator Panel -->
                         <div x-show="addPanelOpen" x-transition
                             class="p-6 bg-indigo-50/30 border border-indigo-100 rounded-2xl animate-in slide-in-from-top-2">
-                            <form action="{{ route('projects.collaborators.add', $survey) }}" method="POST"
+                            <form action="{{ route('surveys.collaborators.add', $survey) }}" method="POST"
                                 class="space-y-6">
                                 @csrf
                                 <div>
@@ -193,7 +255,8 @@
                                                 class="ml-2 text-[9px] text-indigo-500 uppercase tracking-widest border border-indigo-100 px-2 py-0.5 rounded-full bg-indigo-50/50">Owner</span>
                                         </p>
                                         <p class="text-[10px] text-gray-400 font-bold lowercase tracking-wider">
-                                            {{ $survey->creator->email }}</p>
+                                            {{ $survey->creator->email }}
+                                        </p>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
@@ -214,7 +277,8 @@
                                         <div>
                                             <p class="text-sm font-black text-gray-900">{{ $collaborator->user->name }}</p>
                                             <p class="text-[10px] text-gray-400 font-bold lowercase tracking-wider">
-                                                {{ $collaborator->user->email }}</p>
+                                                {{ $collaborator->user->email }}
+                                            </p>
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-4">
@@ -225,7 +289,7 @@
                                             {{ $colPermsCount }} Granular {{ Str::plural('Permission', $colPermsCount) }}
                                         </span>
 
-                                        <form action="{{ route('projects.collaborators.remove', [$survey, $collaborator]) }}"
+                                        <form action="{{ route('surveys.collaborators.remove', [$survey, $collaborator]) }}"
                                             method="POST">
                                             @csrf
                                             @method('DELETE')
@@ -238,6 +302,106 @@
                                 </div>
                             @endforeach
                         </div>
+                    </div>
+                </section>
+
+                <hr class="border-gray-50">
+
+                <!-- Export Branding -->
+                @php
+                    $tier = auth()->user()->organization?->subscriptionTier ?? auth()->user()->independent?->subscriptionTier ?? auth()->user()->subscriptionTier;
+                    $canBrand = $tier && in_array($tier->slug, ['pro', 'enterprise']);
+                @endphp
+                <section class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div>
+                        <h4 class="text-xs font-bold text-gray-900 uppercase tracking-wider mb-1">Export Branding</h4>
+                        <p class="text-[11px] text-gray-400 font-bold leading-relaxed">Control the branding on generated
+                            reports and data exports.</p>
+                        @if(!$canBrand)
+                            <div class="mt-4 p-4 bg-amber-50 rounded-xl border border-amber-100">
+                                <p class="text-[10px] text-amber-700 font-bold uppercase tracking-widest leading-relaxed">
+                                    <i class="fa-solid fa-lock mr-1"></i> Upgrade to Pro or Enterprise to unlock export branding
+                                    controls.
+                                </p>
+                            </div>
+                        @endif
+                    </div>
+                    <div class="md:col-span-2">
+                        <form action="{{ route('surveys.settings.update', $survey) }}" method="POST"
+                            enctype="multipart/form-data"
+                            class="space-y-6 {{ !$canBrand ? 'opacity-50 pointer-events-none' : '' }}">
+                            @csrf
+
+                            <!-- Toggle KMSurveyTool Branding -->
+                            <div
+                                class="p-5 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-bold text-gray-900">Remove KMSurveyTool Branding</p>
+                                    <p class="text-[10px] text-gray-400 font-medium mt-1">Remove the "Powered by
+                                        KMSurveyTool" marks from all exports.</p>
+                                </div>
+                                <div class="km-toggle-container">
+                                    <input type="hidden" name="remove_km_branding_present" value="1">
+                                    <input type="checkbox" name="remove_km_branding" value="1" {{ $survey->remove_km_branding ? 'checked' : '' }} class="km-toggle-checkbox"
+                                        id="brand_toggle">
+                                    <label for="brand_toggle" class="km-toggle-bg">
+                                        <div class="km-toggle-dot"></div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <hr class="border-gray-100">
+
+                            <!-- Custom Org Branding -->
+                            <div>
+                                <h5 class="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4">Custom
+                                    Organization Branding</h5>
+                                <div class="flex flex-col sm:flex-row gap-8">
+                                    <div class="flex-1">
+                                        <label
+                                            class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Export
+                                            Logo</label>
+                                        <div class="flex items-center gap-4">
+                                            @if($survey->export_logo_url)
+                                                <div
+                                                    class="w-16 h-16 rounded-xl border border-gray-100 bg-white overflow-hidden flex items-center justify-center p-2 shadow-sm">
+                                                    <img src="{{ route('surveys.branding.logo', $survey) }}" alt="Logo"
+                                                        class="max-w-full max-h-full object-contain">
+                                                </div>
+                                            @else
+                                                <div
+                                                    class="w-16 h-16 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 bg-gray-50">
+                                                    <i class="fa-solid fa-image text-xl"></i>
+                                                </div>
+                                            @endif
+                                            <div class="flex-1">
+                                                <input type="file" name="export_logo" accept="image/*"
+                                                    class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-all cursor-pointer">
+                                                <p class="mt-1 text-[10px] text-gray-400 font-medium">PNG or JPG, max 2MB.
+                                                    Applied to PDF header.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1">
+                                        <label
+                                            class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Organization
+                                            Name</label>
+                                        <input type="text" name="export_org_name" value="{{ $survey->export_org_name }}"
+                                            placeholder="e.g. Acme Corp"
+                                            class="w-full text-sm border-gray-200 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 placeholder-gray-300">
+                                        <p class="mt-1 text-[10px] text-gray-400 font-medium">Text to display alongside or
+                                            instead of the logo.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end pt-4">
+                                <button type="submit"
+                                    class="px-8 py-3 bg-gray-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-gray-100 hover:bg-black transition-all">
+                                    Save Branding Preferences
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </section>
 
@@ -260,25 +424,35 @@
                                     <p class="text-xs text-amber-600 font-medium lowercase">Stop collection but keep data
                                         available for analytical reports.</p>
                                 </div>
-                                <form id="archive-form-{{ $survey->id }}" action="{{ route('projects.archive', $survey) }}"
+                                <form id="archive-form-{{ $survey->id }}" action="{{ route('surveys.archive', $survey) }}"
                                     method="POST" class="hidden">
                                     @csrf
                                 </form>
-                                <div class="flex items-center gap-3">
-                                    <button type="button" x-show="!confirming" @click="confirming = true"
-                                        class="px-6 py-2 bg-amber-600 text-white rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-amber-700 transition-all shadow-sm">
-                                        Archive
-                                    </button>
-                                    <div x-show="confirming" class="flex items-center gap-2" style="display:none">
-                                        <span class="text-[10px] font-black text-amber-600 uppercase tracking-widest px-2">Are
-                                            you sure?</span>
-                                        <button type="button"
-                                            @click="document.getElementById('archive-form-{{ $survey->id }}').submit()"
-                                            class="px-6 py-2 bg-amber-600 text-white rounded-xl font-bold text-xs uppercase hover:bg-amber-700 transition-all shadow-sm">YES</button>
-                                        <button type="button" @click="confirming = false"
-                                            class="px-6 py-2 bg-gray-100 text-gray-400 rounded-xl font-bold text-xs uppercase hover:bg-gray-200 transition-all shadow-sm">NO</button>
-                                    </div>
-                                </div>
+                                <button type="button" @click="
+                                                                        Swal.fire({
+                                                                            title: 'Archive Project?',
+                                                                            html: '<p class=\'text-sm\'>You are about to archive <b>{{ addslashes($survey->title) }}</b>. It will be moved to the archive and will no longer accept new submissions.</p>',
+                                                                            icon: 'info',
+                                                                            showCancelButton: true,
+                                                                            confirmButtonText: 'Yes, Archive It',
+                                                                            cancelButtonText: 'Cancel',
+                                                                            confirmButtonColor: '#d97706',
+                                                                            cancelButtonColor: '#4b5563',
+                                                                            reverseButtons: true,
+                                                                            customClass: {
+                                                                                popup: 'rounded-3xl',
+                                                                                confirmButton: 'rounded-xl font-bold px-6 py-3',
+                                                                                cancelButton: 'rounded-xl font-bold px-6 py-3'
+                                                                            }
+                                                                        }).then((result) => {
+                                                                            if (result.isConfirmed) {
+                                                                                document.getElementById('archive-form-{{ $survey->id }}').submit();
+                                                                            }
+                                                                        });
+                                                                    "
+                                    class="px-6 py-2 bg-amber-600 text-white rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-amber-700 transition-all shadow-sm border border-amber-100">
+                                    Archive Project
+                                </button>
                             </div>
                         @endif
 
@@ -293,30 +467,38 @@
                                 @csrf
                                 @method('DELETE')
                             </form>
-                            <div x-data="{ confirming: false }" class="flex items-center gap-3">
-                                <button type="button" x-show="!confirming" @click="confirming = true"
-                                    class="px-6 py-2 bg-red-600 text-white rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-red-700 transition-all shadow-sm border border-red-100">
-                                    Delete Project
-                                </button>
-                                <div x-show="confirming"
-                                    class="flex items-center gap-2 animate-in fade-in slide-in-from-right-2 duration-200"
-                                    style="display:none">
-                                    <span
-                                        class="text-[10px] font-black text-red-600 uppercase tracking-widest bg-red-50 px-3 py-1.5 border border-red-100 rounded-lg">Confirm?</span>
-                                    <button type="button"
-                                        @click="console.log('ProjectSettings confirming YES'); document.getElementById('delete-form-{{ $survey->id }}').submit()"
-                                        class="px-6 py-2 bg-red-600 text-white rounded-xl font-bold text-xs uppercase hover:bg-red-700 transition-all shadow-sm">YES</button>
-                                    <button type="button" @click="confirming = false"
-                                        class="px-6 py-2 bg-gray-100 text-gray-500 rounded-xl font-bold text-xs uppercase hover:bg-gray-200 transition-all">NO</button>
-                                </div>
-                            </div>
+                            <button type="button" @click="
+                                                    Swal.fire({
+                                                        title: 'Delete Project?',
+                                                        html: '<p class=\'text-sm\'>You are about to delete <b>{{ addslashes($survey->title) }}</b> and all its associated data.<br><br><span class=\'text-red-500 font-bold uppercase text-[10px] tracking-widest\'>This action cannot be undone.</span></p>',
+                                                        icon: 'warning',
+                                                        showCancelButton: true,
+                                                        confirmButtonText: 'Yes, Delete Permanently',
+                                                        cancelButtonText: 'Cancel',
+                                                        confirmButtonColor: '#ef4444',
+                                                        cancelButtonColor: '#1e293b',
+                                                        reverseButtons: true,
+                                                        customClass: {
+                                                            popup: 'rounded-3xl',
+                                                            confirmButton: 'rounded-xl font-bold px-6 py-3',
+                                                            cancelButton: 'rounded-xl font-bold px-6 py-3'
+                                                        }
+                                                    }).then((result) => {
+                                                        if (result.isConfirmed) {
+                                                            document.getElementById('delete-form-{{ $survey->id }}').submit();
+                                                        }
+                                                    });
+                                                "
+                                class="px-6 py-2 bg-red-600 text-white rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-red-700 transition-all shadow-sm border border-red-100">
+                                Delete Project
+                            </button>
                         </div>
                     </div>
                 </section>
             </div>
 
             <div class="p-8 bg-gray-50 border-t border-gray-100 flex justify-end">
-                <button
+                <button type="submit" form="details-form"
                     class="px-8 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">
                     Save Settings
                 </button>

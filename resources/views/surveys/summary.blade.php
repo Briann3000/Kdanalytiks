@@ -1,6 +1,6 @@
-@extends('surveys.project_hub')
+@extends('surveys.hub')
 
-@section('project-content')
+@section('survey-content')
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
         <!-- Main Stats -->
         <div class="md:col-span-2 space-y-8">
@@ -19,7 +19,8 @@
                     <div class="p-6 rounded-2xl bg-slate-50 border border-slate-100">
                         <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Date Created</p>
                         <p class="text-xl font-black text-slate-700 tracking-tighter">
-                            {{ $survey->created_at->format('M d, Y') }}</p>
+                            {{ $survey->created_at->format('M d, Y') }}
+                        </p>
                     </div>
                 </div>
             </div>
@@ -57,7 +58,7 @@
                             <h3 class="text-sm font-black uppercase tracking-widest mb-1">Survey in Draft Mode</h3>
                             <p class="text-xs font-bold opacity-70 leading-relaxed mb-4">This survey is currently a draft. No
                                 data can be collected until it is deployed.</p>
-                            <form action="{{ route('projects.publish', $survey) }}" method="POST">
+                            <form action="{{ route('surveys.publish', $survey) }}" method="POST">
                                 @csrf
                                 <button type="submit"
                                     class="px-6 py-3 bg-amber-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-amber-700 transition-all shadow-lg shadow-amber-200">
@@ -90,7 +91,7 @@
                         </div>
                         <span class="text-sm font-bold uppercase tracking-wider">Update Form</span>
                     </a>
-                    <a href="{{ route('projects.data', $survey) }}"
+                    <a href="{{ route('surveys.data', $survey) }}"
                         class="flex items-center p-4 bg-gray-50 rounded-2xl hover:bg-emerald-50 hover:text-emerald-600 transition-all group">
                         <div
                             class="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center mr-4 group-hover:border-emerald-100">
@@ -98,7 +99,7 @@
                         </div>
                         <span class="text-sm font-bold uppercase tracking-wider">Browse Submissions</span>
                     </a>
-                    <a href="{{ route('projects.reports', $survey) }}"
+                    <a href="{{ route('surveys.reports', $survey) }}"
                         class="flex items-center p-4 bg-gray-50 rounded-2xl hover:bg-blue-50 hover:text-blue-600 transition-all group">
                         <div
                             class="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center mr-4 group-hover:border-blue-100">
