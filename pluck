@@ -1,1 +1,0 @@
-App\Models\Survey::whereNotNull export_logo_url - export_logo_url
