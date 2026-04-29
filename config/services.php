@@ -40,6 +40,11 @@ return [
         'model' => env('GROQ_MODEL', 'llama-3.1-8b-instant'),
     ],
 
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-1.5-flash'),
+    ],
+
     'intasend' => [
         'publishable_key' => env('INTASEND_PUBLISHABLE_KEY'),
         'secret_key' => env('INTASEND_SECRET_KEY'),

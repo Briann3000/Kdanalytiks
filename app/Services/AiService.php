@@ -57,9 +57,10 @@ class AiService
             return null;
 
         $prompt = "Analyze the sentiment of the following survey response. Return ONLY a JSON object with 'sentiment' (Positive, Negative, or Neutral) and 'confidence' (0-1). \n\n" . $textData;
+        $systemPrompt = "You are a sentiment analysis assistant.";
 
         try {
-            $responseJson = $this->callGroq($prompt, null, true);
+            $responseJson = $this->callAi($prompt, $systemPrompt, true);
             if ($responseJson) {
                 if ($org)
                     $this->incrementUsage($org);
@@ -130,7 +131,7 @@ class AiService
         $prompt = "Summarize these voter responses in 3 concise bullet points. Focus on key themes and tone.\n\nDATA:\n" . $dataDump;
 
         try {
-            $result = $this->callGroq($prompt);
+            $result = $this->callAi($prompt);
             if (!$result) {
                 return "AI Summary is currently unavailable (Engine failed to respond).";
             }
@@ -146,8 +147,165 @@ class AiService
     }
 
     /**
-     * Primary Groq API caller.
+     * Unified AI caller that routes to the active provider.
      */
+    public function callAi($prompt, $systemPrompt = null, $isJson = false)
+    {
+        $provider = env('AI_PROVIDER', 'groq');
+        if ($provider === 'gemini') {
+            return $this->callGemini($prompt, $systemPrompt);
+        }
+        return $this->callGroq($prompt, $systemPrompt, $isJson);
+    }
+
+    /**
+     * Unified Parallel AI caller.
+     */
+    public function callAiParallel(array $prompts, $systemPrompt = null)
+    {
+        $provider = env('AI_PROVIDER', 'groq');
+        if ($provider === 'gemini') {
+            return $this->callGeminiParallel($prompts, $systemPrompt);
+        }
+        return $this->callGroqParallel($prompts, $systemPrompt);
+    }
+
+    /**
+     * Call Google Gemini API.
+     */
+    public function callGemini($prompt, $systemPrompt = null)
+    {
+        $apiKey = config('services.gemini.api_key');
+        $model = config('services.gemini.model', 'gemini-2.5-flash');
+
+        if (empty($apiKey)) {
+            Log::error("Gemini API Key is missing.");
+            return null;
+        }
+
+        $url = "https://generativelanguage.googleapis.com/v1/models/{$model}:generateContent?key={$apiKey}";
+
+        $fullPrompt = $systemPrompt ? "SYSTEM INSTRUCTIONS: {$systemPrompt}\n\nUSER PROMPT: {$prompt}" : $prompt;
+
+        $payload = [
+            'contents' => [
+                ['role' => 'user', 'parts' => [['text' => $fullPrompt]]]
+            ]
+        ];
+
+        $maxRetries = 3;
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            try {
+                $response = Http::timeout(60)->post($url, $payload);
+                if ($response->successful()) {
+                    $data = $response->json();
+                    return $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
+                }
+
+                $status = $response->status();
+                if ($status === 429 || $status === 503) {
+                    $waitSeconds = ($status === 429) ? 10 : 5;
+                    Log::warning("Gemini API overloaded (HTTP {$status}, attempt {$attempt}/{$maxRetries}). Waiting {$waitSeconds}s...");
+                    sleep($waitSeconds);
+                    continue;
+                }
+
+                Log::error("Gemini API Error (HTTP {$status}): " . $response->body());
+                return null;
+            } catch (\Exception $e) {
+                Log::error("Gemini Call Exception (attempt {$attempt}): " . $e->getMessage());
+                if ($attempt < $maxRetries) {
+                    sleep(3);
+                    continue;
+                }
+                return null;
+            }
+        }
+
+        Log::error("Gemini API: All {$maxRetries} attempts exhausted.");
+        return null;
+    }
+
+    /**
+     * Call Gemini in parallel.
+     */
+    public function callGeminiParallel(array $prompts, $systemPrompt = null)
+    {
+        $apiKey = config('services.gemini.api_key');
+        $model = config('services.gemini.model', 'gemini-1.5-flash');
+
+        if (empty($apiKey) || empty($prompts))
+            return [];
+
+        $responses = Http::pool(function (\Illuminate\Http\Client\Pool $pool) use ($prompts, $apiKey, $model, $systemPrompt) {
+            foreach ($prompts as $key => $prompt) {
+                $url = "https://generativelanguage.googleapis.com/v1/models/{$model}:generateContent?key={$apiKey}";
+                $fullPrompt = $systemPrompt ? "SYSTEM INSTRUCTIONS: {$systemPrompt}\n\nUSER PROMPT: {$prompt}" : $prompt;
+                $payload = [
+                    'contents' => [['role' => 'user', 'parts' => [['text' => $fullPrompt]]]]
+                ];
+                $pool->as($key)->timeout(90)->post($url, $payload);
+            }
+        });
+
+        $results = [];
+        foreach ($prompts as $key => $prompt) {
+            $response = $responses[$key];
+            if ($response instanceof \Illuminate\Http\Client\Response && $response->successful()) {
+                $data = $response->json();
+                $results[$key] = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
+            } else {
+                $results[$key] = null;
+            }
+        }
+        return $results;
+    }
+
+    /**
+     * Call Groq in parallel for multiple prompts.
+     * Returns an associative array of [key => content]
+     */
+    public function callGroqParallel(array $prompts, $systemPrompt = null)
+    {
+        $apiKey = config('services.groq.api_key');
+        $model = config('services.groq.model', 'llama-3.1-8b-instant');
+
+        if (empty($apiKey) || empty($prompts)) {
+            return [];
+        }
+
+        $finalSystemPrompt = $systemPrompt ?? 'You are an expert researcher.';
+
+        $responses = Http::pool(function (\Illuminate\Http\Client\Pool $pool) use ($prompts, $apiKey, $model, $finalSystemPrompt) {
+            foreach ($prompts as $key => $prompt) {
+                $pool->as($key)->withToken($apiKey)->timeout(60)->post('https://api.groq.com/openai/v1/chat/completions', [
+                    'model' => $model,
+                    'messages' => [
+                        ['role' => 'system', 'content' => $finalSystemPrompt],
+                        ['role' => 'user', 'content' => $prompt],
+                    ],
+                    'temperature' => 0.4,
+                    'max_tokens' => 4096,
+                ]);
+            }
+        });
+
+        $results = [];
+        foreach ($prompts as $key => $prompt) {
+            $response = $responses[$key];
+            if ($response instanceof \Illuminate\Http\Client\Response && $response->successful()) {
+                $data = $response->json();
+                $results[$key] = $data['choices'][0]['message']['content'] ?? null;
+            } else {
+                $errorMsg = ($response instanceof \Exception) ? $response->getMessage() : ($response ? $response->body() : 'No response');
+                Log::error("Groq Parallel Error for key {$key}: " . $errorMsg);
+                $results[$key] = null;
+            }
+        }
+
+        return $results;
+    }
+
     public function callGroq($prompt, $systemPrompt = null, $isJson = false)
     {
         $apiKey = config('services.groq.api_key');
@@ -184,7 +342,7 @@ class AiService
                 Log::info("Groq API call (attempt {$attempt}): model={$model}, prompt_length=" . strlen($prompt));
 
                 $response = Http::withToken($apiKey)
-                    ->timeout(120)
+                    ->timeout(60)
                     ->post('https://api.groq.com/openai/v1/chat/completions', $options);
 
                 if ($response->successful()) {
@@ -217,7 +375,7 @@ class AiService
             } catch (\Exception $e) {
                 Log::error("Groq Call Exception (attempt {$attempt}): " . $e->getMessage());
                 if ($attempt < $maxRetries) {
-                    sleep(5);
+                    sleep(2);
                     continue;
                 }
                 return null;
@@ -227,6 +385,7 @@ class AiService
         Log::error("Groq API: All {$maxRetries} attempts exhausted.");
         return null;
     }
+
 
     /**
      * Generate a full survey schema (JSON) based on a text prompt using Groq.
@@ -261,17 +420,17 @@ class AiService
         Generate exactly what the user asks for, optimized for high completion rates.";
 
         try {
-            $groqData = $this->callGroq($prompt, $systemPrompt, true);
-            if ($groqData) {
+            $aiData = $this->callAi($prompt, $systemPrompt, true);
+            if ($aiData) {
                 if ($org)
                     $this->incrementUsage($org);
 
-                $decoded = json_decode($groqData, true);
+                $decoded = json_decode($aiData, true);
                 return $this->formatSchemaResponse($decoded);
             }
             return $this->getMockSchema($prompt);
         } catch (\Exception $e) {
-            Log::error("AI Schema Generation Error (Groq): " . $e->getMessage());
+            Log::error("AI Schema Generation Error: " . $e->getMessage());
             return $this->getMockSchema($prompt);
         }
     }
