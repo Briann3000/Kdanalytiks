@@ -36,6 +36,7 @@ class RegisterController extends Controller
             'password' => Hash::make($request->password),
             'role' => $role,
             'status' => 'active',
+            'locale' => app()->getLocale(),
         ]);
 
         event(new Registered($user));

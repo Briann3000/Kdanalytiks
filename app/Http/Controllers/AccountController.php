@@ -29,6 +29,7 @@ class AccountController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
             'phone_number' => ['nullable', 'string', 'regex:/^\+?[1-9]\d{7,14}$/'],
+            'locale' => 'required|string|in:en,sw,fr,de,es,ar,zh-CN',
             'current_password' => 'nullable|required_with:new_password',
             'new_password' => ['nullable', 'confirmed', Password::min(8)],
         ], [
@@ -39,6 +40,7 @@ class AccountController extends Controller
             $user->name = $validated['name'];
             $user->email = $validated['email'];
             $user->phone_number = $validated['phone_number'];
+            $user->locale = $validated['locale'];
 
             if ($request->filled('new_password')) {
                 if (!Hash::check($request->current_password, $user->password)) {
