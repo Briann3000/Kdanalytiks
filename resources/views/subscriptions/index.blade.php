@@ -22,7 +22,7 @@
                 </span>
             </div>
 
-            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-8 mb-4">Account Type: {{ $accountTypeLabel ?? 'Researcher' }}</p>
+            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-8 mb-4">{{ __('Account Type') }}: {{ __($accountTypeLabel ?? 'Researcher') }}</p>
             <p class="max-w-2xl mx-auto text-xl text-gray-500 font-medium">Choose the perfect plan for your research needs and start gathering high-impact insights today.</p>
         </div>
 
@@ -84,19 +84,19 @@
                                     <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
                                         <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
                                     </div>
-                                    <span class="text-gray-600 font-medium"><strong>{{ $tier->max_surveys == -1 ? 'Unlimited' : $tier->max_surveys }}</strong> Surveys per Month</span>
+                                     <span class="text-gray-600 font-medium"><strong>{{ $tier->max_surveys == -1 ? __('Unlimited') : $tier->max_surveys }}</strong> {{ __('Surveys per Month') }}</span>
                                 </li>
                                 <li class="flex items-start gap-3">
                                     <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
                                         <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
                                     </div>
-                                    <span class="text-gray-600 font-medium"><strong>{{ $tier->max_responses_per_survey == -1 ? 'Unlimited' : $tier->max_responses_per_survey }}</strong> Responses per Survey</span>
+                                     <span class="text-gray-600 font-medium"><strong>{{ $tier->max_responses_per_survey == -1 ? __('Unlimited') : $tier->max_responses_per_survey }}</strong> {{ __('Responses per Survey') }}</span>
                                 </li>
                                 <li class="flex items-start gap-3">
                                     <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
                                         <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
                                     </div>
-                                    <span class="text-gray-600 font-medium"><strong>{{ $tier->ai_limit_per_month == -1 ? 'Unlimited' : $tier->ai_limit_per_month }}</strong> AI Generations / mo</span>
+                                     <span class="text-gray-600 font-medium"><strong>{{ $tier->ai_limit_per_month == -1 ? __('Unlimited') : $tier->ai_limit_per_month }}</strong> {{ __('AI Generations / mo') }}</span>
                                 </li>
                                 <li class="flex items-start gap-3">
                                     <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">

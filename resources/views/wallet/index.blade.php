@@ -24,7 +24,7 @@
                                 class="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">Active</span>
                         </div>
 
-                        <p class="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-1">Available Balance
+                        <p class="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-1">{{ __('Available Balance') }}
                         </p>
                         <div class="flex items-baseline gap-2 mb-8">
                             <span class="text-indigo-400 text-lg font-black">{{ $wallet->currency ?? 'KES' }}</span>
@@ -41,13 +41,13 @@
                                 </div>
                                 <i
                                     class="fa-solid fa-paper-plane text-indigo-600 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1"></i>
-                                Withdraw Funds
+                                {{ __('Withdraw Funds') }}
                             </button>
 
                             <div class="flex flex-col items-center gap-1 opacity-60">
                                 <p class="text-[9px] text-slate-400 text-center uppercase tracking-widest font-black">
                                     <i class="fa-solid fa-circle-info mr-1 text-indigo-400"></i>
-                                    Minimum: 50.00 {{ $wallet->currency ?? 'KES' }}
+                                    {{ __('Minimum') }}: 50.00 {{ $wallet->currency ?? 'KES' }}
                                 </p>
                             </div>
                         </div>
@@ -62,7 +62,7 @@
                             <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-600">
                                 <i class="fa-solid fa-arrow-trend-up"></i>
                             </div>
-                            <p class="text-[10px] text-gray-400 font-black uppercase tracking-wider">Total Earned</p>
+                            <p class="text-[10px] text-gray-400 font-black uppercase tracking-wider">{{ __('Total Earned') }}</p>
                         </div>
                         <p class="text-lg font-black text-slate-800">
                             {{ number_format($wallet->transactions()->where('type', 'credit')->sum('amount'), 2) }}</p>
@@ -73,7 +73,7 @@
                             <div class="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center text-rose-600">
                                 <i class="fa-solid fa-arrow-trend-down"></i>
                             </div>
-                            <p class="text-[10px] text-gray-400 font-black uppercase tracking-wider">Withdrawn</p>
+                            <p class="text-[10px] text-gray-400 font-black uppercase tracking-wider">{{ __('Withdrawn') }}</p>
                         </div>
                         <p class="text-lg font-black text-slate-800">
                             {{ number_format($wallet->transactions()->where('type', 'debit')->where('status', 'completed')->sum('amount'), 2) }}
@@ -87,11 +87,11 @@
                 <div class="flex items-center justify-between mb-8">
                     <h3 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
                         <div class="w-2 h-8 bg-indigo-600 rounded-full"></div>
-                        Recent Activity
+                        {{ __('Recent Activity') }}
                     </h3>
                     <a href="{{ route('wallet.history') }}"
                         class="px-4 py-2 bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
-                        View History
+                        {{ __('View History') }}
                     </a>
                 </div>
 
@@ -135,9 +135,8 @@
                                 class="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6 transform -rotate-6">
                                 <i class="fa-solid fa-vault text-3xl text-slate-200"></i>
                             </div>
-                            <h4 class="text-lg font-black text-slate-800 uppercase tracking-widest mb-2">No activity yet</h4>
-                            <p class="text-xs text-gray-400 font-bold max-w-[200px] mx-auto leading-relaxed uppercase">Start
-                                responding to surveys to earn rewards and grow your balance.</p>
+                            <h4 class="text-lg font-black text-slate-800 uppercase tracking-widest mb-2">{{ __('No activity yet') }}</h4>
+                            <p class="text-xs text-gray-400 font-bold max-w-[200px] mx-auto leading-relaxed uppercase">{{ __('Start responding to surveys to earn rewards and grow your balance.') }}</p>
                         </div>
                     @endforelse
                 </div>
@@ -154,7 +153,7 @@
 
             <div class="relative bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 transform transition-all">
                 <div class="flex justify-between items-center mb-6">
-                    <h4 class="text-2xl font-black text-gray-800">Withdraw Funds</h4>
+                    <h4 class="text-2xl font-black text-gray-800">{{ __('Withdraw Funds') }}</h4>
                     <button @click="open = false" class="text-gray-400 hover:text-gray-600">
                         <i class="fa-solid fa-xmark text-xl"></i>
                     </button>
@@ -163,7 +162,7 @@
                 <form action="{{ route('wallet.withdraw') }}" method="POST">
                     @csrf
                     <div class="mb-6">
-                        <label class="block text-sm font-bold text-gray-700 mb-2">Amount to Withdraw</label>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">{{ __('Amount to Withdraw') }}</label>
                         <div class="relative">
                             <input type="number" name="amount" step="0.01"
                                 class="w-full pl-6 pr-16 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-black text-xl"
@@ -171,12 +170,12 @@
                             <span
                                 class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold uppercase">{{ $wallet->currency ?? 'KES' }}</span>
                         </div>
-                        <p class="mt-2 text-[10px] text-gray-400 font-bold uppercase tracking-wider">Your max:
+                        <p class="mt-2 text-[10px] text-gray-400 font-bold uppercase tracking-wider">{{ __('Your max') }}:
                             {{ number_format((float) $wallet->balance, 2) }}</p>
                     </div>
 
                     <div class="mb-6">
-                        <label class="block text-sm font-bold text-gray-700 mb-2">M-Pesa Phone Number</label>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">{{ __('M-Pesa Phone Number') }}</label>
                         <div class="relative">
                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold uppercase"><i
                                     class="fa-solid fa-phone"></i></span>
@@ -184,7 +183,7 @@
                                 class="w-full pl-12 pr-4 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold text-lg"
                                 placeholder="254..." required>
                         </div>
-                        <p class="mt-2 text-[10px] text-gray-400 font-bold uppercase tracking-wider">Format: 2547XXXXXXXX
+                        <p class="mt-2 text-[10px] text-gray-400 font-bold uppercase tracking-wider">{{ __('Format') }}: 2547XXXXXXXX
                         </p>
                     </div>
 
@@ -192,7 +191,7 @@
 
                     <button type="submit"
                         class="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl hover:bg-indigo-700 transition-all active:scale-95">
-                        Confirm Withdrawal
+                        {{ __('Confirm Withdrawal') }}
                     </button>
                 </form>
             </div>

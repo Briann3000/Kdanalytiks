@@ -10,7 +10,7 @@
             @endphp
             <a href="{{ route($userRole . '.dashboard') }}"
                 class="inline-flex items-center text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
-                <i class="fa-solid fa-arrow-left mr-2"></i> Back to Dashboard
+                <i class="fa-solid fa-arrow-left mr-2"></i> {{ __('Back to Dashboard') }}
             </a>
         </div>
     @endauth
@@ -20,14 +20,13 @@
             <div
                 class="inline-flex items-center px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold uppercase tracking-widest mb-4 border border-indigo-100">
                 <span class="flex h-2 w-2 rounded-full bg-indigo-400 mr-2 animate-pulse"></span>
-                Community Marketplace
+                {{ __('Community Marketplace') }}
             </div>
             <h1 class="text-5xl font-black mb-6 text-gray-900 tracking-tight leading-tight">
-                Explore Public Surveys
+                {{ __('Explore Public Surveys') }}
             </h1>
             <p class="text-gray-600 text-xl font-medium leading-relaxed">
-                Join thousands of contributors. Participate in clinical research, share your feedback, and help shape
-                community knowledge.
+                {{ __('Join thousands of contributors. Participate in clinical research, share your feedback, and help shape community knowledge.') }}
             </p>
         </div>
         <div class="absolute right-[-10%] top-[-20%] w-96 h-96 bg-indigo-50 rounded-full blur-3xl"></div>
@@ -41,7 +40,8 @@
             <div class="relative w-full md:w-96 group">
                 <i
                     class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 group-focus-within:text-indigo-600 transition-colors"></i>
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by title..."
+                <input type="text" name="search" value="{{ request('search') }}"
+                    placeholder="{{ __('Search by title...') }}"
                     class="w-full pl-12 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all shadow-sm">
             </div>
             <div class="relative w-full md:w-64 group">
@@ -49,7 +49,7 @@
                     class="fa-solid fa-filter absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 group-focus-within:text-indigo-600 transition-colors"></i>
                 <select name="category"
                     class="w-full pl-12 pr-10 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 appearance-none transition-all shadow-sm">
-                    <option value="">All Categories</option>
+                    <option value="">{{ __('All Categories') }}</option>
                     @foreach($categories as $category)
                         @php $val = $category instanceof \BackedEnum ? $category->value : $category; @endphp
                         <option value="{{ $val }}" {{ request('category') === $val ? 'selected' : '' }}>
@@ -63,22 +63,26 @@
                     class="fa-solid fa-sack-dollar absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 group-focus-within:text-emerald-500 transition-colors"></i>
                 <select name="paid_status"
                     class="w-full pl-12 pr-10 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 appearance-none transition-all shadow-sm">
-                    <option value="">All Types</option>
-                    <option value="paid" {{ request('paid_status') === 'paid' ? 'selected' : '' }}>Paid Surveys Only</option>
-                    <option value="unpaid" {{ request('paid_status') === 'unpaid' ? 'selected' : '' }}>Free Surveys Only
+                    <option value="">{{ __('All Types') }}</option>
+                    <option value="paid" {{ request('paid_status') === 'paid' ? 'selected' : '' }}>
+                        {{ __('Paid Surveys Only') }}
                     </option>
-                    <option value="exhausted" {{ request('paid_status') === 'exhausted' ? 'selected' : '' }}>Paid (Budget
-                        Exhausted)</option>
+                    <option value="unpaid" {{ request('paid_status') === 'unpaid' ? 'selected' : '' }}>
+                        {{ __('Free Surveys Only') }}
+                    </option>
+                    <option value="exhausted" {{ request('paid_status') === 'exhausted' ? 'selected' : '' }}>
+                        {{ __('Paid (Budget Exhausted)') }}
+                    </option>
                 </select>
             </div>
             <button type="submit"
                 class="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">
-                Filter
+                {{ __('Filter') }}
             </button>
             @if(request()->anyFilled(['search', 'category', 'paid_status']))
                 <a href="{{ route('surveys.public') }}"
                     class="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-red-500 transition-colors">
-                    Clear
+                    {{ __('Clear') }}
                 </a>
             @endif
         </form>
@@ -93,7 +97,7 @@
                         <div class="flex justify-between items-start mb-4">
                             <span
                                 class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-600">
-                                {{ $survey->category }}
+                                {{ __($survey->category instanceof \BackedEnum ? $survey->category->value : $survey->category) }}
                             </span>
                             @if($survey->is_paid)
                                 @php
@@ -102,8 +106,8 @@
                                 @if($budgetExhausted)
                                     <span
                                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-700 shadow-sm border border-red-200"
-                                        title="The reward budget for this survey has been exhausted.">
-                                        <i class="fa-solid fa-sack-xmark mr-1"></i> Budget Exhausted
+                                        title="{{ __('The reward budget for this survey has been exhausted.') }}">
+                                        <i class="fa-solid fa-sack-xmark mr-1"></i> {{ __('Budget Exhausted') }}
                                     </span>
                                 @else
                                     <span
@@ -118,7 +122,7 @@
                             {{ $survey->title }}
                         </h3>
                         <p class="text-gray-500 text-sm mb-4 line-clamp-3">
-                            {{ $survey->description ?? 'No description provided.' }}
+                            {{ $survey->description ?? __('No description provided.') }}
                         </p>
                     </div>
                     <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
@@ -133,7 +137,7 @@
                             </a>
                             <a href="{{ route('surveys.show', $survey) }}"
                                 class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors">
-                                Participate <i class="fa-solid fa-arrow-right ml-2 text-[10px]"></i>
+                                {{ __('Participate') }} <i class="fa-solid fa-arrow-right ml-2 text-[10px]"></i>
                             </a>
                         </div>
                     </div>
@@ -149,12 +153,13 @@
             <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
                 <i class="fa-solid fa-magnifying-glass text-3xl text-gray-300"></i>
             </div>
-            <h3 class="text-2xl font-bold text-gray-900 mb-2">No public surveys found</h3>
-            <p class="text-gray-500 mb-8 max-w-sm mx-auto">We couldn't find any public surveys matching your current search or
-                filters. Try adjusting your criteria.</p>
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">{{ __('No public surveys found') }}</h3>
+            <p class="text-gray-500 mb-8 max-w-sm mx-auto">
+                {{ __("We couldn't find any public surveys matching your current search or filters. Try adjusting your criteria.") }}
+            </p>
             <a href="{{ route('surveys.public') }}"
                 class="inline-flex items-center px-6 py-3 bg-indigo-100 text-indigo-700 font-bold rounded-xl hover:bg-indigo-200 transition-colors">
-                Clear Filters
+                {{ __('Clear Filters') }}
             </a>
         </div>
     @endif
