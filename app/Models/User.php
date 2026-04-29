@@ -28,6 +28,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'export_logo_url',
         'export_org_name',
         'free_export_count',
+        'locale',
     ];
 
     protected $hidden = [
