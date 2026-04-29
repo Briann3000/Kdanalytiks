@@ -8,10 +8,11 @@
             <div class="px-6 py-6 sm:px-8 flex justify-between items-center bg-indigo-50 border-l-8 border-indigo-600">
                 <div>
                     <h3 class="text-2xl leading-none font-black text-gray-900 mb-1">
-                        Welcome back, {{ auth()->user()->name }}
+                        {{ __('Welcome back') }}, {{ auth()->user()->name }}
                     </h3>
                     <p class="text-sm text-gray-600 font-bold uppercase tracking-widest">
-                        RESPONDENT DASHBOARD &bull; <span class="text-green-600">SYSTEM ONLINE</span>
+                        {{ __('RESPONDENT DASHBOARD') }} &bull; <span
+                            class="text-green-600">{{ __('SYSTEM ONLINE') }}</span>
                     </p>
                 </div>
             </div>
@@ -19,7 +20,7 @@
 
         <!-- Quick Action Shortcuts -->
         <div class="mb-8">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Quick Actions</h3>
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">{{ __('Quick Actions') }}</h3>
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <a href="{{ route('surveys.public') }}"
                     class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-indigo-500 hover:ring-1 hover:ring-indigo-500 transition-all">
@@ -27,7 +28,7 @@
                         class="w-12 h-12 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors mb-3">
                         <i class="fa-solid fa-magnifying-glass text-xl"></i>
                     </div>
-                    <span class="text-sm font-medium text-gray-900">Take Surveys</span>
+                    <span class="text-sm font-medium text-gray-900">{{ __('Take Surveys') }}</span>
                 </a>
 
                 <a href="{{ route('respondent.history') }}"
@@ -36,7 +37,7 @@
                         class="w-12 h-12 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors mb-3">
                         <i class="fa-solid fa-clock-rotate-left text-xl"></i>
                     </div>
-                    <span class="text-sm font-medium text-gray-900">My Responses</span>
+                    <span class="text-sm font-medium text-gray-900">{{ __('My Responses') }}</span>
                 </a>
 
                 <a href="{{ route('research-proposal.index') }}"
@@ -45,7 +46,7 @@
                         class="w-12 h-12 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors mb-3">
                         <i class="fa-solid fa-graduation-cap text-xl"></i>
                     </div>
-                    <span class="text-sm font-medium text-gray-900">Research Studio</span>
+                    <span class="text-sm font-medium text-gray-900">{{ __('Research Studio') }}</span>
                 </a>
 
                 <a href="{{ route('account.settings') }}"
@@ -54,13 +55,13 @@
                         class="w-12 h-12 flex items-center justify-center rounded-full bg-orange-100 text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-colors mb-3">
                         <i class="fa-solid fa-user-gear text-xl"></i>
                     </div>
-                    <span class="text-sm font-medium text-gray-900">Account Settings</span>
+                    <span class="text-sm font-medium text-gray-900">{{ __('Account Settings') }}</span>
                 </a>
             </div>
         </div>
 
         <!-- Overview Metrics -->
-        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Overview Metrics</h3>
+        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">{{ __('Overview Metrics') }}</h3>
         <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
             <!-- Wallet Balance -->
             <div
@@ -74,7 +75,8 @@
                             <i class="fa-solid fa-wallet text-2xl text-white"></i>
                         </div>
                         <div class="ml-4 flex-1">
-                            <dt class="text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-1">Wallet Balance
+                            <dt class="text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-1">
+                                {{ __('Wallet Balance') }}
                             </dt>
                             <dd class="flex items-baseline">
                                 <div class="text-2xl font-black text-white">
@@ -89,7 +91,7 @@
                     class="bg-black/10 px-6 py-3 text-xs flex justify-between items-center group-hover:bg-black/20 transition-colors">
                     <a href="{{ route('wallet.index') }}"
                         class="font-black text-white uppercase tracking-tighter flex items-center">
-                        Withdraw <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
+                        {{ __('Withdraw') }} <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
                     </a>
                     <span class="text-[9px] text-white/60 font-medium tracking-wide">Sync: Real-time</span>
                 </div>
@@ -104,7 +106,8 @@
                         </div>
                         <div class="ml-5 w-0 flex-1">
                             <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">Available Public Surveys</dt>
+                                <dt class="text-sm font-medium text-gray-500 truncate">{{ __('Available Public Surveys') }}
+                                </dt>
                                 <dd>
                                     <div class="text-2xl font-bold text-gray-900">{{ count($availableSurveys) }}</div>
                                 </dd>
@@ -130,7 +133,7 @@
                         </div>
                         <div class="ml-5 w-0 flex-1">
                             <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">Completed Responses</dt>
+                                <dt class="text-sm font-medium text-gray-500 truncate">{{ __('Completed Responses') }}</dt>
                                 <dd>
                                     <div class="text-2xl font-bold text-gray-900">{{ count($responses) }}</div>
                                 </dd>
@@ -151,7 +154,8 @@
                 class="bg-white overflow-hidden shadow rounded-lg border-t-4 border-purple-400 transform hover:scale-[1.02] transition-all">
                 <div class="p-5 text-center">
                     <dl>
-                        <dt class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Reports Generated
+                        <dt class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                            {{ __('Reports Generated') }}
                         </dt>
                         <dd>
                             <div class="text-3xl font-black text-gray-900">{{ $reportsGenerated }}</div>
@@ -161,7 +165,7 @@
                 <div class="bg-gray-50 px-5 py-3 text-xs text-center uppercase tracking-tighter">
                     <a href="{{ route('research-proposal.history') }}"
                         class="font-bold text-purple-600 hover:text-purple-500">
-                        My Reports <i class="fa-solid fa-chevron-right ml-1"></i>
+                        {{ __('My Reports') }} <i class="fa-solid fa-chevron-right ml-1"></i>
                     </a>
                 </div>
             </div>
@@ -171,7 +175,7 @@
         <div class="bg-white shadow rounded-lg border border-gray-100 overflow-hidden">
             <div class="px-6 py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/30">
                 <h3 class="text-xl font-black text-gray-900 uppercase tracking-tight flex items-center">
-                    <i class="fa-solid fa-clock-rotate-left mr-3 text-indigo-500"></i> Recent Activity
+                    <i class="fa-solid fa-clock-rotate-left mr-3 text-indigo-500"></i> {{ __('Recent Activity') }}
                 </h3>
             </div>
             <div class="p-6">
@@ -186,7 +190,8 @@
                                     </div>
                                     <div>
                                         <p class="text-sm font-bold text-gray-900">
-                                            {{ $response->survey->title ?? 'Deleted Survey' }}</p>
+                                            {{ $response->survey->title ?? 'Deleted Survey' }}
+                                        </p>
                                         <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
                                             Completed {{ $response->created_at->diffForHumans() }}
                                         </p>

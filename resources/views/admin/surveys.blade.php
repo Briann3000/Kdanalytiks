@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Survey Inventory - Admin')
+@section('title', __('Survey Inventory - Admin'))
 
 @section('content')
 <div x-data="{ 
@@ -20,17 +20,17 @@
     },
     async bulkDelete() {
         if (this.selected.length === 0) {
-            Swal.fire('No Selection', 'Please select at least one survey to delete.', 'info');
+            Swal.fire('{{ __("No Selection") }}', '{{ __("Please select at least one survey to delete.") }}', 'info');
             return;
         }
         
         const result = await Swal.fire({
-            title: 'Delete Selected Surveys?',
-            html: `You are about to delete <b>${this.selected.length}</b> surveys from the platform inventory.<br><br><span class='text-red-500 font-bold uppercase text-[10px] tracking-widest'>This action is irreversible.</span>`,
+            title: '{{ __("Delete Selected Surveys?") }}',
+            html: `{{ __("You are about to delete") }} <b>${this.selected.length}</b> {{ __("surveys from the platform inventory.") }}<br><br><span class='text-red-500 font-bold uppercase text-[10px] tracking-widest'>{{ __("This action is irreversible.") }}</span>`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'Yes, Delete All',
-            cancelButtonText: 'Cancel',
+            confirmButtonText: '{{ __("Yes, Delete All") }}',
+            cancelButtonText: '{{ __("Cancel") }}',
             confirmButtonColor: '#ef4444',
             cancelButtonColor: '#1e293b',
             reverseButtons: true,
@@ -43,8 +43,8 @@
 
         if (result.isConfirmed) {
             Swal.fire({
-                title: 'Processing...',
-                html: 'Mass deleting surveys from inventory...',
+                title: '{{ __("Processing...") }}',
+                html: '{{ __("Mass deleting surveys from inventory...") }}',
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();
@@ -64,24 +64,24 @@
                 const data = await res.json();
                 if (data.success) {
                     Swal.fire({
-                        title: 'Deleted!',
+                        title: '{{ __("Deleted!") }}',
                         text: data.message,
                         icon: 'success',
                         timer: 1500,
                         showConfirmButton: false
                     }).then(() => window.location.reload());
                 } else {
-                    Swal.fire('Error', data.message || 'Bulk delete failed.', 'error');
+                    Swal.fire('{{ __("Error") }}', data.message || '{{ __("Bulk delete failed.") }}', 'error');
                 }
             } catch (err) {
-                Swal.fire('Error', 'An error occurred during bulk deletion.', 'error');
+                Swal.fire('{{ __("Error") }}', '{{ __("An error occurred during bulk deletion.") }}', 'error');
             }
         }
     }
 }" class="px-4 sm:px-8 lg:px-12 py-8">
     <div class="mb-8">
-        <h1 class="text-2xl font-black text-gray-900 tracking-tight uppercase">Survey Inventory</h1>
-        <p class="text-sm text-gray-500 font-medium">Manage and monitor all surveys across the platform.</p>
+        <h1 class="text-2xl font-black text-gray-900 tracking-tight uppercase">{{ __('Survey Inventory') }}</h1>
+        <p class="text-sm text-gray-500 font-medium">{{ __('Manage and monitor all surveys across the platform.') }}</p>
     </div>
 
     <!-- Bulk Action Bar -->
@@ -92,12 +92,12 @@
          class="mb-6 bg-red-600 p-4 rounded-2xl shadow-xl shadow-red-100 flex items-center justify-between" style="display: none">
         <div class="flex items-center text-white">
             <span class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center mr-3 text-sm font-black" x-text="selected.length"></span>
-            <span class="text-xs font-black uppercase tracking-widest">Surveys Selected for Deletion</span>
+            <span class="text-xs font-black uppercase tracking-widest">{{ __('Surveys Selected for Deletion') }}</span>
         </div>
         <div class="flex items-center gap-3">
-            <button @click="selected = []; allSelected = false" class="text-white/70 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors mr-2">Deselect All</button>
+            <button @click="selected = []; allSelected = false" class="text-white/70 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors mr-2">{{ __('Deselect All') }}</button>
             <button @click="bulkDelete()" class="px-6 py-2 bg-white text-red-600 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm hover:bg-red-50 transition-all transform hover:scale-105 active:scale-95">
-                <i class="fa-solid fa-trash-can mr-2"></i>Delete Selected
+                <i class="fa-solid fa-trash-can mr-2"></i>{{ __('Delete Selected') }}
             </button>
         </div>
     </div>
@@ -106,15 +106,15 @@
     <div class="flex flex-wrap gap-2 mb-6">
         <a href="{{ route('admin.surveys.index') }}" 
            class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all {{ !request('status') ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white text-gray-400 hover:text-indigo-600 border border-gray-100' }}">
-            All Surveys
+            {{ __('All Surveys') }}
         </a>
         <a href="{{ route('admin.surveys.index', ['status' => 'active']) }}" 
            class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all {{ request('status') === 'active' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-100' : 'bg-white text-gray-400 hover:text-emerald-600 border border-gray-100' }}">
-            Active
+            {{ __('Active') }}
         </a>
         <a href="{{ route('admin.surveys.index', ['status' => 'draft']) }}" 
            class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all {{ request('status') === 'draft' ? 'bg-gray-600 text-white shadow-lg shadow-gray-100' : 'bg-white text-gray-400 hover:text-gray-600 border border-gray-100' }}">
-            Drafts
+            {{ __('Drafts') }}
         </a>
     </div>
 
@@ -122,39 +122,39 @@
     <div class="bg-white p-3 rounded-lg border border-gray-100 shadow-sm mb-6">
         <form action="{{ route('admin.surveys.index') }}" method="GET" class="flex flex-wrap gap-3 items-center">
             <div class="w-40">
-                <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</label>
+                <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{{ __('Status') }}</label>
                 <select name="status" class="w-full text-[10px] font-bold border-gray-100 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-1.5 shadow-sm">
-                    <option value="">All Statuses</option>
+                    <option value="">{{ __('All Statuses') }}</option>
                     @foreach(collect(\App\Enums\SurveyStatus::cases())->filter(fn($s) => $s->value !== 'pending_approval')->sortBy(fn($s) => strtoupper(str_replace('_', ' ', $s->value))) as $status)
-                        <option value="{{ $status->value }}" {{ request('status') == $status->value ? 'selected' : '' }}>{{ strtoupper(str_replace('_', ' ', $status->value)) }}</option>
+                        <option value="{{ $status->value }}" {{ request('status') == $status->value ? 'selected' : '' }}>{{ __(strtoupper(str_replace('_', ' ', $status->value))) }}</option>
                     @endforeach
                 </select>
             </div>
             <div class="w-40">
-                <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Category</label>
+                <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{{ __('Category') }}</label>
                 <select name="category" class="w-full text-[10px] font-bold border-gray-100 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-1.5 shadow-sm">
-                    <option value="">All Categories</option>
+                    <option value="">{{ __('All Categories') }}</option>
                     @foreach(collect(\App\Enums\SurveyCategory::cases())->sortBy('value') as $cat)
-                        <option value="{{ $cat->value }}" {{ request('category') == $cat->value ? 'selected' : '' }}>{{ $cat->value }}</option>
+                        <option value="{{ $cat->value }}" {{ request('category') == $cat->value ? 'selected' : '' }}>{{ __($cat->value) }}</option>
                     @endforeach
                 </select>
             </div>
             <div class="w-40">
-                <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Source</label>
+                <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{{ __('Source') }}</label>
                 <select name="source" class="w-full text-[10px] font-bold border-gray-100 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-1.5 shadow-sm">
-                    <option value="">All Sources</option>
-                    <option value="admin" {{ request('source') == 'admin' ? 'selected' : '' }}>ADMIN</option>
-                    <option value="independent" {{ request('source') == 'independent' ? 'selected' : '' }}>INDEPENDENT</option>
-                    <option value="organization" {{ request('source') == 'organization' ? 'selected' : '' }}>ORGANIZATION</option>
+                    <option value="">{{ __('All Sources') }}</option>
+                    <option value="admin" {{ request('source') == 'admin' ? 'selected' : '' }}>{{ __('ADMIN') }}</option>
+                    <option value="independent" {{ request('source') == 'independent' ? 'selected' : '' }}>{{ __('INDEPENDENT') }}</option>
+                    <option value="organization" {{ request('source') == 'organization' ? 'selected' : '' }}>{{ __('ORGANIZATION') }}</option>
                 </select>
             </div>
             <div class="flex-grow max-w-xs">
-                <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Search</label>
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Title or Owner..." class="w-full text-[10px] font-bold border-gray-100 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-1.5 shadow-sm">
+                <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{{ __('Search') }}</label>
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="{{ __('Title or Owner...') }}" class="w-full text-[10px] font-bold border-gray-100 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-1.5 shadow-sm">
             </div>
             <div class="flex items-end self-end">
                 <button type="submit" class="inline-flex justify-center py-1.5 px-6 border border-transparent shadow-md text-[10px] font-black rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-all uppercase tracking-wider">
-                    Filter
+                    {{ __('Filter') }}
                 </button>
             </div>
         </form>
@@ -179,7 +179,7 @@
                         </th>
                         <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">
                             <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'title', 'sort_dir' => $sortBy === 'title' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-indigo-600 transition-colors">
-                                Survey Detail
+                                {{ __('Survey Detail') }}
                                 @if($sortBy === 'title')
                                     <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-indigo-600"></i>
                                 @else
@@ -189,7 +189,7 @@
                         </th>
                         <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">
                             <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'created_by', 'sort_dir' => $sortBy === 'created_by' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-indigo-600 transition-colors">
-                                Owner
+                                {{ __('Owner') }}
                                 @if($sortBy === 'created_by')
                                     <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-indigo-600"></i>
                                 @else
@@ -199,7 +199,7 @@
                         </th>
                         <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">
                             <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'type', 'sort_dir' => $sortBy === 'type' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-indigo-600 transition-colors">
-                                Type
+                                {{ __('Type') }}
                                 @if($sortBy === 'type')
                                     <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-indigo-600"></i>
                                 @else
@@ -209,7 +209,7 @@
                         </th>
                         <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">
                             <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'status', 'sort_dir' => $sortBy === 'status' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-indigo-600 transition-colors">
-                                Status
+                                {{ __('Status') }}
                                 @if($sortBy === 'status')
                                     <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-indigo-600"></i>
                                 @else
@@ -219,7 +219,7 @@
                         </th>
                         <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">
                             <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'responses_count', 'sort_dir' => $sortBy === 'responses_count' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-indigo-600 transition-colors">
-                                Responses
+                                {{ __('Responses') }}
                                 @if($sortBy === 'responses_count')
                                     <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-indigo-600"></i>
                                 @else
@@ -229,7 +229,7 @@
                         </th>
                         <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">
                             <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'created_at', 'sort_dir' => $sortBy === 'created_at' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-indigo-600 transition-colors">
-                                Date Created
+                                {{ __('Date Created') }}
                                 @if($sortBy === 'created_at')
                                     <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-indigo-600"></i>
                                 @else
@@ -237,7 +237,7 @@
                                 @endif
                             </a>
                         </th>
-                        <th class="px-6 py-4 text-right text-[11px] font-bold text-gray-900 uppercase tracking-wider pr-20">Actions</th>
+                        <th class="px-6 py-4 text-right text-[11px] font-bold text-gray-900 uppercase tracking-wider pr-20">{{ __('Actions') }}</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-100">
@@ -257,7 +257,7 @@
                         </td>
                         <td class="px-6 py-4">
                             <div class="text-sm font-bold text-gray-900">{{ $survey->title }}</div>
-                            <div class="text-[10px] text-gray-400 font-black uppercase tracking-tighter">{{ $survey->category instanceof \BackedEnum ? $survey->category->value : $survey->category }}</div>
+                            <div class="text-[10px] text-gray-400 font-black uppercase tracking-tighter">{{ __($survey->category instanceof \BackedEnum ? $survey->category->value : $survey->category) }}</div>
                         </td>
                         <td class="px-6 py-4">
                             @if($survey->organization)
@@ -275,12 +275,12 @@
                                     <span class="text-xs font-bold text-gray-600">{{ $survey->independent->name }}</span>
                                 </div>
                             @else
-                                <span class="text-[10px] font-black text-gray-300 uppercase italic">Platform Admin</span>
+                                <span class="text-[10px] font-black text-gray-300 uppercase italic">{{ __('Platform Admin') }}</span>
                             @endif
                         </td>
                         <td class="px-6 py-4">
                             <span class="px-2 py-1 bg-gray-100 text-gray-500 rounded text-[10px] font-black uppercase tracking-widest">
-                                {{ $survey->type instanceof \BackedEnum ? $survey->type->value : $survey->type }}
+                                {{ __($survey->type instanceof \BackedEnum ? $survey->type->value : $survey->type) }}
                             </span>
                         </td>
                         <td class="px-6 py-4">
@@ -289,7 +289,7 @@
                             @endphp
                             <span class="px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest
                                 {{ $statusVal === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400' }}">
-                                {{ str_replace('_', ' ', $statusVal) }}
+                                {{ __(str_replace('_', ' ', $statusVal)) }}
                             </span>
                         </td>
                         <td class="px-6 py-4 text-sm font-bold text-indigo-600">
@@ -309,11 +309,11 @@
                                             x-show="!confirming"
                                             @click.stop="confirming = true"
                                             class="w-7 h-7 bg-red-50 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100" 
-                                            title="Delete permanently">
+                                            title="{{ __('Delete permanently') }}">
                                         <i class="fa-solid fa-trash-can text-[10px]"></i>
                                     </button>
                                     <div x-show="confirming" class="flex items-center gap-1 animate-in fade-in slide-in-from-right-2 duration-200" style="display:none">
-                                        <span class="text-[9px] font-black text-red-600 uppercase tracking-tighter mr-1 shadow-sm px-1.5 border border-red-200 bg-red-50 rounded">SURE?</span>
+                                        <span class="text-[9px] font-black text-red-600 uppercase tracking-tighter mr-1 shadow-sm px-1.5 border border-red-200 bg-red-50 rounded">{{ __('SURE?') }}</span>
                                         <button type="button" 
                                                 @click.stop="
                                                     fetch('{{ route('surveys.destroy', $survey) }}', {
@@ -328,14 +328,14 @@
                                                         if(res.ok) {
                                                             deleted = true;
                                                         } else {
-                                                            Swal.fire('Error', 'Survey could not be deleted.', 'error');
+                                                            Swal.fire('{{ __("Error") }}', '{{ __("Survey could not be deleted.") }}', 'error');
                                                         }
                                                     });
                                                 "
-                                                class="px-2 py-1 bg-red-600 text-white rounded text-[10px] font-black uppercase hover:bg-red-700 shadow-sm">YES</button>
+                                                class="px-2 py-1 bg-red-600 text-white rounded text-[10px] font-black uppercase hover:bg-red-700 shadow-sm">{{ __('YES') }}</button>
                                         <button type="button" 
                                                 @click.stop="confirming = false"
-                                                class="px-2 py-1 bg-gray-100 text-gray-400 rounded text-[10px] font-black uppercase hover:bg-gray-200">NO</button>
+                                                class="px-2 py-1 bg-gray-100 text-gray-400 rounded text-[10px] font-black uppercase hover:bg-gray-200">{{ __('NO') }}</button>
                                     </div>
                                 </div>
                             </div>
@@ -343,7 +343,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="8" class="px-6 py-12 text-center text-gray-400 italic font-medium">No surveys found.</td>
+                        <td colspan="8" class="px-6 py-12 text-center text-gray-400 italic font-medium">{{ __('No surveys found.') }}</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -358,7 +358,7 @@
 
     <div class="mt-6 pb-20">
         <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center text-xs font-black text-gray-400 uppercase tracking-widest hover:text-indigo-600 transition-colors">
-            <i class="fa-solid fa-arrow-left mr-2"></i> Back to Dashboard
+            <i class="fa-solid fa-arrow-left mr-2"></i> {{ __('Back to Dashboard') }}
         </a>
     </div>
 </div>
