@@ -36,158 +36,386 @@ class AcademicSynthesisService
         $currentYear = date('Y');
         $totalResponses = $aggregatedData['survey_info']['total_responses'] ?? 0;
         $dataSummary = $this->buildDataSummary($aggregatedData);
+        $locale = \App::getLocale();
 
         $sections = [];
-
-        // ── 1. STATIC PRELIMINARY PAGES ──
         $sections['Title Page'] = $this->generateTitlePage($survey, $currentYear, $style);
         $sections['Declaration'] = $this->generateDeclaration($survey, $currentYear);
         $sections['Acknowledgement'] = $this->generateAcknowledgement($survey);
 
-        // ── 2. BATCH CALL: PRELIMINARY AI SECTIONS (Abstract, Abbreviations, Terms) ──
-        sleep(1); // Rate limit buffer
-        $prelimPrompt = "Write the following preliminary sections for a research report titled '{$survey->title}'.\n" .
-            "Use exact markers [SECTION: Name] before each section.\n\n" .
-            "[SECTION: Abstract] - Write a 250-word academic abstract.\n" .
-            "[SECTION: Abbreviations] - List 10 standard research abbreviations.\n" .
-            "[SECTION: Definition of Key Terms] - Define 5-8 key academic terms relevant to this topic.\n\n" .
-            "SURVEY DATA CONTEXT:\n{$dataSummary}";
-        $this->batchProcess($prelimPrompt, $sections, $survey, $style, $currentYear);
+        // ── DEFINE ALL PROMPTS ──
+        $prelimPrompt = "Write Abstract, Abbreviations, and Definition of Key Terms for '{$survey->title}'. Use [SECTION: Name] markers.\nDATA:\n{$dataSummary}";
+        $ch1Prompt = "Write Chapter 1: Introduction for '{$survey->title}'. Use markers: [SECTION: 1.1 Background of the Study], [SECTION: 1.2 Statement of the Problem], [SECTION: 1.3 Objectives of the Study], [SECTION: 1.4 Research Questions], [SECTION: 1.5 Significance of the Study], [SECTION: 1.6 Scope and Limitations].";
+        $ch2Prompt = "Write Chapter 2: Literature Review for '{$survey->title}'. Use markers: [SECTION: 2.0 Introduction], [SECTION: 2.1 Theoretical Framework], [SECTION: 2.2 Conceptual Framework], [SECTION: 2.3 Empirical Review], [SECTION: 2.4 Research Gaps], [SECTION: 2.5 Summary]. References:\n{$referencePrompt}";
+        $ch3Prompt = "Write Chapter 3: Research Methodology for '{$survey->title}'. Use markers: [SECTION: 3.1 Research Design], [SECTION: 3.2 Target Population], [SECTION: 3.3 Sample Size and Sampling Techniques], [SECTION: 3.4 Data Collection Instruments], [SECTION: 3.5 Data Collection Procedures], [SECTION: 3.6 Validity and Reliability], [SECTION: 3.7 Data Analysis and Presentation].";
 
-        // ── 3. BATCH CALL: CHAPTER 1 (INTRODUCTION) ──
-        sleep(2); // Rate limit buffer
-        $ch1Prompt = "Write CHAPTER 1: INTRODUCTION for the research report '{$survey->title}'.\n" .
-            "Use markers [SECTION: Name] for each sub-section:\n" .
-            "[SECTION: 1.1 Background of the Study]\n" .
-            "[SECTION: 1.2 Statement of the Problem]\n" .
-            "[SECTION: 1.3 Objectives of the Study]\n" .
-            "[SECTION: 1.4 Research Questions]\n" .
-            "[SECTION: 1.5 Significance of the Study]\n" .
-            "[SECTION: 1.6 Scope and Limitations]\n\n" .
-            "Respondents: {$totalResponses}. Description: {$survey->description}.";
+        $groupContext = "";
+        foreach (array_slice($aggregatedData['questions'], 0, 8) as $idx => $q) {
+            $groupContext .= "Q" . ($idx + 1) . ": {$q['label']}\nData: " . json_encode($q['stats'] ?? $q['insights']) . "\n\n";
+        }
+        $qPrompt = "Write Chapter 4: Results and Discussion introduction and thematic analysis for '{$survey->title}'. Use markers: [SECTION: 4.0 Introduction] and [SECTION: 4.X Name] for findings.\nDATA:\n{$groupContext}";
+
+        $ch5RefPrompt = "Write Chapter 5 AND References for '{$survey->title}'.\n" .
+            "Use markers: [SECTION: 5.1 Summary of Findings], [SECTION: 5.2 Conclusions], [SECTION: 5.3 Recommendations], [SECTION: REFERENCES].\n" .
+            "For REFERENCES, list 10-15 academic sources in {$style} style.\n" .
+            "Manual references to include: {$referencePrompt}\n" .
+            "DATA:\n{$dataSummary}";
+
+        // ── EXECUTE TURBO PARALLEL WAVES ──
+        $wave1 = [
+            'prelim' => $prelimPrompt,
+            'ch1' => $ch1Prompt,
+            'ch2' => $ch2Prompt
+        ];
+        $results1 = $this->processWave($wave1, $survey, $style, $currentYear);
+
+        $wave2 = [
+            'ch3' => $ch3Prompt,
+            'ch4' => $qPrompt,
+            'ch5ref' => $ch5RefPrompt
+        ];
+        $results2 = $this->processWave($wave2, $survey, $style, $currentYear);
+
+        // ── MERGE SEQUENTIALLY ──
+        // 1. Preliminaries
+        $sections = array_merge($sections, $results1['prelim'] ?? []);
+
+        // 2. Chapter 1
         $sections['CHAPTER 1: INTRODUCTION'] = '__chapter_header__';
-        $this->batchProcess($ch1Prompt, $sections, $survey, $style, $currentYear);
+        $sections = array_merge($sections, $results1['ch1'] ?? []);
 
-        // ── 4. BATCH CALL: CHAPTER 2 (LITERATURE REVIEW) ──
-        sleep(2); // Rate limit buffer
-        $ch2Prompt = "Write CHAPTER 2: LITERATURE REVIEW for '{$survey->title}'.\n" .
-            "Use markers:\n" .
-            "[SECTION: 2.0 Introduction]\n" .
-            "[SECTION: 2.1 Theoretical Framework]\n" .
-            "[SECTION: 2.2 Conceptual Framework]\n" .
-            "[SECTION: 2.3 Empirical Review]\n" .
-            "[SECTION: 2.4 Research Gaps]\n" .
-            "[SECTION: 2.5 Summary]\n\n" .
-            "REFERENCES TO USE:\n{$referencePrompt}";
+        // 3. Chapter 2
         $sections['CHAPTER 2: LITERATURE REVIEW'] = '__chapter_header__';
-        $this->batchProcess($ch2Prompt, $sections, $survey, $style, $currentYear);
+        $sections = array_merge($sections, $results1['ch2'] ?? []);
 
-        // ── 5. BATCH CALL: CHAPTER 3 (METHODOLOGY) ──
-        sleep(2); // Rate limit buffer
-        $ch3Prompt = "Write CHAPTER 3: RESEARCH METHODOLOGY for '{$survey->title}'.\n" .
-            "Use markers:\n" .
-            "[SECTION: 3.1 Research Design]\n" .
-            "[SECTION: 3.2 Target Population]\n" .
-            "[SECTION: 3.3 Sample Size and Sampling Techniques]\n" .
-            "[SECTION: 3.4 Data Collection Instruments]\n" .
-            "[SECTION: 3.5 Data Collection Procedures]\n" .
-            "[SECTION: 3.6 Validity and Reliability]\n" .
-            "[SECTION: 3.7 Data Analysis and Presentation]\n\n" .
-            "Respondents: {$totalResponses}. Methodology: Survey-based.";
+        // 4. Chapter 3
         $sections['CHAPTER 3: RESEARCH METHODOLOGY'] = '__chapter_header__';
-        $this->batchProcess($ch3Prompt, $sections, $survey, $style, $currentYear);
+        $sections = array_merge($sections, $results2['ch3'] ?? []);
 
-        // ── 6. CHAPTER 4: RESULTS AND DISCUSSION (Data Heavy - Segmented) ──
+        // 5. Chapter 4
         $sections['CHAPTER 4: RESULTS AND DISCUSSION'] = '__chapter_header__';
-        $sections['4.0 Introduction'] = "This chapter presents the analysis and interpretation of data collected from {$totalResponses} respondents for the survey '{$survey->title}'.";
+        $sections = array_merge($sections, $results2['ch4'] ?? []);
 
-        // We still iterate questions to ensure tables are embedded correctly
-        $questionGroups = array_chunk($aggregatedData['questions'], 5); // Process in groups of 5 to stay fast
-        $qIdx = 1;
-        foreach ($questionGroups as $group) {
-            $groupContext = "";
-            foreach ($group as $q) {
-                $groupContext .= "Q" . ($qIdx++) . ": {$q['label']}\nData: " . json_encode($q['stats'] ?? $q['insights']) . "\n\n";
-            }
+        // 6. Chapter 5 & References
+        // The AI generates 5.1, 5.2, 5.3 and then REFERENCES.
+        // We need to inject the CHAPTER 5 header before 5.1.
+        $sections['CHAPTER 5: SUMMARY, CONCLUSIONS AND RECOMMENDATIONS'] = '__chapter_header__';
 
-            $qPrompt = "Write an academic discussion for the following 5 survey findings. " .
-                "Use the marker [SECTION: 4.X Title] for each. " .
-                "Mention specific percentages and counts in your prose.\n\nFINDINGS:\n{$groupContext}";
-
-            $this->batchProcess($qPrompt, $sections, $survey, $style, $currentYear);
+        // Separate out REFERENCES if it exists in the chunk
+        $ch5RefChunk = $results2['ch5ref'] ?? [];
+        $refsContent = null;
+        if (isset($ch5RefChunk['REFERENCES'])) {
+            $refsContent = $ch5RefChunk['REFERENCES'];
+            unset($ch5RefChunk['REFERENCES']);
         }
 
-        // Re-inject tables into Chapter 4 sections (since AI generates prose, we append the HTML tables)
+        $sections = array_merge($sections, $ch5RefChunk);
+
+        if ($refsContent) {
+            $sections['REFERENCES'] = '__chapter_header__';
+            $sections['REFERENCES_CONTENT'] = $refsContent; // Using a unique key so it doesn't overwrite header
+        }
+
+        // ── RE-INJECT TABLES INTO CH4 ──
         foreach ($aggregatedData['questions'] as $idx => $q) {
-            $foundKey = null;
             $search = "4." . ($idx + 1);
             foreach (array_keys($sections) as $key) {
-                if (str_starts_with($key, $search)) {
-                    $foundKey = $key;
+                if (str_starts_with($key, $search) && !empty($q['stats'])) {
+                    $sections[$key] .= "\n\n" . $this->buildSingleQuestionTableHtml($q['label'], $q['stats'], $totalResponses);
                     break;
                 }
             }
-            if ($foundKey && !empty($q['stats'])) {
-                $sections[$foundKey] .= "\n\n" . $this->buildSingleQuestionTableHtml($q['label'], $q['stats'], $totalResponses);
-            }
         }
 
-        // ── 7. BATCH CALL: CHAPTER 5 ──
-        sleep(3); // Extra buffer for the final chapter call
-        Log::info('Starting Chapter 5 generation...');
-        $ch5Prompt = "Write CHAPTER 5: SUMMARY, CONCLUSIONS AND RECOMMENDATIONS for '{$survey->title}'.\n" .
-            "Use markers:\n" .
-            "[SECTION: 5.1 Summary of Findings]\n" .
-            "[SECTION: 5.2 Conclusions]\n" .
-            "[SECTION: 5.3 Recommendations]\n\n" .
-            "DATA SUMMARY:\n{$dataSummary}";
-        $sections['CHAPTER 5: SUMMARY, CONCLUSIONS AND RECOMMENDATIONS'] = '__chapter_header__';
-        $this->batchProcess($ch5Prompt, $sections, $survey, $style, $currentYear);
-
-        // ── 8. BATCH CALL: REFERENCES ──
-        sleep(2); // Rate limit buffer
-        $refPrompt = "Generate the REFERENCES section for '{$survey->title}'.\n" .
-            "Use marker: [SECTION: REFERENCES]\n" .
-            "List 10-15 academic sources strictly in {$style} style.\n\n" .
-            "USER REFERENCES:\n{$referencePrompt}";
-        $this->batchProcess($refPrompt, $sections, $survey, $style, $currentYear);
-
-        // ── 9. APPENDICES ──
+        // ── APPENDICES ──
         $sections['APPENDICES'] = $this->generateAppendices($survey, $aggregatedData);
 
         return [
             'outline' => "Generated Academic Structure",
-            'sections' => $sections,
+            'sections' => array_filter($sections),
             'metadata' => [
                 'survey_id' => $survey->id,
                 'style' => $style,
                 'manual_references' => $manualReferences,
                 'generated_at' => now()->toIso8601String(),
                 'total_responses' => $totalResponses,
+                'locale' => $locale,
             ]
         ];
     }
 
     /**
+     * Normalize report keys back to standard English keys so that __() can translate them.
+     */
+    public function normalizeReportKeys(array $sections)
+    {
+        $normalized = [];
+        $mappings = [
+            '1.1' => '1.1 Background of the Study',
+            '1.2' => '1.2 Statement of the Problem',
+            '1.3' => '1.3 Objectives of the Study',
+            '1.4' => '1.4 Research Questions',
+            '1.5' => '1.5 Significance of the Study',
+            '1.6' => '1.6 Scope and Limitations',
+            '2.0' => '2.0 Introduction',
+            '2.1' => '2.1 Theoretical Framework',
+            '2.2' => '2.2 Conceptual Framework',
+            '2.3' => '2.3 Empirical Review',
+            '2.4' => '2.4 Research Gaps',
+            '2.5' => '2.5 Summary',
+            '3.1' => '3.1 Research Design',
+            '3.2' => '3.2 Target Population',
+            '3.3' => '3.3 Sample Size and Sampling Techniques',
+            '3.4' => '3.4 Data Collection Instruments',
+            '3.6' => '3.6 Validity and Reliability',
+            '5.1' => '5.1 Summary of Findings',
+            '5.2' => '5.2 Conclusions',
+            '5.3' => '5.3 Recommendations',
+            'SURA YA 1' => 'CHAPTER 1: INTRODUCTION',
+            'SURA YA 2' => 'CHAPTER 2: LITERATURE REVIEW',
+            'SURA YA 3' => 'CHAPTER 3: RESEARCH METHODOLOGY',
+            'SURA YA 4' => 'CHAPTER 4: RESULTS AND DISCUSSION',
+            'SURA YA 5' => 'CHAPTER 5: SUMMARY, CONCLUSIONS AND RECOMMENDATIONS',
+            'CHAPITRE 1' => 'CHAPTER 1: INTRODUCTION',
+            'CHAPITRE 2' => 'CHAPTER 2: LITERATURE REVIEW',
+            'CHAPITRE 3' => 'CHAPTER 3: RESEARCH METHODOLOGY',
+            'CHAPITRE 4' => 'CHAPTER 4: RESULTS AND DISCUSSION',
+            'CHAPITRE 5' => 'CHAPTER 5: SUMMARY, CONCLUSIONS AND RECOMMENDATIONS',
+            'CAPÍTULO 1' => 'CHAPTER 1: INTRODUCTION',
+            'CAPÍTULO 2' => 'CHAPTER 2: LITERATURE REVIEW',
+            'CAPÍTULO 3' => 'CHAPTER 3: RESEARCH METHODOLOGY',
+            'CAPÍTULO 4' => 'CHAPTER 4: RESULTS AND DISCUSSION',
+            'CAPÍTULO 5' => 'CHAPTER 5: SUMMARY, CONCLUSIONS AND RECOMMENDATIONS',
+        ];
+
+        foreach ($sections as $title => $content) {
+            $newTitle = $title;
+            foreach ($mappings as $match => $standard) {
+                if (str_contains(strtoupper($title), strtoupper($match))) {
+                    $newTitle = $standard;
+                    break;
+                }
+            }
+            $normalized[$newTitle] = $content;
+        }
+
+        return $normalized;
+    }
+
+    private function parseAndInject($response, &$sections)
+    {
+        $parts = preg_split('/\[SECTION:\s*([^\]]+)\]/i', $response, -1, PREG_SPLIT_DELIM_CAPTURE);
+        for ($i = 1; $i < count($parts); $i += 2) {
+            $rawTitle = trim($parts[$i]);
+            $content = trim($parts[$i + 1] ?? '');
+
+            // Marker Normalization
+            $title = $rawTitle;
+            $mappings = [
+                'Background' => '1.1 Background of the Study',
+                'Statement of the Problem' => '1.2 Statement of the Problem',
+                'Objectives' => '1.3 Objectives of the Study',
+                'Research Questions' => '1.4 Research Questions',
+                'Significance' => '1.5 Significance of the Study',
+                'Scope and Limitations' => '1.6 Scope and Limitations',
+                'Theoretical Framework' => '2.1 Theoretical Framework',
+                'Conceptual Framework' => '2.2 Conceptual Framework',
+                'Empirical Review' => '2.3 Empirical Review',
+                'Research Gaps' => '2.4 Research Gaps',
+                'Summary' => '2.5 Summary',
+                'Declaration' => 'Declaration',
+                'Acknowledgement' => 'Acknowledgement',
+                'Abstract' => 'Abstract',
+                'Abbreviations' => 'Abbreviations',
+                'Definition of Key Terms' => 'Definition of Key Terms',
+                'REFERENCES' => 'REFERENCES',
+            ];
+
+            foreach ($mappings as $match => $standardKey) {
+                if (str_contains($rawTitle, $match)) {
+                    $title = $standardKey;
+                    break;
+                }
+            }
+
+            if ($title && $content) {
+                $sections[$title] = $content;
+            }
+        }
+    }
+
+    /**
      * Process a batch of sections from a single AI call.
      */
+    /**
+     * Translate an existing report to a new language using batched calls for speed.
+     */
+    public function translateReport(array $sections, string $targetLocale)
+    {
+        $langMap = [
+            'sw' => 'Swahili',
+            'fr' => 'French',
+            'de' => 'German',
+            'es' => 'Spanish',
+            'ar' => 'Arabic',
+            'zh' => 'Chinese (Simplified)',
+        ];
+        $targetLanguage = $langMap[$targetLocale] ?? 'English';
+
+        $translatedSections = $sections;
+        $sectionsToTranslate = [];
+        $idMap = [];
+        $counter = 0;
+
+        foreach ($sections as $title => $content) {
+            if ($content === '__chapter_header__' || $title === 'Title Page') {
+                continue;
+            }
+            $id = "SEC" . (++$counter);
+            $sectionsToTranslate[$id] = $content;
+            $idMap[$id] = $title;
+        }
+
+        if (empty($sectionsToTranslate))
+            return ['success' => true, 'sections' => $sections];
+
+        $chunks = array_chunk($sectionsToTranslate, 5, true);
+        $prompts = [];
+        foreach ($chunks as $chunkIdx => $chunk) {
+            $chunkPrompt = "Translate the following sections into {$targetLanguage}. Maintain formatting.\n\n";
+            foreach ($chunk as $id => $content) {
+                $chunkPrompt .= "[[[ID: {$id}]]]\n{$content}\n\n";
+            }
+            $prompts["chunk_{$chunkIdx}"] = $chunkPrompt;
+        }
+
+        $systemPrompt = "You are a professional academic translator. Output ONLY the marked sections. Keep [[[ID: ...]]] markers EXACTLY as written. DO NOT translate the 'ID' part of the marker.";
+        $responses = $this->aiService->callGroqParallel($prompts, $systemPrompt);
+
+        $anySuccess = false;
+        foreach ($responses as $key => $response) {
+            \Illuminate\Support\Facades\Log::info("Translation Response for $key: " . substr($response, 0, 200));
+            if ($response) {
+                $anySuccess = true;
+                $parts = preg_split('/\[\[\[ID:\s*([^\]]+)\]\]\]/i', $response, -1, PREG_SPLIT_DELIM_CAPTURE);
+                for ($i = 1; $i < count($parts); $i += 2) {
+                    $idPart = trim($parts[$i]);
+                    $contentPart = trim($parts[$i + 1] ?? '');
+                    if (isset($idMap[$idPart])) {
+                        $translatedSections[$idMap[$idPart]] = $contentPart;
+                    }
+                }
+            }
+        }
+
+        return [
+            'success' => $anySuccess,
+            'sections' => $translatedSections
+        ];
+    }
+    /**
+     * Process a wave of 2 parallel AI calls, parsing results in order.
+     */
+    private function processWave(array $prompts, $survey, $style, $currentYear)
+    {
+        $locale = \Illuminate\Support\Facades\App::getLocale();
+        $langMap = [
+            'sw' => 'Swahili',
+            'fr' => 'French',
+            'de' => 'German',
+            'es' => 'Spanish',
+            'ar' => 'Arabic',
+            'zh-CN' => 'Chinese (Simplified)',
+        ];
+        $language = $langMap[$locale] ?? 'English';
+
+        $systemPrompt = "You are a senior academic director. Write formal, objective research prose. " .
+            "CRITICAL: You MUST use the exact English markers [SECTION: Name] provided in the prompt before every new section you write. " .
+            "Do NOT translate the names inside the [SECTION: ...] markers, even if you are writing the content in another language. " .
+            "Ground every claim in the survey findings. Attribute data to '{$survey->title}' ({$currentYear}). " .
+            "Citation style: {$style}. Output only the marked sections. " .
+            "WARNING: Do NOT append a 'References' list or bibliography at the end of your text unless explicitly asked to generate [SECTION: REFERENCES]. " .
+            "IMPORTANT: You MUST write the entire CONTENT of the sections in {$language}.";
+
+        Log::info("Executing Parallel Wave with " . count($prompts) . " prompts...");
+        $responses = $this->aiService->callAiParallel($prompts, $systemPrompt);
+
+        $parsedResults = [];
+
+        // Parse responses IN KEY ORDER
+        foreach ($prompts as $key => $prompt) {
+            $parsedResults[$key] = [];
+            $response = $responses[$key] ?? null;
+            if ($response) {
+                $this->parseAndInject($response, $parsedResults[$key]);
+            } else {
+                Log::warning("Wave call '{$key}' returned null — falling back to sequential.");
+                // Fallback: try a single sequential call for this prompt
+                $fallback = $this->aiService->callAi($prompt, $systemPrompt);
+                if ($fallback) {
+                    $this->parseAndInject($fallback, $parsedResults[$key]);
+                }
+            }
+        }
+
+        return $parsedResults;
+    }
+
     private function batchProcess($prompt, &$sections, $survey, $style, $currentYear)
     {
+        $locale = \Illuminate\Support\Facades\App::getLocale();
+        $langMap = [
+            'sw' => 'Swahili',
+            'fr' => 'French',
+            'de' => 'German',
+            'es' => 'Spanish',
+            'ar' => 'Arabic',
+            'zh-CN' => 'Chinese (Simplified)',
+        ];
+        $language = $langMap[$locale] ?? 'English';
+
         $systemPrompt = "You are a senior academic director. Write formal, objective research prose. " .
-            "CRITICAL: You MUST use the marker [SECTION: Name] before every new section you write. " .
-            "Gound every claim in the survey findings. Attribute data to '{$survey->title}' ({$currentYear}). " .
-            "Citation style: {$style}. Output only the marked sections.";
+            "CRITICAL: You MUST use the exact English markers [SECTION: Name] provided in the prompt before every new section you write. " .
+            "Do NOT translate the names inside the [SECTION: ...] markers, even if you are writing the content in another language. " .
+            "Ground every claim in the survey findings. Attribute data to '{$survey->title}' ({$currentYear}). " .
+            "Citation style: {$style}. Output only the marked sections. " .
+            "WARNING: Do NOT append a 'References' list or bibliography at the end of your text unless explicitly asked to generate [SECTION: REFERENCES]. " .
+            "IMPORTANT: You MUST write the entire CONTENT of the sections in {$language}.";
 
         Log::info("Executing Batch AI Call for prompt: " . substr($prompt, 0, 100) . "...");
-        $response = $this->aiService->callGroq($prompt, $systemPrompt);
+        $response = $this->aiService->callAi($prompt, $systemPrompt);
 
         if ($response) {
             // More resilient regex: handles optional spaces and case sensitivity
             $parts = preg_split('/\[SECTION:\s*([^\]]+)\]/i', $response, -1, PREG_SPLIT_DELIM_CAPTURE);
 
             for ($i = 1; $i < count($parts); $i += 2) {
-                $title = trim($parts[$i]);
+                $rawTitle = trim($parts[$i]);
                 $content = trim($parts[$i + 1] ?? '');
+
+                // Marker Normalization: Map common translations back to English keys
+                $title = $rawTitle;
+                $mappings = [
+                    'Background' => '1.1 Background of the Study',
+                    'Statement of the Problem' => '1.2 Statement of the Problem',
+                    'Objectives' => '1.3 Objectives of the Study',
+                    'Research Questions' => '1.4 Research Questions',
+                    'Significance' => '1.5 Significance of the Study',
+                    'Scope and Limitations' => '1.6 Scope and Limitations',
+                    'Theoretical Framework' => '2.1 Theoretical Framework',
+                    'Conceptual Framework' => '2.2 Conceptual Framework',
+                    'Empirical Review' => '2.3 Empirical Review',
+                    'Research Gaps' => '2.4 Research Gaps',
+                    'Summary' => '2.5 Summary',
+                ];
+
+                foreach ($mappings as $match => $standardKey) {
+                    if (str_contains($rawTitle, $match)) {
+                        $title = $standardKey;
+                        break;
+                    }
+                }
+
                 if ($title && $content) {
                     $sections[$title] = $content;
                 }
@@ -228,8 +456,8 @@ class AcademicSynthesisService
     {
         $table = "<div class='data-table' style='margin: 20px 0;'>";
         $table .= "<table style='width:100%; border-collapse:collapse; font-size:12px; border:1px solid #e5e7eb;'>";
-        $table .= "<caption style='font-weight:bold; margin-bottom:5px; text-align:left;'>Table: " . e($label) . " (N={$totalResponses})</caption>";
-        $table .= "<tr style='background:#f9fafb;'><th style='padding:8px; border:1px solid #e5e7eb; text-align:left;'>Response</th><th style='padding:8px; border:1px solid #e5e7eb;'>f</th><th style='padding:8px; border:1px solid #e5e7eb;'>%</th></tr>";
+        $table .= "<caption style='font-weight:bold; margin-bottom:5px; text-align:left;'>" . __('Table') . ": " . e($label) . " (N={$totalResponses})</caption>";
+        $table .= "<tr style='background:#f9fafb;'><th style='padding:8px; border:1px solid #e5e7eb; text-align:left;'>" . __('Response') . "</th><th style='padding:8px; border:1px solid #e5e7eb;'>f</th><th style='padding:8px; border:1px solid #e5e7eb;'>%</th></tr>";
         foreach ($stats as $s) {
             $table .= "<tr><td style='padding:8px; border:1px solid #e5e7eb;'>" . e($s['option']) . "</td><td style='padding:8px; border:1px solid #e5e7eb; text-align:center;'>{$s['count']}</td><td style='padding:8px; border:1px solid #e5e7eb; text-align:center;'>{$s['percentage']}%</td></tr>";
         }
@@ -243,23 +471,31 @@ class AcademicSynthesisService
     private function generateTitlePage($survey, $year, $style)
     {
         $user = auth()->user();
-        $name = $user ? $user->name : 'Researcher';
-        return "<div class='title-page' style='text-align:center; padding-top:100px;'><h1>" . strtoupper($survey->title) . "</h1><p>A Research Report</p><br><p>By</p><h3>{$name}</h3><br><p>Style: " . strtoupper($style) . "</p><p>{$year}</p></div>";
+        $name = $user ? $user->name : __('Researcher');
+        $reportType = __('A Research Report');
+        $byText = __('By');
+        $styleText = __('Style');
+        return "<div class='title-page' style='text-align:center; padding-top:100px;'><h1>" . strtoupper($survey->title) . "</h1><p>{$reportType}</p><br><p>{$byText}</p><h3>{$name}</h3><br><p>{$styleText}: " . strtoupper($style) . "</p><p>{$year}</p></div>";
     }
 
     private function generateDeclaration($survey, $year)
     {
-        return "I declare that this report is my original work based on survey data '{$survey->title}' collected in {$year}.";
+        return __("I declare that this report is my original work based on survey data ':title' collected in :year.", [
+            'title' => $survey->title,
+            'year' => $year
+        ]);
     }
 
     private function generateAcknowledgement($survey)
     {
-        return "I acknowledge the contributions of all respondents to the '{$survey->title}' survey.";
+        return __("I acknowledge the contributions of all respondents to the ':title' survey.", [
+            'title' => $survey->title
+        ]);
     }
 
     private function generateAppendices($survey, $aggregatedData)
     {
-        $app = "Appendix A: Questionnaire\n\n";
+        $app = __("Appendix A: Questionnaire") . "\n\n";
         foreach ($aggregatedData['questions'] as $idx => $q) {
             $app .= ($idx + 1) . ". " . $q['label'] . "\n";
         }
@@ -307,15 +543,16 @@ class AcademicSynthesisService
         }
 
         foreach ($content as $title => $text) {
+            $localizedTitle = __($title);
             if ($text === '__chapter_header__') {
                 $section->addPageBreak();
-                $section->addTitle($title, 1);
+                $section->addTitle($localizedTitle, 1);
                 continue;
             }
 
             // Skip title for the Title Page as it's usually inside the content
             if ($title !== 'Title Page') {
-                $section->addTitle($title, 2);
+                $section->addTitle($localizedTitle, 2);
             }
 
             // If the content looks like HTML, use the HTML parser
@@ -345,15 +582,16 @@ class AcademicSynthesisService
     {
         $html = "";
         foreach ($content as $title => $text) {
+            $localizedTitle = __($title);
             if ($text === '__chapter_header__') {
-                $html .= "<h1 style='page-break-before:always; text-align:center;'>{$title}</h1>";
+                $html .= "<h1 style='page-break-before:always; text-align:center;'>{$localizedTitle}</h1>";
                 continue;
             }
             if (str_contains($text, 'title-page')) {
                 $html .= $text;
                 continue;
             }
-            $html .= "<h2>{$title}</h2><div>" . nl2br(e($text)) . "</div>";
+            $html .= "<h2>{$localizedTitle}</h2><div>" . nl2br(e($text)) . "</div>";
         }
 
         $mpdf = new \Mpdf\Mpdf([
