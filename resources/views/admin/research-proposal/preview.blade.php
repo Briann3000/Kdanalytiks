@@ -5,6 +5,45 @@
     $isTruncated = $isTruncated ?? false;
     $truncateAfter = 10; // Show front matter and Chapter 1 intro
     $sectionCount = 0;
+    $reportLocale = $reportData['metadata']['locale'] ?? 'en';
+    $currentLocale = app()->getLocale();
+    $needsTranslation = ($reportLocale !== $currentLocale);
+
+    // Title Normalizer for legacy or partially translated keys
+    $normalizeTitle = function($title) {
+        $clean = preg_replace('/\s*\(approx\..*?\)/i', '', $title);
+        
+        // Map common Swahili/Mixed prefixes back to standard English keys
+        $mappings = [
+            '1.1 Background ya Utafiti' => '1.1 Background of the Study',
+            '1.1 Historia ya Utafiti' => '1.1 Background of the Study',
+            '1.2 Maelezo ya Tatizo' => '1.2 Statement of the Problem',
+            '1.3 Malengo ya Utafiti' => '1.3 Objectives of the Study',
+            '1.4 Maswali ya Utafiti' => '1.4 Research Questions',
+            '1.5 Muhimu wa Utafiti' => '1.5 Significance of the Study',
+            '1.6 Upeo na Vikwazo' => '1.6 Scope and Limitations',
+            '2.0 Utangulizi' => '2.0 Introduction',
+            '2.1 Mfumo wa Kinadharia' => '2.1 Theoretical Framework',
+            '2.2 Mfumo wa Dhana' => '2.2 Conceptual Framework',
+            '2.3 Mapitio ya Kiuchunguzi' => '2.3 Empirical Review',
+            '2.4 Mapengo ya Utafiti' => '2.4 Research Gaps',
+            '2.5 Muhtasari' => '2.5 Summary',
+            '3.1 Muundo wa Utafiti' => '3.1 Research Design',
+            '3.2 Idadi Lengwa' => '3.2 Target Population',
+            '3.3 Ukubwa wa Sampuli' => '3.3 Sample Size and Sampling Techniques',
+            '3.4 Zana za Ukusanyaji' => '3.4 Data Collection Instruments',
+            '3.6 Uhalali na Uaminifu' => '3.6 Validity and Reliability',
+            '5.1 Muhtasari wa Matokeo' => '5.1 Summary of Findings',
+            '5.2 Hitimisho' => '5.2 Conclusions',
+            '5.3 Mapendekezo' => '5.3 Recommendations',
+        ];
+
+        foreach ($mappings as $sw => $en) {
+            if (str_contains($clean, $sw)) return $en;
+        }
+
+        return $clean;
+    };
 @endphp
 
 @section('sub_sidebar')
@@ -17,7 +56,7 @@
             <i class="fa-solid fa-folder-open text-indigo-500" :class="sidebarOpen ? 'mr-3' : ''"></i>
             <h3 x-show="sidebarOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                 class="text-[10px] font- uppercase tracking-widest truncate flex-1">
-                Report Structure
+                {{ __('Report Structure') }}
             </h3>
             <button @click="sidebarOpen = !sidebarOpen"
                 class="w-6 h-6 flex items-center justify-center rounded-lg bg-white border border-gray-100 text-gray-400 hover:text-indigo-600 hover:border-indigo-100 transition-all"
@@ -29,7 +68,7 @@
         <nav class="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar" style="min-height: 0;">
             @foreach($reportData['sections'] as $title => $content)
                 @php
-                    $cleanTitle = preg_replace('/\s*\(approx\..*?\)/i', '', $title);
+                    $cleanTitle = $normalizeTitle($title);
                     $isChapter = str_starts_with($title, 'CHAPTER') || in_array($title, ['REFERENCES', 'APPENDICES']);
                     $isPrelim = in_array($title, ['Title Page', 'Declaration', 'Acknowledgement', 'Abstract', 'Abbreviations', 'Definition of Key Terms']);
                 @endphp
@@ -42,7 +81,7 @@
                                 :class="sidebarOpen ? 'mr-2' : ''">
                                 <i class="fa-solid fa-bookmark text-[7px]"></i>
                             </span>
-                            <span x-show="sidebarOpen" x-transition class="truncate uppercase tracking-wider">{{ $cleanTitle }}</span>
+                            <span x-show="sidebarOpen" x-transition class="truncate uppercase tracking-wider">{{ __($cleanTitle) }}</span>
                         </a>
                     </div>
                 @elseif($isPrelim)
@@ -53,7 +92,7 @@
                             :class="sidebarOpen ? 'mr-2' : ''">
                             {{ $loop->iteration }}
                         </span>
-                        <span x-show="sidebarOpen" x-transition class="truncate">{{ $cleanTitle }}</span>
+                        <span x-show="sidebarOpen" x-transition class="truncate">{{ __($cleanTitle) }}</span>
                     </a>
                 @else
                     <a href="#section-{{ $loop->iteration }}"
@@ -64,7 +103,7 @@
                             :class="sidebarOpen ? 'mr-2' : ''">
                             {{ $loop->iteration }}
                         </span>
-                        <span x-show="sidebarOpen" x-transition class="truncate">{{ $cleanTitle }}</span>
+                        <span x-show="sidebarOpen" x-transition class="truncate">{{ __($cleanTitle) }}</span>
                     </a>
                 @endif
             @endforeach
@@ -210,7 +249,7 @@
                         if ($isTruncated && $sectionCount > $truncateAfter)
                             break;
 
-                        $cleanContentTitle = preg_replace('/\s*\(approx\..*?\)/i', '', $title);
+                        $cleanContentTitle = $normalizeTitle($title);
                         $isChapter = str_starts_with($title, 'CHAPTER') || in_array($title, ['REFERENCES', 'APPENDICES']);
                         $isTitlePage = $title === 'Title Page';
                     @endphp
@@ -219,7 +258,7 @@
                         {{-- Chapter Divider Page --}}
                         <section id="section-{{ $loop->iteration }}"
                             class="scroll-mt-32 py-24 text-center border-t-2 border-b-2 border-gray-100 my-16 relative">
-                            <h2 class="text-2xl font-black text-gray-900 uppercase tracking-widest">{{ $cleanContentTitle }}</h2>
+                            <h2 class="text-2xl font-black text-gray-900 uppercase tracking-widest">{{ __($cleanContentTitle) }}</h2>
                             <div class="w-20 h-1 bg-indigo-600 mx-auto mt-4 rounded-full"></div>
                         </section>
                     @elseif($isTitlePage)
@@ -232,11 +271,11 @@
                         <section id="section-{{ $loop->iteration }}" class="scroll-mt-32 relative">
                             @if($isChapter)
                                 <h2 class="text-xl font-black text-gray-900 mb-8 tracking-tight uppercase leading-none text-center">
-                                    {{ $cleanContentTitle }}</h2>
+                                    {{ __($cleanContentTitle) }}</h2>
                             @else
                                 <h3
                                     class="text-lg font-black text-gray-900 mb-6 border-l-4 border-indigo-600 pl-5 tracking-tight leading-snug">
-                                    {{ $cleanContentTitle }}</h3>
+                                    {{ __($cleanContentTitle) }}</h3>
                             @endif
                             <div
                                 class="prose prose-slate prose-lg max-w-none text-gray-700 leading-relaxed font-serif text-justify">
@@ -258,15 +297,15 @@
                         <section id="section-{{ $loop->iteration }}" class="scroll-mt-32 relative">
                             @if($isChapter)
                                 <h2 class="text-xl font-black text-gray-900 mb-8 tracking-tight uppercase leading-none text-center">
-                                    {{ $cleanContentTitle }}</h2>
+                                    {{ __($cleanContentTitle) }}</h2>
                             @elseif(in_array($title, ['Declaration', 'Acknowledgement', 'Abstract', 'Abbreviations', 'Definition of Key Terms']))
                                 <h3
                                     class="text-lg font-black text-gray-900 mb-6 tracking-tight uppercase leading-none text-center border-b border-gray-100 pb-4">
-                                    {{ $cleanContentTitle }}</h3>
+                                    {{ __($cleanContentTitle) }}</h3>
                             @else
                                 <h3
                                     class="text-lg font-black text-gray-900 mb-6 border-l-4 border-indigo-600 pl-5 tracking-tight leading-snug">
-                                    {{ $cleanContentTitle }}</h3>
+                                    {{ __($cleanContentTitle) }}</h3>
                             @endif
                             <div
                                 class="prose prose-slate prose-lg max-w-none text-gray-700 leading-relaxed font-serif text-justify whitespace-pre-line">

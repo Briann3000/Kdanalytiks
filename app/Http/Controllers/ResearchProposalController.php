@@ -106,6 +106,7 @@ class ResearchProposalController extends Controller
      */
     public function generate(Request $request)
     {
+        set_time_limit(300); // Increase limit for complex AI generation
         $request->validate([
             'survey_id' => 'required|exists:surveys,id',
             'style' => 'required|string|in:apa7,mla9,harvard,chicago,ieee,vancouver,oscola',
@@ -144,9 +145,45 @@ class ResearchProposalController extends Controller
      */
     public function preview($reportId, Request $request)
     {
+        set_time_limit(300); // Allow time for potential auto-translation
         $reportData = session($reportId);
         if (!$reportData) {
             return redirect()->route('research-proposal.index')->with('error', 'Report draft not found or expired.');
+        }
+
+        // --- STRUCTURAL NORMALIZATION ---
+        // Ensure all keys are standard English so __() can translate them in any locale
+        $reportData['sections'] = $this->synthesisService->normalizeReportKeys($reportData['sections']);
+        session([$reportId => $reportData]);
+
+        // --- AUTO-TRANSLATION LOGIC ---
+        // If the report's stored locale doesn't match the current UI locale,
+        // automatically trigger the translation to unify the experience.
+        $currentLocale = \App::getLocale();
+        $reportLocale = $reportData['metadata']['locale'] ?? 'en';
+
+        if ($reportLocale !== $currentLocale && !isset($reportData['is_translating'])) {
+            try {
+                // Prevent recursive loops if translation fails
+                $reportData['is_translating'] = true;
+                session([$reportId => $reportData]);
+
+                $translationResult = $this->synthesisService->translateReport($reportData['sections'], $currentLocale);
+
+                if ($translationResult['success']) {
+                    $reportData['sections'] = $translationResult['sections'];
+                    $reportData['metadata']['locale'] = $currentLocale;
+                    $reportData['metadata']['translated_at'] = now()->toIso8601String();
+                    session()->now('success', __('Report content automatically unified with :lang', ['lang' => strtoupper($currentLocale)]));
+                }
+
+                unset($reportData['is_translating']);
+                session([$reportId => $reportData]); // <--- FIX: Actually save the translated data and clear the lock
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Auto-translation failed: ' . $e->getMessage());
+                unset($reportData['is_translating']);
+                session([$reportId => $reportData]);
+            }
         }
 
         $user = auth()->user();
@@ -163,6 +200,40 @@ class ResearchProposalController extends Controller
         $remainingExports = max(0, 2 - $user->free_export_count);
 
         return view('admin.research-proposal.preview', compact('reportData', 'reportId', 'format', 'isTruncated', 'canExport', 'remainingExports'));
+    }
+
+    /**
+     * Translate the current report session data.
+     */
+    public function translate($reportId, Request $request)
+    {
+        set_time_limit(300); // Increase limit for translation
+        $reportData = session($reportId);
+        if (!$reportData) {
+            return back()->with('error', 'Report data not found.');
+        }
+
+        $targetLocale = \App::getLocale();
+
+        // Don't translate if already in the target locale
+        if (isset($reportData['metadata']['locale']) && $reportData['metadata']['locale'] === $targetLocale) {
+            return back()->with('info', 'Report is already in ' . strtoupper($targetLocale));
+        }
+
+        try {
+            $translationResult = $this->synthesisService->translateReport($reportData['sections'], $targetLocale);
+
+            $reportData['sections'] = $translationResult['sections'] ?? $translationResult;
+            $reportData['metadata']['locale'] = $targetLocale;
+            $reportData['metadata']['translated_at'] = now()->toIso8601String();
+
+            session([$reportId => $reportData]);
+
+            return back()->with('success', 'Report has been translated to ' . strtoupper($targetLocale));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Report translation error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to translate report. Please try again.');
+        }
     }
 
     /**
