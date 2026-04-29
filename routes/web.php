@@ -24,6 +24,9 @@ Route::get('/', function () {
     return view('welcome'); // Landing Page (Always accessible)
 })->name('home');
 
+Route::get('/lang/{locale}', [\App\Http\Controllers\LocaleController::class, 'switch'])
+    ->name('locale.switch');
+
 Route::get('/privacy-policy', function () {
     return view('privacy');
 })->name('privacy');
@@ -188,6 +191,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/research-proposal/export-proposal/{id}', [\App\Http\Controllers\ResearchProposalController::class, 'exportProposal'])->name('research-proposal.export-proposal');
     Route::post('/research-proposal/generate', [\App\Http\Controllers\ResearchProposalController::class, 'generate'])->name('research-proposal.generate');
     Route::get('/research-proposal/preview/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'preview'])->name('research-proposal.preview');
+    Route::post('/research-proposal/translate/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'translate'])->name('research-proposal.translate');
     Route::post('/research-proposal/export/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'export'])->name('research-proposal.export');
 
     Route::resource('research-proposal', \App\Http\Controllers\ResearchProposalController::class)->except(['store']);

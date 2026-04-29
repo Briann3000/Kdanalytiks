@@ -49,7 +49,7 @@
 }">
     <div>
         <h4 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">
-            {{ $role === 'admin' ? 'ADMINISTRATION' : ($role === 'guest' ? 'NAVIGATION' : 'WORKSPACE') }}
+            {{ __($role === 'admin' ? 'ADMINISTRATION' : ($role === 'guest' ? 'NAVIGATION' : 'WORKSPACE')) }}
         </h4>
         <nav class="space-y-1">
             @if($role === 'admin')
@@ -58,7 +58,7 @@
                         class="flex items-center px-3 py-2 text-sm font-bold uppercase tracking-wider {{ request()->routeIs('admin.dashboard') ? 'text-indigo-700 bg-indigo-50 border-l-2 border-indigo-600' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg group transition-colors">
                         <i
                             class="fa-solid fa-server mr-3 {{ request()->routeIs('admin.dashboard') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
-                        DASHBOARD
+                        {{ __('DASHBOARD') }}
                     </a>
                 </div>
 
@@ -69,7 +69,7 @@
                         <div class="flex items-center">
                             <i
                                 class="fa-solid fa-user-gear mr-3 {{ request()->is('admin/users*') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
-                            MANAGE USERS
+                            {{ __('MANAGE USERS') }}
                         </div>
                         <i class="fa-solid fa-chevron-right text-[10px] text-gray-300 transition-transform duration-300"
                             :class="expandedItem === 'users' ? 'rotate-90 text-indigo-500' : ''"></i>
@@ -81,25 +81,26 @@
                             :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px' }" style="display: none;"
                             @mouseenter="hoverItem = 'users'" @mouseleave="clearFlyout()">
                             <div class="mb-3">
-                                <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-3">Quick
-                                    Actions</div>
+                                <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-3">
+                                    {{ __('Quick Actions') }}
+                                </div>
                                 <a href="{{ route('admin.users.index') }}"
-                                    class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">All
-                                    Users</a>
+                                    class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">{{ __('All Users') }}</a>
+
                                 <a href="{{ route('admin.users.create') }}"
-                                    class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Create
-                                    User</a>
+                                    class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">{{ __('Create User') }}</a>
+
                             </div>
                             <div class="border-t border-gray-50 pt-3">
-                                <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-3">Filter
-                                    Roles</div>
+                                <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-3">
+                                    {{ __('Filter Roles') }}</div>
                                 <div class="space-y-1">
                                     <a href="{{ route('admin.users.index', ['role' => 'independent']) }}"
-                                        class="block px-3 py-1 text-[10px] font-bold text-gray-400 hover:text-indigo-600">INDEPENDENT</a>
+                                        class="block px-3 py-1 text-[10px] font-bold text-gray-400 hover:text-indigo-600">{{ __('INDEPENDENT') }}</a>
                                     <a href="{{ route('admin.users.index', ['role' => 'organization']) }}"
-                                        class="block px-3 py-1 text-[10px] font-bold text-gray-400 hover:text-indigo-600">ORGANIZATION</a>
+                                        class="block px-3 py-1 text-[10px] font-bold text-gray-400 hover:text-indigo-600">{{ __('ORGANIZATION') }}</a>
                                     <a href="{{ route('admin.users.index', ['role' => 'respondent']) }}"
-                                        class="block px-3 py-1 text-[10px] font-bold text-gray-400 hover:text-indigo-600">RESPONDENT</a>
+                                        class="block px-3 py-1 text-[10px] font-bold text-gray-400 hover:text-indigo-600">{{ __('RESPONDENT') }}</a>
                                 </div>
                             </div>
                         </div>
@@ -116,7 +117,7 @@
                                 class="flex items-center justify-between py-1.5 text-xs font-bold {{ request()->routeIs('admin.users.index') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} cursor-pointer transition-colors relative">
                                 <div class="flex items-center">
                                     <i class="fa-solid fa-users mr-2 opacity-50"></i>
-                                    ACTIVE USERS
+                                    {{ __('ACTIVE USERS') }}
                                 </div>
 
                                 <template x-teleport="body">
@@ -126,14 +127,15 @@
                                         :style="{ top: nestTop + 'px', left: nestLeft + 'px' }">
                                         <div
                                             class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3 px-2">
-                                            Filter Roles</div>
+                                            {{ __('Filter Roles') }}
+                                        </div>
                                         <div class="space-y-1">
                                             <a href="{{ route('admin.users.index', ['role' => 'independent']) }}"
-                                                class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors">INDEPENDENT</a>
+                                                class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors">{{ __('INDEPENDENT') }}</a>
                                             <a href="{{ route('admin.users.index', ['role' => 'organization']) }}"
-                                                class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors">ORGANIZATION</a>
+                                                class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors">{{ __('ORGANIZATION') }}</a>
                                             <a href="{{ route('admin.users.index', ['role' => 'respondent']) }}"
-                                                class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors">RESPONDENT</a>
+                                                class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors">{{ __('RESPONDENT') }}</a>
                                         </div>
                                     </div>
                                 </template>
@@ -142,17 +144,16 @@
                             <div x-show="allUsersExpanded" x-collapse
                                 class="pl-4 space-y-1 my-1 border-l-2 border-indigo-50/50 ml-1 font-bold">
                                 <a href="{{ route('admin.users.index', ['role' => 'independent']) }}"
-                                    class="block py-1 text-[10px] font-bold uppercase tracking-wider {{ request('role') === 'independent' ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600' }} transition-colors">INDEPENDENT</a>
+                                    class="block py-1 text-[10px] font-bold uppercase tracking-wider {{ request('role') === 'independent' ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600' }} transition-colors">{{ __('INDEPENDENT') }}</a>
                                 <a href="{{ route('admin.users.index', ['role' => 'organization']) }}"
-                                    class="block py-1 text-[10px] font-bold uppercase tracking-wider {{ request('role') === 'organization' ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600' }} transition-colors">ORGANIZATION</a>
+                                    class="block py-1 text-[10px] font-bold uppercase tracking-wider {{ request('role') === 'organization' ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600' }} transition-colors">{{ __('ORGANIZATION') }}</a>
                                 <a href="{{ route('admin.users.index', ['role' => 'respondent']) }}"
-                                    class="block py-1 text-[10px] font-bold uppercase tracking-wider {{ request('role') === 'respondent' ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600' }} transition-colors">RESPONDENT</a>
+                                    class="block py-1 text-[10px] font-bold uppercase tracking-wider {{ request('role') === 'respondent' ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600' }} transition-colors">{{ __('RESPONDENT') }}</a>
                             </div>
                         </div>
 
                         <a href="{{ route('admin.users.create') }}"
-                            class="block py-1 text-xs font-bold uppercase tracking-wide {{ request()->routeIs('admin.users.create') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">CREATE
-                            USER</a>
+                            class="block py-1 text-xs font-bold uppercase tracking-wide {{ request()->routeIs('admin.users.create') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">{{ __('CREATE USER') }}</a>
                     </div>
                 </div>
 
@@ -163,7 +164,7 @@
                         <div class="flex items-center">
                             <i
                                 class="fa-solid fa-list-check mr-3 {{ request()->is('admin/surveys*') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
-                            MANAGE SURVEYS
+                            {{ __('MANAGE SURVEYS') }}
                         </div>
                         <i class="fa-solid fa-chevron-right text-[10px] text-gray-300 transition-transform duration-300"
                             :class="expandedItem === 'surveys' ? 'rotate-90 text-indigo-500' : ''"></i>
@@ -177,58 +178,59 @@
                             @mouseenter="hoverItem = 'surveys'" @mouseleave="clearFlyout()">
                             <div class="mb-3">
                                 <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-3">
-                                    Inventory</div>
+                                    {{ __('Inventory') }}
+                                </div>
                                 <div class="relative" x-data="{ n1: false, n1Top: 0, n1Left: 0 }"
                                     @mouseenter="const r = $el.getBoundingClientRect(); n1Top = r.top; n1Left = r.right - 5; n1 = true"
                                     @mouseleave="n1 = false">
                                     <a href="{{ route('admin.surveys.index') }}"
-                                        class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">All
-                                        Surveys</a>
+                                        class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">{{ __('All Surveys') }}</a>
                                     <!-- Nested Flyout -->
                                     <div class="flyout-menu shadow-2xl border border-gray-100 p-3 min-w-[140px]"
                                         style="border-radius: 0.75rem; display: none;" x-show="n1"
                                         :style="{ top: n1Top + 'px', left: n1Left + 'px' }">
                                         <div
                                             class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3 px-2">
-                                            By Role</div>
+                                            {{ __('By Role') }}
+                                        </div>
                                         <div class="space-y-1">
                                             <a href="{{ route('admin.surveys.index', ['source' => 'admin']) }}"
-                                                class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors">ADMIN</a>
+                                                class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors">{{ __('ADMIN') }}</a>
                                             <a href="{{ route('admin.surveys.index', ['source' => 'organization']) }}"
-                                                class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors">ORGANIZATION</a>
+                                                class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors">{{ __('ORGANIZATION') }}</a>
                                             <a href="{{ route('admin.surveys.index', ['source' => 'independent']) }}"
-                                                class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors">INDEPENDENT</a>
+                                                class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors">{{ __('INDEPENDENT') }}</a>
                                         </div>
                                     </div>
                                 </div>
                                 <a href="{{ route('admin.surveys.index', ['status' => 'active']) }}"
-                                    class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Active
-                                    Surveys</a>
+                                    class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">{{ __('Active Surveys') }}</a>
                                 {{-- Removed Pending Approval --}}
                                 <a href="{{ route('admin.surveys.index', ['status' => 'draft']) }}"
-                                    class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Drafts</a>
+                                    class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">{{ __('Drafts') }}</a>
                             </div>
                             <div class="border-t border-gray-50 pt-3">
                                 <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-3">
-                                    Actions</div>
+                                    {{ __('Actions') }}
+                                </div>
                                 <div class="relative" x-data="{ n2: false, n2Top: 0, n2Left: 0 }"
                                     @mouseenter="const r = $el.getBoundingClientRect(); n2Top = r.top; n2Left = r.right - 5; n2 = true"
                                     @mouseleave="n2 = false">
                                     <a href="{{ route('surveys.create') }}"
-                                        class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Create
-                                        Survey</a>
+                                        class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">{{ __('Create Survey') }}</a>
                                     <!-- Nested Flyout -->
                                     <div class="flyout-menu shadow-2xl border border-gray-100 p-3 min-w-[140px]"
                                         style="border-radius: 0.75rem; display: none;" x-show="n2"
                                         :style="{ top: n2Top + 'px', left: n2Left + 'px' }">
                                         <div
                                             class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3 px-2">
-                                            Method</div>
+                                            {{ __('Method') }}
+                                        </div>
                                         <div class="space-y-1">
                                             <a href="{{ route('surveys.create') }}"
-                                                class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors">BLANK</a>
+                                                class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors">{{ __('BLANK') }}</a>
                                             <a href="{{ route('library.templates') }}"
-                                                class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors">TEMPLATE</a>
+                                                class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors">{{ __('TEMPLATE') }}</a>
                                         </div>
                                     </div>
                                 </div>
@@ -243,33 +245,31 @@
                             @mouseenter="const r = $el.getBoundingClientRect(); n3Top = r.top - 8; n3Left = r.right - 5; n3 = true"
                             @mouseleave="n3 = false">
                             <a href="{{ route('admin.surveys.index') }}"
-                                class="block py-1 text-xs font-bold uppercase tracking-wide {{ !request()->has('status') && request()->routeIs('admin.surveys.index') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">ALL
-                                SURVEYS</a>
+                                class="block py-1 text-xs font-bold uppercase tracking-wide {{ !request()->has('status') && request()->routeIs('admin.surveys.index') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">{{ __('ALL SURVEYS') }}</a>
                             <template x-teleport="body">
                                 <!-- Nested Flyout -->
                                 <div class="flyout-menu shadow-2xl border border-gray-100 p-3 min-w-[140px]"
                                     style="border-radius: 0.75rem; display: none;" x-show="n3"
                                     :style="{ top: n3Top + 'px', left: n3Left + 'px' }">
-                                    <div class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3 px-2">By
-                                        Role</div>
+                                    <div class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3 px-2">
+                                        {{ __('By Role') }}</div>
                                     <div class="space-y-1">
                                         <a href="{{ route('admin.surveys.index', ['source' => 'admin']) }}"
-                                            class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">Admin</a>
+                                            class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">{{ __('Admin') }}</a>
                                         <a href="{{ route('admin.surveys.index', ['source' => 'organization']) }}"
-                                            class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">Org</a>
+                                            class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">{{ __('Org') }}</a>
                                         <a href="{{ route('admin.surveys.index', ['source' => 'independent']) }}"
-                                            class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">Independent</a>
+                                            class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">{{ __('Independent') }}</a>
                                     </div>
                                 </div>
                             </template>
                         </div>
 
                         <a href="{{ route('admin.surveys.index', ['status' => 'active']) }}"
-                            class="block py-1 text-xs font-bold uppercase tracking-wide {{ request('status') === 'active' ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} mt-1">ACTIVE
-                            SURVEYS</a>
+                            class="block py-1 text-xs font-bold uppercase tracking-wide {{ request('status') === 'active' ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} mt-1">{{ __('ACTIVE SURVEYS') }}</a>
 
                         <a href="{{ route('admin.surveys.index', ['status' => 'draft']) }}"
-                            class="block py-1 text-xs font-bold uppercase tracking-wide {{ request('status') === 'draft' ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} mt-1">DRAFTS</a>
+                            class="block py-1 text-xs font-bold uppercase tracking-wide {{ request('status') === 'draft' ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} mt-1">{{ __('DRAFTS') }}</a>
 
                         <!-- Filters Section -->
                         <div class="mb-1 mt-1">
@@ -277,18 +277,18 @@
                                 class="flex items-center justify-between py-1.5 text-xs font-bold {{ request()->has('source') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} cursor-pointer transition-colors">
                                 <div class="flex items-center">
                                     <i class="fa-solid fa-filter mr-2 opacity-50"></i>
-                                    ROLES
+                                    {{ __('ROLES') }}
                                 </div>
                             </div>
 
                             <div x-show="roleFiltersExpanded" x-collapse
                                 class="pl-4 space-y-1 my-1 border-l-2 border-indigo-50/50 ml-1">
                                 <a href="{{ route('admin.surveys.index', ['source' => 'admin']) }}"
-                                    class="block py-1 text-[10px] font-bold uppercase tracking-wider {{ request('source') === 'admin' ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600' }} transition-colors">ADMIN</a>
+                                    class="block py-1 text-[10px] font-bold uppercase tracking-wider {{ request('source') === 'admin' ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600' }} transition-colors">{{ __('ADMIN') }}</a>
                                 <a href="{{ route('admin.surveys.index', ['source' => 'organization']) }}"
-                                    class="block py-1 text-[10px] font-bold uppercase tracking-wider {{ request('source') === 'organization' ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600' }} transition-colors">ORG</a>
+                                    class="block py-1 text-[10px] font-bold uppercase tracking-wider {{ request('source') === 'organization' ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600' }} transition-colors">{{ __('ORG') }}</a>
                                 <a href="{{ route('admin.surveys.index', ['source' => 'independent']) }}"
-                                    class="block py-1 text-[10px] font-bold uppercase tracking-wider {{ request('source') === 'independent' ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600' }} transition-colors">INDEPENDENT</a>
+                                    class="block py-1 text-[10px] font-bold uppercase tracking-wider {{ request('source') === 'independent' ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600' }} transition-colors">{{ __('INDEPENDENT') }}</a>
                             </div>
                         </div>
 
@@ -296,19 +296,19 @@
                             @mouseenter="const r = $el.getBoundingClientRect(); n4Top = r.top - 8; n4Left = r.right - 5; n4 = true"
                             @mouseleave="n4 = false">
                             <a href="{{ route('surveys.create') }}"
-                                class="block py-1 text-xs font-bold uppercase tracking-wide {{ request()->routeIs('surveys.create') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">CREATE
-                                SURVEY</a>
+                                class="block py-1 text-xs font-bold uppercase tracking-wide {{ request()->routeIs('surveys.create') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">{{ __('CREATE SURVEY') }}</a>
                             <template x-teleport="body">
                                 <div class="flyout-menu shadow-2xl border border-gray-100 p-3 min-w-[140px]"
                                     style="border-radius: 0.75rem; display: none;" x-show="n4"
                                     :style="{ top: n4Top + 'px', left: n4Left + 'px' }">
                                     <div class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3 px-2">
-                                        Method</div>
+                                        {{ __('Method') }}
+                                    </div>
                                     <div class="space-y-1">
                                         <a href="{{ route('surveys.create') }}"
-                                            class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">Blank</a>
+                                            class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">{{ __('Blank') }}</a>
                                         <a href="{{ route('library.templates') }}"
-                                            class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">Template</a>
+                                            class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">{{ __('Template') }}</a>
                                     </div>
                                 </div>
                             </template>
@@ -323,7 +323,7 @@
                         <div class="flex items-center">
                             <i
                                 class="fa-solid fa-book-bookmark mr-3 {{ request()->routeIs('surveys.archived') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
-                            LIBRARY
+                            {{ __('LIBRARY') }}
                         </div>
                         <i class="fa-solid fa-chevron-right text-[10px] text-gray-300 transition-transform duration-300"
                             :class="expandedItem === 'library' ? 'rotate-90 text-indigo-500' : ''"></i>
@@ -335,19 +335,17 @@
                             :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px' }" style="display: none;"
                             @mouseenter="hoverItem = 'library'" @mouseleave="clearFlyout()">
                             <a href="{{ route('surveys.index', ['status' => 'archived']) }}"
-                                class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Archived
-                                Surveys</a>
+                                class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">{{ __('Archived Surveys') }}</a>
                             <a href="{{ route('library.templates') }}"
-                                class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Templates</a>
+                                class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">{{ __('Templates') }}</a>
                         </div>
                     </template>
 
                     <div x-show="expandedItem === 'library'" x-collapse class="sidebar-submenu">
                         <a href="{{ route('surveys.index', ['status' => 'archived']) }}"
-                            class="block py-1 text-xs font-bold {{ (request()->routeIs('surveys.index') && request('status') === 'archived') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">Archived
-                            Surveys</a>
+                            class="block py-1 text-xs font-bold {{ (request()->routeIs('surveys.index') && request('status') === 'archived') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">{{ __('Archived Surveys') }}</a>
                         <a href="{{ route('library.templates') }}"
-                            class="block py-1 text-xs font-bold {{ request()->routeIs('library.templates') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">Templates</a>
+                            class="block py-1 text-xs font-bold {{ request()->routeIs('library.templates') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">{{ __('Templates') }}</a>
                     </div>
                 </div>
             @else
@@ -355,7 +353,7 @@
                     class="flex items-center px-3 py-2 text-sm uppercase font-bold {{ ($role !== 'guest' && request()->routeIs($role . '.dashboard')) ? 'text-indigo-700 bg-indigo-50 border-l-2 border-indigo-600' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg group transition-colors">
                     <i
                         class="fa-solid fa-gauge-high mr-3 {{ ($role !== 'guest' && request()->routeIs($role . '.dashboard')) ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
-                    {{ $role === 'guest' ? 'HOME' : 'DASHBOARD' }}
+                    {{ __($role === 'guest' ? 'HOME' : 'DASHBOARD') }}
                 </a>
 
                 @if(in_array($role, ['organization', 'independent']))
@@ -366,7 +364,7 @@
                             <div class="flex items-center">
                                 <i
                                     class="fa-solid fa-diagram-project mr-3 {{ (request()->routeIs(['surveys.index', 'surveys.create'])) ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
-                                MANAGE SURVEYS
+                                {{ __('MANAGE SURVEYS') }}
                             </div>
                             <i class="fa-solid fa-chevron-right text-[10px] text-gray-300 transition-transform duration-300"
                                 :class="expandedItem === 'org_projects' ? 'rotate-90 text-indigo-500' : ''"></i>
@@ -378,46 +376,47 @@
                                 :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px' }" style="display: none;"
                                 @mouseenter="hoverItem = 'org_projects'" @mouseleave="clearFlyout()">
                                 <div class="mb-3">
-                                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-3">Survey
-                                        Hub
+                                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-3">
+                                        {{ __('Survey Hub') }}
+
                                     </div>
                                     <div class="space-y-1">
                                         @foreach($categories as $key => $cat)
                                             <a href="{{ route('surveys.index', ['status' => 'active', 'category' => $key]) }}"
                                                 class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-indigo-50/50 rounded-lg transition-colors">
                                                 <i class="fa-solid {{ $cat['icon'] }} mr-2 opacity-50 w-4 text-center"></i>
-                                                {{ $cat['label'] }}
+                                                {{ __($cat['label']) }}
                                             </a>
                                         @endforeach
                                     </div>
                                 </div>
 
                                 <div class="border-t border-gray-50 pt-3 mt-3">
-                                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-3">Manage
+                                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-3">
+                                        {{ __('Manage') }}
                                     </div>
                                     <a href="{{ route('surveys.index', ['status' => 'active']) }}"
-                                        class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Active
-                                        Surveys</a>
+                                        class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">{{ __('Active Surveys') }}</a>
                                     <a href="{{ route('surveys.index', ['status' => 'draft']) }}"
-                                        class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Drafts</a>
+                                        class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">{{ __('Drafts') }}</a>
                                     <div class="relative" x-data="{ nHubCreate: false, nHubTop: 0, nHubLeft: 0 }"
                                         @mouseenter="const r = $el.getBoundingClientRect(); nHubTop = r.top; nHubLeft = r.right - 5; nHubCreate = true"
                                         @mouseleave="nHubCreate = false">
                                         <a href="{{ route('surveys.create') }}"
-                                            class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Create
-                                            Survey</a>
+                                            class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">{{ __('Create Survey') }}</a>
                                         <template x-teleport="body">
                                             <div class="flyout-menu shadow-2xl border border-gray-100 p-3 min-w-[140px]"
                                                 style="border-radius: 0.75rem; display: none;" x-show="nHubCreate"
                                                 :style="{ top: nHubTop + 'px', left: nHubLeft + 'px' }">
                                                 <div
                                                     class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3 px-2">
-                                                    Method</div>
+                                                    {{ __('Method') }}
+                                                </div>
                                                 <div class="space-y-1">
                                                     <a href="{{ route('surveys.create') }}"
-                                                        class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">Blank</a>
+                                                        class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">{{ __('Blank') }}</a>
                                                     <a href="{{ route('library.templates') }}"
-                                                        class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">Template</a>
+                                                        class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">{{ __('Template') }}</a>
                                                 </div>
                                             </div>
                                         </template>
@@ -429,11 +428,10 @@
                         <div x-show="expandedItem === 'org_projects'" x-collapse class="sidebar-submenu"
                             x-data="{ hubSubExpanded: {{ request()->filled('category') ? 'true' : 'false' }} }">
                             <a href="{{ route('surveys.index', ['status' => 'active']) }}"
-                                class="block py-1 text-xs font-bold uppercase tracking-wide {{ (request()->routeIs('surveys.index') && request('status') === 'active' && !request()->filled('category')) ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">ACTIVE
-                                SURVEYS</a>
+                                class="block py-1 text-xs font-bold uppercase tracking-wide {{ (request()->routeIs('surveys.index') && request('status') === 'active' && !request()->filled('category')) ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">{{ __('ACTIVE SURVEYS') }}</a>
 
                             <a href="{{ route('surveys.index', ['status' => 'draft']) }}"
-                                class="block py-1 text-xs font-bold uppercase tracking-wide {{ (request()->routeIs('surveys.index') && request('status') === 'draft') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} mt-1">DRAFTS</a>
+                                class="block py-1 text-xs font-bold uppercase tracking-wide {{ (request()->routeIs('surveys.index') && request('status') === 'draft') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} mt-1">{{ __('DRAFTS') }}</a>
 
                             <!-- Categories Nested in Manage -->
                             <div class="mb-1 mt-1">
@@ -441,7 +439,7 @@
                                     class="flex items-center justify-between py-1.5 text-xs font-bold {{ request()->filled('category') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} cursor-pointer transition-colors">
                                     <div class="flex items-center uppercase">
                                         <i class="fa-solid fa-layer-group mr-2 opacity-50"></i>
-                                        BY CATEGORY
+                                        {{ __('BY CATEGORY') }}
                                     </div>
                                 </div>
 
@@ -450,7 +448,7 @@
                                     @foreach($categories as $key => $cat)
                                         <a href="{{ route('surveys.index', ['status' => 'active', 'category' => $key]) }}"
                                             class="block py-1 text-[10px] font-bold uppercase tracking-wider {{ request('category') === $key && request('status') === 'active' ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600' }} transition-colors">
-                                            {{ $cat['label'] }}
+                                            {{ __($cat['label']) }}
                                         </a>
                                     @endforeach
                                 </div>
@@ -460,18 +458,18 @@
                                 @mouseenter="const r = $el.getBoundingClientRect(); nHubSubTop = r.top - 8; nHubSubLeft = r.right - 5; nHubSubCreate = true"
                                 @mouseleave="nHubSubCreate = false;">
                                 <a href="{{ route('surveys.create') }}"
-                                    class="block py-1 text-xs font-bold uppercase tracking-wide {{ request()->routeIs('surveys.create') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">CREATE
-                                    SURVEY</a>
+                                    class="block py-1 text-xs font-bold uppercase tracking-wide {{ request()->routeIs('surveys.create') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">{{ __('CREATE SURVEY') }}</a>
                                 <div class="flyout-menu shadow-2xl border border-gray-100 p-3 min-w-[140px]"
                                     style="border-radius: 0.75rem; display: none;" x-show="nHubSubCreate"
                                     :style="{ top: nHubSubTop + 'px', left: nHubSubLeft + 'px', zIndex: 50 }">
-                                    <div class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3 px-2">Method
+                                    <div class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3 px-2">
+                                        {{ __('Method') }}
                                     </div>
                                     <div class="space-y-1">
                                         <a href="{{ route('surveys.create') }}"
-                                            class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">Blank</a>
+                                            class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">{{ __('Blank') }}</a>
                                         <a href="{{ route('library.templates') }}"
-                                            class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">Template</a>
+                                            class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">{{ __('Template') }}</a>
                                     </div>
                                 </div>
                             </div>
@@ -485,7 +483,7 @@
                             <div class="flex items-center">
                                 <i
                                     class="fa-solid fa-book-bookmark mr-3 {{ (request()->routeIs('surveys.index') && request('status') === 'archived') ? 'text-indigo-50' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
-                                LIBRARY
+                                {{ __('LIBRARY') }}
                             </div>
                             <i class="fa-solid fa-chevron-right text-[10px] text-gray-300 transition-transform duration-300"
                                 :class="expandedItem === 'org_library' ? 'rotate-90 text-indigo-500' : ''"></i>
@@ -496,18 +494,16 @@
                             :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px' }" style="display: none;"
                             @mouseenter="hoverItem = 'org_library'" @mouseleave="clearFlyout()">
                             <a href="{{ route('surveys.index', ['status' => 'archived']) }}"
-                                class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Archived
-                                Surveys</a>
+                                class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">{{ __('Archived Surveys') }}</a>
                             <a href="{{ route('library.templates') }}"
-                                class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">Templates</a>
+                                class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">{{ __('Templates') }}</a>
                         </div>
 
                         <div x-show="expandedItem === 'org_library'" x-collapse class="sidebar-submenu">
                             <a href="{{ route('surveys.index', ['status' => 'archived']) }}"
-                                class="block py-1 text-xs font-bold {{ (request()->routeIs('surveys.index') && request('status') === 'archived') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">Archived
-                                Surveys</a>
+                                class="block py-1 text-xs font-bold {{ (request()->routeIs('surveys.index') && request('status') === 'archived') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">{{ __('Archived Surveys') }}</a>
                             <a href="{{ route('library.templates') }}"
-                                class="block py-1 text-xs font-bold {{ request()->routeIs('library.templates') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">Templates</a>
+                                class="block py-1 text-xs font-bold {{ request()->routeIs('library.templates') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">{{ __('Templates') }}</a>
                         </div>
                     </div>
 
@@ -521,7 +517,7 @@
                     <div class="flex items-center">
                         <i
                             class="fa-solid fa-graduation-cap mr-3 {{ request()->routeIs('research-proposal.*') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
-                        WRITE REPORT
+                        {{ __('WRITE REPORT') }}
                     </div>
                     <i class="fa-solid fa-chevron-right text-[10px] text-gray-300 transition-transform duration-300"
                         :class="expandedItem === 'studio' ? 'rotate-90 text-indigo-500' : ''"></i>
@@ -533,27 +529,21 @@
                         :style="{ top: (parseInt(flyoutTop) > 400 ? (parseInt(flyoutTop) - 80) : parseInt(flyoutTop)) + 'px', left: flyoutLeft + 'px' }"
                         style="display: none;" @mouseenter="hoverItem = 'studio'" @mouseleave="clearFlyout()">
                         <a href="{{ route('research-proposal.index') }}"
-                            class="block px-3 py-1.5 text-xs font-bold font-bold {{ request()->routeIs('research-proposal.index') ? 'text-indigo-700 bg-gray-50' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg">Report
-                            Generator</a>
+                            class="block px-3 py-1.5 text-xs font-bold font-bold {{ request()->routeIs('research-proposal.index') ? 'text-indigo-700 bg-gray-50' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg">{{ __('Report Generator') }}</a>
                         <a href="{{ route('research-proposal.create') }}"
-                            class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-proposal.create') ? 'text-indigo-700 bg-gray-50' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg">Draft
-                            Reports</a>
+                            class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-proposal.create') ? 'text-indigo-700 bg-gray-50' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg">{{ __('Draft Reports') }}</a>
                         <a href="{{ route('research-proposal.history') }}"
-                            class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-proposal.history') ? 'text-indigo-700 bg-gray-50' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg">Reports
-                            History</a>
+                            class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-proposal.history') ? 'text-indigo-700 bg-gray-50' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg">{{ __('Reports History') }}</a>
                     </div>
                 </template>
 
                 <div x-show="expandedItem === 'studio'" x-collapse class="sidebar-submenu">
                     <a href="{{ route('research-proposal.index') }}"
-                        class="block py-1 text-xs font-bold {{ request()->routeIs('research-proposal.index') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">Report
-                        Generator</a>
+                        class="block py-1 text-xs font-bold {{ request()->routeIs('research-proposal.index') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">{{ __('Report Generator') }}</a>
                     <a href="{{ route('research-proposal.create') }}"
-                        class="block py-1 text-xs font-bold {{ request()->routeIs('research-proposal.create') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">Draft
-                        Reports</a>
+                        class="block py-1 text-xs font-bold {{ request()->routeIs('research-proposal.create') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">{{ __('Draft Reports') }}</a>
                     <a href="{{ route('research-proposal.history') }}"
-                        class="block py-1 text-xs font-bold {{ request()->routeIs('research-proposal.history') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">Reports
-                        History</a>
+                        class="block py-1 text-xs font-bold {{ request()->routeIs('research-proposal.history') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">{{ __('Reports History') }}</a>
                 </div>
             </div>
 
@@ -564,7 +554,7 @@
                     <div class="flex items-center">
                         <i
                             class="fa-solid fa-globe mr-3 {{ request()->routeIs('surveys.public') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
-                        TAKE A SURVEY
+                        {{ __('TAKE A SURVEY') }}
                     </div>
                     <i class="fa-solid fa-chevron-right text-[10px] text-gray-300 transition-transform duration-300"
                         :class="expandedItem === 'public' ? 'rotate-90 text-indigo-500' : ''"></i>
@@ -577,22 +567,21 @@
                         style="display: none;" @mouseenter="hoverItem = 'public'" @mouseleave="clearFlyout()">
                         <div class="mb-3">
                             <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-3">
-                                Discover
+                                {{ __('Discover') }}
                             </div>
                             <a href="{{ route('surveys.public') }}"
-                                class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">All
-                                Surveys</a>
+                                class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-gray-50 rounded-lg">{{ __('All Surveys') }}</a>
                         </div>
                         <div class="border-t border-gray-50 pt-3">
-                            <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-3">By
-                                Category
+                            <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-3">
+                                {{ __('By Category') }}
                             </div>
                             <div class="space-y-1">
                                 @foreach($categories as $key => $cat)
                                     <a href="{{ route('surveys.public', ['category' => $key]) }}"
                                         class="block px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-indigo-700 hover:bg-indigo-50/50 rounded-lg transition-colors">
                                         <i class="fa-solid {{ $cat['icon'] }} mr-2 opacity-50 w-4 text-center"></i>
-                                        {{ $cat['label'] }}
+                                        {{ __($cat['label']) }}
                                     </a>
                                 @endforeach
                             </div>
@@ -602,8 +591,7 @@
 
                 <div x-show="expandedItem === 'public'" x-collapse class="sidebar-submenu">
                     <a href="{{ route('surveys.public') }}"
-                        class="block py-1 text-xs font-bold uppercase tracking-wide {{ request()->routeIs('surveys.public') && !request()->filled('category') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">ACTIVE
-                        SURVEYS</a>
+                        class="block py-1 text-xs font-bold uppercase tracking-wide {{ request()->routeIs('surveys.public') && !request()->filled('category') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }}">{{ __('ACTIVE SURVEYS') }}</a>
 
                     <div class="mb-1 mt-1"
                         x-data="{ publicCatsExpanded: {{ request()->filled('category') && request()->routeIs('surveys.public') ? 'true' : 'false' }} }">
@@ -611,7 +599,7 @@
                             class="flex items-center justify-between py-1.5 text-xs font-bold {{ request()->filled('category') && request()->routeIs('surveys.public') ? 'text-indigo-700' : 'text-gray-600 hover:text-indigo-700' }} cursor-pointer transition-colors">
                             <div class="flex items-center uppercase">
                                 <i class="fa-solid fa-layer-group mr-2 opacity-50"></i>
-                                BY CATEGORY
+                                {{ __('BY CATEGORY') }}
                             </div>
                         </div>
 
@@ -620,7 +608,7 @@
                             @foreach($categories as $key => $cat)
                                 <a href="{{ route('surveys.public', ['category' => $key]) }}"
                                     class="block py-1 text-[10px] font-bold uppercase tracking-wider {{ request('category') === $key && request()->routeIs('surveys.public') ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600' }} transition-colors">
-                                    {{ $cat['label'] }}
+                                    {{ __($cat['label']) }}
                                 </a>
                             @endforeach
                         </div>
@@ -634,13 +622,13 @@
                     class="flex items-center px-3 py-2 text-sm font-bold uppercase tracking-wider {{ request()->routeIs('wallet.*') ? 'text-indigo-700 bg-indigo-50 border-l-2 border-indigo-600 shadow-sm' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg group transition-colors">
                     <i
                         class="fa-solid fa-wallet mr-3 {{ request()->routeIs('wallet.*') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
-                    MY WALLET
+                    {{ __('MY WALLET') }}
                 </a>
             </div>
 
             @if($role !== 'guest' && $role !== 'respondent')
                 <div class="pt-6 border-t border-gray-100 px-3">
-                    <h4 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Quick Links</h4>
+                    <h4 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">{{ __('Quick Links') }}</h4>
                     <div class="space-y-3">
                         <div x-data="{ qlOpen: false, qlTop: 0, qlLeft: 0 }"
                             @mouseenter="const r = $el.getBoundingClientRect(); qlTop = r.top - 100; qlLeft = r.right - 5; qlOpen = true"
@@ -648,7 +636,7 @@
                             @if(in_array($role, ['organization', 'independent', 'admin']))
                                 <a href="{{ route('surveys.create') }}"
                                     class="block w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-widest rounded-lg text-center shadow-lg shadow-indigo-100 transition-all">
-                                    <i class="fa-solid fa-plus-circle mr-2"></i> Create Survey
+                                    <i class="fa-solid fa-plus-circle mr-2"></i> {{ __('Create Survey') }}
                                 </a>
                             @endif
                             <template x-teleport="body">
@@ -657,12 +645,13 @@
                                     style="border-radius: 0.75rem; display: none;" x-show="qlOpen"
                                     :style="{ top: qlTop + 'px', left: qlLeft + 'px' }">
                                     <div class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3 px-2">
-                                        Method</div>
+                                        {{ __('Method') }}
+                                    </div>
                                     <div class="space-y-1 text-left">
                                         <a href="{{ route('surveys.create') }}"
-                                            class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">Blank</a>
+                                            class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">{{ __('Blank') }}</a>
                                         <a href="{{ route('library.templates') }}"
-                                            class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">Template</a>
+                                            class="block px-3 py-1.5 text-[10px] font-bold text-gray-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors uppercase">{{ __('Template') }}</a>
                                     </div>
                                 </div>
                             </template>
@@ -676,14 +665,14 @@
     <!-- ACCOUNT SECTION -->
     @auth
         <div>
-            <h4 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 mt-8">ACCOUNT</h4>
+            <h4 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 mt-8">{{ __('ACCOUNT') }}</h4>
             <nav class="space-y-1">
                 <div class="sidebar-item relative">
                     <a href="{{ route('account.settings') }}"
                         class="flex items-center px-3 py-2 text-sm font-bold uppercase tracking-wider {{ request()->routeIs('account.settings') ? 'text-indigo-700 bg-indigo-50 border-l-2 border-indigo-600' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg group transition-colors">
                         <i
                             class="fa-solid fa-user-gear mr-3 {{ request()->routeIs('account.settings') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
-                        SETTINGS
+                        {{ __('SETTINGS') }}
                     </a>
                 </div>
                 @if(in_array($role, ['organization', 'independent', 'respondent']))
@@ -692,7 +681,7 @@
                             class="flex items-center px-3 py-2 text-sm font-bold uppercase tracking-wider {{ request()->routeIs('subscriptions.index') ? 'text-indigo-700 bg-indigo-50 border-l-2 border-indigo-600' : 'text-gray-600 hover:text-indigo-700 hover:bg-gray-50' }} rounded-lg group transition-colors">
                             <i
                                 class="fa-solid fa-crown mr-3 {{ request()->routeIs('subscriptions.index') ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500' }}"></i>
-                            SUBSCRIBE
+                            {{ __('SUBSCRIBE') }}
                         </a>
                     </div>
                 @endif

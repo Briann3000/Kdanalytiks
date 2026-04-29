@@ -364,7 +364,7 @@
 
                                 <a href="{{ route($roleValNav . '.dashboard') }}"
                                     class="text-gray-500 hover:text-indigo-700 px-3 py-2 text-sm font-bold transition-colors">
-                                    Dashboard
+                                    {{ __('Dashboard') }}
                                 </a>
                             </div>
                         @endauth
@@ -383,13 +383,50 @@
                                         $displayName = auth()->user()->independent->name;
                                     }
                                 @endphp
-                                <span class="text-sm text-gray-600 mr-4">Welcome, <span
+                                <span class="text-sm text-gray-600 mr-4">{{ __('Welcome') }}, <span
                                         class="font-medium text-gray-900">{{ $displayName }}</span></span>
+
+                                <!-- Language Picker (Auth) -->
+                                <div class="relative mr-4" x-data="{ open: false }">
+                                    <button @click="open = !open"
+                                        class="flex items-center text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-indigo-600 transition-colors">
+                                        <i class="fa-solid fa-globe mr-2"></i>
+                                        <span>{{ app()->getLocale() }}</span>
+                                    </button>
+
+                                    <div x-show="open" @click.away="open = false" x-cloak
+                                        x-transition:enter="transition ease-out duration-100"
+                                        x-transition:enter-start="transform opacity-0 scale-95"
+                                        x-transition:enter-end="transform opacity-100 scale-100"
+                                        class="absolute right-0 mt-2 w-40 rounded-xl shadow-xl bg-white ring-1 ring-black ring-opacity-5 z-[100] border border-gray-100 overflow-hidden">
+                                        <div class="py-1">
+                                            @php
+                                                $langs = [
+                                                    'en' => ['name' => 'English', 'flag' => '🇬🇧'],
+                                                    'sw' => ['name' => 'Kiswahili', 'flag' => '🇰🇪'],
+                                                    'fr' => ['name' => 'Français', 'flag' => '🇫🇷'],
+                                                    'de' => ['name' => 'Deutsch', 'flag' => '🇩🇪'],
+                                                    'es' => ['name' => 'Español', 'flag' => '🇪🇸'],
+                                                    'ar' => ['name' => 'العربية', 'flag' => '🇸🇦'],
+                                                    'zh' => ['name' => '中文', 'flag' => '🇨🇳'],
+                                                ];
+                                            @endphp
+                                            @foreach($langs as $code => $lang)
+                                                <a href="{{ route('locale.switch', $code) }}"
+                                                    class="flex items-center px-4 py-2.5 text-[10px] font-bold text-gray-700 hover:bg-indigo-50 transition-colors {{ app()->getLocale() === $code ? 'text-indigo-600 bg-indigo-50/30' : '' }}">
+                                                    <span class="mr-3">{{ $lang['flag'] }}</span>
+                                                    <span>{{ $lang['name'] }}</span>
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <form method="POST" action="{{ route('logout') }}">
                                     @csrf
                                     <button type="submit"
                                         class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-all font-black text-[11px] uppercase tracking-widest">
-                                        <i class="fa-solid fa-power-off"></i> Logout
+                                        <i class="fa-solid fa-power-off"></i> {{ __('Logout') }}
                                     </button>
                                 </form>
                             </div>
@@ -403,8 +440,46 @@
                                 </button>
                             </div>
                         @else
-                            <a href="{{ route('login') }}"
-                                class="text-sm font-bold text-indigo-600 hover:text-indigo-500">Sign In</a>
+                            <div class="flex items-center space-x-6">
+                                <!-- Language Picker (Guest) -->
+                                <div class="relative" x-data="{ open: false }">
+                                    <button @click="open = !open"
+                                        class="flex items-center text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-indigo-600 transition-colors">
+                                        <i class="fa-solid fa-globe mr-2"></i>
+                                        <span>{{ app()->getLocale() }}</span>
+                                    </button>
+
+                                    <div x-show="open" @click.away="open = false" x-cloak
+                                        x-transition:enter="transition ease-out duration-100"
+                                        x-transition:enter-start="transform opacity-0 scale-95"
+                                        x-transition:enter-end="transform opacity-100 scale-100"
+                                        class="absolute right-0 mt-2 w-40 rounded-xl shadow-xl bg-white ring-1 ring-black ring-opacity-5 z-[100] border border-gray-100 overflow-hidden">
+                                        <div class="py-1">
+                                            @php
+                                                $langs = [
+                                                    'en' => ['name' => 'English', 'flag' => '🇬🇧'],
+                                                    'sw' => ['name' => 'Kiswahili', 'flag' => '🇰🇪'],
+                                                    'fr' => ['name' => 'Français', 'flag' => '🇫🇷'],
+                                                    'de' => ['name' => 'Deutsch', 'flag' => '🇩🇪'],
+                                                    'es' => ['name' => 'Español', 'flag' => '🇪🇸'],
+                                                    'ar' => ['name' => 'العربية', 'flag' => '🇸🇦'],
+                                                    'zh' => ['name' => '中文', 'flag' => '🇨🇳'],
+                                                ];
+                                            @endphp
+                                            @foreach($langs as $code => $lang)
+                                                <a href="{{ route('locale.switch', $code) }}"
+                                                    class="flex items-center px-4 py-2.5 text-[10px] font-bold text-gray-700 hover:bg-indigo-50 transition-colors {{ app()->getLocale() === $code ? 'text-indigo-600 bg-indigo-50/30' : '' }}">
+                                                    <span class="mr-3">{{ $lang['flag'] }}</span>
+                                                    <span>{{ $lang['name'] }}</span>
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <a href="{{ route('login') }}"
+                                    class="text-sm font-bold text-indigo-600 hover:text-indigo-500">{{ __('Sign In') }}</a>
+                            </div>
                         @endauth
                     </div>
                 </div>
@@ -418,19 +493,19 @@
                             $roleValMob = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
                         @endphp
                         <div class="py-3 mb-2 border-b border-gray-50">
-                            <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Account</p>
+                            <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">{{ __('ACCOUNT') }}</p>
                             <p class="text-sm font-bold text-gray-800">{{ $displayName }}</p>
                         </div>
                         <a href="{{ route($roleValMob . '.dashboard') }}"
                             class="block pl-3 pr-4 py-2 border-l-4 border-indigo-500 text-base font-medium text-indigo-700 bg-indigo-50 rounded-r-md">
-                            Dashboard
+                            {{ __('Dashboard') }}
                         </a>
                         <div class="mt-4 pt-4 border-t border-gray-100">
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <button type="submit"
                                     class="flex items-center w-full px-3 py-2 text-base font-bold text-red-600 hover:bg-red-50 rounded-md">
-                                    <i class="fa-solid fa-right-from-bracket mr-3"></i> Sign Out
+                                    <i class="fa-solid fa-right-from-bracket mr-3"></i> {{ __('Sign Out') }}
                                 </button>
                             </form>
                         </div>
@@ -511,12 +586,12 @@
                         <a href="{{ route($roleValNav . '.dashboard') }}"
                             class="flex flex-col items-center justify-center w-full text-gray-500 hover:text-indigo-600 {{ request()->routeIs($roleValNav . '.dashboard') ? 'text-indigo-600' : '' }} transition-colors">
                             <i class="fa-solid fa-house mb-1 text-lg"></i>
-                            <span class="text-[10px] font-bold">Home</span>
+                            <span class="text-[10px] font-bold">{{ __('Home') }}</span>
                         </a>
                         <a href="{{ route('surveys.index', ['status' => 'active']) }}"
                             class="flex flex-col items-center justify-center w-full text-gray-500 hover:text-indigo-600 {{ (request()->routeIs('surveys.index') && request('status') === 'active') ? 'text-indigo-600' : '' }} transition-colors">
                             <i class="fa-solid fa-layer-group mb-1 text-lg"></i>
-                            <span class="text-[10px] font-bold">Projects</span>
+                            <span class="text-[10px] font-bold">{{ __('Projects') }}</span>
                         </a>
                         <a href="{{ route('surveys.create') }}"
                             class="flex flex-col items-center justify-center w-full text-gray-500 hover:text-indigo-600 {{ request()->routeIs('surveys.create') ? 'text-indigo-600' : '' }} transition-colors relative">
@@ -524,12 +599,12 @@
                                 class="absolute -top-4 bg-indigo-600 text-white w-10 h-10 flex items-center justify-center rounded-full shadow-lg border-2 border-gray-50">
                                 <i class="fa-solid fa-plus text-lg"></i>
                             </div>
-                            <span class="text-[10px] font-bold mt-5">Create</span>
+                            <span class="text-[10px] font-bold mt-5">{{ __('Create') }}</span>
                         </a>
                         <a href="{{ route('research-proposal.index') }}"
                             class="flex flex-col items-center justify-center w-full text-gray-500 hover:text-indigo-600 {{ request()->routeIs('research-proposal.*') ? 'text-indigo-600' : '' }} transition-colors">
                             <i class="fa-solid fa-file-signature mb-1 text-lg"></i>
-                            <span class="text-[10px] font-bold">Report</span>
+                            <span class="text-[10px] font-bold">{{ __('Report') }}</span>
                         </a>
                     </nav>
                 @endauth
