@@ -30,10 +30,11 @@ class DataAggregatorService
         if ($questions->isEmpty() && $isJson) {
             $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
             foreach ($schema as $field) {
-                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph'])) continue;
-                
+                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph']))
+                    continue;
+
                 // Create a transient question-like object for aggregation logic
-                $qObj = (object)[
+                $qObj = (object) [
                     'id' => $field['name'],
                     'name' => $field['name'],
                     'type' => $field['type'] ?? 'text',
@@ -58,7 +59,7 @@ class DataAggregatorService
         $data = [
             'id' => $question->id,
             'type' => $question->type,
-            'label' => $question->label,
+            'label' => $question->label ?? $question->text ?? $question->name ?? 'Question',
             'stats' => [],
             'insights' => []
         ];
@@ -85,7 +86,7 @@ class DataAggregatorService
     {
         // Find the "name" or identifier in the schema if applicable
         $name = $question->name ?? $question->id;
-        
+
         $responses = DB::table('answers')
             ->whereNull('question_id')
             ->where('value', 'LIKE', '%"name":"' . $name . '"%')
@@ -125,7 +126,7 @@ class DataAggregatorService
         }
 
         if (!empty($textInsights)) {
-            $data['insights'] = array_slice($textInsights, 0, 20);
+            $data['insights'] = array_slice($textInsights, 0, 50);
         }
     }
 
@@ -159,7 +160,7 @@ class DataAggregatorService
             ->whereNotNull('value')
             ->where('value', '!=', '')
             ->latest()
-            ->take(20)
+            ->take(50)
             ->pluck('value')
             ->toArray();
     }

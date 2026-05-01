@@ -60,10 +60,9 @@ class ProposalGeneratorService
             "Use markers [SECTION: Name] for:\n" .
             "[SECTION: 1.1 Background of the Study]\n" .
             "[SECTION: 1.2 Statement of the Problem]\n" .
-            "[SECTION: 1.3 Objectives of the Study]\n" .
-            "[SECTION: 1.4 Research Questions]\n" .
-            "[SECTION: 1.5 Significance of the Study]\n" .
-            "[SECTION: 1.6 Scope and Limitations]";
+            "[SECTION: 1.3 Objectives and Research Questions]\n" .
+            "[SECTION: 1.4 Significance of the Study]\n" .
+            "[SECTION: 1.5 Scope and Limitations]";
         Log::info("Drafting Ch 1 for ID: {$proposal->id}");
         $this->batchProcess($p1, $generatedContent, $systemPrompt);
 
@@ -71,10 +70,11 @@ class ProposalGeneratorService
         sleep(2);
         $p2 = "Draft CHAPTER 2: LITERATURE REVIEW for '{$proposal->title}':\n" .
             "Use markers:\n" .
-            "[SECTION: 2.1 Theoretical Framework]\n" .
-            "[SECTION: 2.2 Conceptual Framework] - Discuss variables relationships.\n" .
-            "[SECTION: 2.3 Empirical Review] - Discuss past studies trends.\n" .
-            "[SECTION: 2.4 Research Gaps]";
+            "[SECTION: 2.1 Introduction]\n" .
+            "[SECTION: 2.2 Theoretical Framework]\n" .
+            "[SECTION: 2.3 Conceptual Framework] - Discuss variables relationships.\n" .
+            "[SECTION: 2.4 Empirical Review] - Discuss past studies trends.\n" .
+            "[SECTION: 2.5 Research Gaps]";
         Log::info("Drafting Ch 2 for ID: {$proposal->id}");
         $this->batchProcess($p2, $generatedContent, $systemPrompt);
 
@@ -93,12 +93,15 @@ class ProposalGeneratorService
 
         // ── 5. CHAPTER 4: EXPECTED RESULTS ──
         sleep(2);
-        $p4 = "Draft CHAPTER 4: EXPECTED RESULTS & DATA PRESENTATION for '{$proposal->title}':\n" .
-            "Based on the objectives, discuss how findings will likely look.\n" .
-            "Use markers:\n" .
-            "[SECTION: 4.1 Introduction to Analysis]\n" .
-            "[SECTION: 4.2 Expected Finding Trends]\n" .
-            "[SECTION: 4.3 Data Presentation Plan]";
+        $p4 = "Draft CHAPTER 4: DATA ANALYSIS, PRESENTATION AND INTERPRETATION for '{$proposal->title}':\n" .
+            "Use markers: [SECTION: 4.1 Introduction], [SECTION: 4.2 Response Rate], [SECTION: 4.3 Respondent Demographics], [SECTION: 4.4 Data Analysis and Presentation], [SECTION: 4.5 Discussion of Findings], [SECTION: 4.6 Summary].\n" .
+            "GUIDELINES for 4.4:\n" .
+            "- For each area, provide a sub-heading like '4.4.x [Topic Name]'.\n" .
+            "- Present expected findings objectively, then provide a brief interpretation.\n" .
+            "- DO NOT use asterisks (**) for sub-headings. Write them as plain text on their own line.\n" .
+            "GUIDELINES for 4.5:\n" .
+            "- Structure 4.5 around the specific Research Objectives you generated in Chapter 1.\n" .
+            "- For each objective, discuss how the expected findings would address it.\n";
         Log::info("Drafting Ch 4 for ID: {$proposal->id}");
         $this->batchProcess($p4, $generatedContent, $systemPrompt);
 
@@ -108,8 +111,9 @@ class ProposalGeneratorService
             "Discuss conclusions for the study design.\n" .
             "Use markers:\n" .
             "[SECTION: 5.1 Summary of the Study Plan]\n" .
-            "[SECTION: 5.2 Conclusions based on expected trends]\n" .
-            "[SECTION: 5.3 Recommendations for Future Research]";
+            "[SECTION: 5.2 Conclusions]\n" .
+            "[SECTION: 5.3 Limitations of the Study]\n" .
+            "[SECTION: 5.4 Recommendations for Future Research]";
         Log::info("Drafting Ch 5 for ID: {$proposal->id}");
         $this->batchProcess($p5, $generatedContent, $systemPrompt);
 

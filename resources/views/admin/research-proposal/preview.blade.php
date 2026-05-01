@@ -18,24 +18,38 @@
             '1.1 Background ya Utafiti' => '1.1 Background of the Study',
             '1.1 Historia ya Utafiti' => '1.1 Background of the Study',
             '1.2 Maelezo ya Tatizo' => '1.2 Statement of the Problem',
-            '1.3 Malengo ya Utafiti' => '1.3 Objectives of the Study',
-            '1.4 Maswali ya Utafiti' => '1.4 Research Questions',
-            '1.5 Muhimu wa Utafiti' => '1.5 Significance of the Study',
-            '1.6 Upeo na Vikwazo' => '1.6 Scope and Limitations',
-            '2.0 Utangulizi' => '2.0 Introduction',
-            '2.1 Mfumo wa Kinadharia' => '2.1 Theoretical Framework',
-            '2.2 Mfumo wa Dhana' => '2.2 Conceptual Framework',
-            '2.3 Mapitio ya Kiuchunguzi' => '2.3 Empirical Review',
-            '2.4 Mapengo ya Utafiti' => '2.4 Research Gaps',
-            '2.5 Muhtasari' => '2.5 Summary',
+            '1.3 Malengo ya Utafiti' => '1.3 Objectives and Research Questions',
+            '1.3 Maswali ya Utafiti' => '1.3 Objectives and Research Questions',
+            '1.4 Maswali ya Utafiti' => '1.3 Objectives and Research Questions',
+            '1.4 Muhimu wa Utafiti' => '1.4 Significance of the Study',
+            '1.5 Muhimu wa Utafiti' => '1.4 Significance of the Study',
+            '1.5 Upeo na Vikwazo' => '1.5 Scope and Limitations',
+            '1.6 Upeo na Vikwazo' => '1.5 Scope and Limitations',
+            '2.0 Utangulizi' => '2.1 Introduction',
+            '2.1 Utangulizi' => '2.1 Introduction',
+            '2.1 Mfumo wa Kinadharia' => '2.2 Theoretical Framework',
+            '2.2 Mfumo wa Kinadharia' => '2.2 Theoretical Framework',
+            '2.2 Mfumo wa Dhana' => '2.3 Conceptual Framework',
+            '2.3 Mfumo wa Dhana' => '2.3 Conceptual Framework',
+            '2.3 Mapitio ya Kiuchunguzi' => '2.4 Empirical Review',
+            '2.4 Mapitio ya Kiuchunguzi' => '2.4 Empirical Review',
+            '2.4 Mapengo ya Utafiti' => '2.5 Research Gaps',
+            '2.5 Mapengo ya Utafiti' => '2.5 Research Gaps',
+            '2.5 Muhtasari' => '2.6 Summary',
+            '2.6 Muhtasari' => '2.6 Summary',
             '3.1 Muundo wa Utafiti' => '3.1 Research Design',
             '3.2 Idadi Lengwa' => '3.2 Target Population',
             '3.3 Ukubwa wa Sampuli' => '3.3 Sample Size and Sampling Techniques',
             '3.4 Zana za Ukusanyaji' => '3.4 Data Collection Instruments',
             '3.6 Uhalali na Uaminifu' => '3.6 Validity and Reliability',
+            '4.1 Utangulizi' => '4.1 Introduction',
+            '4.4 Uchambuzi wa Data' => '4.4 Data Analysis and Presentation',
+            '4.5 Majadiliano' => '4.5 Discussion of Findings',
             '5.1 Muhtasari wa Matokeo' => '5.1 Summary of Findings',
             '5.2 Hitimisho' => '5.2 Conclusions',
-            '5.3 Mapendekezo' => '5.3 Recommendations',
+            '5.3 Vikwazo' => '5.3 Limitations of the Study',
+            '5.3 Mapendekezo' => '5.4 Recommendations',
+            '5.4 Mapendekezo' => '5.4 Recommendations',
         ];
 
         foreach ($mappings as $sw => $en) {
@@ -65,7 +79,7 @@
             </button>
         </div>
 
-        <nav class="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar" style="min-height: 0;">
+        <nav class="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar" id="reportNav" style="min-height: 0;">
             @foreach($reportData['sections'] as $title => $content)
                 @php
                     $cleanTitle = $normalizeTitle($title);
@@ -74,8 +88,8 @@
                 @endphp
                 @if($isChapter)
                     <div class="mt-3 mb-1">
-                        <a href="#section-{{ $loop->iteration }}"
-                            class="flex items-center rounded-xl text-[10px] font-black text-indigo-700 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 transition-all group"
+                        <a href="#section-{{ $loop->iteration }}" data-nav-target="section-{{ $loop->iteration }}"
+                            class="nav-link nav-chapter flex items-center rounded-xl text-[10px] font-black text-indigo-700 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 transition-all group"
                             :class="sidebarOpen ? 'px-4 py-2.5' : 'p-2 justify-center'">
                             <span class="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded bg-indigo-600 text-white text-[8px]"
                                 :class="sidebarOpen ? 'mr-2' : ''">
@@ -85,21 +99,21 @@
                         </a>
                     </div>
                 @elseif($isPrelim)
-                    <a href="#section-{{ $loop->iteration }}"
-                        class="flex items-center rounded-xl text-[10px] font-bold text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all border border-transparent hover:border-gray-100 italic"
+                    <a href="#section-{{ $loop->iteration }}" data-nav-target="section-{{ $loop->iteration }}"
+                        class="nav-link nav-prelim flex items-center rounded-xl text-[10px] font-bold text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all border border-transparent hover:border-gray-100 italic"
                         :class="sidebarOpen ? 'px-4 py-2' : 'p-2 justify-center'">
-                        <span class="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded bg-gray-50 text-[8px] text-gray-400 group-hover:bg-gray-100 group-hover:text-gray-600 transition-colors"
+                        <span class="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded bg-gray-50 text-[8px] text-gray-400"
                             :class="sidebarOpen ? 'mr-2' : ''">
                             {{ $loop->iteration }}
                         </span>
                         <span x-show="sidebarOpen" x-transition class="truncate">{{ __($cleanTitle) }}</span>
                     </a>
                 @else
-                    <a href="#section-{{ $loop->iteration }}"
-                        class="flex items-center rounded-xl text-xs font-bold text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 transition-all border border-transparent hover:border-indigo-100 group"
+                    <a href="#section-{{ $loop->iteration }}" data-nav-target="section-{{ $loop->iteration }}"
+                        class="nav-link nav-section flex items-center rounded-xl text-xs font-bold text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 transition-all border border-transparent hover:border-indigo-100 group"
                         :class="sidebarOpen ? 'px-4 py-2.5' : 'p-2 justify-center'">
                         <span
-                            class="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-lg bg-gray-50 text-[9px] group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors"
+                            class="nav-icon w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-lg bg-gray-50 text-[9px] group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors"
                             :class="sidebarOpen ? 'mr-2' : ''">
                             {{ $loop->iteration }}
                         </span>
@@ -266,8 +280,8 @@
                         <section id="section-{{ $loop->iteration }}" class="scroll-mt-32 py-8 border-b-2 border-gray-100 relative">
                             {!! $content !!}
                         </section>
-                    @elseif(str_contains($content, "<div class='data-table'") || str_contains($content, "<table"))
-                        {{-- Section with embedded data table --}}
+                    @elseif(str_contains($content, '<table') || str_contains($content, '<img') || str_contains($content, '<h4>'))
+                        {{-- Section with embedded HTML (data tables, charts, sub-headings) --}}
                         <section id="section-{{ $loop->iteration }}" class="scroll-mt-32 relative">
                             @if($isChapter)
                                 <h2 class="text-xl font-black text-gray-900 mb-8 tracking-tight uppercase leading-none text-center">
@@ -279,17 +293,7 @@
                             @endif
                             <div
                                 class="prose prose-slate prose-lg max-w-none text-gray-700 leading-relaxed font-serif text-justify">
-                                @php
-                                    // Split content into prose and table parts
-                                    $parts = preg_split('/(<div class=\'data-table\'.*?<\/div>)/s', $content, -1, PREG_SPLIT_DELIM_CAPTURE);
-                                @endphp
-                                @foreach($parts as $part)
-                                    @if(str_starts_with(trim($part), "<div class='data-table'") || str_starts_with(trim($part), "<table"))
-                                        {!! $part !!}
-                                    @else
-                                        {!! nl2br(e($part)) !!}
-                                    @endif
-                                @endforeach
+                                {!! $content !!}
                             </div>
                         </section>
                     @else
@@ -309,7 +313,12 @@
                             @endif
                             <div
                                 class="prose prose-slate prose-lg max-w-none text-gray-700 leading-relaxed font-serif text-justify whitespace-pre-line">
-                                {!! nl2br(e($content)) !!}
+                                @php
+                                    $rendered = e($content);
+                                    $rendered = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $rendered);
+                                    $rendered = nl2br($rendered);
+                                @endphp
+                                {!! $rendered !!}
                             </div>
                         </section>
                     @endif
@@ -360,10 +369,102 @@
                 padding: 8px 12px;
             }
 
+            /* Sub-heading styling for 4.4.x sections */
+            .prose h4 {
+                font-family: system-ui, -apple-system, sans-serif;
+                font-size: 1rem;
+                font-weight: 800;
+                color: #1e293b;
+                margin-top: 2.5rem;
+                margin-bottom: 1rem;
+                padding-bottom: 0.5rem;
+                border-bottom: 2px solid #e2e8f0;
+            }
+
+            /* Chart image styling */
+            .prose img {
+                max-width: 100%;
+                height: auto;
+                border-radius: 8px;
+                border: 1px solid #e5e7eb;
+                margin: 1.5rem auto;
+                display: block;
+            }
+
             /* Ensure section transitions are smooth when clicking sidebar links */
             html {
                 scroll-behavior: smooth;
             }
+
+            /* Active sidebar nav link */
+            .nav-link.is-active.nav-section {
+                background: #eef2ff;
+                color: #4338ca;
+                border-color: #c7d2fe;
+                font-weight: 800;
+            }
+            .nav-link.is-active.nav-section .nav-icon {
+                background: #c7d2fe;
+                color: #4338ca;
+            }
+            .nav-link.is-active.nav-chapter {
+                background: #4338ca;
+                color: #fff;
+                border-color: #4338ca;
+            }
+            .nav-link.is-active.nav-chapter span:first-child {
+                background: #fff;
+                color: #4338ca;
+            }
+            .nav-link.is-active.nav-prelim {
+                background: #f1f5f9;
+                color: #334155;
+                border-color: #cbd5e1;
+                font-weight: 800;
+                font-style: normal;
+            }
+
+            /* Responsive sidebar: hide on small screens */
+            @media (max-width: 768px) {
+                .report-structure-sidebar {
+                    display: none;
+                }
+            }
         </style>
+    @endpush
+
+    @push('scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const nav = document.getElementById('reportNav');
+                if (!nav) return;
+
+                const sections = document.querySelectorAll('section[id^="section-"]');
+                const navLinks = nav.querySelectorAll('.nav-link');
+
+                if (!sections.length || !navLinks.length) return;
+
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const id = entry.target.id;
+                            navLinks.forEach(link => {
+                                link.classList.remove('is-active');
+                                if (link.getAttribute('data-nav-target') === id) {
+                                    link.classList.add('is-active');
+                                    // Scroll the nav to keep active item visible
+                                    link.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                                }
+                            });
+                        }
+                    });
+                }, {
+                    rootMargin: '-80px 0px -60% 0px',
+                    threshold: 0.1
+                });
+
+                sections.forEach(section => observer.observe(section));
+            });
+        </script>
     @endpush
 @endsection

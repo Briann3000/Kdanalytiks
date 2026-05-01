@@ -30,14 +30,14 @@ class QualitativeAnalysisService
             ];
         }
 
-        // Reduced to 150 chars and 12 responses to stay within Groq TPM limits (Free Tier)
-        $responses = array_map(function($r) {
+        // Balance between AI context quality and Groq TPM limits
+        $responses = array_map(function ($r) {
             $r = is_array($r) ? implode(', ', $r) : $r;
-            return strlen($r) > 150 ? substr($r, 0, 147) . '...' : $r;
+            return strlen($r) > 200 ? substr($r, 0, 197) . '...' : $r;
         }, $responses);
 
-        $chunks = array_chunk($responses, 12);
-        
+        $chunks = array_chunk($responses, 25);
+
         return $this->processChunk($chunks[0]);
     }
 
@@ -76,18 +76,34 @@ RULES:
 
         try {
             Log::info("QualitativeAnalysisService: Analyzing batch of " . count($batch) . " responses.");
-            
-            $response = Http::withToken($this->apiKey)
-                ->timeout(90)
-                ->post('https://api.groq.com/openai/v1/chat/completions', [
-                    'model' => $this->model,
-                    'messages' => [
-                        ['role' => 'system', 'content' => $systemPrompt],
-                        ['role' => 'user', 'content' => "VOTER RESPONSES TO ANALYZE:\n" . $textData]
-                    ],
-                    'response_format' => ['type' => 'json_object'],
-                    'temperature' => 0.1
-                ]);
+
+            $response = null;
+            $maxRetries = 3;
+
+            for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+                $response = Http::withToken($this->apiKey)
+                    ->timeout(90)
+                    ->post('https://api.groq.com/openai/v1/chat/completions', [
+                        'model' => $this->model,
+                        'messages' => [
+                            ['role' => 'system', 'content' => $systemPrompt],
+                            ['role' => 'user', 'content' => "VOTER RESPONSES TO ANALYZE:\n" . $textData]
+                        ],
+                        'response_format' => ['type' => 'json_object'],
+                        'temperature' => 0.1
+                    ]);
+
+                if ($response->successful()) {
+                    break;
+                }
+
+                // Rate limited - wait and retry
+                if ($response->status() === 429 && $attempt < $maxRetries) {
+                    Log::warning("QualitativeAnalysisService: Rate limited, retry {$attempt}/{$maxRetries}");
+                    sleep($attempt * 3); // 3s, 6s backoff
+                    continue;
+                }
+            }
 
             if ($response->failed()) {
                 Log::error('QualitativeAnalysisService Error: ' . $response->body());
@@ -97,9 +113,10 @@ RULES:
             $result = $response->json();
             $content = $result['choices'][0]['message']['content'] ?? '{}';
             Log::info("QualitativeAnalysisService: Raw AI content: " . substr($content, 0, 100) . "...");
-            
+
             $data = json_decode($content, true);
-            if (!$data) throw new \Exception('Malformed AI JSON response.');
+            if (!$data)
+                throw new \Exception('Malformed AI JSON response.');
 
             // Ensure structure consistency with ai-insight-card.blade.php
             return [

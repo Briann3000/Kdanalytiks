@@ -45,18 +45,32 @@ class AcademicSynthesisService
 
         // ── DEFINE ALL PROMPTS ──
         $prelimPrompt = "Write Abstract, Abbreviations, and Definition of Key Terms for '{$survey->title}'. Use [SECTION: Name] markers.\nDATA:\n{$dataSummary}";
-        $ch1Prompt = "Write Chapter 1: Introduction for '{$survey->title}'. Use markers: [SECTION: 1.1 Background of the Study], [SECTION: 1.2 Statement of the Problem], [SECTION: 1.3 Objectives of the Study], [SECTION: 1.4 Research Questions], [SECTION: 1.5 Significance of the Study], [SECTION: 1.6 Scope and Limitations].";
-        $ch2Prompt = "Write Chapter 2: Literature Review for '{$survey->title}'. Use markers: [SECTION: 2.0 Introduction], [SECTION: 2.1 Theoretical Framework], [SECTION: 2.2 Conceptual Framework], [SECTION: 2.3 Empirical Review], [SECTION: 2.4 Research Gaps], [SECTION: 2.5 Summary]. References:\n{$referencePrompt}";
+        $ch1Prompt = "Write Chapter 1: Introduction for '{$survey->title}'. Use markers: [SECTION: 1.1 Background of the Study], [SECTION: 1.2 Statement of the Problem], [SECTION: 1.3 Objectives and Research Questions], [SECTION: 1.4 Significance of the Study], [SECTION: 1.5 Scope and Limitations].";
+        $ch2Prompt = "Write Chapter 2: Literature Review for '{$survey->title}'. Use markers: [SECTION: 2.1 Introduction], [SECTION: 2.2 Theoretical Framework], [SECTION: 2.3 Conceptual Framework], [SECTION: 2.4 Empirical Review], [SECTION: 2.5 Research Gaps], [SECTION: 2.6 Summary]. References:\n{$referencePrompt}";
         $ch3Prompt = "Write Chapter 3: Research Methodology for '{$survey->title}'. Use markers: [SECTION: 3.1 Research Design], [SECTION: 3.2 Target Population], [SECTION: 3.3 Sample Size and Sampling Techniques], [SECTION: 3.4 Data Collection Instruments], [SECTION: 3.5 Data Collection Procedures], [SECTION: 3.6 Validity and Reliability], [SECTION: 3.7 Data Analysis and Presentation].";
 
         $groupContext = "";
-        foreach (array_slice($aggregatedData['questions'], 0, 8) as $idx => $q) {
-            $groupContext .= "Q" . ($idx + 1) . ": {$q['label']}\nData: " . json_encode($q['stats'] ?? $q['insights']) . "\n\n";
+        foreach (array_slice($aggregatedData['questions'], 0, 20) as $idx => $q) {
+            $dataToUse = !empty($q['stats']) ? $q['stats'] : $q['insights'];
+            $groupContext .= "Q" . ($idx + 1) . ": " . ($q['label'] ?? 'Question') . "\nData: " . json_encode($dataToUse) . "\n\n";
         }
-        $qPrompt = "Write Chapter 4: Results and Discussion introduction and thematic analysis for '{$survey->title}'. Use markers: [SECTION: 4.0 Introduction] and [SECTION: 4.X Name] for findings.\nDATA:\n{$groupContext}";
+        $qPrompt = "Write Chapter 4: Results and Discussion for '{$survey->title}'.\n" .
+            "Total respondents: {$totalResponses}.\n" .
+            "Use markers: [SECTION: 4.1 Introduction], [SECTION: 4.2 Response Rate], [SECTION: 4.3 Respondent Demographics], [SECTION: 4.4 Data Analysis and Presentation], [SECTION: 4.5 Discussion of Findings], [SECTION: 4.6 Summary].\n" .
+            "CRITICAL RULES:\n" .
+            "- ALL percentages, frequencies, and figures you mention MUST come EXACTLY from the DATA below. DO NOT invent or estimate any numbers.\n" .
+            "- If data for a question is empty ([]), write 'No quantitative data was collected for this question' and provide only a qualitative summary.\n" .
+            "GUIDELINES for 4.4:\n" .
+            "- For each survey question, provide a sub-heading: 4.4.1 [Question Text], 4.4.2 [Question Text], etc.\n" .
+            "- Present the factual findings first (using EXACT figures from the data), then provide a brief interpretation of what the data means for that question.\n" .
+            "- DO NOT use asterisks (**) for sub-headings. Write them as plain text on their own line.\n" .
+            "GUIDELINES for 4.5:\n" .
+            "- Structure 4.5 around the specific Research Objectives you generated in Chapter 1.\n" .
+            "- For each objective, discuss how the collected survey data addresses it, citing specific findings from 4.4.\n" .
+            "DATA:\n{$groupContext}";
 
         $ch5RefPrompt = "Write Chapter 5 AND References for '{$survey->title}'.\n" .
-            "Use markers: [SECTION: 5.1 Summary of Findings], [SECTION: 5.2 Conclusions], [SECTION: 5.3 Recommendations], [SECTION: REFERENCES].\n" .
+            "Use markers: [SECTION: 5.1 Summary of Findings], [SECTION: 5.2 Conclusions], [SECTION: 5.3 Limitations of the Study], [SECTION: 5.4 Recommendations], [SECTION: REFERENCES].\n" .
             "For REFERENCES, list 10-15 academic sources in {$style} style.\n" .
             "Manual references to include: {$referencePrompt}\n" .
             "DATA:\n{$dataSummary}";
@@ -117,14 +131,22 @@ class AcademicSynthesisService
         }
 
         // ── RE-INJECT TABLES INTO CH4 ──
-        foreach ($aggregatedData['questions'] as $idx => $q) {
-            $search = "4." . ($idx + 1);
-            foreach (array_keys($sections) as $key) {
-                if (str_starts_with($key, $search) && !empty($q['stats'])) {
-                    $sections[$key] .= "\n\n" . $this->buildSingleQuestionTableHtml($q['label'], $q['stats'], $totalResponses);
-                    break;
+        $targetKey = null;
+        foreach (array_keys($sections) as $key) {
+            if (str_contains($key, '4.4 Data Analysis')) {
+                $targetKey = $key;
+                break;
+            }
+        }
+
+        if ($targetKey) {
+            foreach ($aggregatedData['questions'] as $idx => $q) {
+                if (!empty($q['stats'])) {
+                    $sections[$targetKey] .= "\n\n" . $this->buildSingleQuestionTableHtml($q['label'], $q['stats'], $totalResponses);
                 }
             }
+            // Fix sub-headings formatting (convert **4.4.x ...** or plain 4.4.x to headings)
+            $sections[$targetKey] = preg_replace('/(?:\*\*)?(4\.4\.\d+\s+[^\n\*]+)(?:\*\*)?/', '<h4>$1</h4>', $sections[$targetKey]);
         }
 
         // ── APPENDICES ──
@@ -153,24 +175,30 @@ class AcademicSynthesisService
         $mappings = [
             '1.1' => '1.1 Background of the Study',
             '1.2' => '1.2 Statement of the Problem',
-            '1.3' => '1.3 Objectives of the Study',
-            '1.4' => '1.4 Research Questions',
-            '1.5' => '1.5 Significance of the Study',
-            '1.6' => '1.6 Scope and Limitations',
-            '2.0' => '2.0 Introduction',
-            '2.1' => '2.1 Theoretical Framework',
-            '2.2' => '2.2 Conceptual Framework',
-            '2.3' => '2.3 Empirical Review',
-            '2.4' => '2.4 Research Gaps',
-            '2.5' => '2.5 Summary',
+            '1.3' => '1.3 Objectives and Research Questions',
+            '1.4' => '1.4 Significance of the Study',
+            '1.5' => '1.5 Scope and Limitations',
+            '2.1' => '2.1 Introduction',
+            '2.2' => '2.2 Theoretical Framework',
+            '2.3' => '2.3 Conceptual Framework',
+            '2.4' => '2.4 Empirical Review',
+            '2.5' => '2.5 Research Gaps',
+            '2.6' => '2.6 Summary',
             '3.1' => '3.1 Research Design',
             '3.2' => '3.2 Target Population',
             '3.3' => '3.3 Sample Size and Sampling Techniques',
             '3.4' => '3.4 Data Collection Instruments',
             '3.6' => '3.6 Validity and Reliability',
+            '4.1' => '4.1 Introduction',
+            '4.2' => '4.2 Response Rate',
+            '4.3' => '4.3 Respondent Demographics',
+            '4.4' => '4.4 Data Analysis and Presentation',
+            '4.5' => '4.5 Discussion of Findings',
+            '4.6' => '4.6 Summary',
             '5.1' => '5.1 Summary of Findings',
             '5.2' => '5.2 Conclusions',
-            '5.3' => '5.3 Recommendations',
+            '5.3' => '5.3 Limitations of the Study',
+            '5.4' => '5.4 Recommendations',
             'SURA YA 1' => 'CHAPTER 1: INTRODUCTION',
             'SURA YA 2' => 'CHAPTER 2: LITERATURE REVIEW',
             'SURA YA 3' => 'CHAPTER 3: RESEARCH METHODOLOGY',
@@ -214,15 +242,25 @@ class AcademicSynthesisService
             $mappings = [
                 'Background' => '1.1 Background of the Study',
                 'Statement of the Problem' => '1.2 Statement of the Problem',
-                'Objectives' => '1.3 Objectives of the Study',
-                'Research Questions' => '1.4 Research Questions',
-                'Significance' => '1.5 Significance of the Study',
-                'Scope and Limitations' => '1.6 Scope and Limitations',
-                'Theoretical Framework' => '2.1 Theoretical Framework',
-                'Conceptual Framework' => '2.2 Conceptual Framework',
-                'Empirical Review' => '2.3 Empirical Review',
-                'Research Gaps' => '2.4 Research Gaps',
-                'Summary' => '2.5 Summary',
+                'Objectives' => '1.3 Objectives and Research Questions',
+                'Research Questions' => '1.3 Objectives and Research Questions',
+                'Significance' => '1.4 Significance of the Study',
+                'Scope and Limitations' => '1.5 Scope and Limitations',
+                '2.1 Introduction' => '2.1 Introduction',
+                'Theoretical Framework' => '2.2 Theoretical Framework',
+                'Conceptual Framework' => '2.3 Conceptual Framework',
+                'Empirical Review' => '2.4 Empirical Review',
+                'Research Gaps' => '2.5 Research Gaps',
+                '2.6 Summary' => '2.6 Summary',
+                '4.1 Introduction' => '4.1 Introduction',
+                'Response Rate' => '4.2 Response Rate',
+                'Respondent Demographics' => '4.3 Respondent Demographics',
+                'Discussion of Findings' => '4.5 Discussion of Findings',
+                '4.6 Summary' => '4.6 Summary',
+                'Summary of Findings' => '5.1 Summary of Findings',
+                'Conclusions' => '5.2 Conclusions',
+                'Limitations' => '5.3 Limitations of the Study',
+                'Recommendations' => '5.4 Recommendations',
                 'Declaration' => 'Declaration',
                 'Acknowledgement' => 'Acknowledgement',
                 'Abstract' => 'Abstract',
@@ -454,15 +492,57 @@ class AcademicSynthesisService
      */
     private function buildSingleQuestionTableHtml($label, $stats, $totalResponses)
     {
-        $table = "<div class='data-table' style='margin: 20px 0;'>";
-        $table .= "<table style='width:100%; border-collapse:collapse; font-size:12px; border:1px solid #e5e7eb;'>";
-        $table .= "<caption style='font-weight:bold; margin-bottom:5px; text-align:left;'>" . __('Table') . ": " . e($label) . " (N={$totalResponses})</caption>";
-        $table .= "<tr style='background:#f9fafb;'><th style='padding:8px; border:1px solid #e5e7eb; text-align:left;'>" . __('Response') . "</th><th style='padding:8px; border:1px solid #e5e7eb;'>f</th><th style='padding:8px; border:1px solid #e5e7eb;'>%</th></tr>";
-        foreach ($stats as $s) {
-            $table .= "<tr><td style='padding:8px; border:1px solid #e5e7eb;'>" . e($s['option']) . "</td><td style='padding:8px; border:1px solid #e5e7eb; text-align:center;'>{$s['count']}</td><td style='padding:8px; border:1px solid #e5e7eb; text-align:center;'>{$s['percentage']}%</td></tr>";
+        // ── 1. GENERATE CHART USING QUICKCHART ──
+        $chartLabels = [];
+        $chartData = [];
+        foreach (array_slice($stats, 0, 8) as $s) {
+            $chartLabels[] = strlen($s['option']) > 15 ? substr($s['option'], 0, 12) . '...' : $s['option'];
+            $chartData[] = $s['count'];
         }
-        $table .= "</table></div>";
-        return $table;
+
+        $chartConfig = [
+            'type' => 'bar',
+            'data' => [
+                'labels' => $chartLabels,
+                'datasets' => [
+                    [
+                        'label' => 'Frequency',
+                        'data' => $chartData,
+                        'backgroundColor' => 'rgba(79, 70, 229, 0.7)',
+                        'borderColor' => 'rgb(79, 70, 229)',
+                        'borderWidth' => 1
+                    ]
+                ]
+            ],
+            'options' => [
+                'title' => ['display' => true, 'text' => $label],
+                'legend' => ['display' => false]
+            ]
+        ];
+
+        $chartUrl = "https://quickchart.io/chart?c=" . urlencode(json_encode($chartConfig)) . "&w=500&h=300";
+
+        $html = "<div style='text-align: center; margin: 30px 0;'>";
+        $html .= "<img src='{$chartUrl}' style='max-width: 100%; height: auto; border: 1px solid #eee; border-radius: 8px;' />";
+        $html .= "</div>";
+
+        $html .= "<h4>Table: {$label} (N={$totalResponses})</h4>";
+        $html .= "<table border='1' style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'>";
+        $html .= "<thead><tr style='background: #f3f4f6;'>";
+        $html .= "<th style='padding: 8px; text-align: left;'>Response</th>";
+        $html .= "<th style='padding: 8px; text-align: center;'>f</th>";
+        $html .= "<th style='padding: 8px; text-align: center;'>%</th>";
+        $html .= "</tr></thead>";
+        $html .= "<tbody>";
+        foreach ($stats as $s) {
+            $html .= "<tr>";
+            $html .= "<td style='padding: 8px; border: 1px solid #ddd;'>{$s['option']}</td>";
+            $html .= "<td style='padding: 8px; border: 1px solid #ddd; text-align: center;'>{$s['count']}</td>";
+            $html .= "<td style='padding: 8px; border: 1px solid #ddd; text-align: center;'>{$s['percentage']}%</td>";
+            $html .= "</tr>";
+        }
+        $html .= "</tbody></table>";
+        return $html;
     }
 
     // ... (Keep existing Title Page, Declaration, Acknowledgement, Appendices, Export methods from previous version) ...
