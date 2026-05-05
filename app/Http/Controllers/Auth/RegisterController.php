@@ -15,7 +15,8 @@ class RegisterController extends Controller
 {
     public function showRegistrationForm(Request $request, $role = 'respondent')
     {
-        return view('auth.register', compact('role'));
+        $redirect = $request->query('redirect');
+        return view('auth.register', compact('role', 'redirect'));
     }
 
     public function register(Request $request, $role = 'respondent')
@@ -55,6 +56,6 @@ class RegisterController extends Controller
             ]);
         }
 
-        return redirect()->route($role . '.login')->with('success', 'Registration successful. A verification link has been sent to your email.');
+        return redirect()->route($role . '.login', ['redirect' => $request->input('redirect')])->with('success', 'Registration successful. Please login to continue.');
     }
 }

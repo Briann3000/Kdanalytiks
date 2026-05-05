@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', ucfirst($role) . ' Register')
+@section('title', __(ucfirst($role) . ' Registration'))
 
 @section('content')
     <div class="min-h-[80vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -8,9 +8,9 @@
             <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
                 <i class="fa-solid fa-user-plus text-xl"></i>
             </div>
-            <h2 class="mt-6 text-3xl font-extrabold text-gray-900">{{ ucfirst($role) }} Registration</h2>
+            <h2 class="mt-6 text-3xl font-extrabold text-gray-900">{{ __(ucfirst($role) . ' Registration') }}</h2>
             <p class="mt-2 text-sm text-gray-600">
-                Join KMSurveyTool and start building
+                {{ __('Join KMSurveyTool and start building') }}
             </p>
         </div>
 
@@ -37,7 +37,8 @@
                                 <i class="fa-solid fa-circle-xmark text-red-400"></i>
                             </div>
                             <div class="ml-3">
-                                <h3 class="text-sm font-medium text-red-800">There were errors with your registration</h3>
+                                <h3 class="text-sm font-medium text-red-800">
+                                    {{ __('There were errors with your registration') }}</h3>
                                 <div class="mt-2 text-sm text-red-700">
                                     <ul role="list" class="list-disc pl-5 space-y-1">
                                         @foreach ($errors->all() as $error)
@@ -52,9 +53,10 @@
 
                 <form class="space-y-6" method="POST">
                     @csrf
+                    <input type="hidden" name="redirect" value="{{ request('redirect') }}">
                     <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                         <div class="sm:col-span-6">
-                            <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
+                            <label for="name" class="block text-sm font-medium text-gray-700">{{ __('Full Name') }}</label>
                             <div class="mt-1">
                                 <input id="name" name="name" type="text" required
                                     class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
@@ -62,7 +64,8 @@
                         </div>
 
                         <div class="sm:col-span-6">
-                            <label for="email" class="block text-sm font-medium text-gray-700">Email address</label>
+                            <label for="email"
+                                class="block text-sm font-medium text-gray-700">{{ __('Email address') }}</label>
                             <div class="mt-1">
                                 <input id="email" name="email" type="email" required
                                     class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
@@ -71,8 +74,8 @@
 
                         @if($role == 'organization')
                             <div class="sm:col-span-6">
-                                <label for="organization_name" class="block text-sm font-medium text-gray-700">Organization
-                                    Name</label>
+                                <label for="organization_name"
+                                    class="block text-sm font-medium text-gray-700">{{ __('Organization Name') }}</label>
                                 <div class="mt-1">
                                     <input id="organization_name" name="organization_name" type="text" required
                                         class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
@@ -80,16 +83,16 @@
                             </div>
                         @elseif($role == 'independent')
                             <div class="sm:col-span-6">
-                                <label for="institution" class="block text-sm font-medium text-gray-700">Institution
-                                    (Optional)</label>
+                                <label for="institution"
+                                    class="block text-sm font-medium text-gray-700">{{ __('Institution (Optional)') }}</label>
                                 <div class="mt-1">
                                     <input id="institution" name="institution" type="text"
                                         class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                                 </div>
                             </div>
                             <div class="sm:col-span-6">
-                                <label for="research_area" class="block text-sm font-medium text-gray-700">Research Area
-                                    (Optional)</label>
+                                <label for="research_area"
+                                    class="block text-sm font-medium text-gray-700">{{ __('Research Area (Optional)') }}</label>
                                 <div class="mt-1">
                                     <input id="research_area" name="research_area" type="text"
                                         class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
@@ -98,7 +101,8 @@
                         @endif
 
                         <div class="sm:col-span-3">
-                            <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                            <label for="password"
+                                class="block text-sm font-medium text-gray-700">{{ __('Password') }}</label>
                             <div class="mt-1 relative rounded-md shadow-sm">
                                 <input id="password" name="password" type="password" required
                                     class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm pr-10">
@@ -112,8 +116,8 @@
                         </div>
 
                         <div class="sm:col-span-3">
-                            <label for="password_confirmation" class="block text-sm font-medium text-gray-700">Confirm
-                                Password</label>
+                            <label for="password_confirmation"
+                                class="block text-sm font-medium text-gray-700">{{ __('Confirm Password') }}</label>
                             <div class="mt-1 relative rounded-md shadow-sm">
                                 <input id="password_confirmation" name="password_confirmation" type="password" required
                                     class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm pr-10">
@@ -131,7 +135,7 @@
                     <div class="mt-6">
                         <button type="submit"
                             class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
-                            <i class="fa-solid fa-user-plus mt-0.5 mr-2"></i> Register Account
+                            <i class="fa-solid fa-user-plus mt-0.5 mr-2"></i> {{ __('Register Account') }}
                         </button>
                     </div>
                 </form>
@@ -142,14 +146,14 @@
                             <div class="w-full border-t border-gray-300"></div>
                         </div>
                         <div class="relative flex justify-center text-sm">
-                            <span class="px-2 bg-white text-gray-500">Already have an account?</span>
+                            <span class="px-2 bg-white text-gray-500">{{ __('Already have an account?') }}</span>
                         </div>
                     </div>
 
-                    <div class="mt-6">
-                        <a href="{{ route('login.role', ['role' => $role]) }}"
-                            class="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
-                            Sign in to your {{ $role }} account
+                    <div class="mt-6 text-center">
+                        <a href="{{ route('login.role', ['role' => $role, 'redirect' => request('redirect')]) }}"
+                            class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                            {{ __('Sign in to your :role account', ['role' => __($role)]) }}
                         </a>
                     </div>
                 </div>

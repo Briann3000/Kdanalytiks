@@ -641,6 +641,43 @@
     @stack('scripts')
 
     <script>
+        function urgeLogin(surveyUrl, isPaid, rewardAmount, currency) {
+            let title = `{{ __('Sign in to Participate') }}`;
+            let text = `{{ __('Join KMSurveyTool to contribute your insights.') }}`;
+
+            if (isPaid) {
+                title = `{{ __('Earn') }} ` + rewardAmount + ' ' + currency;
+                text = `{{ __('Register or Login to receive this reward and access your wallet.') }}`;
+            }
+
+            Swal.fire({
+                title: '<span class="text-indigo-600">' + title + '</span>',
+                html: '<p class="text-sm text-gray-600 font-medium">' + text + '</p>',
+                icon: 'info',
+                showCloseButton: true,
+                showCancelButton: false,
+                showDenyButton: true,
+                confirmButtonText: `{{ __('Login') }}`,
+                denyButtonText: `{{ __('Register') }}`,
+                confirmButtonColor: '#4f46e5',
+                denyButtonColor: '#6366f1',
+                customClass: {
+                    popup: 'rounded-3xl border-none shadow-2xl',
+                    title: 'text-2xl font-black tracking-tight',
+                    confirmButton: 'rounded-xl px-8 py-3 text-xs font-black uppercase tracking-widest',
+                    denyButton: 'rounded-xl px-8 py-3 text-xs font-black uppercase tracking-widest'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = "{{ route('login') }}?redirect=" + encodeURIComponent(surveyUrl);
+                } else if (result.isDenied) {
+                    window.location.href = "{{ route('register', ['role' => 'respondent']) }}?redirect=" + encodeURIComponent(surveyUrl);
+                }
+            });
+        }
+    </script>
+
+    <script>
         document.addEventListener('alpine:init', () => {
             Alpine.store('workspace', {
                 activeTab: '{{ request('tab', 'overview') }}',

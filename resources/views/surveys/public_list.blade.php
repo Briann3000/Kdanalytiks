@@ -135,10 +135,18 @@
                                 title="Send Invitation via Email">
                                 <i class="fa-solid fa-envelope text-indigo-500"></i>
                             </a>
-                            <a href="{{ route('surveys.show', $survey) }}"
-                                class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors">
-                                {{ __('Participate') }} <i class="fa-solid fa-arrow-right ml-2 text-[10px]"></i>
-                            </a>
+                            @auth
+                                <a href="{{ route('surveys.show', $survey) }}"
+                                    class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors">
+                                    {{ __('Participate') }} <i class="fa-solid fa-arrow-right ml-2 text-[10px]"></i>
+                                </a>
+                            @else
+                                <button
+                                    onclick="urgeLogin('{{ route('surveys.show', $survey) }}', {{ $survey->is_paid ? 'true' : 'false' }}, '{{ number_format($survey->reward_per_response, 0) }}', '{{ $survey->reward_currency ?? 'KES' }}')"
+                                    class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors">
+                                    {{ __('Participate') }} <i class="fa-solid fa-arrow-right ml-2 text-[10px]"></i>
+                                </button>
+                            @endauth
                         </div>
                     </div>
                 </div>
