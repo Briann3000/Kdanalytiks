@@ -1428,6 +1428,7 @@ class SurveyController extends Controller
 
             // --- Reward Logic Start ---
             $rewardMessage = '';
+            $earnedAmount = 0;
             if ($survey->is_paid && $survey->reward_per_response > 0 && auth()->check()) {
                 $user = auth()->user();
 
@@ -1463,6 +1464,7 @@ class SurveyController extends Controller
                             'description' => "Reward for completing Survey ID: {$surveyLocked->id}"
                         ]);
 
+                        $earnedAmount = (float) $surveyLocked->reward_per_response;
                         $rewardMessage = " You earned " . number_format((float) $surveyLocked->reward_per_response, 2) . " " . ($wallet->currency ?? 'KES') . "!";
                     }
                 }
@@ -1521,6 +1523,17 @@ class SurveyController extends Controller
                     \Log::error("AI Background Error: " . $e->getMessage());
                 }
 
+                // Send Notification Email
+                if (auth()->check() && $earnedAmount > 0) {
+                    try {
+                        $user = auth()->user();
+                        $role = $user->role instanceof \App\Enums\UserRole ? $user->role->value : $user->role;
+                        \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\SurveyRewardNotification($survey, $earnedAmount, $user->wallet?->currency ?? 'KES', $role));
+                    } catch (\Exception $e) {
+                        \Log::error("Email Error: " . $e->getMessage());
+                    }
+                }
+
                 session()->flash('success', 'Thank you for completing the survey!' . $rewardMessage);
                 return response()->json(['success' => true]);
             }
@@ -1557,6 +1570,17 @@ class SurveyController extends Controller
                 (new \App\Services\AiService())->analyzeResponseSentiment($response);
             } catch (\Exception $e) {
                 \Log::error("AI Background Error: " . $e->getMessage());
+            }
+
+            // Send Notification Email
+            if (auth()->check() && $earnedAmount > 0) {
+                try {
+                    $user = auth()->user();
+                    $role = $user->role instanceof \App\Enums\UserRole ? $user->role->value : $user->role;
+                    \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\SurveyRewardNotification($survey, $earnedAmount, $user->wallet?->currency ?? 'KES', $role));
+                } catch (\Exception $e) {
+                    \Log::error("Email Error: " . $e->getMessage());
+                }
             }
 
             return redirect()->back()->with('success', 'Thank you for completing the survey!' . $rewardMessage);
