@@ -2,35 +2,36 @@
 
 @section('survey-content')
     <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden" x-data="{ 
-            search: '', 
-            showLightbox: false, 
-            activeMedia: null,
-            media: {{ json_encode($mediaFiles) }},
-            get filteredMedia() {
-                if (!this.search) return this.media;
-                return this.media.filter(m => m.path.toLowerCase().includes(this.search.toLowerCase()));
-            },
-            openLightbox(file) {
-                this.activeMedia = file;
-                this.showLightbox = true;
-            }
-         }">
+                search: '', 
+                showLightbox: false, 
+                activeMedia: null,
+                media: {{ json_encode($mediaFiles) }},
+                get filteredMedia() {
+                    if (!this.search) return this.media;
+                    return this.media.filter(m => m.path.toLowerCase().includes(this.search.toLowerCase()));
+                },
+                openLightbox(file) {
+                    this.activeMedia = file;
+                    this.showLightbox = true;
+                }
+             }">
         <div
             class="px-8 py-6 border-b border-gray-50 bg-slate-50/50 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-                <h5 class="text-sm font-black text-gray-900 uppercase tracking-widest leading-none">Media Gallery</h5>
-                <p class="text-[9px] text-gray-500 font-bold uppercase mt-1 tracking-wider">All media assets submitted by
-                    survey respondents</p>
+                <h5 class="text-sm font-black text-gray-900 uppercase tracking-widest leading-none">
+                    {{ __('Media Gallery') }}</h5>
+                <p class="text-[9px] text-gray-500 font-bold uppercase mt-1 tracking-wider">
+                    {{ __('All media assets submitted by survey respondents') }}</p>
             </div>
             <div class="flex items-center gap-3 w-full md:w-auto">
                 <div class="relative flex-grow">
-                    <input type="text" x-model="search" placeholder="Search by filename..."
+                    <input type="text" x-model="search" placeholder="{{ __('Search by filename...') }}"
                         class="w-full md:w-64 pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-[10px] font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
                     <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]"></i>
                 </div>
                 <span
                     class="px-3 py-2 bg-white border border-gray-200 rounded-xl text-[10px] font-black text-indigo-600 shadow-sm whitespace-nowrap">
-                    <span x-text="filteredMedia.length"></span> / {{ count($mediaFiles) }} Assets
+                    <span x-text="filteredMedia.length"></span> / {{ count($mediaFiles) }} {{ __('Assets') }}
                 </span>
             </div>
         </div>
@@ -53,7 +54,8 @@
                                             class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mb-2">
                                             <i class="fa-solid fa-play text-sm"></i>
                                         </div>
-                                        <span class="text-[8px] font-black uppercase text-gray-500">Video Asset</span>
+                                        <span
+                                            class="text-[8px] font-black uppercase text-gray-500">{{ __('Video Asset') }}</span>
                                     </div>
                                 </template>
                                 <template x-if="file.type === 'audio'">
@@ -62,7 +64,8 @@
                                             class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mb-2">
                                             <i class="fa-solid fa-microphone text-sm"></i>
                                         </div>
-                                        <span class="text-[8px] font-black uppercase text-gray-500">Audio Voice</span>
+                                        <span
+                                            class="text-[8px] font-black uppercase text-gray-500">{{ __('Audio Voice') }}</span>
                                     </div>
                                 </template>
                                 <template x-if="file.type === 'file'">
@@ -71,7 +74,8 @@
                                             class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 mb-2">
                                             <i class="fa-solid fa-file-invoice text-sm"></i>
                                         </div>
-                                        <span class="text-[8px] font-black uppercase text-gray-500">Document</span>
+                                        <span
+                                            class="text-[8px] font-black uppercase text-gray-500">{{ __('Document') }}</span>
                                     </div>
                                 </template>
 
@@ -113,12 +117,12 @@
                         class="w-20 h-20 bg-white rounded-3xl shadow-sm border border-gray-100 flex items-center justify-center mx-auto mb-6">
                         <i class="fa-solid fa-photo-film text-4xl text-gray-200"></i>
                     </div>
-                    <h3 class="text-lg font-black text-gray-900 uppercase tracking-widest leading-none">Discovery Empty</h3>
-                    <p class="text-[10px] text-gray-500 font-bold uppercase mt-2 tracking-wider">No media files match your
-                        current search criteria.</p>
+                    <h3 class="text-lg font-black text-gray-900 uppercase tracking-widest leading-none">
+                        {{ __('Discovery Empty') }}</h3>
+                    <p class="text-[10px] text-gray-500 font-bold uppercase mt-2 tracking-wider">
+                        {{ __('No media files match your current search criteria.') }}</p>
                     <button @click="search = ''"
-                        class="mt-6 px-6 py-2 bg-indigo-600 text-white text-[10px] font-black uppercase rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">Reset
-                        Search</button>
+                        class="mt-6 px-6 py-2 bg-indigo-600 text-white text-[10px] font-black uppercase rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">{{ __('Reset Search') }}</button>
                 </div>
             </template>
         </div>
@@ -170,7 +174,7 @@
                 class="absolute bottom-8 left-1/2 -translate-x-1/2 bg-white/5 backdrop-blur-md px-8 py-4 rounded-2xl border border-white/10 text-center">
                 <h6 class="text-white font-black text-sm tracking-tight mb-1"
                     x-text="activeMedia ? activeMedia.path.split('/').pop() : ''"></h6>
-                <div class="text-indigo-300 font-bold uppercase tracking-[0.2em] text-[10px]">Submitted on <span
+                <div class="text-indigo-300 font-bold uppercase tracking-[0.2em] text-[10px]">{{ __('Submitted on') }} <span
                         x-text="activeMedia ? activeMedia.date : ''"></span></div>
             </div>
         </div>

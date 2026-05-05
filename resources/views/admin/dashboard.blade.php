@@ -12,12 +12,6 @@
                 <p class="text-sm text-gray-500 font-bold uppercase tracking-widest">
                     {{ __('GLOBAL ADMINISTRATION & MONITORING') }}</p>
             </div>
-            <div class="flex space-x-3">
-                <span
-                    class="inline-flex items-center px-4 py-2 rounded-full text-[10px] font-black bg-green-50 text-green-700 border border-green-100 uppercase tracking-widest">
-                    <span class="h-2 w-2 mr-2 rounded-full bg-green-500 animate-pulse"></span>
-                    {{ __('Systems Operational') }}
-                </span>
             </div>
         </div>
 

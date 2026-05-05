@@ -21,7 +21,7 @@
                                 <i class="fa-solid fa-wallet text-indigo-400 text-xl"></i>
                             </div>
                             <span
-                                class="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">Active</span>
+                                class="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">{{ __('Active') }}</span>
                         </div>
 
                         <p class="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-1">{{ __('Available Balance') }}
@@ -125,7 +125,7 @@
                                     class="inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.1em] {{ $transaction->status === 'completed' ? 'bg-green-100/50 text-green-700 border border-green-200' : 'bg-amber-100/50 text-amber-700 border border-amber-200' }}">
                                     <span
                                         class="w-1 h-1 rounded-full mr-2 {{ $transaction->status === 'completed' ? 'bg-green-600' : 'bg-amber-600 animate-pulse' }}"></span>
-                                    {{ $transaction->status }}
+                                    {{ __($transaction->status) }}
                                 </span>
                             </div>
                         </div>

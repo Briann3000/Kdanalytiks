@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Respondent Dashboard')
+@section('title', __('Respondent Dashboard'))
 
 @section('content')
     <div class="px-4 py-6 sm:px-0">
@@ -11,8 +11,7 @@
                         {{ __('Welcome back') }}, {{ auth()->user()->name }}
                     </h3>
                     <p class="text-sm text-gray-600 font-bold uppercase tracking-widest">
-                        {{ __('RESPONDENT DASHBOARD') }} &bull; <span
-                            class="text-green-600">{{ __('SYSTEM ONLINE') }}</span>
+                        {{ __('RESPONDENT DASHBOARD') }}
                     </p>
                 </div>
             </div>
@@ -118,7 +117,7 @@
                 <div class="bg-gray-50 px-5 py-3 text-xs">
                     <a href="{{ route('surveys.public') }}"
                         class="font-bold text-indigo-600 hover:text-indigo-500 uppercase tracking-tighter">
-                        Browse all <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
+                        {{ __('Browse all') }} <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
                     </a>
                 </div>
             </div>
@@ -144,7 +143,7 @@
                 <div class="bg-gray-50 px-5 py-3 text-xs">
                     <a href="{{ route('respondent.history') }}"
                         class="font-bold text-green-600 hover:text-green-500 uppercase tracking-tighter">
-                        View history <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
+                        {{ __('View history') }} <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
                     </a>
                 </div>
             </div>
@@ -199,7 +198,7 @@
                                 </div>
                                 <span
                                     class="text-[10px] px-3 py-1 bg-gray-100 text-gray-500 rounded-full font-black uppercase tracking-widest border border-gray-200">
-                                    {{ $response->survey->category ?? 'General' }}
+                                    {{ __($response->survey->category->value ?? $response->survey->category ?? 'General') }}
                                 </span>
                             </div>
                         @endforeach
@@ -207,7 +206,7 @@
                 @else
                     <div class="text-center py-12">
                         <i class="fa-solid fa-receipt text-gray-200 text-5xl mb-4"></i>
-                        <p class="text-gray-400 font-bold uppercase tracking-widest">No activity recorded yet</p>
+                        <p class="text-gray-400 font-bold uppercase tracking-widest">{{ __('No activity recorded yet') }}</p>
                     </div>
                 @endif
             </div>

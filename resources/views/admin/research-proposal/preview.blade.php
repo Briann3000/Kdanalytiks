@@ -137,7 +137,7 @@
                         <i class="fa-solid fa-arrow-left text-[10px]"></i>
                     </a>
                     <div class="hidden sm:block">
-                        <h1 class="text-[10px] font-black text-gray-900 uppercase tracking-tight leading-none">Preview</h1>
+                        <h1 class="text-[10px] font-black text-gray-900 uppercase tracking-tight leading-none">{{ __('Preview') }}</h1>
                         <p class="text-[8px] text-gray-400 font-bold uppercase tracking-wider">{{ $reportId }}</p>
                     </div>
                 </div>
@@ -315,7 +315,15 @@
                                 class="prose prose-slate prose-lg max-w-none text-gray-700 leading-relaxed font-serif text-justify whitespace-pre-line">
                                 @php
                                     $rendered = e($content);
+                                    // Handle bold (markdown style)
                                     $rendered = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $rendered);
+                                    // Handle bold italics (often used for subheadings in AI output)
+                                    $rendered = preg_replace('/\*\*\*(.+?)\*\*\*/', '<h4 class="text-indigo-700">$1</h4>', $rendered);
+                                    // Handle headings (markdown style)
+                                    $rendered = preg_replace('/^### (.+)$/m', '<h4>$1</h4>', $rendered);
+                                    $rendered = preg_replace('/^## (.+)$/m', '<h3>$1</h3>', $rendered);
+                                    // Handle images (for charts)
+                                    $rendered = preg_replace('/!\[.*?\]\((.+?)\)/', '<img src="$1" class="rounded-xl shadow-lg my-6 max-w-full">', $rendered);
                                     $rendered = nl2br($rendered);
                                 @endphp
                                 {!! $rendered !!}
@@ -401,27 +409,39 @@
                 background: #eef2ff;
                 color: #4338ca;
                 border-color: #c7d2fe;
-                font-weight: 800;
+                font-weight: 900;
+                box-shadow: inset 4px 0 0 #4338ca;
+                transform: translateX(2px);
             }
             .nav-link.is-active.nav-section .nav-icon {
-                background: #c7d2fe;
-                color: #4338ca;
+                background: #4338ca;
+                color: #fff;
+                transform: scale(1.1);
             }
             .nav-link.is-active.nav-chapter {
                 background: #4338ca;
                 color: #fff;
                 border-color: #4338ca;
+                box-shadow: 0 4px 12px rgba(67, 56, 202, 0.2);
             }
             .nav-link.is-active.nav-chapter span:first-child {
                 background: #fff;
                 color: #4338ca;
+                animation: pulse 2s infinite;
             }
             .nav-link.is-active.nav-prelim {
-                background: #f1f5f9;
-                color: #334155;
-                border-color: #cbd5e1;
-                font-weight: 800;
+                background: #f8fafc;
+                color: #0f172a;
+                border-color: #e2e8f0;
+                font-weight: 900;
                 font-style: normal;
+                box-shadow: inset 4px 0 0 #64748b;
+            }
+
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.1); }
+                100% { transform: scale(1); }
             }
 
             /* Responsive sidebar: hide on small screens */

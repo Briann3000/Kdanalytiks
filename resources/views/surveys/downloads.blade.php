@@ -14,7 +14,7 @@
                     });
             },
             deleteExport(filename) {
-                if(!confirm('Delete this snapshot?')) return;
+                if(!confirm('{{ __('Delete this snapshot?') }}')) return;
                 fetch('{{ url('surveys/' . $survey->id . '/downloads') }}/' + filename, {
                     method: 'DELETE',
                     headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
@@ -25,8 +25,8 @@
         <div class="lg:col-span-1 space-y-8">
             <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
                 <div class="px-8 py-6 border-b border-gray-50 bg-slate-50/50">
-                    <h5 class="text-sm font-black text-gray-900 uppercase tracking-widest leading-none">New Export</h5>
-                    <p class="text-[9px] text-gray-500 font-bold uppercase mt-1 tracking-wider">Generate fresh data files
+                    <h5 class="text-sm font-black text-gray-900 uppercase tracking-widest leading-none">{{ __('New Export') }}</h5>
+                    <p class="text-[9px] text-gray-500 font-bold uppercase mt-1 tracking-wider">{{ __('Generate fresh data files') }}
                     </p>
                 </div>
                 <div class="p-8 space-y-4">
@@ -44,10 +44,8 @@
                                 <i class="fa-solid fa-file-csv text-xl"></i>
                             </div>
                             <div>
-                                <span class="block text-xs font-black text-emerald-900 uppercase tracking-tight">CSV
-                                    Spreadsheet</span>
-                                <span class="block text-[8px] text-emerald-600/70 font-bold uppercase tracking-wider">Raw
-                                    data dump</span>
+                                <span class="block text-xs font-black text-emerald-900 uppercase tracking-tight">{{ __('CSV Spreadsheet') }}</span>
+                                <span class="block text-[8px] text-emerald-600/70 font-bold uppercase tracking-wider">{{ __('Raw data dump') }}</span>
                             </div>
                         </div>
                         <i
@@ -63,10 +61,8 @@
                                 <i class="fa-solid fa-file-pdf text-xl"></i>
                             </div>
                             <div>
-                                <span class="block text-xs font-black text-rose-900 uppercase tracking-tight">Analytical
-                                    PDF</span>
-                                <span class="block text-[8px] text-rose-600/70 font-bold uppercase tracking-wider">Report &
-                                    Charts</span>
+                                <span class="block text-xs font-black text-rose-900 uppercase tracking-tight">{{ __('Analytical PDF') }}</span>
+                                <span class="block text-[8px] text-rose-600/70 font-bold uppercase tracking-wider">{{ __('Report & Charts') }}</span>
                             </div>
                         </div>
                         <i
@@ -83,11 +79,9 @@
                                     <i class="fa-solid fa-file-excel text-xl"></i>
                                 </div>
                                 <div>
-                                    <span class="block text-xs font-black text-indigo-900 uppercase tracking-tight">Excel
-                                        (.xlsx)</span>
+                                    <span class="block text-xs font-black text-indigo-900 uppercase tracking-tight">{{ __('Excel (.xlsx)') }}</span>
                                     <span
-                                        class="block text-[8px] text-indigo-600/70 font-bold uppercase tracking-wider">Formatted
-                                        Sheets</span>
+                                        class="block text-[8px] text-indigo-600/70 font-bold uppercase tracking-wider">{{ __('Formatted Sheets') }}</span>
                                 </div>
                             </div>
                             <i
@@ -102,11 +96,10 @@
                                     <i class="fa-solid fa-file-excel text-xl"></i>
                                 </div>
                                 <div>
-                                    <span class="block text-xs font-black text-gray-400 uppercase tracking-tight">Excel
-                                        (.xlsx)</span>
+                                    <span class="block text-xs font-black text-gray-400 uppercase tracking-tight">{{ __('Excel (.xlsx)') }}</span>
                                     <span
                                         class="block text-[8px] text-indigo-400 font-black uppercase tracking-widest flex items-center gap-1">
-                                        <i class="fa-solid fa-lock text-[7px]"></i> Upgrade to Pro
+                                        <i class="fa-solid fa-lock text-[7px]"></i> {{ __('Upgrade to Pro') }}
                                     </span>
                                 </div>
                             </div>
@@ -123,11 +116,9 @@
                                     <i class="fa-solid fa-code text-xl"></i>
                                 </div>
                                 <div>
-                                    <span class="block text-xs font-black text-amber-900 uppercase tracking-tight">JSON
-                                        Archive</span>
+                                    <span class="block text-xs font-black text-amber-900 uppercase tracking-tight">{{ __('JSON Archive') }}</span>
                                     <span
-                                        class="block text-[8px] text-amber-600/70 font-bold uppercase tracking-wider">Developer
-                                        Data</span>
+                                        class="block text-[8px] text-amber-600/70 font-bold uppercase tracking-wider">{{ __('Developer Data') }}</span>
                                 </div>
                             </div>
                             <i
@@ -142,11 +133,10 @@
                                     <i class="fa-solid fa-code text-xl"></i>
                                 </div>
                                 <div>
-                                    <span class="block text-xs font-black text-gray-400 uppercase tracking-tight">JSON
-                                        Archive</span>
+                                    <span class="block text-xs font-black text-gray-400 uppercase tracking-tight">{{ __('JSON Archive') }}</span>
                                     <span
                                         class="block text-[8px] text-amber-400 font-black uppercase tracking-widest flex items-center gap-1">
-                                        <i class="fa-solid fa-lock text-[7px]"></i> Upgrade to Pro
+                                        <i class="fa-solid fa-lock text-[7px]"></i> {{ __('Upgrade to Pro') }}
                                     </span>
                                 </div>
                             </div>
@@ -163,11 +153,9 @@
                                     <i class="fa-solid fa-file-code text-xl"></i>
                                 </div>
                                 <div>
-                                    <span class="block text-xs font-black text-slate-900 uppercase tracking-tight">XML
-                                        Document</span>
+                                    <span class="block text-xs font-black text-slate-900 uppercase tracking-tight">{{ __('XML Document') }}</span>
                                     <span
-                                        class="block text-[8px] text-slate-600/70 font-bold uppercase tracking-wider">Enterprise
-                                        Sync</span>
+                                        class="block text-[8px] text-slate-600/70 font-bold uppercase tracking-wider">{{ __('Enterprise Sync') }}</span>
                                 </div>
                             </div>
                             <i
@@ -182,11 +170,10 @@
                                     <i class="fa-solid fa-file-code text-xl"></i>
                                 </div>
                                 <div>
-                                    <span class="block text-xs font-black text-gray-400 uppercase tracking-tight">XML
-                                        Document</span>
+                                    <span class="block text-xs font-black text-gray-400 uppercase tracking-tight">{{ __('XML Document') }}</span>
                                     <span
                                         class="block text-[8px] text-slate-400 font-black uppercase tracking-widest flex items-center gap-1">
-                                        <i class="fa-solid fa-lock text-[7px]"></i> Enterprise Only
+                                        <i class="fa-solid fa-lock text-[7px]"></i> {{ __('Enterprise Only') }}
                                     </span>
                                 </div>
                             </div>
@@ -203,11 +190,9 @@
                                     <i class="fa-solid fa-square-poll-vertical text-xl"></i>
                                 </div>
                                 <div>
-                                    <span class="block text-xs font-black text-violet-900 uppercase tracking-tight">SPSS
-                                        (.sav)</span>
+                                    <span class="block text-xs font-black text-violet-900 uppercase tracking-tight">{{ __('SPSS (.sav)') }}</span>
                                     <span
-                                        class="block text-[8px] text-violet-600/70 font-bold uppercase tracking-wider">Statistical
-                                        Analysis</span>
+                                        class="block text-[8px] text-violet-600/70 font-bold uppercase tracking-wider">{{ __('Statistical Analysis') }}</span>
                                 </div>
                             </div>
                             <i
@@ -222,11 +207,10 @@
                                     <i class="fa-solid fa-square-poll-vertical text-xl"></i>
                                 </div>
                                 <div>
-                                    <span class="block text-xs font-black text-gray-400 uppercase tracking-tight">SPSS
-                                        (.sav)</span>
+                                    <span class="block text-xs font-black text-gray-400 uppercase tracking-tight">{{ __('SPSS (.sav)') }}</span>
                                     <span
                                         class="block text-[8px] text-violet-400 font-black uppercase tracking-widest flex items-center gap-1">
-                                        <i class="fa-solid fa-lock text-[7px]"></i> Enterprise Only
+                                        <i class="fa-solid fa-lock text-[7px]"></i> {{ __('Enterprise Only') }}
                                     </span>
                                 </div>
                             </div>
@@ -243,10 +227,8 @@
                                     <i class="fa-brands fa-google-drive text-xl"></i>
                                 </div>
                                 <div>
-                                    <span class="block text-xs font-black text-cyan-900 uppercase tracking-tight">Google
-                                        Sheets</span>
-                                    <span class="block text-[8px] text-cyan-600/70 font-bold uppercase tracking-wider">Live
-                                        Sync</span>
+                                    <span class="block text-xs font-black text-cyan-900 uppercase tracking-tight">{{ __('Google Sheets') }}</span>
+                                    <span class="block text-[8px] text-cyan-600/70 font-bold uppercase tracking-wider">{{ __('Live Sync') }}</span>
                                 </div>
                             </div>
                             <i class="fa-solid fa-arrow-right text-cyan-300 group-hover:translate-x-1 transition-transform"></i>
@@ -260,11 +242,10 @@
                                     <i class="fa-brands fa-google-drive text-xl"></i>
                                 </div>
                                 <div>
-                                    <span class="block text-xs font-black text-gray-400 uppercase tracking-tight">Google
-                                        Sheets</span>
+                                    <span class="block text-xs font-black text-gray-400 uppercase tracking-tight">{{ __('Google Sheets') }}</span>
                                     <span
                                         class="block text-[8px] text-cyan-400 font-black uppercase tracking-widest flex items-center gap-1">
-                                        <i class="fa-solid fa-lock text-[7px]"></i> Enterprise Only
+                                        <i class="fa-solid fa-lock text-[7px]"></i> {{ __('Enterprise Only') }}
                                     </span>
                                 </div>
                             </div>
@@ -281,17 +262,16 @@
                 class="bg-white rounded-[2.5rem] shadow-xl border border-gray-100 overflow-hidden min-h-[550px] flex flex-col">
                 <div class="px-10 py-8 border-b border-gray-50 bg-slate-50/30 flex justify-between items-center">
                     <div>
-                        <h5 class="text-base font-black text-gray-900 uppercase tracking-widest leading-none">Export History
+                        <h5 class="text-base font-black text-gray-900 uppercase tracking-widest leading-none">{{ __('Export History') }}
                         </h5>
-                        <p class="text-[10px] text-gray-500 font-bold uppercase mt-2 tracking-wider">Persistent archive of
-                            all generated reports</p>
+                        <p class="text-[10px] text-gray-500 font-bold uppercase mt-2 tracking-wider">{{ __('Persistent archive of all generated reports') }}</p>
                     </div>
                     <div class="flex items-center gap-4">
                         <span x-show="loading"
-                            class="text-[10px] font-bold text-indigo-500 animate-pulse">Refreshing...</span>
+                            class="text-[10px] font-bold text-indigo-500 animate-pulse">{{ __('Refreshing...') }}</span>
                         <span
                             class="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-100 px-3 py-1.5 rounded-xl border border-gray-100">
-                            <span x-text="exports.length"></span> Snapshots</span>
+                            <span x-text="exports.length"></span> {{ __('Snapshots') }}</span>
                         <button type="button" @click="refresh()"
                             class="w-10 h-10 bg-white border border-gray-100 rounded-2xl flex items-center justify-center text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
                             <i class="fa-solid fa-rotate text-sm" :class="loading ? 'fa-spin' : ''"></i>
@@ -307,13 +287,13 @@
                                     <tr class="bg-white/80 backdrop-blur-sm">
                                         <th
                                             class="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                            Snapshot Detail</th>
+                                            {{ __('Snapshot Detail') }}</th>
                                         <th
                                             class="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                            Timestamp</th>
+                                            {{ __('Timestamp') }}</th>
                                         <th
                                             class="px-8 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                            Control</th>
+                                            {{ __('Control') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100">
@@ -369,9 +349,8 @@
                                 class="w-20 h-20 bg-white rounded-3xl flex items-center justify-center text-gray-200 shadow-sm mb-6">
                                 <i class="fa-solid fa-cloud-arrow-down text-4xl"></i>
                             </div>
-                            <h6 class="text-xs font-black text-gray-400 uppercase tracking-widest">No Snapshots Found</h6>
-                            <p class="text-[9px] text-gray-400 font-bold uppercase mt-2">Generate your first report to start
-                                history</p>
+                            <h6 class="text-xs font-black text-gray-400 uppercase tracking-widest">{{ __('No Snapshots Found') }}</h6>
+                            <p class="text-[9px] text-gray-400 font-bold uppercase mt-2">{{ __('Generate your first report to start history') }}</p>
                         </div>
                     </template>
                 </div>
@@ -379,8 +358,7 @@
                 <div class="px-10 py-6 bg-gray-50/50 border-t border-gray-50 mt-auto">
                     <div class="flex items-center gap-2 text-indigo-400">
                         <i class="fa-solid fa-circle-info text-xs"></i>
-                        <p class="text-[9px] font-bold uppercase tracking-widest">Exports are retained for 30 days unless
-                            manually purged</p>
+                        <p class="text-[9px] font-bold uppercase tracking-widest">{{ __('Exports are retained for 30 days unless manually purged') }}</p>
                     </div>
                 </div>
             </div>

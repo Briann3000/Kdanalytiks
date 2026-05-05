@@ -1,44 +1,44 @@
 @extends('layouts.app')
 
-@section('title', 'Organization Dashboard')
+@section('title', __('ORGANIZATION DASHBOARD'))
 
 @section('content')
-    <h1>Organization Dashboard</h1>
-    <p>Welcome, {{ auth()->user()->name }}</p>
+    <h1>{{ __('ORGANIZATION DASHBOARD') }}</h1>
+    <p>{{ __('Welcome') }}, {{ auth()->user()->name }}</p>
 
     @if($organization)
         <h2>{{ $organization->name }}</h2>
-        <p>Payment Status: {{ $organization->payment_status }}</p>
+        <p>{{ __('Payment Status') }}: {{ __($organization->payment_status) }}</p>
     @else
-        <p>No organization profile found.</p>
+        <p>{{ __('No organization profile found.') }}</p>
     @endif
 
-    <h3>Your Surveys</h3>
+    <h3>{{ __('Your Surveys') }}</h3>
     @if($surveys->count() > 0)
         <table class="w3-table w3-striped">
             <tr>
-                <th>Title</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>{{ __('Title') }}</th>
+                <th>{{ __('Status') }}</th>
+                <th>{{ __('Actions') }}</th>
             </tr>
             @foreach($surveys as $survey)
                 <tr>
                     <td>{{ $survey->title }}</td>
-                    <td>{{ $survey->status }}</td>
+                    <td>{{ __($survey->status) }}</td>
                     <td>
-                        <a href="#" class="w3-button w3-small w3-blue">Edit</a>
-                        <a href="#" class="w3-button w3-small w3-green">View Responses</a>
+                        <a href="#" class="w3-button w3-small w3-blue">{{ __('Edit') }}</a>
+                        <a href="#" class="w3-button w3-small w3-green">{{ __('View Responses') }}</a>
                     </td>
                 </tr>
             @endforeach
         </table>
     @else
-        <p>No surveys yet.</p>
+        <p>{{ __('No surveys yet.') }}</p>
     @endif
 
     <div class="w3-margin-top">
-        <a href="{{ route('organization.create-survey') }}" class="w3-button w3-blue">Create New Survey</a>
-        <a href="{{ route('organization.surveys') }}" class="w3-button w3-green">Manage Surveys</a>
-        <a href="{{ route('account.settings') }}" class="w3-button w3-indigo">Account Settings</a>
+        <a href="{{ route('organization.create-survey') }}" class="w3-button w3-blue">{{ __('Create New Survey') }}</a>
+        <a href="{{ route('organization.surveys') }}" class="w3-button w3-green">{{ __('Manage Surveys') }}</a>
+        <a href="{{ route('account.settings') }}" class="w3-button w3-indigo">{{ __('Account Settings') }}</a>
     </div>
 @endsection

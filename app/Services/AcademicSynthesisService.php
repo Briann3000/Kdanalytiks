@@ -45,7 +45,7 @@ class AcademicSynthesisService
 
         // ── DEFINE ALL PROMPTS ──
         $prelimPrompt = "Write Abstract, Abbreviations, and Definition of Key Terms for '{$survey->title}'. Use [SECTION: Name] markers.\nDATA:\n{$dataSummary}";
-        $ch1Prompt = "Write Chapter 1: Introduction for '{$survey->title}'. Use markers: [SECTION: 1.1 Background of the Study], [SECTION: 1.2 Statement of the Problem], [SECTION: 1.3 Objectives and Research Questions], [SECTION: 1.4 Significance of the Study], [SECTION: 1.5 Scope and Limitations].";
+        $ch1Prompt = "Write Chapter 1: Introduction for '{$survey->title}'. Use markers: [SECTION: 1.1 Background of the Study], [SECTION: 1.2 Statement of the Problem], [SECTION: 1.3 Research Objectives / Questions], [SECTION: 1.4 Significance of the Study], [SECTION: 1.5 Scope and Limitations].";
         $ch2Prompt = "Write Chapter 2: Literature Review for '{$survey->title}'. Use markers: [SECTION: 2.1 Introduction], [SECTION: 2.2 Theoretical Framework], [SECTION: 2.3 Conceptual Framework], [SECTION: 2.4 Empirical Review], [SECTION: 2.5 Research Gaps], [SECTION: 2.6 Summary]. References:\n{$referencePrompt}";
         $ch3Prompt = "Write Chapter 3: Research Methodology for '{$survey->title}'. Use markers: [SECTION: 3.1 Research Design], [SECTION: 3.2 Target Population], [SECTION: 3.3 Sample Size and Sampling Techniques], [SECTION: 3.4 Data Collection Instruments], [SECTION: 3.5 Data Collection Procedures], [SECTION: 3.6 Validity and Reliability], [SECTION: 3.7 Data Analysis and Presentation].";
 
@@ -56,17 +56,18 @@ class AcademicSynthesisService
         }
         $qPrompt = "Write Chapter 4: Results and Discussion for '{$survey->title}'.\n" .
             "Total respondents: {$totalResponses}.\n" .
-            "Use markers: [SECTION: 4.1 Introduction], [SECTION: 4.2 Response Rate], [SECTION: 4.3 Respondent Demographics], [SECTION: 4.4 Data Analysis and Presentation], [SECTION: 4.5 Discussion of Findings], [SECTION: 4.6 Summary].\n" .
+            "Use markers: [SECTION: 4.1 Introduction], [SECTION: 4.2 Response Rate], [SECTION: 4.3 Respondent Demographics], [SECTION: 4.4 Data Analysis and Presentation], [SECTION: 4.5 Discussion of Findings (Research Objectives / Questions)], [SECTION: 4.6 Summary].\n" .
             "CRITICAL RULES:\n" .
             "- ALL percentages, frequencies, and figures you mention MUST come EXACTLY from the DATA below. DO NOT invent or estimate any numbers.\n" .
             "- If data for a question is empty ([]), write 'No quantitative data was collected for this question' and provide only a qualitative summary.\n" .
             "GUIDELINES for 4.4:\n" .
             "- For each survey question, provide a sub-heading: 4.4.1 [Question Text], 4.4.2 [Question Text], etc.\n" .
             "- Present the factual findings first (using EXACT figures from the data), then provide a brief interpretation of what the data means for that question.\n" .
-            "- DO NOT use asterisks (**) for sub-headings. Write them as plain text on their own line.\n" .
+            "- DO NOT use asterisks (***) or (**) for sub-headings. Write them as plain text on their own line.\n" .
             "GUIDELINES for 4.5:\n" .
-            "- Structure 4.5 around the specific Research Objectives you generated in Chapter 1.\n" .
-            "- For each objective, discuss how the collected survey data addresses it, citing specific findings from 4.4.\n" .
+            "- ONLY refer to the Research Objectives / Questions generated in Chapter 1.\n" .
+            "- For each objective/question, discuss how the collected survey data addresses it, citing specific findings from 4.4.\n" .
+            "- DO NOT append '(linked to objectives)' to any headings in 4.5.\n" .
             "DATA:\n{$groupContext}";
 
         $ch5RefPrompt = "Write Chapter 5 AND References for '{$survey->title}'.\n" .
@@ -145,8 +146,22 @@ class AcademicSynthesisService
                     $sections[$targetKey] .= "\n\n" . $this->buildSingleQuestionTableHtml($q['label'], $q['stats'], $totalResponses);
                 }
             }
-            // Fix sub-headings formatting (convert **4.4.x ...** or plain 4.4.x to headings)
-            $sections[$targetKey] = preg_replace('/(?:\*\*)?(4\.4\.\d+\s+[^\n\*]+)(?:\*\*)?/', '<h4>$1</h4>', $sections[$targetKey]);
+            // Fix sub-headings formatting (convert **4.4.x ...** or plain 4.4.x or ***4.4.x...*** to headings)
+            $sections[$targetKey] = preg_replace('/(?:\*+)?(4\.4\.\d+\s+[^\n\*]+)(?:\*+)?/', '<h4>$1</h4>', $sections[$targetKey]);
+            // Remove "(linked to objectives)" text from any headings
+            $sections[$targetKey] = preg_replace('/\s*\(linked\s+to\s+objectives\)/i', '', $sections[$targetKey]);
+        }
+
+        // Apply cleaning to all sections
+        foreach ($sections as $k => $v) {
+            if ($v !== '__chapter_header__') {
+                $sections[$k] = preg_replace('/\s*\(linked\s+to\s+objectives\)/i', '', $sections[$k]);
+
+                // Fix "Definition of Key Terms" asterisk formatting (e.g. **Term**: ... or ***Term***: ...)
+                if (str_contains($k, 'Definition of Key Terms')) {
+                    $sections[$k] = preg_replace('/(?:\*+)([^\*:]+)(?:\*+):/', '<strong>$1</strong>:', $sections[$k]);
+                }
+            }
         }
 
         // ── APPENDICES ──

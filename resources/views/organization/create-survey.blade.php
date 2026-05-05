@@ -1,14 +1,14 @@
 @extends('layouts.app')
 
-@section('title', 'Create Survey')
+@section('title', __('Create Survey'))
 
 @section('content')
-    <h1>Create New Survey</h1>
+    <h1>{{ __('Create New Survey') }}</h1>
 
     @if ($errors->any())
         <div class="w3-panel w3-red w3-round">
             @foreach ($errors->all() as $error)
-                <p>{{ $error }}</p>
+                <p>{{ __($error) }}</p>
             @endforeach
         </div>
     @endif
@@ -16,34 +16,34 @@
     <form method="post" action="{{ route('organization.store-survey') }}" class="w3-container w3-card w3-white w3-padding">
         @csrf
         <p>
-            <label>Title</label>
+            <label>{{ __('Title') }}</label>
             <input class="w3-input w3-border" type="text" name="title" required>
         </p>
         <p>
-            <label>Description</label>
+            <label>{{ __('Description') }}</label>
             <textarea class="w3-input w3-border" name="description" rows="4"></textarea>
         </p>
         <p>
-            <label>Category</label>
+            <label>{{ __('Category') }}</label>
             <select class="w3-select w3-border" name="category" required>
-                <option value="">Select Category</option>
-                <option value="Marketing">Marketing</option>
-                <option value="Academic">Academic</option>
-                <option value="Product">Product</option>
-                <option value="Political">Political</option>
+                <option value="">{{ __('Select Category') }}</option>
+                <option value="Marketing">{{ __('Market Research') }}</option>
+                <option value="Academic">{{ __('Academic') }}</option>
+                <option value="Product">{{ __('Product') }}</option>
+                <option value="Political">{{ __('Polls') }}</option>
             </select>
         </p>
         <p>
-            <label>Type</label>
+            <label>{{ __('Type') }}</label>
             <select class="w3-select w3-border" name="type" required>
-                <option value="">Select Type</option>
-                <option value="public">Public</option>
-                <option value="invitation">Invitation Only</option>
+                <option value="">{{ __('Select Type') }}</option>
+                <option value="public">{{ __('Public') }}</option>
+                <option value="invitation">{{ __('Invitation Only') }}</option>
             </select>
         </p>
         <p>
-            <button class="w3-button w3-blue w3-round" type="submit">Create Survey</button>
-            <a href="{{ route('organization.surveys') }}" class="w3-button w3-grey w3-round">Cancel</a>
+            <button class="w3-button w3-blue w3-round" type="submit">{{ __('Create Survey') }}</button>
+            <a href="{{ route('organization.surveys') }}" class="w3-button w3-grey w3-round">{{ __('Cancel') }}</a>
         </p>
     </form>
 @endsection
