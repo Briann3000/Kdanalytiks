@@ -84,10 +84,37 @@
                                             }
                                             // Handle media paths
                                             if (str_starts_with($val, 'uploads/')) {
-                                                $val = __('Media File');
+                                                $mediaUrl = asset('storage/' . $val);
+                                                $val = '<a href="' . $mediaUrl . '" target="_blank" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-bold"><i class="fa-solid fa-play-circle mr-1"></i> ' . __('View Media') . '</a>';
                                             }
+                                            // Handle signature data (base64 PNG)
+                                            elseif (str_contains($val, 'base64,')) {
+                                                $val = '<a href="javascript:void(0)" onclick="Swal.fire({title:\'Signature\', imageUrl:\''.$val.'\', imageAlt:\'Signature\', customClass: {image: \'rounded-xl border border-gray-100 shadow-lg\'}})" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-bold"><i class="fa-solid fa-signature mr-1"></i> ' . __('View Signature') . '</a>';
+                                            }
+                                            // Handle location coordinates
+                                            elseif (preg_match('/^-?\d+\.\d+,-?\d+\.\d+$/', $val)) {
+                                                $parts = explode(',', $val);
+                                                $val = '📍 ' . $parts[0] . ', ' . $parts[1];
+                                            }
+                                            // Handle JSON arrays (repeat groups)
+                                            elseif (str_starts_with($val, '[') && json_decode($val) !== null) {
+                                                $decoded = json_decode($val, true);
+                                                $val = count($decoded) . ' ' . __('entries');
+                                            }
+                                            // Handle JSON objects (likert matrix)
+                                            elseif (str_starts_with($val, '{') && json_decode($val) !== null) {
+                                                $decoded = json_decode($val, true);
+                                                $pairs = [];
+                                                foreach($decoded as $k => $v) {
+                                                    $pairs[] = (str_contains($k, 'item-') ? '' : $k . ': ') . $v;
+                                                }
+                                                $val = implode(', ', $pairs);
+                                            }
+                                            // Handle acknowledge fields
+                                            elseif ($val === 'true') { $val = '✅'; }
+                                            elseif ($val === 'false') { $val = '❌'; }
                                         @endphp
-                                        {{ str($val)->limit(40) }}
+                                        {!! $val !!}
                                     </td>
                                 @endforeach
 

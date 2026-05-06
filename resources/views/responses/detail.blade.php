@@ -68,25 +68,73 @@
             @if(!empty($survey->json_schema))
                 @php
                     $jsonAnswer = $response->answers->first();
-                    $parsedData = $jsonAnswer ? json_decode($jsonAnswer->value, true) : null;
+                    $parsedData = $jsonAnswer ? json_decode($jsonAnswer->value, true) : [];
+                    $schemaFields = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
+                    if (!is_array($schemaFields)) $schemaFields = [];
+                    
+                    // Filter out header and paragraph
+                    $schemaFields = array_filter($schemaFields, function($field) {
+                        return isset($field['name']) && !in_array($field['type'], ['header', 'paragraph']);
+                    });
                 @endphp
                 
-                @if($parsedData && is_array($parsedData))
-                    @foreach($parsedData as $data)
-                        @if(isset($data['name']) && isset($data['userData']))
-                            <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 hover:bg-gray-50">
-                                <dt class="text-sm font-medium text-gray-700">
-                                    {{ $data['label'] ?? $data['name'] }}
-                                </dt>
-                                <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 font-bold whitespace-pre-wrap">
-                                    @if(is_array($data['userData']))
-                                        {{ implode(', ', $data['userData']) }}
-                                    @else
-                                        {{ $data['userData'] }}
-                                    @endif
-                                </dd>
-                            </div>
-                        @endif
+                @if(count($schemaFields) > 0)
+                    @foreach($schemaFields as $field)
+                        @php
+                            $val = '—';
+                            $label = $field['label'] ?? $field['name'];
+                            
+                            foreach ($parsedData as $data) {
+                                if (isset($data['name']) && $data['name'] === $field['name']) {
+                                    $val = $data['userData'] ?? '—';
+                                    if (is_array($val)) {
+                                        $val = implode(', ', $val);
+                                    }
+                                    break;
+                                }
+                            }
+                            
+                            $valStr = trim((string)$val);
+                            
+                            // Formatting logic
+                            if (str_starts_with($valStr, 'uploads/')) {
+                                $mediaUrl = asset('storage/' . $valStr);
+                                $displayVal = '<a href="' . $mediaUrl . '" target="_blank" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-bold"><i class="fa-solid fa-play-circle mr-1"></i> ' . __('View Media') . '</a>';
+                            } elseif (str_contains($valStr, 'base64,')) {
+                                $displayVal = '<a href="javascript:void(0)" onclick="Swal.fire({title:\'Signature\', imageUrl:\''.$valStr.'\', imageAlt:\'Signature\', customClass: {image: \'rounded-xl border border-gray-100 shadow-lg\'}})" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-bold"><i class="fa-solid fa-signature mr-1"></i> ' . __('View Signature') . '</a>';
+                            } elseif (preg_match('/^-?\d+\.\d+,-?\d+\.\d+$/', $valStr)) {
+                                $parts = explode(',', $valStr);
+                                $displayVal = '📍 ' . $parts[0] . ', ' . $parts[1];
+                            } elseif (str_starts_with($valStr, '[') && ($decoded = json_decode($valStr, true)) !== null) {
+                                $displayVal = empty($decoded) ? '<span class="text-gray-400 font-normal">—</span>' : count($decoded) . ' ' . __('entries');
+                            } elseif (str_starts_with($valStr, '{') && ($decoded = json_decode($valStr, true)) !== null) {
+                                if (empty((array)$decoded)) {
+                                    $displayVal = '<span class="text-gray-400 font-normal">—</span>';
+                                } else {
+                                    $pairs = [];
+                                    foreach($decoded as $k => $v) {
+                                        $pairs[] = (str_contains((string)$k, 'item-') ? '' : $k . ': ') . (is_array($v) ? json_encode($v) : $v);
+                                    }
+                                    $displayVal = implode(', ', $pairs);
+                                }
+                            } elseif ($valStr === 'true' || $valStr === '1') { 
+                                $displayVal = '✅'; 
+                            } elseif ($valStr === 'false' || $valStr === '0') { 
+                                $displayVal = '❌'; 
+                            } elseif ($valStr === '—' || $valStr === '') {
+                                $displayVal = '<span class="text-gray-400 font-normal">—</span>';
+                            } else {
+                                $displayVal = htmlspecialchars($valStr);
+                            }
+                        @endphp
+                        <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 hover:bg-gray-50">
+                            <dt class="text-sm font-medium text-gray-700">
+                                {{ $label }}
+                            </dt>
+                            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 font-bold whitespace-pre-wrap">
+                                {!! $displayVal !!}
+                            </dd>
+                        </div>
                     @endforeach
                 @else
                     <div class="py-4 sm:py-5 sm:px-6">

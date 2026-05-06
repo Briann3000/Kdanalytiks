@@ -8,6 +8,10 @@
         <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jQuery-formBuilder/3.4.2/form-render.min.js"></script>
+        <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     @endif
 
     <style>
@@ -84,6 +88,86 @@
             width: 1.25rem !important;
             height: 1.25rem !important;
             accent-color: #4f46e5 !important;
+        }
+
+        .location-map-container {
+            width: 100%;
+            height: 250px;
+            border-radius: 1rem;
+            z-index: 1;
+            border: 2px solid #f1f5f9;
+            display: none;
+            /* Hidden by default, shown only if Leaflet loads */
+        }
+
+        .signature-canvas {
+            touch-action: none;
+            cursor: crosshair;
+            border: 2px dashed #cbd5e1;
+            border-radius: 1rem;
+            background: #ffffff;
+            width: 100%;
+            height: 200px;
+            display: block;
+        }
+
+        .qr-reader-container {
+            background: #f8fafc;
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 2px solid #e2e8f0;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        #qr-canvas {
+            width: 100% !important;
+            border-radius: 1rem;
+        }
+
+        .btn-scanner-start {
+            background: #4f46e5;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 1px;
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-scanner-start:hover {
+            background: #4338ca;
+            transform: translateY(-2px);
+        }
+
+        .pulse-loc {
+            animation: pulse-loc 2s infinite;
+        }
+
+        @keyframes pulse-loc {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 10px rgba(79, 70, 229, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(79, 70, 229, 0);
+            }
         }
 
         /* Choice Highlighting */
@@ -173,100 +257,161 @@
             font-weight: 800;
         }
 
-        .recorder-dashboard {
-            background: #1e293b;
-            color: white;
-            padding: 2rem;
-            border-radius: 1.5rem;
-            text-align: center;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
-        /* Generated Header Styling */
-        .rendered-form h1 {
-            font-size: 1.875rem !important;
-            font-weight: 900 !important;
-            color: #111827 !important;
-            padding-left: 2.5rem !important;
-            border-left: 6px solid #6366f1 !important;
-            margin-top: 3.5rem !important;
-            margin-bottom: 2rem !important;
-            line-height: 1.2 !important;
-        }
-
-        .rendered-form h2 {
-            font-size: 1.5rem !important;
-            font-weight: 800 !important;
-            color: #1f2937 !important;
-            padding-left: 1.5rem !important;
-            margin-top: 2.5rem !important;
-            margin-bottom: 1.5rem !important;
-            line-height: 1.3 !important;
-        }
-
-        .rendered-form h3 {
-            font-size: 1.125rem !important;
-            font-weight: 800 !important;
-            color: #1f2937 !important;
-            padding-left: 1rem !important;
-            margin-top: 2rem !important;
-            margin-bottom: 1rem !important;
-        }
-
-        .recorder-status {
-            font-size: 0.7rem;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.2em;
-            color: #94a3b8;
-            margin-bottom: 1.5rem;
-        }
-
-        .recorder-timer {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin: 1rem 0;
-            color: #f8fafc;
-            text-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
-        }
-
-        .record-btn {
-            width: 5rem;
-            height: 5rem;
-            background: #ef4444;
-            border-radius: 999px;
-            display: inline-flex;
+        /* Kobo Style Media Buttons */
+        .kobo-media-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
             align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            border: 6px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .record-btn:hover {
-            transform: scale(1.05);
-            background: #f87171;
+        .kobo-record-btn {
+            background-color: #4a7ba5 !important;
+            color: white !important;
+            padding: 10px 18px !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            cursor: pointer !important;
+            border: none !important;
+            transition: all 0.2s ease !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+            height: 42px !important;
         }
 
-        .record-btn.recording {
-            animation: pulse-red 2s infinite;
-            border-radius: 1rem;
-            background: #dc2626;
+        .kobo-record-btn:hover {
+            background-color: #3b6385 !important;
+            transform: translateY(-1px);
         }
 
-        @keyframes pulse-red {
+        .kobo-record-btn.recording {
+            background-color: #ef4444 !important;
+            animation: kobo-pulse 1.5s infinite;
+        }
+
+        @keyframes kobo-pulse {
             0% {
-                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+                opacity: 1;
             }
 
-            70% {
-                box-shadow: 0 0 0 20px rgba(239, 68, 68, 0);
+            50% {
+                opacity: 0.7;
             }
 
             100% {
-                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+                opacity: 1;
             }
+        }
+
+        .kobo-upload-btn {
+            background-color: #d0e9f8 !important;
+            color: #005fa8 !important;
+            padding: 10px 18px !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            cursor: pointer !important;
+            border: none !important;
+            transition: all 0.2s ease !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+            height: 42px !important;
+        }
+
+        .kobo-upload-btn:hover {
+            background-color: #b8dcf2 !important;
+            transform: translateY(-1px);
+        }
+
+        .kobo-status-badge {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #64748b;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .kobo-timer {
+            font-family: monospace;
+            font-size: 14px;
+            font-weight: 700;
+            color: #475569;
+            margin-left: 8px;
+        }
+
+        /* Repeat Group */
+        .repeat-entry {
+            border-left: 3px solid #6366f1;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            padding-left: 1.5rem;
+            background: #fafafe;
+            border-radius: 0 1rem 1rem 0;
+        }
+
+        .repeat-entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        /* Likert Matrix */
+        .likert-matrix-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .likert-matrix-table th {
+            padding: 0.75rem 0.5rem;
+            text-align: center;
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: #6b7280;
+            text-transform: uppercase;
+            background: #f9fafb;
+        }
+
+        .likert-matrix-table th:first-child {
+            text-align: left;
+            border-radius: 0.75rem 0 0 0;
+        }
+
+        .likert-matrix-table th:last-child {
+            border-radius: 0 0.75rem 0 0;
+        }
+
+        .likert-matrix-table td {
+            padding: 0.75rem 0.5rem;
+            text-align: center;
+            border-top: 1px solid #f3f4f6;
+        }
+
+        .likert-matrix-table td:first-child {
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.875rem;
+        }
+
+        .likert-matrix-table td input[type="radio"] {
+            accent-color: #4f46e5;
+            width: 1.15rem;
+            height: 1.15rem;
+            cursor: pointer;
+        }
+
+        .likert-matrix-table tr:hover td {
+            background: #f5f3ff;
         }
     </style>
 @endsection
@@ -411,46 +556,245 @@
                         </form>
 
                         <script>
-                            jQuery(function ($) {
-                                let surveyData = @json($survey->json_schema);
+                            // --- Global Interactive State (Defined immediately) ---
+                            window._locationMaps = window._locationMaps || {};
+                            window._qrScanners = window._qrScanners || {};
+                            window._signaturePads = window._signaturePads || {};
+                            window._repeatCounters = window._repeatCounters || {};
 
-                                if (typeof surveyData === 'string' && surveyData.trim() !== '') {
+                            // --- Advanced Field Setup Functions ---
+                            window.setupLocationMap = function (id) {
+                                setTimeout(() => {
+                                    const mapEl = document.getElementById('map_' + id);
+                                    if (!mapEl || window._locationMaps[id]) return;
+                                    if (typeof L === 'undefined') return;
                                     try {
-                                        surveyData = JSON.parse(surveyData);
-                                        // Handle potential double-parsing if Blade escaped a JSON string
-                                        if (typeof surveyData === 'string' && surveyData.trim() !== '') {
-                                            surveyData = JSON.parse(surveyData);
+                                        mapEl.style.display = 'block';
+                                        const map = L.map('map_' + id).setView([0, 0], 2);
+                                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
+                                        setTimeout(() => map.invalidateSize(), 200);
+                                        setTimeout(() => map.invalidateSize(), 1000);
+                                        window._locationMaps[id] = { map: map, marker: null };
+                                    } catch (e) { mapEl.style.display = 'none'; }
+                                }, 500);
+                            };
+
+                            window.captureLocation = function (id) {
+                                const statusEl = document.getElementById('loc_status_' + id);
+                                const input = document.getElementById('input_' + id);
+                                if (!navigator.geolocation) { statusEl.innerText = 'Not supported'; return; }
+                                statusEl.innerText = 'Acquiring...';
+                                navigator.geolocation.getCurrentPosition(
+                                    (pos) => {
+                                        const lat = pos.coords.latitude.toFixed(6);
+                                        const lng = pos.coords.longitude.toFixed(6);
+                                        input.value = lat + ',' + lng;
+                                        statusEl.innerText = '📍 ' + lat + ', ' + lng;
+                                        if (window._locationMaps[id]) {
+                                            const m = window._locationMaps[id];
+                                            m.map.invalidateSize();
+                                            m.map.setView([lat, lng], 15);
+                                            if (m.marker) m.map.removeLayer(m.marker);
+                                            m.marker = L.marker([lat, lng]).addTo(m.map);
                                         }
-                                    } catch (e) {
-                                        console.error("Failed to parse stringified surveyData:", e);
-                                        surveyData = [];
-                                    }
+                                    },
+                                    (err) => { statusEl.innerText = 'Error: ' + err.message; },
+                                    { enableHighAccuracy: true, timeout: 10000 }
+                                );
+                            };
+
+                            window.setupQRScanner = function (id) {
+                                if (window._qrScanners[id]) return;
+                                try { window._qrScanners[id] = new Html5Qrcode('qr_reader_' + id); } catch (e) { }
+                            };
+
+                            window.startQRScanner = function (id) {
+                                const scanner = window._qrScanners[id];
+                                if (!scanner) return;
+                                if (!window.isSecureContext && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                                    Swal.fire('Security', 'Camera requires HTTPS on mobile.', 'warning');
+                                    return;
+                                }
+                                const startBtn = document.getElementById('qr_start_btn_' + id);
+                                if (startBtn) startBtn.style.display = 'none';
+                                scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 250 }, (text) => {
+                                    document.getElementById('input_' + id).value = text;
+                                    document.getElementById('qr_text_' + id).innerText = text;
+                                    document.getElementById('qr_result_' + id).style.display = 'block';
+                                    scanner.stop().catch(() => { });
+                                }, () => { }).catch(err => { if (startBtn) startBtn.style.display = 'block'; });
+                            };
+
+                            window.setupSignaturePad = function (id) {
+                                setTimeout(() => {
+                                    const canvas = document.getElementById('sig_canvas_' + id);
+                                    if (!canvas || window._signaturePads[id]) return;
+
+                                    // Ensure canvas is visible and has dimensions
+                                    canvas.style.touchAction = 'none';
+                                    canvas.style.border = '2px dashed #e2e8f0';
+                                    canvas.style.borderRadius = '12px';
+                                    canvas.style.background = '#f8fafc';
+
+                                    const updateSize = () => {
+                                        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                                        const rect = canvas.getBoundingClientRect();
+                                        if (rect.width === 0) return; // Wait for visibility
+                                        canvas.width = rect.width * ratio;
+                                        canvas.height = rect.height * ratio;
+                                        const ctx = canvas.getContext("2d");
+                                        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.scale(ratio, ratio);
+                                    };
+
+                                    updateSize();
+                                    const pad = new SignaturePad(canvas, {
+                                        backgroundColor: 'rgba(255, 255, 255, 0)',
+                                        penColor: 'rgb(30, 41, 59)',
+                                        minWidth: 1.5,
+                                        maxWidth: 4
+                                    });
+
+                                    pad.addEventListener('beginStroke', () => {
+                                        const placeholder = document.getElementById('sig_placeholder_' + id);
+                                        if (placeholder) placeholder.style.display = 'none';
+                                    });
+                                    pad.addEventListener('endStroke', () => {
+                                        const input = document.getElementById('input_' + id);
+                                        if (input) input.value = pad.toDataURL();
+                                    });
+
+                                    window.addEventListener('resize', updateSize);
+                                    window._signaturePads[id] = pad;
+                                    console.log("Signature Pad Ready:", id);
+                                }, 1000);
+                            };
+
+                            window.setupCalculateField = function (id, formula) {
+                                if (!formula) return;
+                                const fieldRefs = formula.match(/\$\{([^}]+)\}/g) || [];
+                                const fieldNames = fieldRefs.map(r => r.replace('${', '').replace('}', ''));
+
+                                function recalculate() {
+                                    let expr = formula;
+                                    fieldNames.forEach(name => {
+                                        let input = document.querySelector(`[name="${name}"]`);
+                                        if (!input) input = document.querySelector(`[name="${name}[]"]`);
+                                        if (!input) input = document.getElementById(name);
+                                        if (!input) input = document.querySelector(`.field-${name} input`);
+
+                                        let val = 0;
+                                        if (input) {
+                                            if (input.type === 'radio' || input.type === 'checkbox') {
+                                                const checked = document.querySelector(`input[name="${name}"]:checked, input[name="${name}[]"]:checked`);
+                                                val = checked ? (parseFloat(checked.value) || 0) : 0;
+                                            } else {
+                                                val = parseFloat(input.value) || 0;
+                                            }
+                                        }
+                                        expr = expr.replaceAll('${' + name + '}', val);
+                                    });
+
+                                    try {
+                                        const safeExpr = expr.replace(/[^-()\d/*+.]/g, '');
+                                        const result = Function('"use strict"; return (' + safeExpr + ')')();
+                                        const display = document.getElementById('calc_display_' + id);
+                                        const input = document.getElementById('input_' + id);
+                                        if (display) display.innerText = isNaN(result) ? '—' : parseFloat(result.toFixed(4));
+                                        if (input) input.value = isNaN(result) ? '' : result;
+                                    } catch (e) { }
                                 }
 
-                                // Handle case where data might be wrapped in an object {fields: [...]}
-                                if (surveyData && !Array.isArray(surveyData) && Array.isArray(surveyData.fields)) {
-                                    surveyData = surveyData.fields;
+                                if (window.jQuery) {
+                                    fieldNames.forEach(name => {
+                                        window.jQuery(document).on('change input keyup blur', `[name="${name}"], [name="${name}[]"], #${name}`, recalculate);
+                                    });
+                                }
+                                setTimeout(recalculate, 1500);
+                            };
+
+                            window.addRepeatEntry = function (id) {
+                                const container = document.getElementById('repeat_entries_' + id);
+                                const input = document.getElementById('input_' + id);
+                                if (!container || !input) return;
+                                if (!window._repeatCounters[id]) window._repeatCounters[id] = 0;
+                                window._repeatCounters[id]++;
+                                const idx = window._repeatCounters[id];
+                                const entry = document.createElement('div');
+                                entry.className = 'repeat-entry';
+                                entry.innerHTML = `<div class="repeat-entry-header"><span class="text-[10px] font-black text-indigo-500 uppercase">Entry #${idx}</span><button type="button" onclick="window.removeRepeatEntry('${id}', ${idx})" class="text-red-400 text-xs font-bold">Remove</button></div><input type="text" name="${id}_entry_${idx}" class="w-full px-4 py-2 border rounded-xl mt-1" oninput="window.syncRepeatData('${id}')">`;
+                                entry.id = `repeat_entry_${id}_${idx}`;
+                                container.appendChild(entry);
+                                window.syncRepeatData(id);
+                            };
+
+                            window.removeRepeatEntry = function (id, idx) {
+                                const entry = document.getElementById(`repeat_entry_${id}_${idx}`);
+                                if (entry) entry.remove();
+                                window.syncRepeatData(id);
+                            };
+
+                            window.syncRepeatData = function (id) {
+                                const container = document.getElementById('repeat_entries_' + id);
+                                const input = document.getElementById('input_' + id);
+                                if (!container || !input) return;
+                                const entries = [];
+                                container.querySelectorAll('.repeat-entry input').forEach(inp => {
+                                    if (inp.value.trim()) entries.push(inp.value.trim());
+                                });
+                                input.value = JSON.stringify(entries);
+                            };
+
+                            window.updateLikertMatrix = function (id) {
+                                const input = document.getElementById('input_' + id);
+                                if (!input) return;
+                                const rows = JSON.parse(input.dataset.rows || '[]');
+                                const result = {};
+                                rows.forEach(r => {
+                                    const checked = document.querySelector(`input[name="${id}_row_${r.value}"]:checked`);
+                                    if (checked) result[r.value] = checked.value;
+                                });
+                                input.value = JSON.stringify(result);
+                            };
+
+                            window.clearSignature = function (id) {
+                                if (window._signaturePads[id]) {
+                                    window._signaturePads[id].clear();
+                                    document.getElementById('input_' + id).value = '';
+                                }
+                            };
+
+                            window.resetQRScanner = function (id) {
+                                document.getElementById('input_' + id).value = '';
+                                document.getElementById('qr_result_' + id).style.display = 'none';
+                                const startBtn = document.getElementById('qr_start_btn_' + id);
+                                if (startBtn) startBtn.style.display = 'block';
+                            };
+
+                            window.onload = function () {
+                                if (window._surveyHasInitialized) return;
+                                window._surveyHasInitialized = true;
+
+                                if (!window.jQuery) {
+                                    console.error("jQuery not loaded!");
+                                    return;
                                 }
 
-                                if (!Array.isArray(surveyData)) {
-                                    console.warn("surveyData is not an array, defaulting to empty list", surveyData);
-                                    surveyData = [];
-                                }
+                                const $ = window.jQuery;
+                                console.log("Initializing Survey Engine...");
+
+                                let surveyData = @json($survey->json_schema);
+                                if (typeof surveyData === 'string') { try { surveyData = JSON.parse(surveyData); } catch (e) { } }
+                                if (surveyData && surveyData.fields) surveyData = surveyData.fields;
+                                if (!Array.isArray(surveyData)) surveyData = [];
 
                                 const container = $('#surveyContainer');
-
                                 $('#surveyLoading').hide();
                                 $('#submitContainer').removeClass('hidden');
-                                $('#jsonCaptchaContainer').removeClass('hidden');
 
                                 const draftKey = `draft_survey_{{ $survey->id }}`;
                                 let savedDraft = localStorage.getItem(draftKey);
                                 let userData = null;
-                                if (savedDraft) {
-                                    try {
-                                        userData = JSON.parse(savedDraft);
-                                    } catch (e) { }
-                                }
+                                if (savedDraft) { try { userData = JSON.parse(savedDraft); } catch (e) { } }
 
                                 const typeMap = {
                                     'select_one': 'radio-group',
@@ -464,17 +808,33 @@
                                     'audio': 'audio_recorder',
                                     'video': 'video_recorder',
                                     'decimal': 'number',
-                                    'ranking': 'ranking_list'
+                                    'ranking': 'ranking_list',
+                                    'location': 'location_picker',
+                                    'qrcode': 'qrcode_scanner',
+                                    'signature': 'signature_pad_input',
+                                    'datetime': 'datetime_picker',
+                                    'acknowledge': 'acknowledge_box',
+                                    'hidden': 'hidden_field',
+                                    'calculate': 'calculate_display',
+                                    'repeat': 'repeat_container',
+                                    'likert_matrix': 'likert_matrix_grid'
                                 };
 
+                                let qCounter = 1;
                                 const processedSchema = surveyData.map(field => {
                                     const finalType = typeMap[field.type] || field.type;
-                                    const fieldClone = { ...field, type: finalType };
+                                    const fieldClone = { ...field, type: finalType, originalType: field.type };
 
-                                    // Inline layout for radio/checkbox
+                                    // Numbering
+                                    if (!['header', 'paragraph', 'hidden', 'note'].includes(field.type) && field.label) {
+                                        fieldClone.label = `${qCounter}. ${field.label}`;
+                                        qCounter++;
+                                    }
+
+                                    // Remove inline layout (force vertical)
                                     if (field.type && ['select_one', 'select_many', 'radio-group', 'checkbox-group'].includes(field.type)) {
-                                        fieldClone.inline = true;
-                                        fieldClone.className = (fieldClone.className || '') + ' preview-inline-group';
+                                        fieldClone.inline = false;
+                                        fieldClone.className = (fieldClone.className || '') + ' preview-vertical-group';
                                     }
 
                                     if (field.type === 'range') fieldClone.subtype = 'range';
@@ -517,13 +877,13 @@
                                             const id = fieldData.name;
                                             return {
                                                 field: `
-                                                                                                                                <div class="rating-wrapper bg-white py-6 px-4 rounded-2xl mb-4 border border-gray-100 shadow-sm">
-                                                                                                                                    <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rating'}</label>
-                                                                                                                                    <div class="likert-container" id="likert_${id}" style="display: flex !important; justify-content: space-between !important; gap: 8px !important;">
-                                                                                                                                        ${[1, 2, 3, 4, 5].map(i => `<div class="likert-item" data-value="${i}" onclick="setRendererLikertValue('${id}', ${i})" style="flex:1; text-align:center; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; font-weight:700;">${i}</div>`).join('')}
-                                                                                                                                    </div>
-                                                                                                                                    <input type="hidden" name="${id}" id="input_${id}" required="${fieldData.required ? 'true' : 'false'}" value="">
-                                                                                                                                </div>`
+                                                                                                                                                                                <div class="rating-wrapper bg-white py-6 px-4 rounded-2xl mb-4 border border-gray-100 shadow-sm">
+                                                                                                                                                                                    <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rating'}</label>
+                                                                                                                                                                                    <div class="likert-container" id="likert_${id}" style="display: flex !important; justify-content: space-between !important; gap: 8px !important;">
+                                                                                                                                                                                        ${[1, 2, 3, 4, 5].map(i => `<div class="likert-item" data-value="${i}" onclick="setRendererLikertValue('${id}', ${i})" style="flex:1; text-align:center; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; font-weight:700;">${i}</div>`).join('')}
+                                                                                                                                                                                    </div>
+                                                                                                                                                                                    <input type="hidden" name="${id}" id="input_${id}" required="${fieldData.required ? 'true' : 'false'}" value="">
+                                                                                                                                                                                </div>`
                                             };
                                         },
                                         'ranking_list': function (fieldData) {
@@ -531,80 +891,245 @@
                                             const options = fieldData.values || [];
                                             return {
                                                 field: `
-                                                                                                                                <div class="ranking-wrapper bg-white p-6 rounded-2xl mb-4 border border-gray-100 shadow-sm">
-                                                                                                                                    <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rank the following'}</label>
-                                                                                                                                    <div class="grid grid-cols-2 gap-4">
-                                                                                                                                        <div>
-                                                                                                                                            <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest block mb-2">Choices</span>
-                                                                                                                                            <div id="pool_${id}" class="rank-pool" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;">
-                                                                                                                                                ${options.map(opt => `
-                                                                                                                                                    <div class="rank-item" data-value="${opt.value}" onclick="togglePublicRankItem('${id}', this)">
-                                                                                                                                                        ${opt.label}
-                                                                                                                                                    </div>
-                                                                                                                                                `).join('')}
-                                                                                                                                            </div>
-                                                                                                                                        </div>
-                                                                                                                                        <div>
-                                                                                                                                            <span class="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2">Your Order</span>
-                                                                                                                                            <div id="ranked_${id}" class="rank-ordered" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;"></div>
-                                                                                                                                        </div>
-                                                                                                                                    </div>
-                                                                                                                                    <input type="hidden" name="${id}" id="input_${id}" value="">
-                                                                                                                                </div>`,
+                                                                                                                                                                                <div class="ranking-wrapper bg-white p-6 rounded-2xl mb-4 border border-gray-100 shadow-sm">
+                                                                                                                                                                                    <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rank the following'}</label>
+                                                                                                                                                                                    <div class="grid grid-cols-2 gap-4">
+                                                                                                                                                                                        <div>
+                                                                                                                                                                                            <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest block mb-2">Choices</span>
+                                                                                                                                                                                            <div id="pool_${id}" class="rank-pool" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;">
+                                                                                                                                                                                                ${options.map(opt => `
+                                                                                                                                                                                                    <div class="rank-item" data-value="${opt.value}" onclick="togglePublicRankItem('${id}', this)">
+                                                                                                                                                                                                        ${opt.label}
+                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                `).join('')}
+                                                                                                                                                                                            </div>
+                                                                                                                                                                                        </div>
+                                                                                                                                                                                        <div>
+                                                                                                                                                                                            <span class="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2">Your Order</span>
+                                                                                                                                                                                            <div id="ranked_${id}" class="rank-ordered" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;"></div>
+                                                                                                                                                                                        </div>
+                                                                                                                                                                                    </div>
+                                                                                                                                                                                    <input type="hidden" name="${id}" id="input_${id}" value="">
+                                                                                                                                                                                </div>`,
                                                 onRender: () => setupPublicRankingUI(id)
                                             };
                                         },
                                         'audio_recorder': function (fieldData) {
                                             const id = fieldData.name;
+                                            const maxDur = fieldData.max_duration || 60;
                                             return {
                                                 field: `
-                                                                                                                                <div class="recorder-dashboard mb-4" style="background:#1e293b; color:white; padding:24px; border-radius:24px; text-align:center;">
-                                                                                                                                    <div class="recorder-status" id="status_${id}" style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; margin-bottom:16px;">Voice Response</div>
-                                                                                                                                    <div class="recorder-timer" id="timer_${id}" style="font-family:monospace; font-size:32px; font-weight:700; margin:16px 0;">00:00</div>
-                                                                                                                                    <div class="flex items-center justify-center space-x-6 gap-6" style="display:flex; justify-content:center; align-items:center;">
-                                                                                                                                        <div id="start_${id}" class="record-btn" style="width:64px; height:64px; background:#ef4444; border-radius:999px; display:flex !important; align-items:center; justify-content:center; cursor:pointer; border:4px solid rgba(255,255,255,0.1);">
-                                                                                                                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-                                                                                                                                        </div>
-                                                                                                                                        <div id="stop_${id}" class="record-btn bg-gray-600 hidden" style="width:64px; height:64px; background:#4b5563; border-radius:12px; display:none; align-items:center; justify-content:center; cursor:pointer;">
-                                                                                                                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 6h12v12H6z"/></svg>
-                                                                                                                                        </div>
-                                                                                                                                    </div>
-                                                                                                                                    <audio id="player_${id}" controls class="hidden w-full mt-6" style="display:none; width:100%; margin-top:24px;"></audio>
-                                                                                                                                    <button type="button" id="retake_${id}" class="mt-4 text-[10px] uppercase font-black text-indigo-400 hidden" style="display:none; background:none; border:none; color:#818cf8; cursor:pointer;">Retake Recording</button>
-                                                                                                                                    <input type="hidden" name="${id}_blob" id="blob_${id}">
-                                                                                                                                </div>`,
-                                                onRender: () => setupRecorder(id, 'audio')
+                                                                                    <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
+                                                                                        <span class="kobo-status-badge" id="status_${id}">Voice Response</span>
+
+                                                                                        <div class="kobo-media-row mt-2">
+                                                                                            <button type="button" id="start_${id}" class="kobo-record-btn">
+                                                                                                <i class="fa-solid fa-microphone"></i>
+                                                                                                <span>Start Recording</span>
+                                                                                            </button>
+
+                                                                                            <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
+                                                                                                <i class="fa-solid fa-square"></i>
+                                                                                                <span>Stop</span>
+                                                                                                <span class="kobo-timer" id="timer_${id}">00:00</span>
+                                                                                            </button>
+
+                                                                                            <div id="upload_container_${id}">
+                                                                                                <label for="file_${id}" class="kobo-upload-btn">
+                                                                                                    <i class="fa-solid fa-upload"></i>
+                                                                                                    <span>Upload audio File</span>
+                                                                                                    <input type="file" id="file_${id}" accept="audio/*" class="hidden" style="display:none;" onchange="window.handleMediaUpload('${id}', 'audio', ${maxDur})">
+                                                                                                </label>
+                                                                                            </div>
+
+                                                                                            <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
+                                                                                                <i class="fa-solid fa-trash-can mr-1"></i> Discard
+                                                                                            </button>
+                                                                                        </div>
+
+                                                                                        <div class="mt-4">
+                                                                                            <audio id="player_${id}" controls class="hidden w-full" style="display:none;"></audio>
+                                                                                        </div>
+
+                                                                                        <input type="hidden" name="${id}" id="blob_${id}">
+                                                                                    </div>`,
+                                                onRender: () => setupRecorder(id, 'audio', maxDur)
                                             };
                                         },
                                         'video_recorder': function (fieldData) {
                                             const id = fieldData.name;
+                                            const maxDur = fieldData.max_duration || 60;
                                             return {
                                                 field: `
-                                                                                                                                <div class="recorder-dashboard mb-4" style="background:#1e293b; color:white; padding:0; border-radius:24px; overflow:hidden; position:relative;">
-                                                                                                                                    <div class="relative aspect-video bg-black" style="background:black; aspect-ratio:16/9; position:relative;">
-                                                                                                                                        <video id="preview_${id}" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; opacity:0.5;"></video>
-                                                                                                                                        <video id="player_${id}" controls style="display:none; width:100%; height:100%; object-fit:contain;"></video>
-                                                                                                                                        <div class="absolute inset-0 flex flex-col items-center justify-center" style="position:absolute; inset:0; display:flex; flex-direction:column; items-center; justify-center;">
-                                                                                                                                            <div class="recorder-status" id="status_${id}" style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; margin-bottom:8px;">Video Response</div>
-                                                                                                                                            <div class="recorder-timer" id="timer_${id}" style="font-family:monospace; font-size:24px; font-weight:700; margin-bottom:16px;">00:00</div>
-                                                                                                                                            <div id="start_${id}" class="record-btn" style="width:56px; height:56px; background:#ef4444; border-radius:999px; display:flex !important; align-items:center; justify-content:center; cursor:pointer; border:4px solid rgba(255,255,255,0.2);">
-                                                                                                                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
-                                                                                                                                            </div>
-                                                                                                                                            <div id="stop_${id}" class="record-btn bg-gray-600 hidden" style="width:56px; height:56px; background:#4b5563; border-radius:12px; display:none; align-items:center; justify-content:center; cursor:pointer;">
-                                                                                                                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 6h12v12H6z"/></svg>
-                                                                                                                                            </div>
-                                                                                                                                        </div>
-                                                                                                                                    </div>
-                                                                                                                                    <button type="button" id="retake_${id}" class="absolute bottom-4 right-4" style="display:none; position:absolute; bottom:16px; right:16px; background:rgba(0,0,0,0.5); color:white; padding:8px 16px; border-radius:24px; border:none; font-size:10px; font-weight:900; text-transform:uppercase; cursor:pointer;">Retake</button>
-                                                                                                                                    <input type="hidden" name="${id}_blob" id="blob_${id}">
-                                                                                                                                </div>`,
-                                                onRender: () => setupRecorder(id, 'video')
+                                                                                    <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
+                                                                                        <span class="kobo-status-badge" id="status_${id}">Video Response</span>
+
+                                                                                        <div class="relative aspect-video bg-black rounded-xl overflow-hidden mb-4" style="background:black; aspect-ratio:16/9; position:relative;">
+                                                                                            <video id="preview_${id}" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; opacity:0.8;"></video>
+                                                                                            <video id="player_${id}" controls style="display:none; width:100%; height:100%; object-fit:contain;"></video>
+                                                                                        </div>
+
+                                                                                        <div class="kobo-media-row">
+                                                                                            <button type="button" id="start_${id}" class="kobo-record-btn">
+                                                                                                <i class="fa-solid fa-video"></i>
+                                                                                                <span>Start Recording</span>
+                                                                                            </button>
+
+                                                                                            <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
+                                                                                                <i class="fa-solid fa-square"></i>
+                                                                                                <span>Stop</span>
+                                                                                                <span class="kobo-timer" id="timer_${id}">00:00</span>
+                                                                                            </button>
+
+                                                                                            <div id="upload_container_${id}">
+                                                                                                <label for="file_${id}" class="kobo-upload-btn">
+                                                                                                    <i class="fa-solid fa-upload"></i>
+                                                                                                    <span>Upload video File</span>
+                                                                                                    <input type="file" id="file_${id}" accept="video/*" class="hidden" style="display:none;" onchange="window.handleMediaUpload('${id}', 'video', ${maxDur})">
+                                                                                                </label>
+                                                                                            </div>
+
+                                                                                            <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
+                                                                                                <i class="fa-solid fa-trash-can mr-1"></i> Discard
+                                                                                            </button>
+                                                                                        </div>
+
+                                                                                        <input type="hidden" name="${id}" id="blob_${id}">
+                                                                                    </div>`,
+                                                onRender: () => setupRecorder(id, 'video', maxDur)
+                                            };
+                                        },
+                                        'datetime_picker': function (fieldData) {
+                                            return { field: `<div class="form-group mb-4"><label class="block text-lg font-bold text-gray-900 mb-3">${fieldData.label || 'Date & Time'}</label><input type="datetime-local" name="${fieldData.name}" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl font-bold text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" ${fieldData.required ? 'required' : ''}></div>` };
+                                        },
+                                        'acknowledge_box': function (fieldData) {
+                                            return { field: `<div class="p-5 bg-amber-50/50 rounded-2xl border border-amber-100 mb-4"><label class="flex items-start cursor-pointer gap-3"><input type="checkbox" name="${fieldData.name}" value="true" class="w-5 h-5 mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" ${fieldData.required ? 'required' : ''}><span class="text-sm font-bold text-gray-700">${fieldData.label || 'I acknowledge'}</span></label></div>` };
+                                        },
+                                        'hidden_field': function (fieldData) {
+                                            return { field: `<input type="hidden" name="${fieldData.name}" value="${fieldData.default_value || ''}">` };
+                                        },
+                                        'calculate_display': function (fieldData) {
+                                            const id = fieldData.name;
+                                            return {
+                                                field: `<div class="p-5 bg-gray-50 rounded-2xl border border-gray-100 mb-4"><label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">${fieldData.label || 'Calculated Value'}</label><div class="text-2xl font-black text-indigo-600" id="calc_display_${id}">&mdash;</div><input type="hidden" name="${id}" id="input_${id}" value="" data-formula="${fieldData.formula || ''}"></div>`,
+                                                onRender: () => window.setupCalculateField(id, fieldData.formula || '')
+                                            };
+                                        },
+                                        'location_picker': function (fieldData) {
+                                            const id = fieldData.name;
+                                            return {
+                                                field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4"><label class="block text-lg font-bold text-gray-900 mb-3">${fieldData.label || 'GPS Location'}</label><div id="map_${id}" class="location-map-container" style="height:250px;border-radius:1rem;background:#e2e8f0;"></div><div class="flex items-center gap-3 mt-3"><button type="button" onclick="window.captureLocation('${id}')" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold uppercase hover:bg-indigo-700 transition-all"><i class="fa-solid fa-location-crosshairs mr-2"></i>Capture My Location</button><span id="loc_status_${id}" class="text-[10px] font-bold text-gray-400 uppercase"></span></div><input type="hidden" name="${id}" id="input_${id}" value="" ${fieldData.required ? 'required' : ''}></div>`,
+                                                onRender: () => window.setupLocationMap(id)
+                                            };
+                                        },
+                                        'qrcode_scanner': function (fieldData) {
+                                            const id = fieldData.name;
+                                            return {
+                                                field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4">
+                                                                                                            <label class="block text-lg font-bold text-gray-900 mb-3">${fieldData.label || 'Scan QR Code'}</label>
+                                                                                                            <div id="qr_container_${id}" class="qr-reader-container">
+                                                                                                                <div id="qr_reader_${id}" style="width:100%;"></div>
+                                                                                                                <button type="button" id="qr_start_btn_${id}" onclick="window.startQRScanner('${id}')" class="btn-scanner-start">
+                                                                                                                    <i class="fa-solid fa-camera mr-2"></i> Open Camera
+                                                                                                                </button>
+                                                                                                            </div>
+                                                                                                            <div id="qr_result_${id}" class="mt-4" style="display:none;">
+                                                                                                                <div class="flex items-center gap-3 p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                                                                                                                    <i class="fa-solid fa-circle-check text-emerald-500"></i>
+                                                                                                                    <span class="text-sm font-bold text-emerald-700" id="qr_text_${id}"></span>
+                                                                                                                </div>
+                                                                                                                <button type="button" onclick="window.resetQRScanner('${id}')" class="mt-2 text-[10px] font-bold text-indigo-500 uppercase hover:text-indigo-700">Scan Again</button>
+                                                                                                            </div>
+                                                                                                            <input type="hidden" name="${id}" id="input_${id}" value="" ${fieldData.required ? 'required' : ''}>
+                                                                                                        </div>`,
+                                                onRender: () => window.setupQRScanner(id)
+                                            };
+                                        },
+                                        'signature_pad_input': function (fieldData) {
+                                            const id = fieldData.name;
+                                            return {
+                                                field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4">
+                                                                                                            <label class="block text-lg font-bold text-gray-900 mb-3">${fieldData.label || 'Signature'}</label>
+                                                                                                            <div class="relative group">
+                                                                                                                <canvas id="sig_canvas_${id}" class="signature-canvas"></canvas>
+                                                                                                                <div id="sig_placeholder_${id}" class="absolute inset-0 flex items-center justify-center pointer-events-none text-gray-300 font-bold uppercase tracking-widest text-[10px]">
+                                                                                                                    Sign Here
+                                                                                                                </div>
+                                                                                                                <button type="button" onclick="window.clearSignature('${id}')" class="absolute top-2 right-2 p-2 text-gray-400 hover:text-red-500 transition-all">
+                                                                                                                    <i class="fa-solid fa-eraser"></i>
+                                                                                                                </button>
+                                                                                                            </div>
+                                                                                                            <input type="hidden" name="${id}" id="input_${id}" ${fieldData.required ? 'required' : ''}>
+                                                                                                        </div>`,
+                                                onRender: () => window.setupSignaturePad(id)
+                                            };
+                                        },
+                                        'likert_matrix_grid': function (fieldData) {
+                                            const id = fieldData.name;
+                                            const rows = fieldData.rows || [{ label: 'Item 1', value: 'item-1' }, { label: 'Item 2', value: 'item-2' }];
+                                            const columns = fieldData.columns || [{ label: '1', value: '1' }, { label: '2', value: '2' }, { label: '3', value: '3' }, { label: '4', value: '4' }, { label: '5', value: '5' }];
+                                            let hdr = '<th style="text-align:left;padding:10px 8px;font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;"></th>';
+                                            columns.forEach(c => { hdr += `<th style="padding:10px 8px;text-align:center;font-size:10px;font-weight:800;color:#6b7280;text-transform:uppercase;background:#f9fafb;">${c.label}</th>`; });
+                                            let body = '';
+                                            rows.forEach(r => {
+                                                let cells = `<td style="padding:12px 8px;text-align:left;font-weight:600;color:#374151;font-size:0.875rem;border-top:1px solid #f3f4f6;">${r.label}</td>`;
+                                                columns.forEach(c => { cells += `<td style="padding:12px 8px;text-align:center;border-top:1px solid #f3f4f6;"><input type="radio" name="${id}_row_${r.value}" value="${c.value}" style="accent-color:#4f46e5;width:1.15rem;height:1.15rem;cursor:pointer;" onchange="window.updateLikertMatrix('${id}')"></td>`; });
+                                                body += `<tr>${cells}</tr>`;
+                                            });
+                                            return {
+                                                field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4"><label class="block text-lg font-bold text-gray-900 mb-4">${fieldData.label || 'Rate the following'}</label><div style="overflow-x:auto;"><table class="likert-matrix-table" style="width:100%;"><thead><tr>${hdr}</tr></thead><tbody>${body}</tbody></table></div><input type="hidden" name="${id}" id="input_${id}" value="" data-rows='${JSON.stringify(rows)}'></div>`,
+                                                onRender: () => window.updateLikertMatrix(id)
+                                            };
+                                        },
+                                        'repeat_container': function (fieldData) {
+                                            const id = fieldData.name;
+                                            const minR = fieldData.min_repeat || 1;
+                                            const maxR = fieldData.max_repeat || 10;
+                                            return {
+                                                field: `<div class="p-5 rounded-2xl border-2 border-dashed border-indigo-200 mb-4 bg-indigo-50/20" id="repeat_${id}"><div class="flex items-center gap-2 mb-3"><i class="fa-solid fa-repeat text-indigo-500"></i><label class="text-lg font-bold text-indigo-700">${fieldData.label || 'Repeating Section'}</label></div><div id="repeat_entries_${id}" class="space-y-3"></div><button type="button" onclick="window.addRepeatEntry('${id}')" class="mt-3 px-4 py-2 bg-indigo-100 text-indigo-600 rounded-xl text-xs font-bold uppercase hover:bg-indigo-200 transition-all"><i class="fa-solid fa-plus mr-2"></i>Add Entry</button><input type="hidden" name="${id}" id="input_${id}" value="[]" data-min="${minR}" data-max="${maxR}"></div>`,
+                                                onRender: () => { for (let i = 0; i < minR; i++) window.addRepeatEntry(id); }
                                             };
                                         }
                                     }
                                 };
 
                                 const formRenderInstance = container.formRender(renderOptions);
+
+                                // --- Manual Initialization for Advanced Fields ---
+                                // Use a small delay and requestAnimationFrame to ensure form is fully in DOM
+                                setTimeout(() => {
+                                    requestAnimationFrame(() => {
+                                        console.log("Starting advanced field initialization for", processedSchema.length, "fields");
+
+                                        processedSchema.forEach(field => {
+                                            const name = field.name;
+                                            const type = field.type;
+
+                                            try {
+                                                if (type === 'location_picker') {
+                                                    console.log("Initing GPS:", name);
+                                                    window.setupLocationMap(name);
+                                                } else if (type === 'qrcode_scanner') {
+                                                    console.log("Initing QR:", name);
+                                                    window.setupQRScanner(name);
+                                                } else if (type === 'signature_pad_input') {
+                                                    console.log("Initing Signature:", name);
+                                                    window.setupSignaturePad(name);
+                                                } else if (type === 'calculate_display') {
+                                                    console.log("Initing Calculate:", name);
+                                                    window.setupCalculateField(name, field.formula);
+                                                } else if (type === 'repeat_container') {
+                                                    const minR = field.min_repeat || 1;
+                                                    for (let i = 0; i < minR; i++) window.addRepeatEntry(name);
+                                                } else if (type === 'likert_matrix_grid') {
+                                                    window.updateLikertMatrix(name);
+                                                }
+                                            } catch (err) {
+                                                console.error(`Error initializing field ${name}:`, err);
+                                            }
+                                        });
+                                    });
+                                }, 500);
 
                                 // --- Display Logic (Conditional Visibility) Engine ---
                                 function updateVisibility() {
@@ -709,7 +1234,7 @@
                                     const input = jQuery(`#input_${id}`);
                                     container.find('.likert-item').removeClass('active');
                                     container.find(`.likert-item[data-value="${value}"]`).addClass('active');
-                                    input.val(value);
+                                    input.val(value).trigger('change');
                                 };
 
                                 window.togglePublicRankItem = function (id, el) {
@@ -735,7 +1260,7 @@
                                     document.getElementById(`input_${id}`).value = values.join(',');
                                 };
 
-                                function setupRecorder(id, type) {
+                                function setupRecorder(id, type, maxDuration = 60) {
                                     let mediaRecorder;
                                     let chunks = [];
                                     let timerInterval;
@@ -749,11 +1274,25 @@
                                     const statusLabel = document.getElementById(`status_${id}`);
                                     const timerLabel = document.getElementById(`timer_${id}`);
                                     const blobInput = document.getElementById(`blob_${id}`);
+                                    const uploadBtn = document.getElementById(`upload_container_${id}`);
 
                                     if (!startBtn) return;
 
+                                    function stopAndCleanup() {
+                                        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                                            mediaRecorder.stop();
+                                        }
+                                        stopBtn.classList.remove('recording');
+                                        if (uploadBtn) uploadBtn.classList.remove('hidden');
+                                    }
+
                                     function updateTimer() {
                                         seconds++;
+                                        if (seconds >= maxDuration) {
+                                            stopAndCleanup();
+                                            statusLabel.innerText = 'Limit Reached';
+                                            return;
+                                        }
                                         const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
                                         const secs = (seconds % 60).toString().padStart(2, '0');
                                         timerLabel.innerText = `${mins}:${secs}`;
@@ -763,6 +1302,7 @@
                                         player.classList.add('hidden');
                                         retakeBtn.classList.add('hidden');
                                         startBtn.classList.remove('hidden');
+                                        if (uploadBtn) uploadBtn.classList.remove('hidden');
                                         if (preview) preview.classList.remove('hidden');
                                         statusLabel.innerText = type === 'video' ? 'Video Ready' : 'Voice Ready';
                                         timerLabel.innerText = '00:00';
@@ -780,6 +1320,7 @@
                                                 preview.classList.remove('hidden');
                                             }
                                             player.classList.add('hidden');
+                                            if (uploadBtn) uploadBtn.classList.add('hidden');
 
                                             mediaRecorder = new MediaRecorder(stream);
                                             mediaRecorder.ondataavailable = (e) => {
@@ -789,7 +1330,6 @@
                                                 clearInterval(timerInterval);
                                                 const blob = new Blob(chunks, { type: type === 'audio' ? 'audio/ogg; codecs=opus' : 'video/webm' });
 
-                                                // Handle saving blob data
                                                 const reader = new FileReader();
                                                 reader.readAsDataURL(blob);
                                                 reader.onloadend = () => {
@@ -798,17 +1338,24 @@
 
                                                 player.src = URL.createObjectURL(blob);
                                                 player.classList.remove('hidden');
+                                                player.style.display = 'block';
                                                 if (preview) preview.classList.add('hidden');
+
+                                                recorderBlobs[id] = blob;
 
                                                 stream.getTracks().forEach(track => track.stop());
                                                 stopBtn.classList.add('hidden');
+                                                stopBtn.style.display = 'none';
                                                 retakeBtn.classList.remove('hidden');
-                                                statusLabel.innerText = 'Response Captured';
+                                                retakeBtn.style.display = 'inline-block';
+                                                if (statusLabel.innerText !== 'Limit Reached') statusLabel.innerText = 'Response Captured';
                                             };
 
                                             mediaRecorder.start();
                                             startBtn.classList.add('hidden');
+                                            startBtn.style.display = 'none';
                                             stopBtn.classList.remove('hidden');
+                                            stopBtn.style.display = 'inline-flex';
                                             stopBtn.classList.add('recording');
                                             statusLabel.innerText = 'Now Recording...';
 
@@ -819,13 +1366,89 @@
                                             alert("Permission denied or device error: " + err.message);
                                         }
                                     };
-                                    stopBtn.onclick = () => {
-                                        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                                            mediaRecorder.stop();
-                                        }
-                                        stopBtn.classList.remove('recording');
-                                    };
+                                    stopBtn.onclick = stopAndCleanup;
                                 }
+
+                                window.handleMediaUpload = function (id, type, maxDuration) {
+                                    const fileInput = document.getElementById('file_' + id);
+                                    const blobInput = document.getElementById('blob_' + id);
+                                    const statusLabel = document.getElementById('status_' + id);
+                                    const player = document.getElementById('player_' + id);
+                                    const startBtn = document.getElementById('start_' + id);
+                                    const retakeBtn = document.getElementById('retake_' + id);
+                                    const timerLabel = document.getElementById('timer_' + id);
+
+                                    if (!fileInput.files.length) return;
+                                    const file = fileInput.files[0];
+
+                                    // Duration Check
+                                    const tempMedia = document.createElement(type === 'audio' ? 'audio' : 'video');
+                                    tempMedia.src = URL.createObjectURL(file);
+                                    tempMedia.onloadedmetadata = function () {
+                                        const duration = tempMedia.duration;
+                                        if (duration > maxDuration) {
+                                            alert(`This file is too long (${Math.round(duration)}s). Maximum allowed is ${maxDuration}s.`);
+                                            fileInput.value = '';
+                                            return;
+                                        }
+
+                                        const reader = new FileReader();
+                                        reader.onload = (e) => {
+                                            blobInput.value = e.target.result;
+                                            player.src = e.target.result;
+                                            player.classList.remove('hidden');
+                                            startBtn.classList.add('hidden');
+                                            retakeBtn.classList.remove('hidden');
+                                            statusLabel.innerText = 'File Imported';
+                                            recorderBlobs[id] = file;
+
+                                            const mins = Math.floor(duration / 60).toString().padStart(2, '0');
+                                            const secs = Math.floor(duration % 60).toString().padStart(2, '0');
+                                            timerLabel.innerText = `${mins}:${secs}`;
+                                        };
+                                        reader.readAsDataURL(file);
+                                    };
+                                };
+
+                                // Input Constraints validation
+                                window.validateConstraints = function (schema) {
+                                    let valid = true;
+                                    schema.forEach(field => {
+                                        if (!field.constraint || field.type === 'hidden') return;
+                                        const input = document.querySelector(`[name="${field.name}"]`);
+                                        if (!input) return;
+                                        const val = parseFloat(input.value);
+                                        if (isNaN(val) && input.value === '') return; // skip empty non-required
+                                        let expr = field.constraint.replace(/\./g, val);
+                                        // Replace field references
+                                        const refs = expr.match(/\$\{([^}]+)\}/g) || [];
+                                        refs.forEach(ref => {
+                                            const refName = ref.replace('${', '').replace('}', '');
+                                            const refInput = document.querySelector(`[name="${refName}"]`);
+                                            expr = expr.replace(ref, refInput ? (parseFloat(refInput.value) || 0) : 0);
+                                        });
+                                        try {
+                                            const result = Function('"use strict"; return (' + expr + ')')();
+                                            if (!result) {
+                                                valid = false;
+                                                const msg = field.constraint_message || 'Invalid value for: ' + (field.label || field.name);
+                                                input.style.borderColor = '#ef4444';
+                                                const existing = input.parentElement.querySelector('.constraint-error');
+                                                if (!existing) {
+                                                    const err = document.createElement('p');
+                                                    err.className = 'constraint-error text-red-500 text-xs font-bold mt-1';
+                                                    err.innerText = msg;
+                                                    input.parentElement.appendChild(err);
+                                                }
+                                            } else {
+                                                input.style.borderColor = '';
+                                                const existing = input.parentElement.querySelector('.constraint-error');
+                                                if (existing) existing.remove();
+                                            }
+                                        } catch (e) { /* ignore parse errors */ }
+                                    });
+                                    return valid;
+                                };
 
                                 // Restore DOM manually if we have a draft
                                 if (userData && userData.length > 0) {
@@ -869,6 +1492,13 @@
                                     const _isGuest = {!! json_encode(auth()->guest()) !!};
                                     const _budgetExhausted = {!! json_encode((bool) $budgetExhausted) !!};
 
+                                    // Validate constraints before submission
+                                    const _originalSchema = surveyData;
+                                    if (typeof window.validateConstraints === 'function' && !window.validateConstraints(_originalSchema)) {
+                                        Swal.fire('Validation Error', 'Some fields have invalid values. Please check highlighted fields.', 'warning');
+                                        return;
+                                    }
+
                                     const performSubmit = () => {
                                         const submitBtn = $('#jsonSurveyForm').find('button[type="submit"]');
                                         const originalText = submitBtn.html();
@@ -886,8 +1516,11 @@
 
                                         for (const id in recorderBlobs) {
                                             if (recorderBlobs[id]) {
-                                                const ext = recorderBlobs[id].type.includes('audio') ? 'ogg' : 'webm';
-                                                formData.append(id, recorderBlobs[id], `${id}_recording.${ext}`);
+                                                const blob = recorderBlobs[id];
+                                                const isUpload = blob instanceof File;
+                                                const ext = isUpload ? blob.name.split('.').pop() : (blob.type.includes('audio') ? 'ogg' : 'webm');
+                                                const fileName = isUpload ? blob.name : `${id}_recording.${ext}`;
+                                                formData.append(id, blob, fileName);
                                             }
                                         }
 
@@ -952,7 +1585,17 @@
                                         performSubmit();
                                     }
                                 });
-                            });
+                            };
+
+                            // Self-healing jQuery check: Retry if jQuery isn't ready yet
+                            (function checkJQuery() {
+                                if (window.jQuery) {
+                                    window.onload();
+                                } else {
+                                    console.warn("jQuery not ready, retrying...");
+                                    setTimeout(checkJQuery, 500);
+                                }
+                            })();
                         </script>
 
                     @else

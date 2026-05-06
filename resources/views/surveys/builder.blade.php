@@ -6,6 +6,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jQuery-formBuilder/3.4.2/form-builder.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jQuery-formBuilder/3.4.2/form-render.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
         [x-cloak] {
@@ -14,6 +18,94 @@
 
         footer {
             display: none !important;
+        }
+
+        /* Kobo Style Media Buttons */
+        .kobo-media-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .kobo-record-btn {
+            background-color: #4a7ba5 !important;
+            color: white !important;
+            padding: 10px 18px !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            cursor: pointer !important;
+            border: none !important;
+            transition: all 0.2s ease !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+            height: 42px !important;
+        }
+
+        .kobo-record-btn:hover {
+            background-color: #3b6385 !important;
+            transform: translateY(-1px);
+        }
+
+        .kobo-record-btn.recording {
+            background-color: #ef4444 !important;
+            animation: kobo-pulse 1.5s infinite;
+        }
+
+        @keyframes kobo-pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .kobo-upload-btn {
+            background-color: #d0e9f8 !important;
+            color: #005fa8 !important;
+            padding: 10px 18px !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            cursor: pointer !important;
+            border: none !important;
+            transition: all 0.2s ease !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+            height: 42px !important;
+        }
+
+        .kobo-upload-btn:hover {
+            background-color: #b8dcf2 !important;
+            transform: translateY(-1px);
+        }
+
+        .kobo-status-badge {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #64748b;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .kobo-timer {
+            font-family: monospace;
+            font-size: 14px;
+            font-weight: 700;
+            color: #475569;
+            margin-left: 8px;
         }
 
         .content-pane {
@@ -426,6 +518,106 @@
             position: static !important;
             /* Override absolute positioning from some libraries */
         }
+
+        /* GPS Location Map */
+        .location-map-container {
+            height: 250px;
+            border-radius: 1rem;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .location-map-container .leaflet-container {
+            height: 100%;
+            width: 100%;
+        }
+
+        /* QR Scanner */
+        .qr-scanner-viewport {
+            border-radius: 1rem;
+            overflow: hidden;
+            max-width: 400px;
+        }
+
+        .qr-scanner-viewport video {
+            border-radius: 1rem;
+        }
+
+        /* Signature Pad */
+        .signature-canvas {
+            border: 2px dashed #d1d5db;
+            border-radius: 1rem;
+            background: #fafafa;
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        /* Likert Matrix */
+        .likert-matrix-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .likert-matrix-table th {
+            padding: 0.75rem 0.5rem;
+            text-align: center;
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: #6b7280;
+            text-transform: uppercase;
+            background: #f9fafb;
+        }
+
+        .likert-matrix-table th:first-child {
+            text-align: left;
+            border-radius: 0.75rem 0 0 0;
+        }
+
+        .likert-matrix-table th:last-child {
+            border-radius: 0 0.75rem 0 0;
+        }
+
+        .likert-matrix-table td {
+            padding: 0.75rem 0.5rem;
+            text-align: center;
+            border-top: 1px solid #f3f4f6;
+        }
+
+        .likert-matrix-table td:first-child {
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.875rem;
+        }
+
+        .likert-matrix-table td input[type="radio"] {
+            accent-color: #4f46e5;
+            width: 1.15rem;
+            height: 1.15rem;
+            cursor: pointer;
+        }
+
+        .likert-matrix-table tr:hover td {
+            background: #f5f3ff;
+        }
+
+        /* Repeat Group */
+        .repeat-entry {
+            border-left: 3px solid #6366f1;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            padding-left: 1.5rem;
+            background: #fafafe;
+            border-radius: 0 1rem 1rem 0;
+        }
+
+        .repeat-entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
     </style>
 @endpush
 
@@ -496,11 +688,10 @@
 
                 <div class="flex items-center gap-3">
                     <button type="submit" form="surveyForm" id="headerSaveBtn"
-                        @click="document.getElementById('survey_status').value = 'active'"
                         class="px-8 py-2.5 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all hover:-translate-y-0.5 active:scale-95 flex items-center group">
                         <i
                             class="fa-solid fa-cloud-arrow-up mr-2 text-indigo-200 group-hover:text-white transition-colors"></i>
-                        {{ __('Save & Publish') }}
+                        {{ __('Save') }}
                     </button>
                 </div>
             </div>
@@ -608,7 +799,7 @@
                         </div>
 
                         <div class="flex items-end space-x-2">
-                            <button type="submit"
+                            <button type="button" @click="updateSurveyDetails()"
                                 class="flex-1 flex justify-center items-center py-2 px-4 border border-transparent rounded-xl shadow-lg text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none transition-all active:scale-95">
                                 <i class="fa-solid fa-save mr-2"></i> {{ isset($survey) ? __('Update') : __('Save') }}
                             </button>
@@ -666,27 +857,27 @@
                         </div>
 
                         <div class="p-8 space-y-6 min-h-[500px] bg-slate-50/20" id="questions-list" x-init="
-                                                                                            new Sortable($el, {
-                                                                                                handle: '.drag-handle',
-                                                                                                animation: 150,
-                                                                                                ghostClass: 'sortable-ghost',
-                                                                                                delay: 150, // Delay to allow scrolling on mobile
-                                                                                                delayOnTouchOnly: true, // Only apply delay on touch
-                                                                                                onEnd: (evt) => {
-                                                                                                    const newQs = [...questions];
-                                                                                                    const [movedItem] = newQs.splice(evt.oldIndex, 1);
-                                                                                                    newQs.splice(evt.newIndex, 0, movedItem);
-                                                                                                    questions = newQs;
-                                                                                                    syncToJson();
-                                                                                                }
-                                                                                            })
-                                                                                        ">
+                                                                                                        new Sortable($el, {
+                                                                                                            handle: '.drag-handle',
+                                                                                                            animation: 150,
+                                                                                                            ghostClass: 'sortable-ghost',
+                                                                                                            delay: 150, // Delay to allow scrolling on mobile
+                                                                                                            delayOnTouchOnly: true, // Only apply delay on touch
+                                                                                                            onEnd: (evt) => {
+                                                                                                                const newQs = [...questions];
+                                                                                                                const [movedItem] = newQs.splice(evt.oldIndex, 1);
+                                                                                                                newQs.splice(evt.newIndex, 0, movedItem);
+                                                                                                                questions = newQs;
+                                                                                                                syncToJson();
+                                                                                                            }
+                                                                                                        })
+                                                                                                    ">
                             <template x-for="(q, index) in questions" :key="q.id || index">
                                 <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 relative group hover:border-indigo-400 hover:shadow-indigo-100 transition-all ml-16"
                                     :class="[
-                                                                                                        q.type === 'group' ? 'border-l-4 border-l-rose-400' : '',
-                                                                                                        selectedQuestions.includes(index) ? 'ring-2 ring-indigo-500 bg-indigo-50/10' : ''
-                                                                                                     ]">
+                                                                                                                    q.type === 'group' ? 'border-l-4 border-l-rose-400' : '',
+                                                                                                                    selectedQuestions.includes(index) ? 'ring-2 ring-indigo-500 bg-indigo-50/10' : ''
+                                                                                                                 ]">
 
                                     <!-- Sidebar: Selection, Number, Drag -->
                                     <div class="absolute -left-14 top-4 h-full flex flex-col items-center space-y-4 z-20">
@@ -741,6 +932,17 @@
                                                         <option value="file">{{ __('File Upload') }}</option>
                                                         <option value="header">{{ __('Section Header') }}</option>
                                                         <option value="group">{{ __('Question Group') }}</option>
+                                                        <option disabled>──────────</option>
+                                                        <option value="datetime">{{ __('Date & Time') }}</option>
+                                                        <option value="acknowledge">{{ __('Acknowledge') }}</option>
+                                                        <option value="hidden">{{ __('Hidden Field') }}</option>
+                                                        <option value="calculate">{{ __('Calculate') }}</option>
+                                                        <option value="likert_matrix">{{ __('Likert Matrix') }}</option>
+                                                        <option value="repeat">{{ __('Repeat Group') }}</option>
+                                                        <option disabled>──────────</option>
+                                                        <option value="location">{{ __('GPS Location') }}</option>
+                                                        <option value="qrcode">{{ __('QR / Barcode') }}</option>
+                                                        <option value="signature">{{ __('Signature') }}</option>
                                                     </select>
                                                 </div>
                                                 <template x-if="q.required">
@@ -847,6 +1049,122 @@
                                             </div>
                                         </div>
 
+                                        <!-- Hidden Field Config -->
+                                        <div x-show="q.type === 'hidden'"
+                                            class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                            <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">
+                                                {{ __('Hidden Field Settings') }}
+                                            </p>
+                                            <input type="text" x-model="q.default_value" @input="syncToJson()"
+                                                placeholder="{{ __('Default value...') }}"
+                                                class="w-full text-xs font-bold text-gray-700 border border-gray-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500 bg-white">
+                                            <p class="text-[8px] text-gray-400 mt-1">
+                                                {{ __('This value is stored but not shown to the respondent.') }}
+                                            </p>
+                                        </div>
+
+                                        <!-- Calculate Config -->
+                                        <div x-show="q.type === 'calculate'"
+                                            class="p-4 bg-amber-50/50 rounded-2xl border border-amber-100">
+                                            <p class="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-3">
+                                                {{ __('Formula') }}
+                                            </p>
+                                            <input type="text" x-model="q.formula" @input="syncToJson()"
+                                                placeholder="e.g. ${field-123} + ${field-456}"
+                                                class="w-full text-xs font-mono font-bold text-gray-700 border border-gray-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-amber-500 bg-white">
+                                            <p class="text-[8px] text-gray-400 mt-1">
+                                                {{ __('Use ${field_name} to reference other fields. Supports +, -, *, / operators.') }}
+                                            </p>
+                                        </div>
+
+                                        <!-- Media Config (Audio/Video) -->
+                                        <div x-show="q.type === 'audio' || q.type === 'video'"
+                                            class="p-4 bg-rose-50/30 rounded-2xl border border-rose-100 mt-4">
+                                            <p class="text-[9px] font-black text-rose-600 uppercase tracking-widest mb-3">
+                                                {{ __('Media Settings') }}
+                                            </p>
+                                            <label
+                                                class="text-[8px] font-black text-gray-400 uppercase block mb-1">{{ __('Max Duration (Seconds)') }}</label>
+                                            <input type="number" min="1" x-model.number="q.max_duration"
+                                                @input="syncToJson()"
+                                                class="w-full text-xs font-bold border border-gray-200 rounded-lg px-3 py-1.5 bg-white">
+                                        </div>
+
+                                        <!-- Repeat Group Config -->
+                                        <div x-show="q.type === 'repeat'"
+                                            class="p-4 bg-violet-50/30 rounded-2xl border border-violet-100">
+                                            <p class="text-[9px] font-black text-violet-600 uppercase tracking-widest mb-3">
+                                                {{ __('Repeat Settings') }}
+                                            </p>
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label
+                                                        class="text-[8px] font-black text-gray-400 uppercase">{{ __('Min Entries') }}</label>
+                                                    <input type="number" min="1" x-model.number="q.min_repeat"
+                                                        @input="syncToJson()"
+                                                        class="w-full text-xs font-bold border border-gray-200 rounded-lg px-3 py-1.5 bg-white">
+                                                </div>
+                                                <div>
+                                                    <label
+                                                        class="text-[8px] font-black text-gray-400 uppercase">{{ __('Max Entries') }}</label>
+                                                    <input type="number" min="1" x-model.number="q.max_repeat"
+                                                        @input="syncToJson()"
+                                                        class="w-full text-xs font-bold border border-gray-200 rounded-lg px-3 py-1.5 bg-white">
+                                                </div>
+                                            </div>
+                                            <p class="text-[8px] text-gray-400 mt-2">
+                                                {{ __('Questions following this marker until the next section will be repeated.') }}
+                                            </p>
+                                        </div>
+
+                                        <!-- Likert Matrix Config -->
+                                        <div x-show="q.type === 'likert_matrix'">
+                                            <div class="p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100 space-y-4">
+                                                <div>
+                                                    <p
+                                                        class="text-[9px] font-black text-indigo-600 uppercase tracking-widest mb-2">
+                                                        {{ __('Row Items (Sub-Questions)') }}
+                                                    </p>
+                                                    <template x-for="(row, rIdx) in (q.rows || [])" :key="rIdx">
+                                                        <div class="flex items-center space-x-2 mb-2">
+                                                            <input type="text" x-model="row.label" @input="syncToJson()"
+                                                                class="flex-1 text-xs font-bold border border-gray-200 rounded-lg px-3 py-1.5 bg-white">
+                                                            <button type="button"
+                                                                @click="q.rows.splice(rIdx, 1); syncToJson()"
+                                                                class="text-red-400 hover:text-red-600">
+                                                                <i class="fa-solid fa-times text-xs"></i>
+                                                            </button>
+                                                        </div>
+                                                    </template>
+                                                    <button type="button"
+                                                        @click="if(!q.rows) q.rows = []; q.rows.push({label: 'Item ' + (q.rows.length+1), value: 'item-' + Date.now()}); syncToJson()"
+                                                        class="text-[9px] font-black text-indigo-500 uppercase hover:text-indigo-700"><i
+                                                            class="fa-solid fa-plus mr-1"></i>{{ __('Add Row') }}</button>
+                                                </div>
+                                                <div>
+                                                    <p
+                                                        class="text-[9px] font-black text-indigo-600 uppercase tracking-widest mb-2">
+                                                        {{ __('Scale Columns') }}
+                                                    </p>
+                                                    <template x-for="(col, cIdx) in (q.columns || [])" :key="cIdx">
+                                                        <div class="flex items-center space-x-2 mb-2">
+                                                            <input type="text" x-model="col.label" @input="syncToJson()"
+                                                                class="flex-1 text-xs font-bold border border-gray-200 rounded-lg px-3 py-1.5 bg-white">
+                                                            <button type="button"
+                                                                @click="q.columns.splice(cIdx, 1); syncToJson()"
+                                                                class="text-red-400 hover:text-red-600">
+                                                                <i class="fa-solid fa-times text-xs"></i>
+                                                            </button>
+                                                        </div>
+                                                    </template>
+                                                    <button type="button"
+                                                        @click="if(!q.columns) q.columns = []; q.columns.push({label: 'Scale ' + (q.columns.length+1), value: 'scale-' + Date.now()}); syncToJson()"
+                                                        class="text-[9px] font-black text-indigo-500 uppercase hover:text-indigo-700"><i
+                                                            class="fa-solid fa-plus mr-1"></i>{{ __('Add Column') }}</button>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <div class="mt-6 flex items-center justify-between border-t border-gray-50 pt-4">
                                             <label class="flex items-center space-x-3 cursor-pointer group/toggle">
                                                 <input type="checkbox" x-model="q.required" @change="syncToJson()"
@@ -870,6 +1188,31 @@
                                                         class="fa-solid fa-code-branch mr-2 group-hover/btn:scale-110 transition-transform"></i>
                                                     {{ __('Skip Logic') }}
                                                 </button>
+
+                                                <!-- Input Constraints -->
+                                                <div x-show="!['header', 'group', 'note', 'hidden', 'acknowledge'].includes(q.type)"
+                                                    class="mt-2">
+                                                    <button type="button" @click="q.showConstraint = !q.showConstraint"
+                                                        class="text-[10px] font-black uppercase flex items-center transition-colors group/btn"
+                                                        :class="q.constraint ? 'text-amber-600' : 'text-gray-400 hover:text-amber-600'">
+                                                        <i
+                                                            class="fa-solid fa-shield-halved mr-2 group-hover/btn:scale-110 transition-transform"></i>
+                                                        {{ __('Constraints') }}
+                                                    </button>
+                                                    <div x-show="q.showConstraint" x-collapse x-cloak
+                                                        class="mt-3 p-3 bg-amber-50/50 rounded-xl border border-amber-100 space-y-2">
+                                                        <input type="text" x-model="q.constraint" @input="syncToJson()"
+                                                            placeholder="{{ __('e.g. . < 100  or  . > 0') }}"
+                                                            class="w-full text-xs font-mono font-bold border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-amber-500">
+                                                        <input type="text" x-model="q.constraint_message"
+                                                            @input="syncToJson()"
+                                                            placeholder="{{ __('Error message if invalid...') }}"
+                                                            class="w-full text-xs font-bold border border-gray-200 rounded-lg px-3 py-1.5 bg-white">
+                                                        <p class="text-[8px] text-gray-400">
+                                                            {{ __('Use . for current value. Supports: < > <= >= == != and field refs like ${field_name}') }}
+                                                        </p>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -901,7 +1244,8 @@
                     <div class="px-8 py-6 border-b border-gray-50 flex items-center justify-between">
                         <div>
                             <h5 class="text-lg font-black text-gray-900 uppercase tracking-widest">
-                                {{ __('Question Library') }}</h5>
+                                {{ __('Question Library') }}
+                            </h5>
                             <p class="text-[10px] text-gray-500 font-bold uppercase mt-1">{{ __('Reusable templates') }}</p>
                         </div>
                         <button type="button" @click="showLibrary = false" class="text-gray-500 hover:text-red-500">
@@ -935,7 +1279,8 @@
                                     <p class="text-sm font-black text-gray-900 uppercase tracking-tight leading-tight"
                                         x-text="item.title"></p>
                                     <p class="text-[9px] text-gray-500 font-bold uppercase mt-2">
-                                        {{ __('Full Survey Blueprint') }}</p>
+                                        {{ __('Full Survey Blueprint') }}
+                                    </p>
                                 </div>
                             </template>
                         </div>
@@ -979,7 +1324,8 @@
                             <i class="fa-solid fa-code mr-3 text-indigo-400"></i> {{ __('JSON Blueprint Editor') }}
                         </h5>
                         <p class="text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-tight">
-                            {{ __('Direct schema manipulation') }}</p>
+                            {{ __('Direct schema manipulation') }}
+                        </p>
                     </div>
                 </div>
                 <div class="p-8 bg-[#030712]">
@@ -1035,7 +1381,8 @@
                         x-if="currentQuestionIndex !== null && ['select_one', 'select_many', 'select', 'ranking', 'radio-group', 'checkbox-group'].includes(questions[currentQuestionIndex].type)">
                         <div>
                             <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-6">
-                                {{ __('If the answer is...') }}</p>
+                                {{ __('If the answer is...') }}
+                            </p>
                             <div class="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                                 <div class="space-y-3">
                                     <template x-for="(opt, oIdx) in questions[currentQuestionIndex].values" :key="oIdx">
@@ -1071,7 +1418,8 @@
                                 <i class="fa-solid fa-circle-info text-gray-400 text-2xl"></i>
                             </div>
                             <p class="text-sm font-black text-gray-900 uppercase tracking-tight">
-                                {{ __('Logic Not Applicable') }}</p>
+                                {{ __('Logic Not Applicable') }}
+                            </p>
                             <p class="text-[10px] text-gray-500 font-bold uppercase mt-2">
                                 {{ __('Skip logic is currently only available for choice-based questions (Select One, Select Many, etc.).') }}
                             </p>
@@ -1115,7 +1463,8 @@
                                     {{ __('Display Logic') }}
                                 </h3>
                                 <p class="text-[10px] text-indigo-100 font-bold uppercase tracking-widest mt-1">
-                                    {{ __('Conditional Visibility') }}</p>
+                                    {{ __('Conditional Visibility') }}
+                                </p>
                             </div>
                         </div>
                         <button @click="closeDisplayLogic()" class="text-white/60 hover:text-white transition-colors">
@@ -1127,7 +1476,8 @@
                         <template x-if="currentDisplayQuestionIndex !== null">
                             <div class="space-y-6">
                                 <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">
-                                    {{ __('Show this question only if...') }}</p>
+                                    {{ __('Show this question only if...') }}
+                                </p>
 
                                 <!-- Trigger Field -->
                                 <div>
@@ -1469,7 +1819,18 @@
                                 value: (v && typeof v === 'object' ? v.value : v) || '',
                                 next: (v && typeof v === 'object' ? v.next : '') || ''
                             })),
-                            visible_if: field.visible_if || null
+                            visible_if: field.visible_if || null,
+                            // New properties for advanced types
+                            constraint: field.constraint || '',
+                            constraint_message: field.constraint_message || '',
+                            default_value: field.default_value || '',
+                            formula: field.formula || '',
+                            max_duration: field.max_duration || 60,
+                            min_repeat: field.min_repeat || 1,
+                            max_repeat: field.max_repeat || 10,
+                            rows: field.rows || [],
+                            columns: field.columns || [],
+                            showConstraint: false
                         };
                         return q;
                     });
@@ -1494,10 +1855,27 @@
                         };
                         if (q.subtype) legacy.subtype = q.subtype;
                         if (['select_one', 'select_many', 'select', 'ranking'].includes(q.type)) {
-                            legacy.values = (q.values || []).map(v => ({ ...v }));
+                            legacy.values = (q.values || []).map(v => ({
+                                ...v,
+                                value: v.label || v.value
+                            }));
                         }
                         if (q.visible_if && q.visible_if.field) {
                             legacy.visible_if = q.visible_if;
+                        }
+                        // Pass through advanced properties
+                        if (q.constraint) legacy.constraint = q.constraint;
+                        if (q.constraint_message) legacy.constraint_message = q.constraint_message;
+                        if (q.default_value) legacy.default_value = q.default_value;
+                        if (q.formula) legacy.formula = q.formula;
+                        if (q.max_duration) legacy.max_duration = q.max_duration;
+                        if (q.type === 'repeat') {
+                            legacy.min_repeat = q.min_repeat || 1;
+                            legacy.max_repeat = q.max_repeat || 10;
+                        }
+                        if (q.type === 'likert_matrix') {
+                            legacy.rows = q.rows || [];
+                            legacy.columns = q.columns || [];
                         }
                         return legacy;
                     });
@@ -1514,11 +1892,37 @@
                             { label: 'Option 1', value: 'option-1', next: '' },
                             { label: 'Option 2', value: 'option-2', next: '' }
                         ],
-                        visible_if: null
+                        visible_if: null,
+                        constraint: '',
+                        constraint_message: '',
+                        default_value: '',
+                        formula: '',
+                        max_duration: 60,
+                        min_repeat: 1,
+                        max_repeat: 10,
+                        rows: [],
+                        columns: [],
+                        showConstraint: false
                     };
                     if (type === 'header') {
                         newQ.subtype = 'h3';
                         newQ.label = 'New Section';
+                    }
+                    if (type === 'likert_matrix') {
+                        newQ.rows = [{ label: 'Item 1', value: 'item-1' }, { label: 'Item 2', value: 'item-2' }];
+                        newQ.columns = [{ label: 'Strongly Disagree', value: '1' }, { label: 'Disagree', value: '2' }, { label: 'Neutral', value: '3' }, { label: 'Agree', value: '4' }, { label: 'Strongly Agree', value: '5' }];
+                    }
+                    if (type === 'repeat') {
+                        newQ.label = 'Repeating Section';
+                    }
+                    if (type === 'acknowledge') {
+                        newQ.label = 'I agree to the above terms';
+                    }
+                    if (type === 'hidden') {
+                        newQ.label = 'Hidden Field';
+                    }
+                    if (type === 'calculate') {
+                        newQ.label = 'Calculated Value';
                     }
 
                     this.questions.push(newQ);
@@ -1619,6 +2023,54 @@
                             console.log('Auto-saved successfully');
                         })
                         .catch(err => console.error('Auto-save failed:', err));
+                },
+
+                updateSurveyDetails() {
+                    const form = document.getElementById('surveyForm');
+                    const formData = new FormData(form);
+
+                    // Add the JSON schema to ensure it's saved too
+                    formData.set('json_schema', this.jsonSchema);
+                    formData.set('status', 'draft');
+
+                    const submitBtn = event.currentTarget;
+                    const originalText = submitBtn.innerHTML;
+                    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving...';
+                    submitBtn.disabled = true;
+
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success',
+                                    text: 'Survey details updated successfully!',
+                                    toast: true,
+                                    position: 'top-end',
+                                    showConfirmButton: false,
+                                    timer: 3000
+                                });
+                            } else {
+                                Swal.fire('Error', data.message || 'Failed to update survey details', 'error');
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Update failed:', err);
+                            Swal.fire('Error', 'An unexpected error occurred', 'error');
+                        })
+                        .finally(() => {
+                            submitBtn.innerHTML = originalText;
+                            submitBtn.disabled = false;
+                        });
                 },
 
                 fetchLibrary() {
@@ -1947,19 +2399,35 @@
                     'decimal': 'number',
                     'ranking': 'ranking_list',
                     'email': 'text',
-                    'date': 'text'
+                    'date': 'text',
+                    'location': 'location_picker',
+                    'qrcode': 'qrcode_scanner',
+                    'signature': 'signature_pad_input',
+                    'datetime': 'datetime_picker',
+                    'acknowledge': 'acknowledge_box',
+                    'hidden': 'hidden_field',
+                    'calculate': 'calculate_display',
+                    'repeat': 'repeat_container',
+                    'likert_matrix': 'likert_matrix_grid'
                 };
 
                 // Filter out empty types (e.g. unconfigured "Choose data type" questions)
+                let qNum = 1;
                 const previewSchema = parsed.filter(f => f.type && f.type.trim() !== '').map((field, idx) => {
                     try {
                         const finalType = typeMap[field.type] || field.type;
                         const fieldClone = { ...field, type: finalType };
 
-                        // Inline layout for radio/checkbox
+                        // Numbering
+                        if (!['header', 'paragraph', 'hidden', 'note'].includes(field.type) && field.label) {
+                            fieldClone.label = `${qNum}. ${field.label}`;
+                            qNum++;
+                        }
+
+                        // Remove inline layout (force vertical)
                         if (['select_one', 'select_many', 'radio-group', 'checkbox-group'].includes(field.type)) {
-                            fieldClone.inline = true;
-                            fieldClone.className = (fieldClone.className || '') + ' preview-inline-group';
+                            fieldClone.inline = false;
+                            fieldClone.className = (fieldClone.className || '') + ' preview-vertical-group';
                         }
 
                         // Subtype/Attribute overrides
@@ -2017,13 +2485,13 @@
                             const id = fieldData.name;
                             return {
                                 field: `
-                                                                                            <div class="rating-wrapper bg-white py-6 px-4 rounded-2xl mb-4 border border-gray-100 shadow-sm">
-                                                                                                <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rating'}</label>
-                                                                                                <div class="likert-container" id="likert_${id}" style="display: flex !important; justify-content: space-between !important; gap: 8px !important;">
-                                                                                                    ${[1, 2, 3, 4, 5].map(i => `<div class="likert-item" data-value="${i}" onclick="setLikertValue('${id}', ${i})" style="flex:1; text-align:center; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; font-weight:700;">${i}</div>`).join('')}
-                                                                                                </div>
-                                                                                                <input type="hidden" name="${id}" id="input_${id}" value="">
-                                                                                            </div>`
+                                                                                                        <div class="rating-wrapper bg-white py-6 px-4 rounded-2xl mb-4 border border-gray-100 shadow-sm">
+                                                                                                            <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rating'}</label>
+                                                                                                            <div class="likert-container" id="likert_${id}" style="display: flex !important; justify-content: space-between !important; gap: 8px !important;">
+                                                                                                                ${[1, 2, 3, 4, 5].map(i => `<div class="likert-item" data-value="${i}" onclick="setLikertValue('${id}', ${i})" style="flex:1; text-align:center; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; font-weight:700;">${i}</div>`).join('')}
+                                                                                                            </div>
+                                                                                                            <input type="hidden" name="${id}" id="input_${id}" value="" onchange="updatePreviewVisibility()">
+                                                                                                        </div>`
                             };
                         },
                         'ranking_list': function (fieldData) {
@@ -2031,26 +2499,26 @@
                             const options = fieldData.values || [];
                             return {
                                 field: `
-                                                                                            <div class="ranking-wrapper bg-white p-6 rounded-2xl mb-4 border border-gray-100 shadow-sm">
-                                                                                                <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rank the following'}</label>
-                                                                                                <div class="grid grid-cols-2 gap-4">
-                                                                                                    <div>
-                                                                                                        <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest block mb-2">Choices</span>
-                                                                                                        <div id="pool_${id}" class="rank-pool" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;">
-                                                                                                            ${options.map(opt => `
-                                                                                                                <div class="rank-item" data-value="${opt.value}" onclick="toggleRankItem('${id}', this)">
-                                                                                                                    ${opt.label}
+                                                                                                        <div class="ranking-wrapper bg-white p-6 rounded-2xl mb-4 border border-gray-100 shadow-sm">
+                                                                                                            <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rank the following'}</label>
+                                                                                                            <div class="grid grid-cols-2 gap-4">
+                                                                                                                <div>
+                                                                                                                    <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest block mb-2">Choices</span>
+                                                                                                                    <div id="pool_${id}" class="rank-pool" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;">
+                                                                                                                        ${options.map(opt => `
+                                                                                                                            <div class="rank-item" data-value="${opt.value}" onclick="toggleRankItem('${id}', this)">
+                                                                                                                                ${opt.label}
+                                                                                                                            </div>
+                                                                                                                        `).join('')}
+                                                                                                                    </div>
                                                                                                                 </div>
-                                                                                                            `).join('')}
-                                                                                                        </div>
-                                                                                                    </div>
-                                                                                                    <div>
-                                                                                                        <span class="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2">Your Order</span>
-                                                                                                        <div id="ranked_${id}" class="rank-ordered" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;"></div>
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                                <input type="hidden" name="${id}" id="input_${id}" value="">
-                                                                                            </div>`,
+                                                                                                                <div>
+                                                                                                                    <span class="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2">Your Order</span>
+                                                                                                                    <div id="ranked_${id}" class="rank-ordered" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;"></div>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                            <input type="hidden" name="${id}" id="input_${id}" value="">
+                                                                                                        </div>`,
                                 onRender: () => setupRankingUI(id)
                             };
                         },
@@ -2058,20 +2526,38 @@
                             const id = fieldData.name + '_preview';
                             return {
                                 field: `
-                                                                                            <div class="recorder-dashboard mb-4" style="background:#1e293b; color:white; padding:24px; border-radius:24px; text-align:center;">
-                                                                                                <div class="recorder-status" id="status_${id}" style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; margin-bottom:16px;">Audio Ready</div>
-                                                                                                <div class="recorder-timer" id="timer_${id}" style="font-family:monospace; font-size:32px; font-weight:700; margin:16px 0;">00:00</div>
-                                                                                                <div class="flex items-center justify-center space-x-6 gap-6" style="display:flex; justify-content:center; align-items:center;">
-                                                                                                    <div id="start_${id}" class="record-btn" style="width:64px; height:64px; background:#ef4444; border-radius:999px; display:flex !important; align-items:center; justify-content:center; cursor:pointer; border:4px solid rgba(255,255,255,0.1);">
-                                                                                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-                                                                                                    </div>
-                                                                                                    <div id="stop_${id}" class="record-btn bg-gray-600 hidden" style="width:64px; height:64px; background:#4b5563; border-radius:12px; display:none; align-items:center; justify-content:center; cursor:pointer;">
-                                                                                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 6h12v12H6z"/></svg>
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                                <audio id="player_${id}" controls class="hidden w-full mt-6" style="display:none; width:100%; margin-top:24px;"></audio>
-                                                                                                <button type="button" id="retake_${id}" class="mt-4 text-[10px] uppercase font-black text-indigo-400 hidden" style="display:none; background:none; border:none; color:#818cf8; cursor:pointer;">Retake Recording</button>
-                                                                                            </div>`,
+                                          <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
+                                            <span class="kobo-status-badge" id="status_${id}">Voice Response</span>
+
+                                            <div class="kobo-media-row mt-2">
+                                                <button type="button" id="start_${id}" class="kobo-record-btn">
+                                                    <i class="fa-solid fa-microphone"></i>
+                                                    <span>Start Recording</span>
+                                                </button>
+
+                                                <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
+                                                    <i class="fa-solid fa-square"></i>
+                                                    <span>Stop</span>
+                                                    <span class="kobo-timer" id="timer_${id}">00:00</span>
+                                                </button>
+
+                                                <div id="upload_container_${id}">
+                                                    <label for="file_${id}" class="kobo-upload-btn">
+                                                        <i class="fa-solid fa-upload"></i>
+                                                        <span>Upload audio File</span>
+                                                        <input type="file" id="file_${id}" accept="audio/*" class="hidden" style="display:none;">
+                                                    </label>
+                                                </div>
+
+                                                <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
+                                                    <i class="fa-solid fa-trash-can mr-1"></i> Discard
+                                                </button>
+                                            </div>
+
+                                            <div class="mt-4">
+                                                <audio id="player_${id}" controls class="hidden w-full" style="display:none;"></audio>
+                                            </div>
+                                        </div>`,
                                 onRender: () => setupPreviewRecorder(id, 'audio')
                             };
                         },
@@ -2079,25 +2565,83 @@
                             const id = fieldData.name + '_preview';
                             return {
                                 field: `
-                                                                                            <div class="recorder-dashboard mb-4" style="background:#1e293b; color:white; padding:0; border-radius:24px; overflow:hidden; position:relative;">
-                                                                                                <div class="relative aspect-video bg-black" style="background:black; aspect-ratio:16/9; position:relative;">
-                                                                                                    <video id="preview_${id}" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; opacity:0.5;"></video>
-                                                                                                    <video id="player_${id}" controls style="display:none; width:100%; height:100%; object-fit:contain;"></video>
-                                                                                                    <div class="absolute inset-0 flex flex-col items-center justify-center" style="position:absolute; inset:0; display:flex; flex-direction:column; items-center; justify-center;">
-                                                                                                        <div class="recorder-status" id="status_${id}" style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; margin-bottom:8px;">Camera Ready</div>
-                                                                                                        <div class="recorder-timer" id="timer_${id}" style="font-family:monospace; font-size:24px; font-weight:700; margin-bottom:16px;">00:00</div>
-                                                                                                        <div id="start_${id}" class="record-btn" style="width:56px; height:56px; background:#ef4444; border-radius:999px; display:flex !important; align-items:center; justify-content:center; cursor:pointer; border:4px solid rgba(255,255,255,0.2);">
-                                                                                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
-                                                                                                        </div>
-                                                                                                        <div id="stop_${id}" class="record-btn bg-gray-600 hidden" style="width:56px; height:56px; background:#4b5563; border-radius:12px; display:none; align-items:center; justify-content:center; cursor:pointer;">
-                                                                                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M6 6h12v12H6z"/></svg>
-                                                                                                        </div>
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                                <button type="button" id="retake_${id}" class="absolute bottom-4 right-4" style="display:none; position:absolute; bottom:16px; right:16px; background:rgba(0,0,0,0.5); color:white; padding:8px 16px; border-radius:24px; border:none; font-size:10px; font-weight:900; text-transform:uppercase; cursor:pointer;">Retake</button>
-                                                                                            </div>`,
+                                          <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
+                                            <span class="kobo-status-badge" id="status_${id}">Video Response</span>
+
+                                            <div class="relative aspect-video bg-black rounded-xl overflow-hidden mb-4" style="background:black; aspect-ratio:16/9; position:relative;">
+                                                <video id="preview_${id}" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; opacity:0.8;"></video>
+                                                <video id="player_${id}" controls style="display:none; width:100%; height:100%; object-fit:contain;"></video>
+                                            </div>
+
+                                            <div class="kobo-media-row">
+                                                <button type="button" id="start_${id}" class="kobo-record-btn">
+                                                    <i class="fa-solid fa-video"></i>
+                                                    <span>Start Recording</span>
+                                                </button>
+
+                                                <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
+                                                    <i class="fa-solid fa-square"></i>
+                                                    <span>Stop</span>
+                                                    <span class="kobo-timer" id="timer_${id}">00:00</span>
+                                                </button>
+
+                                                <div id="upload_container_${id}">
+                                                    <label for="file_${id}" class="kobo-upload-btn">
+                                                        <i class="fa-solid fa-upload"></i>
+                                                        <span>Upload video File</span>
+                                                        <input type="file" id="file_${id}" accept="video/*" class="hidden" style="display:none;">
+                                                    </label>
+                                                </div>
+
+                                                <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
+                                                    <i class="fa-solid fa-trash-can mr-1"></i> Discard
+                                                </button>
+                                            </div>
+                                        </div>`,
                                 onRender: () => setupPreviewRecorder(id, 'video')
                             };
+                        },
+                        'datetime_picker': function (fieldData) {
+                            return { field: `<div class="form-group mb-4"><label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">${fieldData.label || 'Date & Time'}</label><input type="datetime-local" name="${fieldData.name}" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl font-bold text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" ${fieldData.required ? 'required' : ''}></div>` };
+                        },
+                        'acknowledge_box': function (fieldData) {
+                            return { field: `<div class="p-5 bg-amber-50/50 rounded-2xl border border-amber-100 mb-4"><label class="flex items-start cursor-pointer gap-3"><input type="checkbox" name="${fieldData.name}" value="true" class="w-5 h-5 mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" ${fieldData.required ? 'required' : ''}><span class="text-sm font-bold text-gray-700">${fieldData.label || 'I acknowledge'}</span></label></div>` };
+                        },
+                        'hidden_field': function (fieldData) {
+                            return { field: `<div class="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 mb-4 flex items-center gap-3"><i class="fa-solid fa-eye-slash text-slate-400"></i><span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hidden Field: ${fieldData.name}</span><input type="hidden" name="${fieldData.name}" value="${fieldData.default_value || ''}"></div>` };
+                        },
+                        'calculate_display': function (fieldData) {
+                            return {
+                                field: `<div class="p-5 bg-gray-50 rounded-2xl border border-gray-100 mb-4"><label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">${fieldData.label || 'Calculated Value'}</label><div class="text-2xl font-black text-indigo-600" id="calc_display_${fieldData.name}">&mdash;</div><p class="text-[8px] text-gray-400 uppercase mt-2">Formula: ${fieldData.formula || 'Not set'}</p><input type="hidden" name="${fieldData.name}" id="input_${fieldData.name}" value=""></div>`,
+                                onRender: () => window.setupCalculateField(fieldData.name, fieldData.formula)
+                            };
+                        },
+                        'location_picker': function (fieldData) {
+                            const id = fieldData.name;
+                            return { field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4"><label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">${fieldData.label || 'GPS Location'}</label><div id="map_${id}" style="height:220px; border-radius:1rem; background:#e2e8f0; display:flex; align-items:center; justify-content:center;"><span class="text-gray-400 font-bold text-xs uppercase"><i class="fa-solid fa-map-location-dot mr-2"></i>Map loads on live survey</span></div><div class="flex items-center gap-3 mt-3"><button type="button" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold uppercase"><i class="fa-solid fa-location-crosshairs mr-2"></i>Capture Location</button></div><input type="hidden" name="${id}" value=""></div>` };
+                        },
+                        'qrcode_scanner': function (fieldData) {
+                            return { field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4"><label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">${fieldData.label || 'Scan QR Code'}</label><div style="height:200px; border-radius:1rem; background:#1e293b; display:flex; align-items:center; justify-content:center; flex-direction:column;"><i class="fa-solid fa-qrcode text-4xl text-white/30 mb-3"></i><span class="text-white/50 font-bold text-xs uppercase">Camera activates on live survey</span></div><input type="hidden" name="${fieldData.name}" value=""></div>` };
+                        },
+                        'signature_pad_input': function (fieldData) {
+                            return { field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4"><label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">${fieldData.label || 'Signature'}</label><div style="height:150px; border:2px dashed #d1d5db; border-radius:1rem; background:#fafafa; display:flex; align-items:center; justify-content:center;"><span class="text-gray-300 font-bold text-xs uppercase"><i class="fa-solid fa-signature mr-2"></i>Signature pad active on live survey</span></div><input type="hidden" name="${fieldData.name}" value=""></div>` };
+                        },
+                        'likert_matrix_grid': function (fieldData) {
+                            const id = fieldData.name;
+                            const rows = fieldData.rows || [{ label: 'Item 1', value: 'item-1' }, { label: 'Item 2', value: 'item-2' }];
+                            const columns = fieldData.columns || [{ label: '1', value: '1' }, { label: '2', value: '2' }, { label: '3', value: '3' }, { label: '4', value: '4' }, { label: '5', value: '5' }];
+                            let hdr = '<th style="text-align:left;padding:8px;font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;"></th>';
+                            columns.forEach(c => { hdr += `<th style="padding:8px;text-align:center;font-size:10px;font-weight:800;color:#6b7280;text-transform:uppercase;background:#f9fafb;">${c.label}</th>`; });
+                            let body = '';
+                            rows.forEach(r => {
+                                let cells = `<td style="padding:10px 8px;text-align:left;font-weight:600;color:#374151;font-size:0.875rem;border-top:1px solid #f3f4f6;">${r.label}</td>`;
+                                columns.forEach(c => { cells += `<td style="padding:10px 8px;text-align:center;border-top:1px solid #f3f4f6;"><input type="radio" name="${id}_row_${r.value}" value="${c.value}" style="accent-color:#4f46e5;width:1.15rem;height:1.15rem;cursor:pointer;"></td>`; });
+                                body += `<tr>${cells}</tr>`;
+                            });
+                            return { field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4"><label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rate the following'}</label><div style="overflow-x:auto;"><table class="likert-matrix-table"><thead><tr>${hdr}</tr></thead><tbody>${body}</tbody></table></div><input type="hidden" name="${id}" id="input_${id}" value="" onchange="updatePreviewVisibility()"></div>` };
+                        },
+                        'repeat_container': function (fieldData) {
+                            return { field: `<div class="p-5 rounded-2xl border-2 border-dashed border-indigo-200 mb-4 bg-indigo-50/20"><div class="flex items-center gap-2 mb-3"><i class="fa-solid fa-repeat text-indigo-500"></i><label class="text-sm font-bold text-indigo-600 uppercase tracking-widest">${fieldData.label || 'Repeating Section'}</label></div><div class="repeat-entry"><p class="text-xs text-gray-400 font-bold">Entry #1 (respondent adds more on live survey)</p></div><button type="button" class="mt-3 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold uppercase"><i class="fa-solid fa-plus mr-2"></i>Add Entry</button><input type="hidden" name="${fieldData.name}" value="[]"></div>` };
                         }
                     }
                 };
@@ -2210,7 +2754,7 @@
             const input = jQuery(`#input_${id}`);
             container.find('.likert-item').removeClass('active');
             container.find(`.likert-item[data-value="${value}"]`).addClass('active');
-            input.val(value);
+            input.val(value).trigger('change');
         }
 
         function setupRankingUI(id) {
@@ -2241,7 +2785,9 @@
             }
 
             const values = Array.from(ranked.children).map(child => child.dataset.value);
-            document.getElementById(`input_${id}`).value = values.join(',');
+            const input = document.getElementById(`input_${id}`);
+            input.value = values.join(',');
+            jQuery(input).trigger('change');
         }
 
         function setupPreviewRecorder(id, type) {
