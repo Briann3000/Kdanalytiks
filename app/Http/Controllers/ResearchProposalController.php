@@ -127,8 +127,10 @@ class ResearchProposalController extends Controller
             return !empty($ref['author']) || !empty($ref['title']);
         });
 
+        $branding = $this->resolveBrandingContext($survey);
+
         // Generate the academic sections using the NEW iterative pipeline
-        $reportData = $this->synthesisService->generateIterativeReport($survey, $style, $manualReferences);
+        $reportData = $this->synthesisService->generateIterativeReport($survey, $style, $manualReferences, $branding);
 
         // Store the report and survey_id in the session
         $reportId = uniqid('report_');
@@ -320,6 +322,7 @@ class ResearchProposalController extends Controller
                 'showKmBranding' => !($canRemove && ($userRemoveBranding || $survey->remove_km_branding)),
                 'customLogo' => ($canRemove) ? ($survey->export_logo_url ?: $userLogo) : null,
                 'customOrgName' => ($canRemove) ? ($survey->export_org_name ?: $userOrgName) : null,
+                'brandColor' => ($canRemove) ? ($survey->brand_color ?: ($user->brand_color ?: '#4f46e5')) : '#4f46e5',
             ];
         }
 
@@ -327,6 +330,7 @@ class ResearchProposalController extends Controller
             'showKmBranding' => !($canRemove && $userRemoveBranding),
             'customLogo' => ($canRemove && $userLogo) ? $userLogo : null,
             'customOrgName' => ($canRemove && $userOrgName) ? $userOrgName : null,
+            'brandColor' => ($canRemove) ? ($user->brand_color ?: '#4f46e5') : '#4f46e5',
         ];
     }
 

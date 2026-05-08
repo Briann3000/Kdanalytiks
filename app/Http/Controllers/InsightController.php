@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Answer;
 use App\Models\Question;
 use App\Services\QualitativeAnalysisService;
+use App\Services\AiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
@@ -12,10 +13,12 @@ use Illuminate\Support\Facades\Gate;
 class InsightController extends Controller
 {
     protected $analysisService;
+    protected $aiService;
 
-    public function __construct(QualitativeAnalysisService $analysisService)
+    public function __construct(QualitativeAnalysisService $analysisService, AiService $aiService)
     {
         $this->analysisService = $analysisService;
+        $this->aiService = $aiService;
     }
 
     /**
@@ -23,7 +26,7 @@ class InsightController extends Controller
      */
     public function showQualitativeReport(\App\Models\Survey $survey)
     {
-        \Illuminate\Support\Facades\Gate::authorize('view', $survey);
+        Gate::authorize('view', $survey);
 
         $questions = [];
         if (!empty($survey->json_schema)) {
@@ -62,14 +65,12 @@ class InsightController extends Controller
             $responses = [];
 
             if (is_numeric($questionId)) {
-                // Legacy format
                 $responses = Answer::where('question_id', $questionId)
                     ->whereNotNull('value')
                     ->where('value', '!=', '')
                     ->pluck('value')
                     ->toArray();
             } else {
-                // JSON format
                 $surveyId = $survey->id;
                 $rawAnswers = Answer::whereHas('response', function ($q) use ($surveyId) {
                     $q->where('survey_id', $surveyId);
@@ -91,12 +92,9 @@ class InsightController extends Controller
                 }
             }
 
-            \Log::info("Qualitative Analysis (analyze): Found " . count($responses) . " responses for Question ID: {$questionId} in Survey: {$survey->id}");
-
             return $this->analysisService->analyzeResponses($responses);
         });
 
-        // Backend Paywall Truncation Logic
         $user = auth()->user();
         $isTruncated = false;
 
@@ -115,15 +113,108 @@ class InsightController extends Controller
         return response()->json($insight);
     }
 
-    /**
-     * Generate AI insights for a specific open-ended question or JSON field.
-     * (Preserved as a wrapper for the 'ai.insights.question' route)
-     */
     public function generateQuestionInsight(Request $request, $questionId)
     {
         $surveyId = $request->query('survey_id');
         $survey = \App\Models\Survey::findOrFail($surveyId);
-
         return $this->analyze($request, $survey, $questionId);
+    }
+
+    public function generateQuantitativeInsight(Request $request, $questionId)
+    {
+        $surveyId = $request->query('survey_id');
+        $survey = \App\Models\Survey::findOrFail($surveyId);
+
+        $user = auth()->user();
+        if (!$user || !$user->canUseAiAnalysis()) {
+            return response()->json(['error' => 'Premium subscription required for Trend Interpretation.'], 403);
+        }
+
+        $cacheKey = "quantitative_analysis_{$survey->id}_{$questionId}";
+
+        $insight = Cache::remember($cacheKey, 86400, function () use ($survey, $questionId) {
+            $responses = $survey->responses;
+            $stats = [];
+            $totalResponses = $responses->count();
+            $frequencyCount = [];
+
+            if (is_numeric($questionId)) {
+                $question = \App\Models\Question::findOrFail($questionId);
+                $answers = $question->answers;
+                foreach ($responses as $response) {
+                    $answer = $answers->where('response_id', $response->id)->first();
+                    if ($answer && $answer->value !== null && $answer->value !== '') {
+                        $frequencyCount[$answer->value] = ($frequencyCount[$answer->value] ?? 0) + 1;
+                    }
+                }
+            } else {
+                foreach ($responses as $response) {
+                    $jsonAnswer = $response->answers->first();
+                    if ($jsonAnswer) {
+                        $data = is_string($jsonAnswer->value) ? json_decode($jsonAnswer->value, true) : $jsonAnswer->value;
+                        if (is_array($data)) {
+                            foreach ($data as $entry) {
+                                if (isset($entry['name']) && $entry['name'] === $questionId && isset($entry['userData'])) {
+                                    $val = $entry['userData'];
+                                    if ($val !== null && $val !== '') {
+                                        $valStr = is_array($val) ? implode(', ', $val) : $val;
+                                        $frequencyCount[$valStr] = ($frequencyCount[$valStr] ?? 0) + 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            foreach ($frequencyCount as $val => $count) {
+                $stats[] = [
+                    'value' => $val,
+                    'count' => $count,
+                    'percentage' => $totalResponses > 0 ? round(($count / $totalResponses) * 100, 1) : 0
+                ];
+            }
+
+            if (empty($stats))
+                return "Insufficient data for trend interpretation.";
+            return $this->analysisService->analyzeQuantitativeData($stats);
+        });
+
+        return response()->json(['insight' => $insight]);
+    }
+
+    public function analyzeCrosstab(Request $request)
+    {
+        $surveyId = $request->query('survey_id');
+        $survey = \App\Models\Survey::findOrFail($surveyId);
+
+        $user = auth()->user();
+        if (!$user || !$user->hasActiveSubscription()) {
+            return response()->json(['error' => 'Premium subscription required for Correlation Intelligence.'], 403);
+        }
+
+        $matrix = $request->input('matrix');
+        $rowLabel = $request->input('rowLabel');
+        $colLabel = $request->input('colLabel');
+
+        if (empty($matrix)) {
+            return response()->json(['error' => 'No data to analyze.'], 400);
+        }
+
+        $prompt = "As an expert research analyst, interpret this cross-tabulation matrix from a survey titled '{$survey->title}'.\n";
+        $prompt .= "The matrix correlates '{$rowLabel}' (rows) against '{$colLabel}' (columns).\n\n";
+        $prompt .= "Data Matrix:\n" . json_encode($matrix, JSON_PRETTY_PRINT) . "\n\n";
+        $prompt .= "Instructions:\n";
+        $prompt .= "1. Identify the strongest correlations or patterns found.\n";
+        $prompt .= "2. Note any surprising deviations or outliers.\n";
+        $prompt .= "3. Provide a strategic takeaway or 'So What?' for the researcher.\n";
+        $prompt .= "4. Keep it professional, concise (max 200 words), and data-driven.";
+
+        try {
+            $insight = $this->aiService->callAi($prompt, "You are an expert research analyst and statistician. Provide clear, concise, and highly strategic interpretations of survey data.");
+            return response()->json(['insight' => $insight]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'AI Analysis Failed: ' . $e->getMessage()], 500);
+        }
     }
 }

@@ -28,7 +28,7 @@ class AcademicSynthesisService
     /**
      * Generate a full academic research report using an OPTIMIZED batch pipeline.
      */
-    public function generateIterativeReport(Survey $survey, string $style = 'apa7', array $manualReferences = [])
+    public function generateIterativeReport(Survey $survey, string $style = 'apa7', array $manualReferences = [], array $branding = [])
     {
         set_time_limit(600);
         $aggregatedData = $this->dataAggregator->aggregate($survey);
@@ -143,7 +143,7 @@ class AcademicSynthesisService
         if ($targetKey) {
             foreach ($aggregatedData['questions'] as $idx => $q) {
                 if (!empty($q['stats'])) {
-                    $sections[$targetKey] .= "\n\n" . $this->buildSingleQuestionTableHtml($q['label'], $q['stats'], $totalResponses);
+                    $sections[$targetKey] .= "\n\n" . $this->buildSingleQuestionTableHtml($q['label'], $q['stats'], $totalResponses, $branding);
                 }
             }
             // Fix sub-headings formatting (convert **4.4.x ...** or plain 4.4.x or ***4.4.x...*** to headings)
@@ -505,7 +505,7 @@ class AcademicSynthesisService
     /**
      * Helper to build HTML table for data.
      */
-    private function buildSingleQuestionTableHtml($label, $stats, $totalResponses)
+    private function buildSingleQuestionTableHtml($label, $stats, $totalResponses, $branding = [])
     {
         // ── 1. GENERATE CHART USING QUICKCHART ──
         $chartLabels = [];
@@ -515,6 +515,7 @@ class AcademicSynthesisService
             $chartData[] = $s['count'];
         }
 
+        $brandColor = $branding['brandColor'] ?? '#4f46e5';
         $chartConfig = [
             'type' => 'bar',
             'data' => [
@@ -523,8 +524,8 @@ class AcademicSynthesisService
                     [
                         'label' => 'Frequency',
                         'data' => $chartData,
-                        'backgroundColor' => 'rgba(79, 70, 229, 0.7)',
-                        'borderColor' => 'rgb(79, 70, 229)',
+                        'backgroundColor' => $brandColor,
+                        'borderColor' => $brandColor,
                         'borderWidth' => 1
                     ]
                 ]
@@ -716,7 +717,7 @@ class AcademicSynthesisService
                 $mpdf->SetHTMLFooter($footerHtml);
             } else {
                 // Professional branding for Pro/Enterprise - CENTERED & BIGGER
-                $headerHtml = '<div style="text-align: center; border-bottom: 2px solid #f3f4f6; padding-bottom: 15px; margin-bottom: 20px;">';
+                $headerHtml = '<div style="text-align: center; border-bottom: 2px solid ' . ($branding['brandColor'] ?? '#4f46e5') . '; padding-bottom: 15px; margin-bottom: 20px;">';
 
                 if ($branding['customLogo']) {
                     $logoPath = storage_path('app/public/' . $branding['customLogo']);

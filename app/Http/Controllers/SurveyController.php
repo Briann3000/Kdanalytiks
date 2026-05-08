@@ -10,6 +10,9 @@ use App\Models\Answer;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\SurveyResponsesExport;
+use PhpOffice\PhpWord\PhpWord;
+use PhpOffice\PhpWord\IOFactory;
+use PhpOffice\PhpWord\SimpleType\Jc;
 
 class SurveyController extends Controller
 {
@@ -263,6 +266,7 @@ class SurveyController extends Controller
             'showKmBranding' => !($canControl && ($user->remove_km_branding || $survey->remove_km_branding)),
             'customLogo' => ($canControl) ? ($survey->export_logo_url ?: $user->export_logo_url) : null,
             'customOrgName' => ($canControl) ? ($survey->export_org_name ?: $user->export_org_name) : null,
+            'brandColor' => ($canControl) ? ($survey->brand_color ?: ($user->brand_color ?: '#4f46e5')) : '#4f46e5',
             'logoUrl' => ($canControl && $survey->export_logo_url) ? route('surveys.branding.logo', $survey) : null,
         ];
     }
@@ -956,16 +960,14 @@ class SurveyController extends Controller
             ->header('Content-Type', 'text/csv')
             ->header('Content-Disposition', "attachment; filename=\"{$filename}\"");
     }
-    public function report(\App\Models\Survey $survey)
+    private function getAnalyticalData(\App\Models\Survey $survey, $responses, $includeAi = false, $forceGenerate = false)
     {
-        $this->authorizeOwner($survey);
-
-        $responses = $survey->responses()->with('answers.question')->get();
         $isJson = !empty($survey->json_schema) && $survey->json_schema !== '[]';
-
         $totalResponses = $responses->count();
         $analysis = [];
         $chartConfigs = [];
+        $user = auth()->user();
+        $canAnalyze = $user && $user->canUseAiAnalysis();
 
         if ($isJson) {
             $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
@@ -987,52 +989,93 @@ class SurveyController extends Controller
                     $jsonAnswer = $response->answers->first();
                     $found = false;
                     if ($jsonAnswer) {
-                        $parsedData = json_decode($jsonAnswer->value, true) ?? [];
-                        if (is_array($parsedData)) {
-                            foreach ($parsedData as $data) {
-                                if (isset($data['name']) && $data['name'] === $fieldId && isset($data['userData'])) {
-                                    $val = $data['userData'];
-                                    if ($val !== '' && $val !== null && (!is_array($val) || !empty($val))) {
+                        $data = is_string($jsonAnswer->value) ? json_decode($jsonAnswer->value, true) : $jsonAnswer->value;
+                        if (is_array($data)) {
+                            foreach ($data as $entry) {
+                                if (isset($entry['name']) && $entry['name'] === $fieldId && isset($entry['userData'])) {
+                                    $val = $entry['userData'];
+                                    if ($val !== null && $val !== '') {
+                                        $answeredCount++;
+                                        $answersList[] = is_array($val) ? implode(', ', $val) : $val;
                                         $found = true;
-                                        if (is_array($val)) {
-                                            foreach ($val as $v) {
-                                                $answersList[] = $v;
-                                                $frequencyCount[$v] = ($frequencyCount[$v] ?? 0) + 1;
-                                            }
-                                        } else {
-                                            $answersList[] = $val;
-                                            $frequencyCount[$val] = ($frequencyCount[$val] ?? 0) + 1;
-                                        }
                                     }
                                 }
                             }
                         }
                     }
-                    if ($found)
-                        $answeredCount++;
+                    if (!$found) {
+                        $answersList[] = null;
+                    }
                 }
 
                 $missingCount = $totalResponses - $answeredCount;
-                $isChartable = in_array($type, ['select', 'select_one', 'select_many', 'radio-group', 'checkbox-group', 'number', 'decimal', 'rating', 'range', 'ranking']);
-                $canvasId = 'chart-' . str_replace('-', '_', $fieldId);
+                $isChartable = in_array($field['type'], ['radio', 'checkbox', 'select', 'number', 'select-one', 'select-multiple', 'radio-group', 'checkbox-group', 'rating', 'range', 'ranking', 'decimal', 'starRating', 'toggle']);
+                $isAnalyzable = $field['type'] === 'textarea';
+                $canvasId = 'chart-' . $fieldId;
 
-                // Calculate Statistics
                 $stats = [];
-                foreach ($frequencyCount as $val => $count) {
+                if ($isChartable) {
+                    foreach ($answersList as $ans) {
+                        if ($ans !== null && $ans !== '') {
+                            $frequencyCount[$ans] = ($frequencyCount[$ans] ?? 0) + 1;
+                        }
+                    }
+                    foreach ($frequencyCount as $val => $count) {
+                        $stats[] = [
+                            'value' => $val,
+                            'count' => $count,
+                            'percentage' => $totalResponses > 0 ? round(($count / $totalResponses) * 100, 1) : 0
+                        ];
+                    }
                     $stats[] = [
-                        'value' => (string) $val,
-                        'count' => (int) $count,
-                        'percentage' => $totalResponses > 0 ? round(($count / $totalResponses) * 100, 1) : 0
+                        'value' => '[Missing / Skipped]',
+                        'count' => $missingCount,
+                        'percentage' => $totalResponses > 0 ? round(($missingCount / $totalResponses) * 100, 1) : 0,
+                        'is_missing' => true
                     ];
                 }
 
-                // Add Missing data to stats for completeness
-                $stats[] = [
-                    'value' => '[Missing / Skipped]',
-                    'count' => $missingCount,
-                    'percentage' => $totalResponses > 0 ? round(($missingCount / $totalResponses) * 100, 1) : 0,
-                    'is_missing' => true
-                ];
+                $chartUrl = null;
+                if ($isChartable && !empty($frequencyCount)) {
+                    $chartConfigs[] = [
+                        'canvas_id' => $canvasId,
+                        'labels' => array_keys($frequencyCount),
+                        'data' => array_values($frequencyCount)
+                    ];
+
+                    $qcConfig = [
+                        'type' => 'bar',
+                        'data' => [
+                            'labels' => array_keys($frequencyCount),
+                            'datasets' => [['data' => array_values($frequencyCount), 'backgroundColor' => '#4f46e5']]
+                        ],
+                        'options' => ['plugins' => ['legend' => ['display' => false]]]
+                    ];
+                    $chartUrl = 'https://quickchart.io/chart?c=' . urlencode(json_encode($qcConfig)) . '&w=600&h=300';
+                }
+
+                $aiInsight = null;
+                if ($includeAi) {
+                    try {
+                        if ($isAnalyzable) {
+                            // Qualitative Analysis - FREE (Standard)
+                            if ($forceGenerate) {
+                                $aiInsight = \Illuminate\Support\Facades\Cache::remember("qualitative_analysis_{$survey->id}_{$fieldId}", 86400, function () use ($answersList) {
+                                    return (new \App\Services\QualitativeAnalysisService())->analyzeResponses($answersList);
+                                });
+                            }
+                        } elseif ($isChartable && $canAnalyze) {
+                            // Quantitative AI Trend Interpretation - PREMIUM
+                            if ($forceGenerate) {
+                                $aiInsight = \Illuminate\Support\Facades\Cache::remember("quantitative_analysis_{$survey->id}_{$fieldId}", 86400, function () use ($stats) {
+                                    return (new \App\Services\QualitativeAnalysisService())->analyzeQuantitativeData($stats);
+                                });
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error("AI Insight Generation Failed: " . $e->getMessage());
+                    }
+                }
 
                 $analysis[] = [
                     'id' => $fieldId,
@@ -1040,24 +1083,17 @@ class SurveyController extends Controller
                     'label' => $label,
                     'type' => $type,
                     'isChartable' => $isChartable,
+                    'isAnalyzable' => $isAnalyzable,
                     'canvasId' => $canvasId,
                     'answers' => $answersList,
                     'stats' => $stats,
                     'answered_count' => $answeredCount,
-                    'missing_count' => $missingCount
+                    'missing_count' => $missingCount,
+                    'chartUrl' => $chartUrl,
+                    'aiInsight' => $aiInsight
                 ];
-
-                if ($isChartable && !empty($frequencyCount)) {
-                    $chartConfigs[] = [
-                        'canvas_id' => $canvasId,
-                        'labels' => array_keys($frequencyCount),
-                        'data' => array_values($frequencyCount)
-                    ];
-                }
             }
-
         } else {
-            // Legacy Question format
             $questions = $survey->questions()->orderBy('position')->get();
             foreach ($questions as $question) {
                 $answers = $question->answers;
@@ -1076,7 +1112,8 @@ class SurveyController extends Controller
                 }
 
                 $missingCount = $totalResponses - $answeredCount;
-                $isChartable = in_array($question->type, ['radio', 'checkbox', 'select', 'number']);
+                $isChartable = in_array($question->type, ['radio', 'checkbox', 'select', 'number', 'select_one', 'select_many', 'select-one', 'select-multiple', 'radio-group', 'checkbox-group', 'rating', 'range', 'ranking', 'decimal', 'starRating', 'toggle']);
+                $isAnalyzable = $question->type === 'textarea';
                 $canvasId = 'chart-question_' . $question->id;
 
                 $stats = [];
@@ -1094,107 +1131,143 @@ class SurveyController extends Controller
                     'is_missing' => true
                 ];
 
-                $analysis[] = [
-                    'id' => $question->id,
-                    'survey_id' => $survey->id,
-                    'label' => $question->text,
-                    'type' => $question->type,
-                    'isChartable' => $isChartable,
-                    'canvasId' => $canvasId,
-                    'answers' => $answersList,
-                    'stats' => $stats,
-                    'answered_count' => $answeredCount,
-                    'missing_count' => $missingCount
-                ];
-
+                $chartUrl = null;
                 if ($isChartable && !empty($frequencyCount)) {
                     $chartConfigs[] = [
                         'canvas_id' => $canvasId,
                         'labels' => array_keys($frequencyCount),
                         'data' => array_values($frequencyCount)
                     ];
+
+                    $qcConfig = [
+                        'type' => 'bar',
+                        'data' => [
+                            'labels' => array_keys($frequencyCount),
+                            'datasets' => [['data' => array_values($frequencyCount), 'backgroundColor' => '#4f46e5']]
+                        ],
+                        'options' => ['plugins' => ['legend' => ['display' => false]]]
+                    ];
+                    $chartUrl = 'https://quickchart.io/chart?c=' . urlencode(json_encode($qcConfig)) . '&w=600&h=300';
                 }
+
+                $aiInsight = null;
+                if ($includeAi) {
+                    try {
+                        if ($isAnalyzable) {
+                            // Qualitative Analysis - FREE (Standard)
+                            if ($forceGenerate) {
+                                $aiInsight = \Illuminate\Support\Facades\Cache::remember("qualitative_analysis_{$survey->id}_{$question->id}", 86400, function () use ($answersList) {
+                                    return (new \App\Services\QualitativeAnalysisService())->analyzeResponses($answersList);
+                                });
+                            }
+                        } elseif ($isChartable && $canAnalyze) {
+                            // Quantitative AI Trend Interpretation - PREMIUM
+                            if ($forceGenerate) {
+                                $aiInsight = \Illuminate\Support\Facades\Cache::remember("quantitative_analysis_{$survey->id}_{$question->id}", 86400, function () use ($stats) {
+                                    return (new \App\Services\QualitativeAnalysisService())->analyzeQuantitativeData($stats);
+                                });
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error("AI Insight Generation Failed: " . $e->getMessage());
+                    }
+                }
+
+                $analysis[] = [
+                    'id' => $question->id,
+                    'survey_id' => $survey->id,
+                    'label' => $question->text,
+                    'type' => $question->type,
+                    'isChartable' => $isChartable,
+                    'isAnalyzable' => $isAnalyzable,
+                    'canvasId' => $canvasId,
+                    'answers' => $answersList,
+                    'stats' => $stats,
+                    'answered_count' => $answeredCount,
+                    'missing_count' => $missingCount,
+                    'chartUrl' => $chartUrl,
+                    'aiInsight' => $aiInsight
+                ];
             }
         }
 
-        // Generate AI Executive Summary
-        $aiSummary = "Generating AI insights...";
-        try {
-            $aiSummary = (new \App\Services\AiService())->generateSurveySummary($survey);
-        } catch (\Exception $e) {
-            \Log::error("AI Summary Error: " . $e->getMessage());
-        }
-
-        return view('surveys.reports', compact('survey', 'responses', 'analysis', 'chartConfigs', 'aiSummary'));
+        return ['analysis' => $analysis, 'chartConfigs' => $chartConfigs];
     }
 
-    public function exportPdf(\App\Models\Survey $survey)
+    public function report(\App\Models\Survey $survey)
     {
         $this->authorizeOwner($survey);
 
         $responses = $survey->responses()->with('answers.question')->get();
-        $isJson = !empty($survey->json_schema) && $survey->json_schema !== '[]';
-        $analysis = [];
+        $analyticalData = $this->getAnalyticalData($survey, $responses);
+        $analysis = $analyticalData['analysis'];
+        $chartConfigs = $analyticalData['chartConfigs'];
 
-        if ($isJson) {
-            $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
-            $schema = is_array($schema) ? $schema : [];
+        // AI Access Control
+        $user = auth()->user();
+        $canAnalyze = $user->canUseAiAnalysis();
+        $aiSummary = null;
 
-            foreach ($schema as $field) {
-                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph']))
-                    continue;
-
-                $fieldId = $field['name'];
-                $label = $field['label'] ?? $fieldId;
-                $type = $field['type'] ?? 'text';
-                $answersList = [];
-
-                foreach ($responses as $response) {
-                    $jsonAnswer = $response->answers->first();
-                    if ($jsonAnswer) {
-                        $parsedData = json_decode($jsonAnswer->value, true) ?? [];
-                        foreach ($parsedData as $data) {
-                            if (isset($data['name']) && $data['name'] === $fieldId && isset($data['userData'])) {
-                                $val = $data['userData'];
-                                if (is_array($val)) {
-                                    foreach ($val as $v)
-                                        $answersList[] = $v;
-                                } else {
-                                    $answersList[] = $val;
-                                }
-                            }
-                        }
+        if ($canAnalyze) {
+            try {
+                $aiSummary = \Illuminate\Support\Facades\Cache::remember("survey_{$survey->id}_ai_summary", 86400, function () use ($survey, $user) {
+                    $summary = (new \App\Services\AiService())->generateSurveySummary($survey);
+                    // Record usage only if not Pro (Trial mode)
+                    if (!$user->hasProAccess()) {
+                        $user->recordAiUsage();
                     }
-                }
-
-                $analysis[] = [
-                    'label' => $label,
-                    'type' => $type,
-                    'isChartable' => in_array($type, ['select', 'select_one', 'select_many', 'radio-group', 'checkbox-group', 'number', 'decimal', 'rating', 'range', 'ranking']),
-                    'answers' => array_filter($answersList, fn($val) => $val !== null && $val !== '')
-                ];
+                    return $summary;
+                });
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("AI Summary Error: " . $e->getMessage());
+                $aiSummary = "AI analysis is currently unavailable. Please try again later.";
             }
         } else {
-            $questions = $survey->questions()->orderBy('position')->get();
-            foreach ($questions as $question) {
-                $answersList = [];
-                foreach ($question->answers as $answer) {
-                    if ($answer->value !== null && $answer->value !== '') {
-                        $answersList[] = $answer->value;
-                    }
-                }
+            $aiSummary = "TRIAL LIMIT REACHED: Upgrade to Pro or Enterprise to unlock continuous AI Executive Summaries and Strategic Synthesis.";
+        }
 
-                $analysis[] = [
-                    'label' => $question->text,
-                    'type' => $question->type,
-                    'isChartable' => in_array($question->type, ['radio', 'checkbox', 'select', 'number']),
-                    'answers' => $answersList
-                ];
+        return view('surveys.reports', compact('survey', 'responses', 'analysis', 'chartConfigs', 'aiSummary', 'canAnalyze'));
+    }
+
+    public function exportPdf(\App\Models\Survey $survey)
+    {
+        set_time_limit(300);
+        $this->authorizeOwner($survey);
+
+        $responses = $survey->responses()->with('answers.question')->get();
+        $analyticalData = $this->getAnalyticalData($survey, $responses, true, true);
+        $analysis = $analyticalData['analysis'];
+
+        // Convert Chart URLs to Base64 for PDF reliability
+        foreach ($analysis as &$item) {
+            if (!empty($item['chartUrl'])) {
+                try {
+                    $context = stream_context_create([
+                        "ssl" => [
+                            "verify_peer" => false,
+                            "verify_peer_name" => false,
+                        ],
+                    ]);
+                    $imgData = file_get_contents($item['chartUrl'], false, $context);
+                    if ($imgData) {
+                        $item['chartBase64'] = 'data:image/png;base64,' . base64_encode($imgData);
+                    }
+                } catch (\Exception $e) {
+                    \Log::error("Failed to fetch chart for PDF: " . $e->getMessage());
+                }
             }
+        }
+        unset($item);
+
+        $aiSummary = "";
+        try {
+            $aiSummary = (new \App\Services\AiService())->generateSurveySummary($survey);
+        } catch (\Exception $e) {
         }
 
         $branding = $this->getBrandingContext($survey);
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.pdf', compact('survey', 'responses', 'analysis', 'branding'));
+        $isPremium = auth()->user()->hasActiveSubscription();
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.pdf', compact('survey', 'responses', 'analysis', 'branding', 'aiSummary', 'isPremium'));
         $filename = "Analytical_Report_" . Str::slug($survey->title) . "_" . date('Ymd_His') . ".pdf";
 
         // Save for History
@@ -1208,6 +1281,340 @@ class SurveyController extends Controller
     }
 
 
+    public function exportDocx(\App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+
+        $phpWord = new \PhpOffice\PhpWord\PhpWord();
+        $branding = $this->getBrandingContext($survey);
+        $brandHex = ltrim($branding['brandColor'] ?? '4f46e5', '#');
+
+        // Define Styles
+        $phpWord->addTitleStyle(1, ['size' => 26, 'bold' => true, 'color' => '1e1b4b', 'name' => 'Arial'], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER, 'spaceAfter' => 240]);
+        $phpWord->addTitleStyle(2, ['size' => 18, 'bold' => true, 'color' => $brandHex, 'name' => 'Arial'], ['spaceBefore' => 240, 'spaceAfter' => 120, 'borderBottomSize' => 6, 'borderBottomColor' => 'e5e7eb']);
+        $phpWord->addTitleStyle(3, ['size' => 14, 'bold' => true, 'color' => '111827', 'name' => 'Arial'], ['spaceBefore' => 120, 'spaceAfter' => 60]);
+
+        $phpWord->addFontStyle('Normal', ['size' => 10, 'name' => 'Arial', 'color' => '374151']);
+        $phpWord->addFontStyle('Italic', ['size' => 10, 'name' => 'Arial', 'color' => '6b7280', 'italic' => true]);
+        $phpWord->addFontStyle('AiHeading', ['size' => 10, 'bold' => true, 'color' => '15803d', 'name' => 'Arial']);
+        $phpWord->addFontStyle('AiText', ['size' => 10, 'color' => '374151', 'name' => 'Arial']);
+        $phpWord->addFontStyle('Quote', ['size' => 10, 'italic' => true, 'color' => '4b5563', 'name' => 'Arial']);
+
+        $phpWord->addTableStyle('StatsTable', [
+            'borderSize' => 6,
+            'borderColor' => 'e5e7eb',
+            'cellMargin' => 80
+        ], [
+            'bgColor' => 'f9fafb'
+        ]);
+
+        $section = $phpWord->addSection([
+            'marginTop' => 1200,
+            'marginBottom' => 1200,
+            'marginLeft' => 1200,
+            'marginRight' => 1200
+        ]);
+
+        // Cover Page
+        $section->addTextBreak(4);
+        $section->addTitle($survey->title, 1);
+        $section->addText("Analytical Executive Report", ['size' => 14, 'color' => '6366f1', 'bold' => true], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
+        $section->addTextBreak(1);
+        $section->addText("Date Generated: " . now()->format('F d, Y'), ['italic' => true], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
+        $section->addTextBreak(2);
+
+        $responses = $survey->responses()->with('answers.question')->get();
+        $analyticalData = $this->getAnalyticalData($survey, $responses, true, true);
+        $analysis = $analyticalData['analysis'];
+
+        $section->addText("This document provides a comprehensive statistical and qualitative interpretation of gathered data, utilizing AI-driven thematic mapping and sentiment analysis to reveal core respondent trends.", 'Italic', ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
+        $section->addPageBreak();
+
+        $aiSummary = "No AI summary available.";
+        try {
+            $aiSummary = (new \App\Services\AiService())->generateSurveySummary($survey);
+        } catch (\Exception $e) {
+        }
+
+        // Summary Stats (Chapter 4 starts here)
+        $section->addTitle('Chapter 4: Executive Thematic Analysis', 2);
+        $section->addText($aiSummary);
+        $section->addTextBreak(2);
+
+        // Detailed Findings
+        foreach ($analysis as $index => $item) {
+            $section->addHeading("Q" . ($index + 1) . ": " . $item['label'], 3);
+
+            if ($item['isChartable']) {
+                $table = $section->addTable('StatsTable');
+                $table->addRow(400, ['bgColor' => '4338ca']);
+                $table->addCell(4000)->addText("Choice", ['bold' => true, 'color' => 'ffffff']);
+                $table->addCell(2000)->addText("Count", ['bold' => true, 'color' => 'ffffff']);
+                $table->addCell(2000)->addText("Ratio", ['bold' => true, 'color' => 'ffffff']);
+
+                foreach ($item['stats'] as $stat) {
+                    if ($stat['is_missing'] ?? false)
+                        continue;
+                    $table->addRow();
+                    $table->addCell(4000)->addText($stat['value'], 'Normal');
+                    $table->addCell(2000)->addText($stat['count'], 'Normal');
+                    $table->addCell(2000)->addText($stat['percentage'] . '%', 'Normal');
+                }
+
+                $table->addRow(300, ['bgColor' => 'f3f4f6']);
+                $table->addCell(4000)->addText("TOTAL", ['bold' => true]);
+                $table->addCell(2000)->addText($item['answered_count'], ['bold' => true]);
+                $table->addCell(2000)->addText("100%", ['bold' => true]);
+                if (!empty($item['chartUrl'])) {
+                    $section->addTextBreak(1);
+                    try {
+                        $context = stream_context_create([
+                            "ssl" => [
+                                "verify_peer" => false,
+                                "verify_peer_name" => false,
+                            ],
+                        ]);
+                        $img = file_get_contents($item['chartUrl'], false, $context);
+                        if ($img) {
+                            $tempFile = tempnam(sys_get_temp_dir(), 'chart_') . '.png';
+                            file_put_contents($tempFile, $img);
+                            $section->addImage($tempFile, ['width' => 350, 'alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
+                        }
+                    } catch (\Exception $e) {
+                    }
+                }
+
+                if (!empty($item['aiInsight']) && is_string($item['aiInsight'])) {
+                    $section->addTextBreak(1);
+                    $aiTable = $section->addTable(['borderColor' => 'bbf7d0', 'borderSize' => 6, 'cellMargin' => 120]);
+                    $aiTable->addRow();
+                    $aiCell = $aiTable->addCell(8000, ['bgColor' => 'f0fdf4']);
+                    $aiCell->addText("AI STATISTICAL INTERPRETATION", 'AiHeading');
+                    $aiCell->addText($item['aiInsight'], 'AiText');
+                }
+            } else {
+                if (!empty($item['aiInsight']) && is_array($item['aiInsight'])) {
+                    $aiTable = $section->addTable(['borderColor' => 'bbf7d0', 'borderSize' => 6, 'cellMargin' => 120]);
+                    $aiTable->addRow();
+                    $aiCell = $aiTable->addCell(8000, ['bgColor' => 'f0fdf4']);
+
+                    $aiCell->addText("AI QUALITATIVE INSIGHTS", 'AiHeading');
+                    $aiCell->addText("Sentiment Distribution:", ['bold' => true, 'size' => 9]);
+                    $aiCell->addText("Positive: " . $item['aiInsight']['sentiment_breakdown']['Positive'] . "% | Neutral: " . $item['aiInsight']['sentiment_breakdown']['Neutral'] . "% | Negative: " . $item['aiInsight']['sentiment_breakdown']['Negative'] . "%", 'AiText');
+
+                    $aiCell->addTextBreak(1);
+                    $aiCell->addText("Key Thematic Mapping:", ['bold' => true, 'size' => 9]);
+                    foreach ($item['aiInsight']['key_themes'] as $theme) {
+                        $aiCell->addListItem($theme['theme'] . ": " . $theme['explanation'], 0, 'AiText');
+                    }
+
+                    $aiCell->addTextBreak(1);
+                    $aiCell->addText("Representative Voter Quotes:", ['bold' => true, 'size' => 9]);
+                    foreach ($item['aiInsight']['representative_quotes'] as $quote) {
+                        $aiCell->addText('"' . $quote . '"', 'Quote');
+                    }
+                }
+                foreach (array_slice((array) $item['answers'], 0, 15) as $answer) {
+                    $val = is_array($answer) ? json_encode($answer) : (string) $answer;
+
+                    if (str_contains($val, 'base64,')) {
+                        try {
+                            $section->addText("Captured Signature:", ['size' => 8, 'color' => '666666']);
+                            $imageData = explode('base64,', $val)[1];
+                            $section->addMemoryImage(base64_decode($imageData), ['height' => 40]);
+                        } catch (\Exception $e) {
+                            $section->addText("[Signature Rendering Error]");
+                        }
+                    } elseif (str_starts_with($val, 'uploads/') && in_array(strtolower(pathinfo($val, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                        try {
+                            $section->addText("Uploaded Image:", ['size' => 8, 'color' => '666666']);
+                            $section->addImage(public_path('storage/' . $val), ['height' => 80]);
+                        } catch (\Exception $e) {
+                            $section->addText("[Image File Missing: $val]");
+                        }
+                    } else {
+                        $section->addListItem($val);
+                    }
+                }
+            }
+            $section->addTextBreak(1);
+        }
+
+        // Raw Data Appendix (Premium Only)
+        if (auth()->user()->hasActiveSubscription()) {
+            $section = $phpWord->addSection(['breakType' => 'nextPage']);
+            $section->addTitle("Appendix: Raw Data Dump", 2);
+            $section->addText("Complete record of all respondent submissions.", 'Italic');
+            $section->addTextBreak(1);
+
+            foreach ($responses as $resp) {
+                $section->addText("RESPONSE ID: #{$resp->id} | SUBMITTED: " . $resp->created_at->format('M d, Y H:i'), ['bold' => true, 'size' => 9, 'color' => '666666']);
+
+                $table = $section->addTable(['borderSize' => 6, 'borderColor' => 'f3f4f6', 'cellMargin' => 40]);
+                foreach ($analysis as $item) {
+                    $ans = null;
+                    if (!empty($survey->json_schema) && $survey->json_schema !== '[]') {
+                        $data = json_decode($resp->answers->first()->value ?? '[]', true);
+                        foreach ((array) $data as $entry) {
+                            if (isset($entry['name']) && $entry['name'] === $item['id']) {
+                                $ans = $entry['userData'] ?? null;
+                                break;
+                            }
+                        }
+                    } else {
+                        $ans = $resp->answers->where('question_id', $item['id'])->first()?->value;
+                    }
+
+                    $table->addRow();
+                    $table->addCell(3000, ['bgColor' => 'f9fafb'])->addText($item['label'], ['bold' => true, 'size' => 8]);
+
+                    $valStr = is_array($ans) ? implode(', ', $ans) : (string) $ans;
+                    if (str_contains($valStr, 'base64,'))
+                        $valStr = "[Signature Captured]";
+                    elseif (str_starts_with($valStr, 'uploads/'))
+                        $valStr = "[Media: " . basename($valStr) . "]";
+
+                    $table->addCell(7000)->addText($valStr ?: '—', ['size' => 8]);
+                }
+                $section->addTextBreak(1);
+            }
+        }
+
+        // Disclaimer
+        $section->addTextBreak(2);
+        $section->addText("Data Integrity & Validation Disclaimer", ['bold' => true, 'color' => '744210']);
+        $section->addText("This report has been automatically generated by KMSurveyTool. The statistics and AI insights provided are based on raw data collected from survey respondents. PRC™ Consulting does not guarantee the absolute accuracy of AI interpretations. This report should be used as a strategic guide.", ['size' => 9, 'color' => '744210']);
+
+        $filename = "Analytical_Report_" . Str::slug($survey->title) . "_" . date('Ymd_His') . ".docx";
+        $tempFile = tempnam(sys_get_temp_dir(), 'docx');
+        $objWriter = IOFactory::createWriter($phpWord, 'Word2007');
+        $objWriter->save($tempFile);
+
+        return response()->download($tempFile, $filename)->deleteFileAfterSend(true);
+    }
+
+    public function exportSinglePdf(\App\Models\Survey $survey, \App\Models\Response $response)
+    {
+        $this->authorizeOwner($survey);
+
+        $branding = $this->getBrandingContext($survey);
+
+        // Structure data for the single response view
+        $isJson = !empty($survey->json_schema) && $survey->json_schema !== '[]';
+        $answers = [];
+
+        if ($isJson) {
+            $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
+            $parsedData = json_decode($response->answers->first()->value ?? '[]', true) ?? [];
+            foreach ($schema as $field) {
+                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph']))
+                    continue;
+                $val = '—';
+                foreach ($parsedData as $data) {
+                    if (isset($data['name']) && $data['name'] === $field['name']) {
+                        $val = $data['userData'] ?? '—';
+                        break;
+                    }
+                }
+                $answers[] = [
+                    'label' => $field['label'] ?? $field['name'],
+                    'value' => $val
+                ];
+            }
+        } else {
+            foreach ($survey->questions()->orderBy('position')->get() as $q) {
+                $a = $response->answers->where('question_id', $q->id)->first();
+                $answers[] = [
+                    'label' => $q->text,
+                    'value' => $a ? $a->value : '—'
+                ];
+            }
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.single_pdf', compact('survey', 'response', 'answers', 'branding'));
+        $filename = "Response_" . $response->id . "_" . Str::slug($survey->title) . ".pdf";
+
+        return $pdf->download($filename);
+    }
+
+    public function exportSingleDocx(\App\Models\Survey $survey, \App\Models\Response $response)
+    {
+        $this->authorizeOwner($survey);
+
+        $phpWord = new PhpWord();
+        $section = $phpWord->addSection();
+
+        $section->addTitle("Individual Response Detail", 1);
+        $section->addText("Survey: " . $survey->title, ['bold' => true]);
+        $section->addText("Response ID: " . $response->id);
+        $section->addText("Submitted: " . $response->created_at->format('M d, Y H:i'));
+        $section->addText("Respondent: " . ($response->respondent->name ?? 'Anonymous') . " (" . ($response->respondent->email ?? 'N/A') . ")");
+        $section->addTextBreak(2);
+
+        // Answers logic
+        $isJson = !empty($survey->json_schema) && $survey->json_schema !== '[]';
+        if ($isJson) {
+            $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
+            $parsedData = json_decode($response->answers->first()->value ?? '[]', true) ?? [];
+            foreach ($schema as $field) {
+                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph']))
+                    continue;
+                $val = '—';
+                foreach ($parsedData as $data) {
+                    if (isset($data['name']) && $data['name'] === $field['name']) {
+                        $val = $data['userData'] ?? '—';
+                        break;
+                    }
+                }
+
+                $section->addText($field['label'] ?? $field['name'], ['bold' => true, 'size' => 10]);
+                $this->addDocxValue($section, $val);
+                $section->addTextBreak(1);
+            }
+        } else {
+            foreach ($survey->questions()->orderBy('position')->get() as $q) {
+                $a = $response->answers->where('question_id', $q->id)->first();
+                $val = $a ? $a->value : '—';
+                $section->addText($q->text, ['bold' => true, 'size' => 10]);
+                $this->addDocxValue($section, $val);
+                $section->addTextBreak(1);
+            }
+        }
+
+        $filename = "Response_" . $response->id . "_" . Str::slug($survey->title) . ".docx";
+        $tempFile = tempnam(sys_get_temp_dir(), 'docx');
+        $objWriter = IOFactory::createWriter($phpWord, 'Word2007');
+        $objWriter->save($tempFile);
+
+        return response()->download($tempFile, $filename)->deleteFileAfterSend(true);
+    }
+
+    protected function addDocxValue($section, $val)
+    {
+        if (is_array($val)) {
+            foreach ($val as $v)
+                $this->addDocxValue($section, $v);
+            return;
+        }
+
+        $valStr = (string) $val;
+        if (str_contains($valStr, 'base64,')) {
+            try {
+                $imageData = explode('base64,', $valStr)[1];
+                $section->addMemoryImage(base64_decode($imageData), ['height' => 50]);
+            } catch (\Exception $e) {
+                $section->addText("[Signature Error]");
+            }
+        } elseif (str_starts_with($valStr, 'uploads/') && in_array(strtolower(pathinfo($valStr, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+            try {
+                $section->addImage(public_path('storage/' . $valStr), ['height' => 100]);
+            } catch (\Exception $e) {
+                $section->addText("[Image Missing]");
+            }
+        } else {
+            $section->addText($valStr ?: '—');
+        }
+    }
     public function publish(Request $request, \App\Models\Survey $survey)
     {
         $this->authorizeOwner($survey);
@@ -1235,6 +1642,137 @@ class SurveyController extends Controller
         }
 
         return view('surveys.builder', compact('survey', 'limitReached'));
+    }
+
+    public function sharedReport($token)
+    {
+        $survey = \App\Models\Survey::where('share_report_token', $token)->firstOrFail();
+
+        $responses = $survey->responses()->with('answers.question')->get();
+        $analyticalData = $this->getAnalyticalData($survey, $responses, true);
+
+        $analysis = $analyticalData['analysis'];
+        $chartConfigs = $analyticalData['chartConfigs'];
+        $totalResponses = $responses->count();
+        $isSharedView = true;
+        $canAnalyze = false;
+        $aiSummary = null;
+
+        return view('surveys.reports', compact('survey', 'analysis', 'chartConfigs', 'totalResponses', 'isSharedView', 'canAnalyze', 'aiSummary'));
+    }
+
+    public function toggleSharedReport(\App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+
+        if (request()->has('disable')) {
+            $survey->update(['share_report_token' => null]);
+            return back()->with('success', 'Shared report access has been disabled.');
+        }
+
+        $token = Str::random(32);
+        $survey->update(['share_report_token' => $token]);
+
+        return back()->with('success', 'Live Result Dashboard is now active!');
+    }
+
+    public function crosstab(Request $request, \App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+
+        $rowId = $request->row;
+        $colId = $request->col;
+
+        $responses = $survey->responses()->with('answers')->get();
+        $isJson = !empty($survey->json_schema) && $survey->json_schema !== '[]';
+
+        $matrix = [];
+        $rows = [];
+        $cols = [];
+        $rowTotals = [];
+        $colTotals = [];
+        $grandTotal = 0;
+
+        // Get Labels
+        $rowLabel = "Variable A";
+        $colLabel = "Variable B";
+
+        if ($isJson) {
+            $schema = json_decode($survey->json_schema, true);
+            foreach ($schema as $f) {
+                if (isset($f['name'])) {
+                    if ($f['name'] === $rowId)
+                        $rowLabel = $f['label'] ?? $rowId;
+                    if ($f['name'] === $colId)
+                        $colLabel = $f['label'] ?? $colId;
+                }
+            }
+        } else {
+            $rowLabel = \App\Models\Question::find($rowId)?->text ?? $rowId;
+            $colLabel = \App\Models\Question::find($colId)?->text ?? $colId;
+        }
+
+        foreach ($responses as $resp) {
+            $rowVal = $this->getAnswerValue($resp, $rowId, $isJson);
+            $colVal = $this->getAnswerValue($resp, $colId, $isJson);
+
+            if ($rowVal === null)
+                $rowVal = "[Missing]";
+            if ($colVal === null)
+                $colVal = "[Missing]";
+
+            if (!in_array($rowVal, $rows))
+                $rows[] = $rowVal;
+            if (!in_array($colVal, $cols))
+                $cols[] = $colVal;
+
+            if (!isset($matrix[$rowVal][$colVal]))
+                $matrix[$rowVal][$colVal] = 0;
+            $matrix[$rowVal][$colVal]++;
+
+            $rowTotals[$rowVal] = ($rowTotals[$rowVal] ?? 0) + 1;
+            $colTotals[$colVal] = ($colTotals[$colVal] ?? 0) + 1;
+            $grandTotal++;
+        }
+
+        // Fill gaps in matrix
+        foreach ($rows as $r) {
+            foreach ($cols as $c) {
+                if (!isset($matrix[$r][$c]))
+                    $matrix[$r][$c] = 0;
+            }
+        }
+
+        return response()->json([
+            'rowLabel' => $rowLabel,
+            'colLabel' => $colLabel,
+            'results' => [
+                'matrix' => $matrix,
+                'rows' => $rows,
+                'cols' => $cols,
+                'rowTotals' => $rowTotals,
+                'colTotals' => $colTotals,
+                'grandTotal' => $grandTotal
+            ]
+        ]);
+    }
+
+    private function getAnswerValue($response, $questionId, $isJson)
+    {
+        if ($isJson) {
+            $firstAnswer = $response->answers->first();
+            $data = json_decode($firstAnswer ? $firstAnswer->value : '[]', true);
+            foreach ((array) $data as $entry) {
+                if (isset($entry['name']) && $entry['name'] === $questionId) {
+                    $val = $entry['userData'] ?? null;
+                    return is_array($val) ? implode(', ', $val) : $val;
+                }
+            }
+            return null;
+        } else {
+            $a = $response->answers->where('question_id', $questionId)->first();
+            return $a ? $a->value : null;
+        }
     }
 
     public function update(Request $request, \App\Models\Survey $survey)

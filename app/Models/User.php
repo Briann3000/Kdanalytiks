@@ -29,6 +29,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'export_logo_url',
         'export_org_name',
         'free_export_count',
+        'ai_analysis_count',
         'locale',
     ];
 
@@ -43,6 +44,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'role' => \App\Enums\UserRole::class,
         'status' => \App\Enums\UserStatus::class,
         'subscription_expiry' => 'datetime',
+        'ai_analysis_count' => 'integer',
     ];
 
     public function organization(): HasOne
@@ -106,6 +108,44 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         return $entity->payment_status === 'paid' || $entity->payment_status === 'COMPLETE';
+    }
+
+    /**
+     * Check if user has Pro/Enterprise level access
+     */
+    public function hasProAccess(): bool
+    {
+        if ($this->isAdmin()) return true;
+
+        $entity = ($this->role === \App\Enums\UserRole::Organization) ? $this->organization : (($this->role === \App\Enums\UserRole::Independent) ? $this->independent : $this);
+        if (!$entity) return false;
+
+        $tier = $entity->subscriptionTier;
+        if (!$tier) return false;
+
+        $tierSlug = strtolower($tier->slug);
+        return str_contains($tierSlug, 'pro') || str_contains($tierSlug, 'enterprise');
+    }
+
+    /**
+     * Check if user can use AI Analysis (Pro or Trial)
+     */
+    public function canUseAiAnalysis(): bool
+    {
+        if ($this->hasProAccess()) return true;
+
+        // Free users get 2 trials
+        return ($this->ai_analysis_count ?? 0) < 2;
+    }
+
+    /**
+     * Increment AI Analysis usage
+     */
+    public function recordAiUsage(): void
+    {
+        if (!$this->hasProAccess()) {
+            $this->increment('ai_analysis_count');
+        }
     }
 
     /**

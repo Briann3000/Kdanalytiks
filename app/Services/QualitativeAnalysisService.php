@@ -21,18 +21,35 @@ class QualitativeAnalysisService
      */
     public function analyzeResponses(array $responses): array
     {
+        // 1. Filter out non-textual or empty content (e.g. signatures, base64 images, files)
+        $responses = array_filter($responses, function ($r) {
+            if (empty($r)) return false;
+            
+            $r = is_array($r) ? implode(', ', $r) : (string)$r;
+            
+            // Skip data URLs (base64) often found in signatures/images
+            if (str_starts_with($r, 'data:image/') || str_contains($r, ';base64,')) {
+                return false;
+            }
+
+            // Skip very short or non-informative strings that look like IDs
+            if (strlen(trim($r)) < 2) return false;
+
+            return true;
+        });
+
         if (empty($responses)) {
             return [
-                'sentiment' => ['positive' => 0, 'neutral' => 0, 'negative' => 0],
+                'sentiment_breakdown' => ['Positive' => 0, 'Neutral' => 0, 'Negative' => 0],
                 'key_themes' => [],
-                'top_quotes' => [],
-                'error' => 'No responses provided for analysis.'
+                'representative_quotes' => [],
+                'error' => 'Insufficient qualitative text data for analysis.'
             ];
         }
 
         // Balance between AI context quality and Groq TPM limits
         $responses = array_map(function ($r) {
-            $r = is_array($r) ? implode(', ', $r) : $r;
+            $r = is_array($r) ? implode(', ', $r) : (string)$r;
             return strlen($r) > 200 ? substr($r, 0, 197) . '...' : $r;
         }, $responses);
 
@@ -137,6 +154,45 @@ RULES:
                 'representative_quotes' => [],
                 'error' => $e->getMessage()
             ];
+        }
+    }
+
+    /**
+     * Analyze quantitative statistical data.
+     */
+    public function analyzeQuantitativeData(array $stats): string
+    {
+        $statsText = "";
+        foreach ($stats as $stat) {
+            if (isset($stat['is_missing']) && $stat['is_missing']) continue;
+            $statsText .= "Choice: " . $stat['value'] . " | Count: " . $stat['count'] . " | Percentage: " . $stat['percentage'] . "%\n";
+        }
+
+        $systemPrompt = "You are a senior statistical analyst. 
+Analyze the provided frequency data and provide a concise (2-3 sentences) strategic interpretation. 
+Focus on identifying clear majorities, split opinions, or notable trends. 
+Avoid simply restating the numbers; explain what the distribution suggests about respondent behavior or sentiment.";
+
+        try {
+            $response = Http::withToken($this->apiKey)
+                ->timeout(60)
+                ->post('https://api.groq.com/openai/v1/chat/completions', [
+                    'model' => $this->model,
+                    'messages' => [
+                        ['role' => 'system', 'content' => $systemPrompt],
+                        ['role' => 'user', 'content' => "STATISTICAL DATA:\n" . $statsText]
+                    ],
+                    'temperature' => 0.1
+                ]);
+
+            if ($response->failed()) return "Analysis temporarily unavailable.";
+
+            $result = $response->json();
+            return $result['choices'][0]['message']['content'] ?? "No insight generated.";
+
+        } catch (\Exception $e) {
+            Log::error('QualitativeAnalysisService Quant Error: ' . $e->getMessage());
+            return "Unable to analyze data at this time.";
         }
     }
 }

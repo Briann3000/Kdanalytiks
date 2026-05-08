@@ -183,6 +183,17 @@
                                 class="w-full bg-gray-50 border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold text-gray-900 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none {{ !$canCustom ? 'opacity-50 cursor-not-allowed' : '' }}">
                             <p class="text-[9px] text-gray-400 font-bold mt-2 uppercase tracking-tight">{{ __('Used in report footers and title pages.') }}</p>
                         </div>
+
+                        <div>
+                            <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">{{ __('Brand Accent Color') }}</label>
+                            <div class="flex items-center gap-4">
+                                <input type="color" name="brand_color" value="{{ old('brand_color', $user->brand_color ?? '#4f46e5') }}" {{ $canCustom ? '' : 'disabled' }}
+                                    class="w-12 h-12 bg-gray-50 border-none rounded-xl cursor-pointer {{ !$canCustom ? 'opacity-50 cursor-not-allowed' : '' }}">
+                                <input type="text" value="{{ old('brand_color', $user->brand_color ?? '#4f46e5') }}" readonly
+                                    class="flex-1 bg-gray-50 border-gray-100 rounded-2xl px-6 py-4 text-sm font-black text-gray-400 uppercase tracking-widest">
+                            </div>
+                            <p class="text-[9px] text-gray-400 font-bold mt-2 uppercase tracking-tight">{{ __('This color will be used for headings and themes in your exports.') }}</p>
+                        </div>
                     </div>
 
                     <div class="space-y-6">

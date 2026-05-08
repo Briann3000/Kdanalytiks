@@ -77,6 +77,7 @@ class AccountController extends Controller
         $validated = $request->validate([
             'export_org_name' => 'nullable|string|max:255',
             'export_logo' => 'nullable|image|max:2048',
+            'brand_color' => 'nullable|string|regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/',
             'remove_km_branding' => 'nullable',
         ]);
 
@@ -89,12 +90,17 @@ class AccountController extends Controller
                 $user->export_org_name = $validated['export_org_name'];
             }
 
+            if ($request->has('brand_color')) {
+                $user->brand_color = $validated['brand_color'];
+            }
+
             if ($request->hasFile('export_logo')) {
                 if ($user->export_logo_url) {
                     Storage::disk('public')->delete($user->export_logo_url);
                 }
                 $path = $request->file('export_logo')->store('user_branding', 'public');
                 $user->export_logo_url = $path;
+                $user->brand_logo = $path; // Keep both in sync if needed, or just use export_logo_url
             }
 
             $user->save();

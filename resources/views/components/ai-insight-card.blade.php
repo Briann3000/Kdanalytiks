@@ -1,4 +1,4 @@
-@props(['questionId', 'questionTitle', 'surveyId'])
+@props(['questionId', 'questionTitle', 'surveyId', 'index' => 0])
 
 <div x-data="{
     loading: false,
@@ -6,10 +6,14 @@
     error: null,
     qId: '{{ $questionId }}',
     sId: '{{ $surveyId }}',
+    idx: {{ $index }},
     init() {
         this.$watch('qId', () => { this.insight = null; this.error = null; });
         if (this.qId && !this.loading) {
-            this.generate();
+            // Re-enabled automatic fetching with staggering (1.5s per question) to prevent 429 errors
+            setTimeout(() => {
+                this.generate();
+            }, this.idx * 1500);
         }
     },
     async generate(id = null) {
@@ -25,6 +29,7 @@
         this.insight = null;
         try {
             const response = await fetch(`/ai/insights/question/${this.qId}?survey_id=${this.sId}`);
+            if (response.status === 429) throw new Error('Groq AI Rate Limit Exceeded. Please wait a minute and try again.');
             if (!response.ok) throw new Error('API Request Failed');
             
             this.insight = await response.json();
@@ -111,10 +116,14 @@
             <i class="fa fa-sparkles text-indigo-400 text-4xl"></i>
         </div>
         <h4 class="text-3xl font-black text-gray-900 mb-4 tracking-tighter">AI Discovery Engine</h4>
-        <p class="text-lg text-gray-500 font-medium max-w-sm mx-auto leading-relaxed">
-            Select a focus question above and click <span class="text-indigo-600 font-black underline">Generate
-                Report</span> to begin.
+        <p class="text-lg text-gray-500 font-medium max-w-sm mx-auto leading-relaxed mb-8">
+            Manually trigger the AI to analyze and map themes for this question to conserve API limits.
         </p>
+        <button @click="generate()"
+            class="inline-flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 hover:-translate-y-1 active:translate-y-0">
+            <i class="fa-solid fa-play text-sm"></i>
+            {{ __('Generate Report') }}
+        </button>
     </div>
 
     <!-- Results Body -->
@@ -231,4 +240,22 @@
             </div>
         </div>
     </template>
+
+    <!-- Further Analysis Button (Premium Enticement) - Visible when loaded or error occurs -->
+    <div x-show="!loading && (insight || error)"
+        class="mt-8 pt-8 border-t border-gray-100 w-full flex justify-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+        @if(auth()->user() && auth()->user()->canUseAiAnalysis())
+            <button @click="generate()"
+                class="flex items-center gap-3 px-8 py-3 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 uppercase tracking-widest text-[9px] group">
+                <i class="fa-solid fa-rotate-right group-hover:rotate-180 transition-transform"></i>
+                {{ __('Regenerate Deep Analysis') }}
+            </button>
+        @else
+            <button @click="window.location.href='{{ route('subscriptions.index') }}'"
+                class="flex items-center gap-3 px-8 py-3 bg-gray-50 text-gray-400 font-black rounded-2xl border border-gray-100 uppercase tracking-widest text-[9px] group relative overflow-hidden hover:bg-white hover:text-indigo-600 transition-all">
+                <i class="fa-solid fa-lock text-gray-300 group-hover:text-indigo-400 transition-colors"></i>
+                {{ __('Deep Analysis (Premium Only)') }}
+            </button>
+        @endif
+    </div>
 </div>

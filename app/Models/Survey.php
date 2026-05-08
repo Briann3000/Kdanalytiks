@@ -26,6 +26,7 @@ class Survey extends Model
         'is_paid',
         'public_access',
         'share_token',
+        'share_report_token',
         'reward_per_response',
         'reward_budget',
         'current_reward_spent',

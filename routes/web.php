@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SurveyController;
+use App\Http\Controllers\InsightController;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
@@ -139,6 +140,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/auth/google', [\App\Http\Controllers\GoogleController::class, 'redirectToGoogle'])->name('auth.google');
     Route::get('/auth/google/callback', [\App\Http\Controllers\GoogleController::class, 'handleGoogleCallback']);
     Route::get('/surveys/{survey}/export-pdf', [SurveyController::class, 'exportPdf'])->name('surveys.export_pdf');
+    Route::get('/surveys/{survey}/export-docx', [SurveyController::class, 'exportDocx'])->name('surveys.export_docx');
+    Route::get('/surveys/{survey}/responses/{response}/export-pdf', [SurveyController::class, 'exportSinglePdf'])->name('surveys.responses.export_pdf');
+    Route::get('/surveys/{survey}/responses/{response}/export-docx', [SurveyController::class, 'exportSingleDocx'])->name('surveys.responses.export_docx');
     Route::get('/surveys/{survey}/report', [SurveyController::class, 'report'])->name('surveys.report');
 
     // Core Survey CRUD
@@ -175,6 +179,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/collaborators/{permission}', [SurveyController::class, 'removeCollaborator'])->name('collaborators.remove');
         Route::post('/publish', [SurveyController::class, 'publish'])->name('publish');
         Route::post('/archive', [SurveyController::class, 'archive'])->name('archive');
+        Route::post('/toggle-shared-report', [SurveyController::class, 'toggleSharedReport'])->name('reports.toggle-shared');
+        Route::get('/crosstab', [SurveyController::class, 'crosstab'])->name('reports.crosstab');
     });
 
 
@@ -205,6 +211,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // Public Survey Views
 Route::get('/surveys/{survey}', [SurveyController::class, 'show'])->name('surveys.show');
 Route::post('/surveys/{survey}/submit', [SurveyController::class, 'submit'])->middleware('throttle:10,1')->name('surveys.submit');
+Route::get('/reports/shared/{token}', [SurveyController::class, 'sharedReport'])->name('surveys.reports.shared');
 
 Route::post('/surveys/{survey}/invite', [SurveyController::class, 'invite'])->name('surveys.invite');
 
@@ -273,7 +280,9 @@ Route::middleware(['auth', 'verified', 'subscribed:ai', 'throttle:5,1'])->group(
 });
 
 Route::middleware(['auth', 'verified', 'throttle:10,1'])->group(function () {
-    Route::get('/ai/insights/question/{question}', [\App\Http\Controllers\InsightController::class, 'generateQuestionInsight'])->name('ai.insights.question');
+    Route::get('/ai/insights/question/{questionId}', [InsightController::class, 'generateQuestionInsight'])->name('ai.insights.question');
+    Route::get('/ai/insights/quantitative/{questionId}', [InsightController::class, 'generateQuantitativeInsight'])->name('ai.insights.quantitative');
+    Route::post('/ai/insights/crosstab', [InsightController::class, 'analyzeCrosstab'])->name('ai.insights.crosstab');
 
     // Qualitative Reports
     Route::get('/surveys/{survey}/qualitative-report', [\App\Http\Controllers\InsightController::class, 'showQualitativeReport'])->name('surveys.qualitative');
