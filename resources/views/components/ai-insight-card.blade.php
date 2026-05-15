@@ -9,33 +9,43 @@
     idx: {{ $index }},
     init() {
         this.$watch('qId', () => { this.insight = null; this.error = null; });
+        
         if (this.qId && !this.loading) {
-            // Re-enabled automatic fetching with staggering (1.5s per question) to prevent 429 errors
-            setTimeout(() => {
-                this.generate();
-            }, this.idx * 1500);
+            // Lazy load analysis using IntersectionObserver
+            // This prevents hitting Groq rate limits by only analyzing questions as they are viewed
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    console.log('AI Insight Card: Visible in viewport, triggering analysis for:', this.qId);
+                    this.generate();
+                    observer.disconnect(); // Only trigger once
+                }
+            }, { 
+                threshold: 0.1, // Trigger when 10% of the card is visible
+                rootMargin: '100px' // Start loading slightly before it enters the viewport
+            });
+
+            observer.observe(this.$el);
         }
     },
     async generate(id = null) {
         if (id) this.qId = id;
-        if (!this.qId) {
-            console.warn('AI Insight Card: No question ID provided.');
-            return;
-        }
+        if (!this.qId) return;
 
-        console.log('AI Insight Card: Generating report for ID:', this.qId);
+        // Prevent redundant requests if already loading or loaded
+        if (this.loading || this.insight) return;
+
+        console.log('AI Insight Card: Executing generate for ID:', this.qId);
         this.loading = true;
         this.error = null;
-        this.insight = null;
         try {
             const response = await fetch(`/ai/insights/question/${this.qId}?survey_id=${this.sId}`);
-            if (response.status === 429) throw new Error('Groq AI Rate Limit Exceeded. Please wait a minute and try again.');
-            if (!response.ok) throw new Error('API Request Failed');
+            if (response.status === 429) throw new Error(@js(__('Groq AI Rate Limit Exceeded. Please wait a minute and try again.')));
+            if (!response.ok) throw new Error(@js(__('API Request Failed')));
             
             this.insight = await response.json();
             if (this.insight.error) throw new Error(this.insight.error);
         } catch (err) {
-            this.error = 'Unable to analyze responses. There might be too few answers or a network issue.';
+            this.error = @js(__('Unable to analyze responses. There might be too few answers or a network issue.'));
             console.error(err);
         } finally {
             this.loading = false;
@@ -46,25 +56,14 @@
 
     <!-- Header -->
     <template x-if="insight">
-        <div class="flex items-center justify-between mb-10 w-full border-b border-gray-50 pb-8">
+        <div class="flex items-center justify-between mb-6 w-full border-b border-gray-50 pb-6">
             <div class="flex items-center gap-5">
                 <div
                     class="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-xl shadow-indigo-200">
                     <i class="fa fa-chart-pie text-2xl"></i>
                 </div>
                 <div class="text-left">
-                    <h4 class="font-black text-gray-900 text-2xl tracking-tighter">Analytical Results</h4>
-                    <div class="flex items-center gap-2 mt-1">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <p class="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest">Real-time Groq
-                            Feed</p>
-                    </div>
-                </div>
-            </div>
-            <div class="hidden sm:flex items-center gap-4">
-                <div class="flex flex-col items-end">
-                    <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">AI Engine
-                        active</span>
+                    <h4 class="font-black text-gray-900 text-2xl tracking-tighter">{{ __('Analytical Results') }}</h4>
                 </div>
             </div>
         </div>
@@ -88,9 +87,9 @@
                 </div>
             </div>
         </div>
-        <h5 class="text-xl font-black text-gray-900 mb-2">Analyzing Responses</h5>
-        <p class="text-gray-400 text-sm max-w-[280px] font-medium leading-relaxed">Please wait while our AI maps
-            recurring themes and sentiment trends...</p>
+        <h5 class="text-xl font-black text-gray-900 mb-2">{{ __('Analyzing Responses') }}</h5>
+        <p class="text-gray-400 text-sm max-w-[280px] font-medium leading-relaxed">
+            {{ __('Please wait while our AI maps recurring themes and sentiment trends...') }}</p>
     </div>
 
     <!-- Error State -->
@@ -101,7 +100,8 @@
                 <i class="fa fa-triangle-exclamation text-2xl"></i>
             </div>
             <div class="text-center">
-                <p class="font-black uppercase tracking-[0.2em] text-[10px] text-rose-400 mb-2">Technical Insight Error
+                <p class="font-black uppercase tracking-[0.2em] text-[10px] text-rose-400 mb-2">
+                    {{ __('Technical Insight Error') }}
                 </p>
                 <span x-text="error" class="font-bold text-lg leading-tight"></span>
             </div>
@@ -115,9 +115,9 @@
             class="w-24 h-24 bg-white rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-sm border border-gray-100 transform -rotate-2 hover:rotate-0 transition-transform">
             <i class="fa fa-sparkles text-indigo-400 text-4xl"></i>
         </div>
-        <h4 class="text-3xl font-black text-gray-900 mb-4 tracking-tighter">AI Discovery Engine</h4>
+        <h4 class="text-3xl font-black text-gray-900 mb-4 tracking-tighter">{{ __('AI Discovery Engine') }}</h4>
         <p class="text-lg text-gray-500 font-medium max-w-sm mx-auto leading-relaxed mb-8">
-            Manually trigger the AI to analyze and map themes for this question to conserve API limits.
+            {{ __('Manually trigger the AI to analyze and map themes for this question to conserve API limits.') }}
         </p>
         <button @click="generate()"
             class="inline-flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 hover:-translate-y-1 active:translate-y-0">
@@ -128,43 +128,45 @@
 
     <!-- Results Body -->
     <template x-if="insight && !loading">
-        <div class="space-y-10 w-full text-left">
+        <div class="space-y-6 w-full text-left">
 
             <!-- Sentiment Breakdown -->
             <div class="bg-gray-50/50 p-6 rounded-2xl border border-gray-100/50">
                 <div class="flex items-center justify-between mb-4">
-                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Overall Voter
-                        Tone</span>
                     <span
-                        class="text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded">Sentiment
-                        Analysis</span>
+                        class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{{ __('Overall Voter Tone') }}</span>
                 </div>
                 <div
                     class="flex h-4 w-full rounded-full overflow-hidden bg-white border border-gray-100 p-0.5 shadow-inner">
                     <div :style="`width: ${insight.sentiment_breakdown.Positive}%`"
-                        class="bg-emerald-500 h-full rounded-l-full transition-all duration-1000" title="Positive">
+                        class="bg-emerald-500 h-full rounded-l-full transition-all duration-1000"
+                        :title="@js(__('Positive'))">
                     </div>
                     <div :style="`width: ${insight.sentiment_breakdown.Neutral}%`"
-                        class="bg-amber-400 h-full transition-all duration-1000" title="Neutral"></div>
+                        class="bg-amber-400 h-full transition-all duration-1000" :title="@js(__('Neutral'))"></div>
                     <div :style="`width: ${insight.sentiment_breakdown.Negative}%`"
-                        class="bg-rose-500 h-full rounded-r-full transition-all duration-1000" title="Negative"></div>
+                        class="bg-rose-500 h-full rounded-r-full transition-all duration-1000"
+                        :title="@js(__('Negative'))"></div>
                 </div>
                 <div class="flex flex-wrap justify-between mt-4 gap-4">
                     <div class="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-lg">
                         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                        <span class="text-xs font-black text-emerald-800 uppercase tracking-tighter">Positive</span>
+                        <span
+                            class="text-xs font-black text-emerald-800 uppercase tracking-tighter">{{ __('Positive') }}</span>
                         <span class="text-sm font-black text-emerald-900"
                             x-text="insight.sentiment_breakdown.Positive + '%'"></span>
                     </div>
                     <div class="flex items-center gap-2 px-3 py-1.5 bg-amber-50 rounded-lg">
                         <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-                        <span class="text-xs font-black text-amber-800 uppercase tracking-tighter">Neutral</span>
+                        <span
+                            class="text-xs font-black text-amber-800 uppercase tracking-tighter">{{ __('Neutral') }}</span>
                         <span class="text-sm font-black text-amber-900"
                             x-text="insight.sentiment_breakdown.Neutral + '%'"></span>
                     </div>
                     <div class="flex items-center gap-2 px-3 py-1.5 bg-rose-50 rounded-lg">
                         <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-                        <span class="text-xs font-black text-rose-800 uppercase tracking-tighter">Negative</span>
+                        <span
+                            class="text-xs font-black text-rose-800 uppercase tracking-tighter">{{ __('Negative') }}</span>
                         <span class="text-sm font-black text-rose-900"
                             x-text="insight.sentiment_breakdown.Negative + '%'"></span>
                     </div>
@@ -177,8 +179,8 @@
                 <div class="flex flex-col" :class="insight.is_truncated ? 'opacity-40 grayscale-[0.5] blur-[1px]' : ''">
                     <div class="flex items-center gap-2 mb-4">
                         <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
-                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Key Recurring
-                            Themes</span>
+                        <span
+                            class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{{ __('Key Recurring Themes') }}</span>
                     </div>
                     <div class="grid gap-3">
                         <template x-for="theme in insight.key_themes" :key="theme.theme">
@@ -197,8 +199,8 @@
                 <div class="flex flex-col" :class="insight.is_truncated ? 'opacity-40 grayscale-[0.5] blur-[1px]' : ''">
                     <div class="flex items-center gap-2 mb-4">
                         <span class="w-1.5 h-4 bg-emerald-500 rounded-full"></span>
-                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Representative
-                            Quotes</span>
+                        <span
+                            class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{{ __('Representative Quotes') }}</span>
                     </div>
                     <div class="space-y-3">
                         <template x-for="quote in insight.representative_quotes" :key="quote">
@@ -224,14 +226,15 @@
                                 class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white mx-auto mb-6 shadow-xl shadow-indigo-200">
                                 <i class="fa-solid fa-lock text-2xl"></i>
                             </div>
-                            <h5 class="text-2xl font-black text-gray-900 mb-2 tracking-tighter">Unlock Full Analysis
+                            <h5 class="text-2xl font-black text-gray-900 mb-2 tracking-tighter">
+                                {{ __('Unlock Full Analysis') }}
                             </h5>
-                            <p class="text-gray-500 text-sm mb-8 leading-relaxed font-medium">Upgrade to <span
-                                    class="text-indigo-600 font-bold">Respondent Pro</span> to reveal all recurring
-                                themes, quotes, and deep qualitative mapping.</p>
+                            <p class="text-gray-500 text-sm mb-8 leading-relaxed font-medium">{{ __('Upgrade to') }}
+                                <span class="text-indigo-600 font-bold">{{ __('Respondent Pro') }}</span>
+                                {{ __('to reveal all recurring themes, quotes, and deep qualitative mapping.') }}</p>
                             <a href="{{ route('subscriptions.index') }}"
                                 class="inline-flex items-center justify-center w-full px-8 py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 hover:scale-[1.02] active:scale-[0.98]">
-                                Unlock Full Report
+                                {{ __('Unlock Full Report') }}
                                 <i class="fa-solid fa-arrow-right ml-2 text-xs"></i>
                             </a>
                         </div>

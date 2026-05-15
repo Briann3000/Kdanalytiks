@@ -11,8 +11,8 @@
         this.error = null;
         try {
             const response = await fetch(`/ai/insights/quantitative/${this.qId}?survey_id=${this.sId}`);
-            if (response.status === 429) throw new Error('Rate Limit Exceeded. Please wait.');
-            if (!response.ok) throw new Error('Failed to fetch analysis.');
+            if (response.status === 429) throw new Error(@js(__('Rate Limit Exceeded. Please wait.')));
+            if (!response.ok) throw new Error(@js(__('Failed to fetch analysis.')));
             const data = await response.json();
             this.insight = data.insight;
         } catch (err) {
@@ -55,7 +55,8 @@
 
             <div x-show="!insight && !loading && !error" class="py-2">
                 <p class="text-[11px] text-gray-400 font-medium italic">
-                    {{ __('Click below to generate a strategic interpretation of these numbers.') }}</p>
+                    {{ __('Click below to generate a strategic interpretation of these numbers.') }}
+                </p>
             </div>
 
             <!-- Further Analysis (Premium Enticement) -->

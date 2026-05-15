@@ -14,17 +14,17 @@
                     @php 
                         $userRoleVal = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
                     @endphp
-                    <li><a href="{{ route($userRoleVal . '.reports.index') }}" class="hover:text-indigo-600">Reports</a></li>
+                    <li><a href="{{ route($userRoleVal . '.reports.index') }}" class="hover:text-indigo-600">{{ __('Reports') }}</a></li>
                     <li><i class="fa-solid fa-chevron-right text-[10px]"></i></li>
                     <li class="font-medium text-gray-900">{{ $survey->title }}</li>
                 </ol>
             </nav>
-            <h2 class="text-3xl font-bold text-gray-900 tracking-tight">Qualitative Insights</h2>
-            <p class="text-gray-500 text-sm mt-1">Deep-dive into open-ended voter sentiment and thematic trends.</p>
+            <h2 class="text-3xl font-bold text-gray-900 tracking-tight">{{ __('Qualitative Insights') }}</h2>
+            <p class="text-gray-500 text-sm mt-1">{{ __('Deep-dive into open-ended voter sentiment and thematic trends.') }}</p>
         </div>
         <div class="flex space-x-3">
              <a href="{{ route('surveys.report', $survey) }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-bold text-gray-700 bg-white hover:bg-gray-50 transition-colors">
-                <i class="fa-solid fa-chart-line mr-2 text-indigo-600"></i> Standard Report
+                <i class="fa-solid fa-chart-line mr-2 text-indigo-600"></i> {{ __('Standard Report') }}
             </a>
         </div>
     </div>
@@ -33,7 +33,7 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
         <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
             <div class="flex-1">
-                <label for="question-select" class="block text-sm font-semibold text-gray-700 mb-3">Choose a question to analyze</label>
+                <label for="question-select" class="block text-sm font-semibold text-gray-700 mb-3">{{ __('Choose a question to analyze') }}</label>
                 <div class="flex flex-col sm:flex-row gap-4">
                     <select 
                         id="question-select" 
@@ -43,7 +43,7 @@
                         @forelse($questions as $question)
                             <option value="{{ $question['id'] }}">{{ $question['text'] }}</option>
                         @empty
-                            <option disabled>No qualitative questions found</option>
+                            <option disabled>{{ __('No qualitative questions found') }}</option>
                         @endforelse
                     </select>
                     
@@ -52,12 +52,12 @@
                         class="inline-flex items-center justify-center px-6 py-2 border border-transparent text-sm font-bold rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors whitespace-nowrap"
                     >
                         <i class="fa-solid fa-wand-sparkles mr-2"></i>
-                        Generate Report
+                        {{ __('Generate Report') }}
                     </button>
                 </div>
             </div>
             <div class="hidden lg:block pb-1 italic text-xs text-gray-400 font-medium">
-                Individual question sentiment and theme mapping
+                {{ __('Individual question sentiment and theme mapping') }}
             </div>
         </div>
     </div>
@@ -66,7 +66,7 @@
     <div x-show="selectedQuestion" class="mt-8 transition-all">
          <x-ai-insight-card 
             :question-id="''" 
-            :question-title="'Qualitative Analysis'" 
+            :question-title="__('Qualitative Analysis')" 
             :survey-id="$survey->id" 
         />
     </div>
@@ -76,8 +76,8 @@
             <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
                 <i class="fa-solid fa-comment-slash text-3xl text-gray-300"></i>
             </div>
-            <h3 class="text-2xl font-bold text-gray-900 mb-2">No qualitative data found</h3>
-            <p class="text-gray-500 max-w-sm mx-auto">This survey does not contain any open-ended text questions (text or textarea) required for qualitative AI analysis.</p>
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">{{ __('No qualitative data found') }}</h3>
+            <p class="text-gray-500 max-w-sm mx-auto">{{ __('This survey does not contain any open-ended text questions (text or textarea) required for qualitative AI analysis.') }}</p>
         </div>
     @endif
 </div>
