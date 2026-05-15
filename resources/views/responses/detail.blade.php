@@ -78,10 +78,14 @@
                     $schemaFields = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
                     if (!is_array($schemaFields)) $schemaFields = [];
                     
-                    // Filter out header and paragraph
                     $schemaFields = array_filter($schemaFields, function($field) {
                         return isset($field['name']) && !in_array($field['type'], ['header', 'paragraph']);
                     });
+
+                    $tier = auth()->user()->organization?->subscriptionTier?->slug ?? auth()->user()->independent?->subscriptionTier?->slug ?? 'free';
+                    if (auth()->user()->isAdmin()) $tier = 'enterprise';
+                    $isPremium = in_array($tier, ['pro', 'enterprise']);
+                    $transcriptions = $response->ai_metadata['transcriptions'] ?? [];
                 @endphp
                 
                 @if(count($schemaFields) > 0)
@@ -101,44 +105,119 @@
                             }
                             
                             $valStr = trim((string)$val);
-                            
-                            // Formatting logic
-                            if (str_starts_with($valStr, 'uploads/')) {
-                                $mediaUrl = asset('storage/' . $valStr);
-                                $displayVal = '<a href="' . $mediaUrl . '" target="_blank" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-bold"><i class="fa-solid fa-play-circle mr-1"></i> ' . __('View Media') . '</a>';
-                            } elseif (str_contains($valStr, 'base64,')) {
-                                $displayVal = '<a href="javascript:void(0)" onclick="Swal.fire({title:\'Signature\', imageUrl:\''.$valStr.'\', imageAlt:\'Signature\', customClass: {image: \'rounded-xl border border-gray-100 shadow-lg\'}})" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-bold"><i class="fa-solid fa-signature mr-1"></i> ' . __('View Signature') . '</a>';
-                            } elseif (preg_match('/^-?\d+\.\d+,-?\d+\.\d+$/', $valStr)) {
-                                $parts = explode(',', $valStr);
-                                $displayVal = '📍 ' . $parts[0] . ', ' . $parts[1];
-                            } elseif (str_starts_with($valStr, '[') && ($decoded = json_decode($valStr, true)) !== null) {
-                                $displayVal = empty($decoded) ? '<span class="text-gray-400 font-normal">—</span>' : count($decoded) . ' ' . __('entries');
-                            } elseif (str_starts_with($valStr, '{') && ($decoded = json_decode($valStr, true)) !== null) {
-                                if (empty((array)$decoded)) {
-                                    $displayVal = '<span class="text-gray-400 font-normal">—</span>';
-                                } else {
-                                    $pairs = [];
-                                    foreach($decoded as $k => $v) {
-                                        $pairs[] = (str_contains((string)$k, 'item-') ? '' : $k . ': ') . (is_array($v) ? json_encode($v) : $v);
-                                    }
-                                    $displayVal = implode(', ', $pairs);
-                                }
-                            } elseif ($valStr === 'true' || $valStr === '1') { 
-                                $displayVal = '✅'; 
-                            } elseif ($valStr === 'false' || $valStr === '0') { 
-                                $displayVal = '❌'; 
-                            } elseif ($valStr === '—' || $valStr === '') {
-                                $displayVal = '<span class="text-gray-400 font-normal">—</span>';
-                            } else {
-                                $displayVal = htmlspecialchars($valStr);
-                            }
+                            $isMedia = str_starts_with($valStr, 'uploads/') && preg_match('/\.(mp4|webm|ogg|ogv|mov|mp3|wav|m4a|aac)$/i', $valStr);
                         @endphp
                         <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 hover:bg-gray-50">
                             <dt class="text-sm font-medium text-gray-700">
                                 {{ $label }}
                             </dt>
                             <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 font-bold whitespace-pre-wrap">
-                                {!! $displayVal !!}
+                                @if($isMedia)
+                                    <div x-data="{ 
+                                        transcribing: false, 
+                                        transcription: @js($transcriptions[$valStr] ?? null),
+                                        error: null,
+                                        async transcribe() {
+                                            @if(!$isPremium)
+                                                Swal.fire({
+                                                    title: 'Premium Feature',
+                                                    text: 'AI Transcription is only available for Pro and Enterprise plans.',
+                                                    icon: 'info',
+                                                    showCancelButton: true,
+                                                    confirmButtonText: 'Upgrade Now',
+                                                    confirmButtonColor: '#4f46e5'
+                                                }).then((result) => {
+                                                    if (result.isConfirmed) {
+                                                        window.location.href = '{{ route('subscriptions.index') }}';
+                                                    }
+                                                });
+                                                return;
+                                            @endif
+
+                                            this.transcribing = true;
+                                            this.error = null;
+                                            try {
+                                                const response = await fetch('{{ route('surveys.responses.transcribe', [$survey, $response]) }}', {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        'Content-Type': 'application/json',
+                                                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                                    },
+                                                    body: JSON.stringify({ file_path: @js($valStr) })
+                                                });
+                                                const data = await response.json();
+                                                if (data.success) {
+                                                    this.transcription = data.transcription;
+                                                } else {
+                                                    this.error = data.message;
+                                                }
+                                            } catch (e) {
+                                                this.error = 'Transcription failed.';
+                                            } finally {
+                                                this.transcribing = false;
+                                            }
+                                        }
+                                    }" class="space-y-3">
+                                        <div class="flex items-center gap-4">
+                                            <a href="{{ asset('storage/' . $valStr) }}" target="_blank" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
+                                                <i class="fa-solid fa-play-circle mr-2"></i> {{ __('View Media') }}
+                                            </a>
+                                            
+                                            <template x-if="!transcription">
+                                                <button @click="transcribe" :disabled="transcribing" class="inline-flex items-center text-emerald-600 hover:text-emerald-800 font-bold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 disabled:opacity-50 transition-all">
+                                                    <template x-if="!transcribing">
+                                                        <span><i class="fa-solid fa-wand-magic-sparkles mr-2"></i> {{ __('Transcribe with AI') }} @if(!$isPremium) <i class="fa-solid fa-lock ml-1 text-[10px]"></i> @endif</span>
+                                                    </template>
+                                                    <template x-if="transcribing">
+                                                        <span><i class="fa-solid fa-circle-notch fa-spin mr-2"></i> {{ __('Transcribing...') }}</span>
+                                                    </template>
+                                                </button>
+                                            </template>
+                                        </div>
+
+                                        <template x-if="transcription">
+                                            <div class="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100 relative group">
+                                                <div class="flex items-center justify-between mb-2">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="w-1.5 h-4 bg-emerald-500 rounded-full"></span>
+                                                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ __('AI Transcription') }}</span>
+                                                    </div>
+                                                    <button @click="transcribe" :disabled="transcribing" class="text-[9px] font-black uppercase text-indigo-500 hover:text-indigo-700 transition-colors flex items-center gap-1">
+                                                        <i class="fa-solid fa-rotate mr-0.5" :class="transcribing ? 'fa-spin' : ''"></i> 
+                                                        <span x-text="transcribing ? '{{ __('Regenerating...') }}' : '{{ __('Regenerate') }}'"></span>
+                                                    </button>
+                                                </div>
+                                                <p class="text-sm text-gray-700 leading-relaxed italic" x-text="transcription"></p>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="error">
+                                            <p class="text-xs text-rose-500 font-medium" x-text="error"></p>
+                                        </template>
+                                    </div>
+                                @elseif (str_contains($valStr, 'base64,'))
+                                    <a href="javascript:void(0)" onclick="Swal.fire({title:'Signature', imageUrl:'{{ $valStr }}', imageAlt:'Signature', customClass: {image: 'rounded-xl border border-gray-100 shadow-lg'}})" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
+                                        <i class="fa-solid fa-signature mr-2"></i> {{ __('View Signature') }}
+                                    </a>
+                                @elseif (preg_match('/^-?\d+\.\d+,-?\d+\.\d+$/', $valStr))
+                                    📍 {{ $valStr }}
+                                @elseif (str_starts_with($valStr, '[') && ($decoded = json_decode($valStr, true)) !== null)
+                                    {{ empty($decoded) ? '—' : count($decoded) . ' ' . __('entries') }}
+                                @elseif (str_starts_with($valStr, '{') && ($decoded = json_decode($valStr, true)) !== null)
+                                    @php
+                                        $pairs = [];
+                                        foreach($decoded as $k => $v) {
+                                            $pairs[] = (str_contains((string)$k, 'item-') ? '' : $k . ': ') . (is_array($v) ? json_encode($v) : $v);
+                                        }
+                                        echo implode(', ', $pairs);
+                                    @endphp
+                                @elseif ($valStr === 'true' || $valStr === '1') 
+                                    ✅ 
+                                @elseif ($valStr === 'false' || $valStr === '0') 
+                                    ❌ 
+                                @else
+                                    {{ $valStr }}
+                                @endif
                             </dd>
                         </div>
                     @endforeach
@@ -150,23 +229,102 @@
                 
             @else
                 {{-- Legacy Questions --}}
+                @php
+                    $tier = auth()->user()->organization?->subscriptionTier?->slug ?? auth()->user()->independent?->subscriptionTier?->slug ?? 'free';
+                    if (auth()->user()->isAdmin()) $tier = 'enterprise';
+                    $isPremium = in_array($tier, ['pro', 'enterprise']);
+                    $transcriptions = $response->ai_metadata['transcriptions'] ?? [];
+                @endphp
                 @foreach($survey->questions()->orderBy('position')->get() as $question)
                     @php
                         $answer = $response->answers->where('question_id', $question->id)->first();
+                        $valStr = $answer ? $answer->value : '';
+                        $isMedia = $answer && str_starts_with($valStr, 'uploads/') && preg_match('/\.(mp4|webm|ogg|ogv|mov|mp3|wav|m4a|aac)$/i', $valStr);
                     @endphp
                     <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 hover:bg-gray-50">
                         <dt class="text-sm font-medium text-gray-700">
                             {{ $question->text }}
                         </dt>
-                        <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 font-bold">
-                            @if($answer)
-                                @if(in_array($question->type, ['video', 'audio']))
-                                    <a href="{{ asset('storage/' . $answer->value) }}" target="_blank" class="text-indigo-600 hover:text-indigo-900 flex items-center">
-                                        <i class="fa-solid fa-file-audio mr-2"></i> View Uploaded File
-                                    </a>
-                                @else
-                                    {{ $answer->value }}
-                                @endif
+                        <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 font-bold whitespace-pre-wrap">
+                            @if($isMedia)
+                                <div x-data="{ 
+                                    transcribing: false, 
+                                    transcription: @js($transcriptions[$valStr] ?? null),
+                                    error: null,
+                                    async transcribe() {
+                                        @if(!$isPremium)
+                                            Swal.fire({
+                                                title: 'Premium Feature',
+                                                text: 'AI Transcription is only available for Pro and Enterprise plans.',
+                                                icon: 'info',
+                                                showCancelButton: true,
+                                                confirmButtonText: 'Upgrade Now',
+                                                confirmButtonColor: '#4f46e5'
+                                            }).then((result) => {
+                                                if (result.isConfirmed) {
+                                                    window.location.href = '{{ route('subscriptions.index') }}';
+                                                }
+                                            });
+                                            return;
+                                        @endif
+
+                                        this.transcribing = true;
+                                        this.error = null;
+                                        try {
+                                            const response = await fetch('{{ route('surveys.responses.transcribe', [$survey, $response]) }}', {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                                },
+                                                body: JSON.stringify({ file_path: @js($valStr) })
+                                            });
+                                            const data = await response.json();
+                                            if (data.success) {
+                                                this.transcription = data.transcription;
+                                            } else {
+                                                this.error = data.message;
+                                            }
+                                        } catch (e) {
+                                            this.error = 'Transcription failed.';
+                                        } finally {
+                                            this.transcribing = false;
+                                        }
+                                    }
+                                }" class="space-y-3">
+                                    <div class="flex items-center gap-4">
+                                        <a href="{{ asset('storage/' . $valStr) }}" target="_blank" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
+                                            <i class="fa-solid fa-play-circle mr-2"></i> {{ __('View Media') }}
+                                        </a>
+                                        
+                                        <template x-if="!transcription">
+                                            <button @click="transcribe" :disabled="transcribing" class="inline-flex items-center text-emerald-600 hover:text-emerald-800 font-bold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 disabled:opacity-50 transition-all">
+                                                <template x-if="!transcribing">
+                                                    <span><i class="fa-solid fa-wand-magic-sparkles mr-2"></i> {{ __('Transcribe with AI') }} @if(!$isPremium) <i class="fa-solid fa-lock ml-1 text-[10px]"></i> @endif</span>
+                                                </template>
+                                                <template x-if="transcribing">
+                                                    <span><i class="fa-solid fa-circle-notch fa-spin mr-2"></i> {{ __('Transcribing...') }}</span>
+                                                </template>
+                                            </button>
+                                        </template>
+                                    </div>
+
+                                    <template x-if="transcription">
+                                        <div class="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100 relative group">
+                                            <div class="flex items-center gap-2 mb-2">
+                                                <span class="w-1.5 h-4 bg-emerald-500 rounded-full"></span>
+                                                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ __('AI Transcription') }}</span>
+                                            </div>
+                                            <p class="text-sm text-gray-700 leading-relaxed italic" x-text="transcription"></p>
+                                        </div>
+                                    </template>
+
+                                    <template x-if="error">
+                                        <p class="text-xs text-rose-500 font-medium" x-text="error"></p>
+                                    </template>
+                                </div>
+                            @elseif($answer)
+                                {{ $answer->value }}
                             @else
                                 <span class="text-gray-400 italic">No answer provided</span>
                             @endif

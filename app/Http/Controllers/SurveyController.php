@@ -2326,6 +2326,60 @@ class SurveyController extends Controller
         return response()->json($exports);
     }
 
+    public function transcribeMedia(Request $request, \App\Models\Survey $survey, \App\Models\Response $response)
+    {
+        $this->authorizeOwner($survey);
+
+        if ($response->survey_id !== $survey->id) {
+            return response()->json(['success' => false, 'message' => 'Invalid response'], 400);
+        }
+
+        // Premium Check
+        $tier = $this->getCurrentTier();
+        if (!in_array($tier, ['pro', 'enterprise'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'AI Transcription is a Premium feature. Please upgrade to Pro or Enterprise to transcribe media submissions.'
+            ], 403);
+        }
+
+        $filePath = $request->input('file_path');
+        if (empty($filePath)) {
+            return response()->json(['success' => false, 'message' => 'File path is required'], 400);
+        }
+
+        // Construct absolute path
+        $absolutePath = storage_path('app/public/' . $filePath);
+        if (!file_exists($absolutePath)) {
+            return response()->json(['success' => false, 'message' => 'Media file not found on server'], 404);
+        }
+
+        try {
+            $aiService = new \App\Services\AiService();
+            $transcription = $aiService->transcribeMedia($absolutePath);
+
+            if ($transcription) {
+                // Save to Response AI Metadata
+                $metadata = $response->ai_metadata ?? [];
+                if (!isset($metadata['transcriptions'])) {
+                    $metadata['transcriptions'] = [];
+                }
+                $metadata['transcriptions'][$filePath] = $transcription;
+                $response->update(['ai_metadata' => $metadata]);
+
+                return response()->json([
+                    'success' => true,
+                    'transcription' => $transcription
+                ]);
+            }
+
+            return response()->json(['success' => false, 'message' => 'AI transcription failed. Please try again later.'], 500);
+        } catch (\Exception $e) {
+            \Log::error("Transcription Error: " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error during transcription.'], 500);
+        }
+    }
+
     private function getCurrentTier()
     {
         $user = auth()->user();

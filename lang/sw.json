@@ -907,5 +907,13 @@
     "Fresh thread": "Uzi mpya",
     "Excel (.xlsx)": "Excel (.xlsx)",
     "PDF Report": "Ripoti ya PDF",
-    "DOCX Report": "Ripoti ya DOCX"
+    "DOCX Report": "Ripoti ya DOCX",
+    "View Media": "Tazama Media",
+    "View Signature": "Angalia Sahihi",
+    "Transcribe": "Nakili",
+    "Transcribe with AI": "Nakili kwa AI",
+    "Transcribing...": "Inanakili...",
+    "Regenerating...": "Inazalisha upya...",
+    "AI Transcription": "Unukuzi wa AI",
+    "AI Transcription is only available for Pro and Enterprise plans.": "Unukuzi wa AI unapatikana tu kwa mipango ya Pro na Enterprise."
 }

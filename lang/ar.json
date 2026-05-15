@@ -907,5 +907,13 @@
     "Fresh thread": "سلسلة محادثات جديدة",
     "Excel (.xlsx)": "Excel (.xlsx)",
     "PDF Report": "تقرير PDF",
-    "DOCX Report": "تقرير DOCX"
+    "DOCX Report": "تقرير DOCX",
+    "View Media": "عرض الوسائط",
+    "View Signature": "عرض التوقيع",
+    "Transcribe": "تفريغ",
+    "Transcribe with AI": "تفريغ بالذكاء الاصطناعي",
+    "Transcribing...": "جاري التفريغ...",
+    "Regenerating...": "جاري إعادة التوليد...",
+    "AI Transcription": "تفريغ بالذكاء الاصطناعي",
+    "AI Transcription is only available for Pro and Enterprise plans.": "تفريغ الذكاء الاصطناعي متاح فقط لخطط Pro و Enterprise."
 }

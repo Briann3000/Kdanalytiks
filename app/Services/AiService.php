@@ -386,6 +386,46 @@ class AiService
         return null;
     }
 
+    /**
+     * Transcribe an audio or video file using Groq's Whisper model.
+     */
+    public function transcribeMedia(string $absoluteFilePath)
+    {
+        $apiKey = config('services.groq.api_key');
+        if (empty($apiKey)) {
+            Log::error("Groq API Key missing for transcription.");
+            return null;
+        }
+
+        if (!file_exists($absoluteFilePath)) {
+            Log::error("Media file not found for transcription: " . $absoluteFilePath);
+            return null;
+        }
+
+        try {
+            $response = Http::withToken($apiKey)
+                ->timeout(120) // Transcriptions can take longer for large files
+                ->attach('file', file_get_contents($absoluteFilePath), basename($absoluteFilePath))
+                ->post('https://api.groq.com/openai/v1/audio/transcriptions', [
+                    'model' => 'whisper-large-v3',
+                    'response_format' => 'json',
+                    'language' => 'en', // Optional: Can be auto-detected
+                    'temperature' => 0.0,
+                ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                return $data['text'] ?? null;
+            }
+
+            Log::error("Groq Transcription Error (HTTP " . $response->status() . "): " . $response->body());
+            return null;
+        } catch (\Exception $e) {
+            Log::error("Groq Transcription Exception: " . $e->getMessage());
+            return null;
+        }
+    }
+
 
     /**
      * Generate a full survey schema (JSON) based on a text prompt using Groq.
