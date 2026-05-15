@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\SociusChatController;
 use App\Http\Controllers\SurveyController;
 use App\Http\Controllers\InsightController;
 use App\Models\User;
@@ -131,6 +132,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Survey Hub & Core Actions
     Route::get('/surveys/{survey}/responses', [SurveyController::class, 'showResponses'])->name('surveys.responses');
     Route::get('/surveys/{survey_id}/responses/{response_id}', [SurveyController::class, 'showResponseDetail'])->name('surveys.responses.show');
+    Route::post('/surveys/{survey}/responses/{response}/transcribe', [SurveyController::class, 'transcribeMedia'])->name('surveys.responses.transcribe');
     Route::get('/surveys/{survey}/export', [SurveyController::class, 'exportResponses'])->name('surveys.export');
     Route::get('/surveys/{survey}/export-xlsx', [SurveyController::class, 'exportXlsx'])->name('surveys.export_xlsx');
     Route::get('/surveys/{survey}/export-json', [SurveyController::class, 'exportJson'])->name('surveys.export_json');
@@ -181,6 +183,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/archive', [SurveyController::class, 'archive'])->name('archive');
         Route::post('/toggle-shared-report', [SurveyController::class, 'toggleSharedReport'])->name('reports.toggle-shared');
         Route::get('/crosstab', [SurveyController::class, 'crosstab'])->name('reports.crosstab');
+    });
+
+    Route::middleware(['throttle:60,1'])->prefix('surveys/{survey}/analyse')->name('surveys.analyse.')->group(function () {
+        Route::post('/image/generate', [SociusChatController::class, 'generateImage'])->name('image.generate');
+        Route::get('/threads', [SociusChatController::class, 'index'])->name('threads.index');
+        Route::post('/threads', [SociusChatController::class, 'store'])->name('threads.store');
+        Route::get('/threads/{thread}', [SociusChatController::class, 'show'])->name('threads.show');
+        Route::post('/threads/{thread}/messages/stream', [SociusChatController::class, 'stream'])->name('threads.stream');
+        Route::patch('/threads/{thread}', [SociusChatController::class, 'update'])->name('threads.update');
+        Route::post('/threads/{thread}/pin-toggle', [SociusChatController::class, 'togglePin'])->name('threads.pin_toggle');
+        Route::get('/threads/{thread}/export', [SociusChatController::class, 'export'])->name('threads.export');
+        Route::delete('/threads/{thread}', [SociusChatController::class, 'destroy'])->name('threads.destroy');
     });
 
 

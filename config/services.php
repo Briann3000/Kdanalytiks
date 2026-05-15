@@ -59,4 +59,8 @@ return [
         'redirect_uri' => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    'tavily' => [
+        'api_key' => env('TAVILY_API_KEY'),
+    ],
+
 ];

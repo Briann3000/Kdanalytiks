@@ -62,6 +62,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Response::class, 'respondent_id');
     }
 
+    public function aiThreads(): HasMany
+    {
+        return $this->hasMany(SurveyAiThread::class);
+    }
+
     public function wallet(): HasOne
     {
         return $this->hasOne(Wallet::class);
@@ -115,13 +120,16 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function hasProAccess(): bool
     {
-        if ($this->isAdmin()) return true;
+        if ($this->isAdmin())
+            return true;
 
         $entity = ($this->role === \App\Enums\UserRole::Organization) ? $this->organization : (($this->role === \App\Enums\UserRole::Independent) ? $this->independent : $this);
-        if (!$entity) return false;
+        if (!$entity)
+            return false;
 
         $tier = $entity->subscriptionTier;
-        if (!$tier) return false;
+        if (!$tier)
+            return false;
 
         $tierSlug = strtolower($tier->slug);
         return str_contains($tierSlug, 'pro') || str_contains($tierSlug, 'enterprise');
@@ -132,7 +140,8 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function canUseAiAnalysis(): bool
     {
-        if ($this->hasProAccess()) return true;
+        if ($this->hasProAccess())
+            return true;
 
         // Free users get 2 trials
         return ($this->ai_analysis_count ?? 0) < 2;

@@ -79,4 +79,9 @@ class Survey extends Model
     {
         return $this->hasMany(Response::class);
     }
+
+    public function aiThreads(): HasMany
+    {
+        return $this->hasMany(SurveyAiThread::class);
+    }
 }
