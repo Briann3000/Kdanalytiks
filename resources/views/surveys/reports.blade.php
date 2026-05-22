@@ -671,8 +671,16 @@
                     webSearchEnabled: false,
                     historyOpen: window.innerWidth > 1280,
 
+                    // Knowledge Base
+                    kbModalOpen: false,
+                    kbRules: [],
+                    newKbRuleContent: '',
+                    loadingKb: false,
+                    savingKb: false,
+
                     init() {
                         this.loadThreads();
+                        this.loadKbRules();
                         
                         // Debounced visual rendering to handle high-frequency stream updates
                         this.renderDebounce = null;
@@ -1673,6 +1681,143 @@
                                 resolve();
                             }
                         });
+                    },
+
+                    async loadKbRules() {
+                        this.loadingKb = true;
+                        try {
+                            const response = await fetch(this.urls.kbList, {
+                                headers: { 'Accept': 'application/json' }
+                            });
+                            const data = await this.parseJsonResponse(response);
+                            this.kbRules = data.rules || [];
+                        } catch (error) {
+                            console.error('Failed to load KB rules', error);
+                        } finally {
+                            this.loadingKb = false;
+                        }
+                    },
+
+                    async addKbRule() {
+                        if (!this.newKbRuleContent || !this.newKbRuleContent.trim()) return;
+                        this.savingKb = true;
+                        try {
+                            const response = await fetch(this.urls.kbStore, {
+                                method: 'POST',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                },
+                                body: JSON.stringify({ content: this.newKbRuleContent.trim() })
+                            });
+                            const data = await this.parseJsonResponse(response);
+                            if (data.rule) {
+                                this.kbRules = [data.rule, ...this.kbRules];
+                                this.newKbRuleContent = '';
+                                Swal.fire({
+                                    title: @js(__('Added!')),
+                                    text: data.message || @js(__('Preference added.')),
+                                    icon: 'success',
+                                    toast: true,
+                                    position: 'top-end',
+                                    showConfirmButton: false,
+                                    timer: 2000,
+                                    customClass: { popup: 'rounded-2xl shadow-xl border-none' }
+                                });
+                            }
+                        } catch (error) {
+                            Swal.fire({
+                                title: @js(__('Error')),
+                                text: error.message,
+                                icon: 'error',
+                                customClass: { popup: 'rounded-3xl border-none shadow-2xl' }
+                            });
+                        } finally {
+                            this.savingKb = false;
+                        }
+                    },
+
+                    async toggleKbRule(rule) {
+                        const originalState = rule.is_active;
+                        const newState = !originalState;
+                        rule.is_active = newState; // optimistic update
+                        
+                        try {
+                            const url = this.urls.kbUpdateTemplate.replace('__KB__', rule.id);
+                            const response = await fetch(url, {
+                                method: 'PATCH',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                },
+                                body: JSON.stringify({ is_active: newState })
+                            });
+                            const data = await this.parseJsonResponse(response);
+                            if (data.rule) {
+                                rule.is_active = data.rule.is_active;
+                            }
+                        } catch (error) {
+                            rule.is_active = originalState; // rollback
+                            Swal.fire({
+                                title: @js(__('Error')),
+                                text: error.message,
+                                icon: 'error',
+                                customClass: { popup: 'rounded-3xl border-none shadow-2xl' }
+                            });
+                        }
+                    },
+
+                    async deleteKbRule(ruleId) {
+                        const result = await Swal.fire({
+                            title: @js(__('Delete Preference?')),
+                            text: @js(__('This preference will no longer apply to future chat answers.')),
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#ef4444',
+                            cancelButtonColor: '#6b7280',
+                            confirmButtonText: @js(__('Yes, Delete It')),
+                            cancelButtonText: @js(__('Cancel')),
+                            customClass: {
+                                popup: 'rounded-3xl border-none shadow-2xl',
+                                title: 'text-2xl font-black tracking-tight text-gray-900',
+                                confirmButton: 'rounded-xl px-6 py-2.5 text-xs font-black uppercase tracking-widest',
+                                cancelButton: 'rounded-xl px-6 py-2.5 text-xs font-black uppercase tracking-widest'
+                            }
+                        });
+
+                        if (!result.isConfirmed) return;
+
+                        try {
+                            const url = this.urls.kbDestroyTemplate.replace('__KB__', ruleId);
+                            const response = await fetch(url, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                }
+                            });
+                            const data = await this.parseJsonResponse(response);
+                            this.kbRules = this.kbRules.filter(r => r.id !== ruleId);
+                            Swal.fire({
+                                title: @js(__('Deleted!')),
+                                text: data.message || @js(__('Preference removed.')),
+                                icon: 'success',
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 2000,
+                                customClass: { popup: 'rounded-2xl shadow-xl border-none' }
+                            });
+                        } catch (error) {
+                            Swal.fire({
+                                title: @js(__('Error')),
+                                text: error.message,
+                                icon: 'error',
+                                customClass: { popup: 'rounded-3xl border-none shadow-2xl' }
+                            });
+                        }
                     }
                 }
             };

@@ -19,7 +19,7 @@ class SurveyFactory extends Factory
         return [
             'title' => $this->faker->sentence,
             'description' => $this->faker->paragraph,
-            'category' => 'Technology',
+            'category' => \App\Enums\SurveyCategory::Academic->value,
             'type' => 'public',
             'status' => 'active',
             'created_by' => 1,

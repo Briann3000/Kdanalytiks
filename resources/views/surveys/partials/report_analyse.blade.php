@@ -8,7 +8,11 @@
             streamTemplate: @js(route('surveys.analyse.threads.stream', [$survey, '__THREAD__'])),
             updateTemplate: @js(route('surveys.analyse.threads.update', [$survey, '__THREAD__'])),
             pin_toggleTemplate: @js(route('surveys.analyse.threads.pin_toggle', [$survey, '__THREAD__'])),
-            destroyTemplate: @js(route('surveys.analyse.threads.destroy', [$survey, '__THREAD__']))
+            destroyTemplate: @js(route('surveys.analyse.threads.destroy', [$survey, '__THREAD__'])),
+            kbList: @js(route('socius.knowledge-base.index')),
+            kbStore: @js(route('socius.knowledge-base.store')),
+            kbUpdateTemplate: @js(route('socius.knowledge-base.update', ['knowledgeBase' => '__KB__'])),
+            kbDestroyTemplate: @js(route('socius.knowledge-base.destroy', ['knowledgeBase' => '__KB__']))
         }
     })" x-init="init()" class="animate-in fade-in duration-500" style="display: none;">
     <div class="relative flex gap-4 h-[calc(100vh-14rem)] min-h-[600px] overflow-hidden">
@@ -169,38 +173,49 @@
                         x-text="currentThread ? currentThread.title : '{{ __('Socius') }}'"></h3>
                 </div>
 
-                {{-- Export Dropdown --}}
-                <template x-if="currentThreadId">
-                    <div class="relative" x-data="{ exportMenuOpen: false }" @click.away="exportMenuOpen = false">
-                        <button @click="exportMenuOpen = !exportMenuOpen"
-                            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 text-xs font-bold text-slate-300 hover:text-white transition-all">
-                            <i class="fa-solid fa-download text-[10px]"></i>
-                            {{ __('Export') }}
-                            <i class="fa-solid fa-chevron-down text-[10px] opacity-50"></i>
-                        </button>
+                <div class="flex items-center gap-2">
+                    {{-- Knowledge Base Button --}}
+                    <button @click="kbModalOpen = true"
+                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 text-xs font-bold text-slate-300 hover:text-white transition-all"
+                        title="{{ __('Manage persistent formatting rules and styles') }}">
+                        <i class="fa-solid fa-brain text-[10px] text-orange-300"></i>
+                        {{ __('Knowledge Base') }}
+                    </button>
 
-                        <div x-show="exportMenuOpen" x-transition:enter="transition ease-out duration-100"
-                            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                            class="absolute right-0 mt-2 w-48 rounded-2xl bg-[#363636] border border-white/10 shadow-2xl z-50 overflow-hidden py-1">
-                            <a :href="`{{ route('surveys.analyse.threads.export', [$survey, ':thread']) }}`.replace(':thread', currentThreadId) + '?format=pdf'"
-                                class="flex items-center gap-3 px-4 py-2.5 text-xs text-slate-300 hover:bg-white/10 hover:text-white transition-colors">
-                                <i class="fa-solid fa-file-pdf text-red-400"></i> {{ __('PDF Report') }}
-                            </a>
-                            <a :href="`{{ route('surveys.analyse.threads.export', [$survey, ':thread']) }}`.replace(':thread', currentThreadId) + '?format=docx'"
-                                class="flex items-center gap-3 px-4 py-2.5 text-xs text-slate-300 hover:bg-white/10 hover:text-white transition-colors">
-                                <i class="fa-solid fa-file-word text-blue-400"></i> {{ __('Word Document') }}
-                            </a>
-                            <a :href="`{{ route('surveys.analyse.threads.export', [$survey, ':thread']) }}`.replace(':thread', currentThreadId) + '?format=excel'"
-                                class="flex items-center gap-3 px-4 py-2.5 text-xs text-slate-300 hover:bg-white/10 hover:text-white transition-colors">
-                                <i class="fa-solid fa-file-excel text-green-400"></i> {{ __('Excel Spreadsheet') }}
-                            </a>
-                            <a :href="`{{ route('surveys.analyse.threads.export', [$survey, ':thread']) }}`.replace(':thread', currentThreadId) + '?format=md'"
-                                class="flex items-center gap-3 px-4 py-2.5 text-xs text-slate-300 hover:bg-white/10 hover:text-white transition-colors">
-                                <i class="fa-solid fa-file-code text-slate-400"></i> {{ __('Markdown Text') }}
-                            </a>
+                    {{-- Export Dropdown --}}
+                    <template x-if="currentThreadId">
+                        <div class="relative" x-data="{ exportMenuOpen: false }" @click.away="exportMenuOpen = false">
+                            <button @click="exportMenuOpen = !exportMenuOpen"
+                                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 text-xs font-bold text-slate-300 hover:text-white transition-all">
+                                <i class="fa-solid fa-download text-[10px]"></i>
+                                {{ __('Export') }}
+                                <i class="fa-solid fa-chevron-down text-[10px] opacity-50"></i>
+                            </button>
+
+                            <div x-show="exportMenuOpen" x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 scale-95"
+                                x-transition:enter-end="opacity-100 scale-100"
+                                class="absolute right-0 mt-2 w-48 rounded-2xl bg-[#363636] border border-white/10 shadow-2xl z-50 overflow-hidden py-1">
+                                <a :href="`{{ route('surveys.analyse.threads.export', [$survey, ':thread']) }}`.replace(':thread', currentThreadId) + '?format=pdf'"
+                                    class="flex items-center gap-3 px-4 py-2.5 text-xs text-slate-300 hover:bg-white/10 hover:text-white transition-colors">
+                                    <i class="fa-solid fa-file-pdf text-red-400"></i> {{ __('PDF Report') }}
+                                </a>
+                                <a :href="`{{ route('surveys.analyse.threads.export', [$survey, ':thread']) }}`.replace(':thread', currentThreadId) + '?format=docx'"
+                                    class="flex items-center gap-3 px-4 py-2.5 text-xs text-slate-300 hover:bg-white/10 hover:text-white transition-colors">
+                                    <i class="fa-solid fa-file-word text-blue-400"></i> {{ __('Word Document') }}
+                                </a>
+                                <a :href="`{{ route('surveys.analyse.threads.export', [$survey, ':thread']) }}`.replace(':thread', currentThreadId) + '?format=excel'"
+                                    class="flex items-center gap-3 px-4 py-2.5 text-xs text-slate-300 hover:bg-white/10 hover:text-white transition-colors">
+                                    <i class="fa-solid fa-file-excel text-green-400"></i> {{ __('Excel Spreadsheet') }}
+                                </a>
+                                <a :href="`{{ route('surveys.analyse.threads.export', [$survey, ':thread']) }}`.replace(':thread', currentThreadId) + '?format=md'"
+                                    class="flex items-center gap-3 px-4 py-2.5 text-xs text-slate-300 hover:bg-white/10 hover:text-white transition-colors">
+                                    <i class="fa-solid fa-file-code text-slate-400"></i> {{ __('Markdown Text') }}
+                                </a>
+                            </div>
                         </div>
-                    </div>
-                </template>
+                    </template>
+                </div>
             </div>
 
             <div class="flex-1 overflow-y-auto custom-scrollbar px-4 md:px-8 py-6 space-y-6" x-ref="messageList">
@@ -303,8 +318,9 @@
                                     </p>
                                 </div>
                                 {{-- Message Actions --}}
-                                <div
-                                    class="flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
+                                <div x-data="{ localExportOpen: false }" @click.outside="localExportOpen = false"
+                                    class="flex items-center gap-1 transition-opacity relative"
+                                    :class="localExportOpen ? 'opacity-100' : 'opacity-0 group-hover/msg:opacity-100'">
                                     <template x-if="message.role === 'user'">
                                         <button @click="startEditing(message.id, message.content)"
                                             class="w-7 h-7 rounded-xl flex items-center justify-center transition-all"
@@ -320,6 +336,49 @@
                                             <i class="fa-solid fa-rotate text-xs"></i>
                                         </button>
                                     </template>
+
+                                    {{-- Single Message Export Dropdown --}}
+                                    <template
+                                        x-if="message.role === 'assistant' && !message.id.toString().startsWith('temp-')">
+                                        <div class="relative">
+                                            <button @click="localExportOpen = !localExportOpen"
+                                                class="w-7 h-7 rounded-xl flex items-center justify-center transition-all hover:bg-white/10 text-slate-400"
+                                                title="{{ __('Export Report') }}">
+                                                <i class="fa-solid fa-download text-xs"></i>
+                                            </button>
+                                            <div x-show="localExportOpen"
+                                                x-transition:enter="transition ease-out duration-100"
+                                                x-transition:enter-start="opacity-0 scale-95"
+                                                x-transition:enter-end="opacity-100 scale-100"
+                                                x-transition:leave="transition ease-in duration-75"
+                                                x-transition:leave-start="opacity-100 scale-100"
+                                                x-transition:leave-end="opacity-0 scale-95"
+                                                class="absolute right-0 mt-1 w-44 rounded-2xl bg-[#363636] border border-white/10 shadow-2xl z-50 overflow-hidden py-1"
+                                                style="display: none;">
+                                                <a :href="`{{ route('surveys.analyse.threads.export', [$survey, ':thread']) }}`.replace(':thread', currentThreadId) + '?format=pdf&message_id=' + message.id"
+                                                    class="flex items-center gap-2.5 px-3.5 py-2 text-xs text-slate-300 hover:bg-white/10 hover:text-white transition-colors">
+                                                    <i class="fa-solid fa-file-pdf text-red-400 w-4"></i>
+                                                    {{ __('PDF Document') }}
+                                                </a>
+                                                <a :href="`{{ route('surveys.analyse.threads.export', [$survey, ':thread']) }}`.replace(':thread', currentThreadId) + '?format=docx&message_id=' + message.id"
+                                                    class="flex items-center gap-2.5 px-3.5 py-2 text-xs text-slate-300 hover:bg-white/10 hover:text-white transition-colors">
+                                                    <i class="fa-solid fa-file-word text-blue-400 w-4"></i>
+                                                    {{ __('Word Document') }}
+                                                </a>
+                                                <a :href="`{{ route('surveys.analyse.threads.export', [$survey, ':thread']) }}`.replace(':thread', currentThreadId) + '?format=excel&message_id=' + message.id"
+                                                    class="flex items-center gap-2.5 px-3.5 py-2 text-xs text-slate-300 hover:bg-white/10 hover:text-white transition-colors">
+                                                    <i class="fa-solid fa-file-excel text-green-400 w-4"></i>
+                                                    {{ __('Excel Sheet') }}
+                                                </a>
+                                                <a :href="`{{ route('surveys.analyse.threads.export', [$survey, ':thread']) }}`.replace(':thread', currentThreadId) + '?format=md&message_id=' + message.id"
+                                                    class="flex items-center gap-2.5 px-3.5 py-2 text-xs text-slate-300 hover:bg-white/10 hover:text-white transition-colors">
+                                                    <i class="fa-solid fa-file-code text-slate-400 w-4"></i>
+                                                    {{ __('Markdown Text') }}
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </template>
+
                                     <button @click="copyMessage(message.content)"
                                         class="w-7 h-7 rounded-xl flex items-center justify-center transition-all"
                                         :class="message.role === 'user' ? 'hover:bg-black/10 text-slate-700' : 'hover:bg-white/10 text-slate-400'"
@@ -391,7 +450,8 @@
                         </div>
                     </template>
 
-                    <textarea x-model="draft" x-ref="textarea" rows="2" @keydown.enter.exact.prevent="sendMessage()"
+                    <textarea x-model="draft" x-ref="textarea" rows="2"
+                        @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); sendMessage(); }"
                         class="w-full bg-transparent border-0 focus:ring-0 resize-none text-sm text-white placeholder:text-slate-500"
                         placeholder="{{ __('Message Socius...') }}" :disabled="sending || !canAnalyze"></textarea>
 
@@ -449,5 +509,140 @@
                 </div>
             </div>
         </section>
+    </div>
+
+    {{-- Knowledge Base Modal --}}
+    <div x-show="kbModalOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" style="display: none;"
+        @click.self="kbModalOpen = false">
+
+        <div class="relative w-full max-w-2xl bg-[#2b2b2b] text-white rounded-[2rem] border border-white/10 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden"
+            x-transition:enter="transition ease-out duration-300 transform"
+            x-transition:enter-start="opacity-0 scale-95 translate-y-4"
+            x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-200 transform"
+            x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+            x-transition:leave-end="opacity-0 scale-95 translate-y-4" @click.outside="kbModalOpen = false">
+
+            {{-- Modal Header --}}
+            <div class="px-6 py-5 border-b border-white/10 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-10 h-10 rounded-2xl bg-orange-400/10 flex items-center justify-center text-orange-300">
+                        <i class="fa-solid fa-brain text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold tracking-tight">{{ __('Knowledge Base') }}</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">
+                            {{ __('Set custom style and formatting instructions for future answers.') }}</p>
+                    </div>
+                </div>
+                <button @click="kbModalOpen = false"
+                    class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            {{-- Modal Body --}}
+            <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+                {{-- Add New Rule Form --}}
+                <div class="space-y-3">
+                    <h4 class="text-xs font-black uppercase tracking-widest text-slate-400">
+                        {{ __('Add Custom Instruction') }}</h4>
+                    <div
+                        class="rounded-2xl border border-white/10 bg-white/[0.03] p-3 focus-within:border-orange-400/50 transition-all">
+                        <textarea x-model="newKbRuleContent" rows="3"
+                            class="w-full bg-transparent border-0 focus:ring-0 resize-none text-sm text-white placeholder:text-slate-500"
+                            placeholder="{{ __('e.g., Use APA style but with custom modifications like including the author initials in all in-text citations.') }}"
+                            :disabled="savingKb"
+                            @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); addKbRule(); }"></textarea>
+                        <div class="flex justify-end pt-2">
+                            <button @click="addKbRule()" :disabled="savingKb || !newKbRuleContent.trim()"
+                                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-400 text-slate-950 text-[10px] font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed hover:bg-orange-300 transition-all">
+                                <i class="fa-solid fa-plus text-[10px]" :class="{ 'fa-spin': savingKb }"></i>
+                                {{ __('Add Instruction') }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Rules List --}}
+                <div class="space-y-3">
+                    <h4 class="text-xs font-black uppercase tracking-widest text-slate-400">
+                        {{ __('Active Instructions') }}</h4>
+
+                    <template x-if="loadingKb">
+                        <div class="space-y-2">
+                            <div class="h-16 rounded-2xl bg-white/[0.03] animate-pulse"></div>
+                            <div class="h-16 rounded-2xl bg-white/[0.03] animate-pulse"></div>
+                        </div>
+                    </template>
+
+                    <template x-if="!loadingKb && kbRules.length === 0">
+                        <div
+                            class="rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.01] p-8 text-center">
+                            <div
+                                class="w-12 h-12 rounded-2xl bg-white/5 mx-auto mb-3 flex items-center justify-center text-slate-500">
+                                <i class="fa-solid fa-lightbulb"></i>
+                            </div>
+                            <p class="text-sm font-semibold text-slate-300">{{ __('No persistent preferences yet') }}
+                            </p>
+                            <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                                {{ __('Add formatting details or stylistic guidelines above. Socius will remember them across all of your surveys.') }}
+                            </p>
+                        </div>
+                    </template>
+
+                    <template x-if="!loadingKb && kbRules.length > 0">
+                        <div class="space-y-2.5 flex flex-col">
+                            <template x-for="rule in kbRules" :key="rule.id">
+                                <div class="group/rule flex items-start justify-between gap-4 p-4 rounded-2xl border border-white/5 transition-all"
+                                    :class="rule.is_active ? 'bg-white/[0.03] border-white/10' : 'bg-white/[0.01] border-white/[0.02] opacity-60'">
+
+                                    <div class="flex items-start gap-3 flex-1 min-w-0">
+                                        {{-- Toggle --}}
+                                        <button @click="toggleKbRule(rule)"
+                                            class="mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                                            :class="rule.is_active ? 'bg-orange-400' : 'bg-white/10'">
+                                            <span
+                                                class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                                                :class="rule.is_active ? 'translate-x-4' : 'translate-x-0'"></span>
+                                        </button>
+
+                                        {{-- Content --}}
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm text-slate-100 break-words whitespace-pre-wrap font-medium leading-relaxed"
+                                                :class="{ 'line-through text-slate-500': !rule.is_active }"
+                                                x-text="rule.content"></p>
+                                            <p class="text-[9px] text-slate-500 mt-1 uppercase tracking-wider font-bold"
+                                                x-text="formatRelativeTime(rule.created_at)"></p>
+                                        </div>
+                                    </div>
+
+                                    {{-- Delete --}}
+                                    <button @click="deleteKbRule(rule.id)"
+                                        class="w-7 h-7 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover/rule:opacity-100 focus:opacity-100"
+                                        title="{{ __('Delete Rule') }}">
+                                        <i class="fa-solid fa-trash text-xs"></i>
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            {{-- Modal Footer --}}
+            <div class="px-6 py-4 border-t border-white/10 bg-[#232323] flex justify-end">
+                <button @click="kbModalOpen = false"
+                    class="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all">
+                    {{ __('Close') }}
+                </button>
+            </div>
+
+        </div>
     </div>
 </div>

@@ -70,12 +70,16 @@ IMPORTANT RULES:
 - Do not put text inside the code blocks other than the markup/JSON/prompt itself.
 - For Chart.js, always use white/light colors for text/ticks as the UI is dark themed.";
 
-  public function getSystemPrompt(array $memories = []): string
+  public function getSystemPrompt(array $memories = [], array $knowledgeBaseRules = []): string
   {
     $prompt = self::BASE_SYSTEM_PROMPT;
     if (!empty($memories)) {
       $memoryText = collect($memories)->map(fn($m) => "- " . $m)->implode("\n");
       $prompt .= "\n\nRELEVANT PROJECT MEMORY (Context from previous sessions):\n" . $memoryText;
+    }
+    if (!empty($knowledgeBaseRules)) {
+      $kbText = collect($knowledgeBaseRules)->map(fn($r) => "- " . $r)->implode("\n");
+      $prompt .= "\n\nUSER KNOWLEDGE BASE / PREFERENCES:\nYou MUST follow these user-defined formatting preferences and instructions exactly:\n" . $kbText;
     }
     return $prompt;
   }

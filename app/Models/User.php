@@ -67,6 +67,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(SurveyAiThread::class);
     }
 
+    public function sociusKnowledgeBases(): HasMany
+    {
+        return $this->hasMany(SociusKnowledgeBase::class);
+    }
+
     public function wallet(): HasOne
     {
         return $this->hasOne(Wallet::class);

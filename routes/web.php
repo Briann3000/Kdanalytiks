@@ -197,6 +197,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/threads/{thread}', [SociusChatController::class, 'destroy'])->name('threads.destroy');
     });
 
+    Route::get('/socius/knowledge-base', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'index'])->name('socius.knowledge-base.index');
+    Route::post('/socius/knowledge-base', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'store'])->name('socius.knowledge-base.store');
+    Route::patch('/socius/knowledge-base/{knowledgeBase}', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'update'])->name('socius.knowledge-base.update');
+    Route::delete('/socius/knowledge-base/{knowledgeBase}', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'destroy'])->name('socius.knowledge-base.destroy');
+
 
     Route::prefix('library')->name('library.')->group(function () {
         Route::get('/templates', [SurveyController::class, 'templatesIndex'])->name('templates');

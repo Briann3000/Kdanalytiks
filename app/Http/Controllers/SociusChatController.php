@@ -392,6 +392,16 @@ class SociusChatController extends Controller
             ->pluck('fact')
             ->toArray();
 
+        // Fetch user active knowledge base rules
+        $knowledgeBaseRules = [];
+        if (auth()->check()) {
+            $knowledgeBaseRules = auth()->user()
+                ->sociusKnowledgeBases()
+                ->where('is_active', true)
+                ->pluck('content')
+                ->toArray();
+        }
+
         $locales = [
             'en' => 'English',
             'sw' => 'Swahili',
@@ -404,7 +414,7 @@ class SociusChatController extends Controller
         $currentLanguage = $locales[app()->getLocale()] ?? 'English';
 
         $messages = [
-            ['role' => 'system', 'content' => $this->sociusPromptBuilder->getSystemPrompt($memories)],
+            ['role' => 'system', 'content' => $this->sociusPromptBuilder->getSystemPrompt($memories, $knowledgeBaseRules)],
             ['role' => 'system', 'content' => "User current language: {$currentLanguage}. You must respond in {$currentLanguage} by default. IMPORTANT: If the user communicates in a different language (e.g. Swahili, French, etc.), you MUST automatically detect it and converse in that language instead. Always follow the user's lead on language."],
         ];
 
@@ -555,56 +565,89 @@ class SociusChatController extends Controller
         $this->authorizeThread($survey, $thread, $request);
 
         $format = $request->query('format', 'pdf');
-        $messages = $thread->messages()->orderBy('id')->get();
+        $messageId = $request->query('message_id');
+
+        if ($messageId) {
+            $messages = $thread->messages()
+                ->where('id', $messageId)
+                ->get();
+            if ($messages->isEmpty()) {
+                abort(404, 'Message not found');
+            }
+        } else {
+            $messages = $thread->messages()->orderBy('id')->get();
+        }
 
         return match ($format) {
-            'pdf' => $this->exportToPdf($thread, $messages),
-            'docx' => $this->exportToDocx($thread, $messages),
-            'excel' => $this->exportToExcel($thread, $messages),
-            'markdown', 'md' => $this->exportToMarkdown($thread, $messages),
+            'pdf' => $this->exportToPdf($thread, $messages, (bool) $messageId),
+            'docx' => $this->exportToDocx($thread, $messages, (bool) $messageId),
+            'excel' => $this->exportToExcel($thread, $messages, (bool) $messageId),
+            'markdown', 'md' => $this->exportToMarkdown($thread, $messages, (bool) $messageId),
             default => abort(404),
         };
     }
 
-    private function exportToPdf(SurveyAiThread $thread, $messages)
+    private function exportToPdf(SurveyAiThread $thread, $messages, bool $isSingleMessage = false)
     {
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('exports.socius-thread', [
             'thread' => $thread,
             'messages' => $messages,
+            'isSingleMessage' => $isSingleMessage,
         ]);
 
-        return $pdf->download(Str::slug($thread->title ?: 'socius-chat') . '.pdf');
+        $filename = $isSingleMessage
+            ? 'socius-report-' . $messages->first()->id . '.pdf'
+            : Str::slug($thread->title ?: 'socius-chat') . '.pdf';
+
+        return $pdf->download($filename);
     }
 
-    private function exportToDocx(SurveyAiThread $thread, $messages)
+    private function exportToDocx(SurveyAiThread $thread, $messages, bool $isSingleMessage = false)
     {
         $phpWord = new \PhpOffice\PhpWord\PhpWord();
         $section = $phpWord->addSection();
 
-        $section->addTitle($thread->title ?: 'Socius Chat Export', 1);
-        $section->addText('Date: ' . now()->toDayDateTimeString());
-        $section->addTextBreak(2);
-
-        foreach ($messages as $message) {
-            $role = strtoupper($message->role);
-            $section->addText($role . ' (' . $message->created_at->format('Y-m-d H:i') . ')', ['bold' => true]);
+        if ($isSingleMessage) {
+            $message = $messages->first();
+            $section->addTitle($thread->title ?: 'Socius Report', 1);
+            $section->addText('Date: ' . now()->toDayDateTimeString());
+            $section->addTextBreak(2);
 
             $content = $message->content;
             $lines = explode("\n", $content);
             foreach ($lines as $line) {
                 $section->addText($line);
             }
-            $section->addTextBreak(1);
+        } else {
+            $section->addTitle($thread->title ?: 'Socius Chat Export', 1);
+            $section->addText('Date: ' . now()->toDayDateTimeString());
+            $section->addTextBreak(2);
+
+            foreach ($messages as $message) {
+                $role = strtoupper($message->role);
+                $section->addText($role . ' (' . $message->created_at->format('Y-m-d H:i') . ')', ['bold' => true]);
+
+                $content = $message->content;
+                $lines = explode("\n", $content);
+                foreach ($lines as $line) {
+                    $section->addText($line);
+                }
+                $section->addTextBreak(1);
+            }
         }
 
         $objWriter = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'Word2007');
         $tempFile = tempnam(sys_get_temp_dir(), 'socius_docx');
         $objWriter->save($tempFile);
 
-        return response()->download($tempFile, Str::slug($thread->title ?: 'socius-chat') . '.docx')->deleteFileAfterSend(true);
+        $filename = $isSingleMessage
+            ? 'socius-report-' . $messages->first()->id . '.docx'
+            : Str::slug($thread->title ?: 'socius-chat') . '.docx';
+
+        return response()->download($tempFile, $filename)->deleteFileAfterSend(true);
     }
 
-    private function exportToExcel(SurveyAiThread $thread, $messages)
+    private function exportToExcel(SurveyAiThread $thread, $messages, bool $isSingleMessage = false)
     {
         $data = [
             ['Role', 'Timestamp', 'Message Content']
@@ -618,6 +661,10 @@ class SociusChatController extends Controller
             ];
         }
 
+        $filename = $isSingleMessage
+            ? 'socius-report-' . $messages->first()->id . '.xlsx'
+            : Str::slug($thread->title ?: 'socius-chat') . '.xlsx';
+
         return \Maatwebsite\Excel\Facades\Excel::download(
             new class ($data) implements \Maatwebsite\Excel\Concerns\FromCollection {
             public function __construct(private array $data)
@@ -626,24 +673,31 @@ class SociusChatController extends Controller
             {
                 return collect($this->data); }
             },
-            Str::slug($thread->title ?: 'socius-chat') . '.xlsx'
+            $filename
         );
     }
 
-    private function exportToMarkdown(SurveyAiThread $thread, $messages)
+    private function exportToMarkdown(SurveyAiThread $thread, $messages, bool $isSingleMessage = false)
     {
-        $md = "# " . ($thread->title ?: 'Socius Chat Export') . "\n\n";
-        $md .= "Date: " . now()->toDayDateTimeString() . "\n\n---\n\n";
+        if ($isSingleMessage) {
+            $message = $messages->first();
+            $md = $message->content;
+            $filename = 'socius-report-' . $message->id . '.md';
+        } else {
+            $md = "# " . ($thread->title ?: 'Socius Chat Export') . "\n\n";
+            $md .= "Date: " . now()->toDayDateTimeString() . "\n\n---\n\n";
 
-        foreach ($messages as $message) {
-            $role = $message->role === 'user' ? 'User' : 'Socius';
-            $md .= "### " . $role . " (" . $message->created_at->format('Y-m-d H:i') . ")\n\n";
-            $md .= $message->content . "\n\n---\n\n";
+            foreach ($messages as $message) {
+                $role = $message->role === 'user' ? 'User' : 'Socius';
+                $md .= "### " . $role . " (" . $message->created_at->format('Y-m-d H:i') . ")\n\n";
+                $md .= $message->content . "\n\n---\n\n";
+            }
+            $filename = Str::slug($thread->title ?: 'socius-chat') . '.md';
         }
 
         return response($md)
             ->header('Content-Type', 'text/markdown')
-            ->header('Content-Disposition', 'attachment; filename="' . Str::slug($thread->title ?: 'socius-chat') . '.md"');
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
     }
 
     private function friendlyStreamingErrorMessage(\Throwable $e): string
@@ -695,13 +749,16 @@ class SociusChatController extends Controller
             $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
             curl_close($ch);
-
+            // If Hugging Face works, return it
             if ($status === 200 && str_contains($contentType, 'image')) {
-                return response($result)->header('Content-Type', 'image/jpeg');
+                return response($result)
+                    ->header('Content-Type', 'image/jpeg')
+                    ->header('X-AI-Source', 'HuggingFace (OpenJourney)');
             }
 
-            // 2. Try Pollinations (Fallback - Increased timeout to 120s)
+            // FALLBACK: Use Pollinations as a "Transparent Proxy"
             $fallbackUrl = "https://image.pollinations.ai/prompt/" . urlencode($prompt) . "?nologo=true&seed=" . rand(1, 999999);
+
             $ch2 = curl_init();
             curl_setopt($ch2, CURLOPT_URL, $fallbackUrl);
             curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
@@ -715,7 +772,9 @@ class SociusChatController extends Controller
             curl_close($ch2);
 
             if ($fallbackStatus === 200) {
-                return response($fallbackResult)->header('Content-Type', 'image/jpeg');
+                return response($fallbackResult)
+                    ->header('Content-Type', 'image/jpeg')
+                    ->header('X-AI-Source', 'Pollinations (Stable Diffusion XL)');
             }
 
             return response()->json([
