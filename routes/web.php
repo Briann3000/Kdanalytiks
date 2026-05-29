@@ -183,6 +183,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/archive', [SurveyController::class, 'archive'])->name('archive');
         Route::post('/toggle-shared-report', [SurveyController::class, 'toggleSharedReport'])->name('reports.toggle-shared');
         Route::get('/crosstab', [SurveyController::class, 'crosstab'])->name('reports.crosstab');
+
+        // Versioning routes
+        Route::get('/versions', [\App\Http\Controllers\SurveyVersionController::class, 'index'])->name('versions');
+        Route::get('/versions/{version}', [\App\Http\Controllers\SurveyVersionController::class, 'show'])->name('versions.show');
+        Route::post('/versions/{version}/restore', [\App\Http\Controllers\SurveyVersionController::class, 'restore'])->name('versions.restore');
+
+        // Quality Override routes
+        Route::post('/responses/{response}/quality-override', [\App\Http\Controllers\SurveyResponseQualityController::class, 'qualityOverride'])->name('responses.quality-override');
+        Route::post('/responses/bulk-quality-override', [\App\Http\Controllers\SurveyResponseQualityController::class, 'bulkQualityOverride'])->name('responses.bulk-quality-override');
+
+        // Campaign routes
+        Route::get('/campaigns', [\App\Http\Controllers\InviteCampaignController::class, 'index'])->name('campaigns.index');
+        Route::get('/campaigns/create', [\App\Http\Controllers\InviteCampaignController::class, 'create'])->name('campaigns.create');
+        Route::post('/campaigns', [\App\Http\Controllers\InviteCampaignController::class, 'store'])->name('campaigns.store');
+        Route::get('/campaigns/{campaign}', [\App\Http\Controllers\InviteCampaignController::class, 'show'])->name('campaigns.show');
+        Route::post('/campaigns/{campaign}/remind', [\App\Http\Controllers\InviteCampaignController::class, 'sendReminders'])->name('campaigns.remind');
+        Route::post('/campaigns/{campaign}/cancel', [\App\Http\Controllers\InviteCampaignController::class, 'cancel'])->name('campaigns.cancel');
+
+        // Dashboard Builder routes
+        Route::middleware(['subscribed:dashboard'])->group(function () {
+            Route::get('/dashboard-builder', [\App\Http\Controllers\DashboardBuilderController::class, 'dashboardBuilder'])->name('dashboard-builder');
+            Route::post('/dashboard-layout', [\App\Http\Controllers\DashboardBuilderController::class, 'saveDashboardLayout'])->name('dashboard-layout.save');
+        });
     });
 
     Route::middleware(['throttle:60,1'])->prefix('surveys/{survey}/analyse')->name('surveys.analyse.')->group(function () {
@@ -231,6 +254,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::get('/surveys/{survey}', [SurveyController::class, 'show'])->name('surveys.show');
 Route::post('/surveys/{survey}/submit', [SurveyController::class, 'submit'])->middleware('throttle:10,1')->name('surveys.submit');
 Route::get('/reports/shared/{token}', [SurveyController::class, 'sharedReport'])->name('surveys.reports.shared');
+Route::get('/surveys/{survey}/dashboard-preview', [\App\Http\Controllers\DashboardBuilderController::class, 'dashboardPreview'])->name('surveys.dashboard-preview');
 
 Route::post('/surveys/{survey}/invite', [SurveyController::class, 'invite'])->name('surveys.invite');
 

@@ -79,6 +79,18 @@
                         class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.downloads') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                         <i class="fa-solid fa-download mr-2"></i> {{ __('Downloads') }}
                     </a>
+                    <a href="{{ route('surveys.versions', $survey) }}"
+                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.versions*') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
+                        <i class="fa-solid fa-clock-rotate-left mr-2"></i> {{ __('Version History') }}
+                    </a>
+                    <a href="{{ route('surveys.campaigns.index', $survey) }}"
+                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.campaigns*') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
+                        <i class="fa-solid fa-paper-plane mr-2"></i> {{ __('Campaigns') }}
+                    </a>
+                    <a href="{{ route('surveys.dashboard-builder', $survey) }}"
+                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.dashboard-builder') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
+                        <i class="fa-solid fa-table-cells-large mr-2"></i> {{ __('Dashboard Builder') }}
+                    </a>
                     <a href="{{ route('surveys.settings', $survey) }}"
                         class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.settings') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                         <i class="fa-solid fa-gears mr-2"></i> {{ __('Settings') }}

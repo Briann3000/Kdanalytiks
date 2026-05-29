@@ -557,7 +557,7 @@ class SociusChatController extends Controller
             return 'That file type is not supported yet. Please upload a PDF, CSV, TXT, or DOCX file.';
         }
 
-        return 'Socius could not read that file. Please try a different file or re-save it and upload again.';
+        return 'Socius could not read that file. Technical details: ' . $e->getMessage() . ' in ' . basename($e->getFile()) . ':' . $e->getLine();
     }
 
     public function export(Survey $survey, SurveyAiThread $thread, Request $request)

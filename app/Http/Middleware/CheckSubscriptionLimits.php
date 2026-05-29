@@ -23,7 +23,8 @@ class CheckSubscriptionLimits
     public function handle(Request $request, Closure $next, string $limitType): Response
     {
         $user = $request->user();
-        if (!$user) return $next($request);
+        if (!$user)
+            return $next($request);
 
         $role = $user->role instanceof \BackedEnum ? $user->role->value : $user->role;
 
@@ -58,6 +59,12 @@ class CheckSubscriptionLimits
             if (!$this->aiService->checkUsageLimit($entity)) {
                 $limit = $tier->ai_limit_per_month === -1 ? 'Unlimited' : $tier->ai_limit_per_month;
                 return response()->json(['error' => "Upgrade Required: Your monthly AI limit of {$limit} has been reached."], 403);
+            }
+        }
+
+        if ($limitType === 'dashboard') {
+            if ($tier->slug === 'free') {
+                return redirect()->back()->with('error', "Upgrade Required: The Interactive Dashboard Builder is only available on Pro & Enterprise tiers.");
             }
         }
 

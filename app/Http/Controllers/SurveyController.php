@@ -250,6 +250,15 @@ class SurveyController extends Controller
         }
 
         if (!empty($updateData)) {
+            app(\App\Services\SurveyVersioningService::class)->createVersionIfChanged(
+                $survey,
+                [
+                    'title' => $updateData['title'] ?? $survey->title,
+                    'description' => $updateData['description'] ?? $survey->description,
+                    'json_schema' => $survey->json_schema,
+                ],
+                auth()->id()
+            );
             $survey->update($updateData);
         }
 
@@ -386,6 +395,18 @@ class SurveyController extends Controller
         } else {
             $survey = new \App\Models\Survey();
             $survey->created_by = $user->id;
+        }
+
+        if ($survey->exists) {
+            app(\App\Services\SurveyVersioningService::class)->createVersionIfChanged(
+                $survey,
+                [
+                    'title' => $validated['title'],
+                    'description' => $validated['description'] ?? null,
+                    'json_schema' => $validated['json_schema'],
+                ],
+                $user->id
+            );
         }
 
         $survey->title = $validated['title'];
@@ -529,7 +550,21 @@ class SurveyController extends Controller
     public function showResponses(\App\Models\Survey $survey)
     {
         $this->authorizeOwner($survey);
-        $responses = $survey->responses()->with('respondent', 'answers')->orderBy('created_at', 'desc')->paginate(15);
+
+        $query = $survey->responses()->with('respondent', 'answers');
+
+        if (request()->filled('quality')) {
+            $quality = request('quality');
+            if ($quality === 'clean') {
+                $query->where('is_flagged', false)->where('quality_score', '>=', 70);
+            } elseif ($quality === 'review') {
+                $query->where('is_flagged', false)->where('quality_score', '>=', 40)->where('quality_score', '<', 70);
+            } elseif ($quality === 'flagged') {
+                $query->where('is_flagged', true);
+            }
+        }
+
+        $responses = $query->orderBy('created_at', 'desc')->paginate(15);
         $headers = $this->getSurveyAnalysisMetadata($survey);
         return view('surveys.data', compact('survey', 'responses', 'headers'));
     }
@@ -960,7 +995,7 @@ class SurveyController extends Controller
             ->header('Content-Type', 'text/csv')
             ->header('Content-Disposition', "attachment; filename=\"{$filename}\"");
     }
-    private function getAnalyticalData(\App\Models\Survey $survey, $responses, $includeAi = false, $forceGenerate = false)
+    public function getAnalyticalData(\App\Models\Survey $survey, $responses, $includeAi = false, $forceGenerate = false)
     {
         $isJson = !empty($survey->json_schema) && $survey->json_schema !== '[]';
         $totalResponses = $responses->count();
@@ -1789,6 +1824,16 @@ class SurveyController extends Controller
             'reward_budget' => 'nullable|numeric|min:0',
         ]);
 
+        app(\App\Services\SurveyVersioningService::class)->createVersionIfChanged(
+            $survey,
+            [
+                'title' => $validated['title'],
+                'description' => $validated['description'] ?? null,
+                'json_schema' => $validated['json_schema'],
+            ],
+            auth()->id()
+        );
+
         $survey->update([
             'title' => $validated['title'],
             'description' => $validated['description'],
@@ -1908,6 +1953,7 @@ class SurveyController extends Controller
         // Public view for taking the survey
         $user = auth()->user();
         $token = request('token');
+        $inviteToken = request('invite_token');
 
         $isOwner = $user && ($survey->created_by == $user->id);
         $isAdmin = $user && $user->isAdmin();
@@ -1916,13 +1962,33 @@ class SurveyController extends Controller
         // Handle Sharing Token Access
         $hasToken = $token && $survey->share_token === $token;
 
-        // A survey is viewable if it is public, has explicit view permissions, or has a valid token
-        $publicCanView = ($survey->type === \App\Enums\SurveyType::Public) || ($survey->public_access !== 'none') || $hasToken;
+        // Handle Invite Token Access
+        $hasInvite = false;
+        if ($inviteToken) {
+            $recipient = \App\Models\SurveyInviteRecipient::where('token', $inviteToken)
+                ->whereHas('campaign', function ($query) use ($survey) {
+                    $query->where('survey_id', $survey->id);
+                })->first();
+
+            if ($recipient) {
+                $hasInvite = true;
+                if ($recipient->status === 'sent') {
+                    $recipient->update([
+                        'status' => 'opened',
+                        'opened_at' => now(),
+                    ]);
+                    $recipient->campaign->increment('total_opened');
+                }
+            }
+        }
+
+        // A survey is viewable if it is public, has explicit view permissions, or has a valid token or invite
+        $publicCanView = ($survey->type === \App\Enums\SurveyType::Public) || ($survey->public_access !== 'none') || $hasToken || $hasInvite;
 
         $isActive = ($survey->status === \App\Enums\SurveyStatus::Active) || $survey->is_template;
 
         // If not active and not template, only certain people can see
-        if (!$isActive && !$isOwner && !$isAdmin && !$isCollaborator && !$hasToken) {
+        if (!$isActive && !$isOwner && !$isAdmin && !$isCollaborator && !$hasToken && !$hasInvite) {
             abort(403, 'This survey is not active or you do not have permission to view it.');
         }
 
@@ -1964,50 +2030,18 @@ class SurveyController extends Controller
             $response->respondent_id = auth()->id(); // Will be null for guests
             $response->save();
 
-            // --- Reward Logic Start ---
-            $rewardMessage = '';
-            $earnedAmount = 0;
-            if ($survey->is_paid && $survey->reward_per_response > 0 && auth()->check()) {
-                $user = auth()->user();
-
-                // Check if user already responded to this survey to prevent double reward
-                $alreadyRewarded = \App\Models\Transaction::where('wallet_id', $user->wallet?->id)
-                    ->where('type', 'credit')
-                    ->where('description', 'like', "%Survey ID: {$survey->id}%")
-                    ->exists();
-
-                if (!$alreadyRewarded) {
-                    // Lock the survey record to prevent concurrent budget exhaustion Race Condition
-                    $surveyLocked = \App\Models\Survey::where('id', $survey->id)->lockForUpdate()->first();
-
-                    if ($surveyLocked && ($surveyLocked->current_reward_spent + (float) $surveyLocked->reward_per_response <= (float) $surveyLocked->reward_budget)) {
-                        // 1. Update Survey Spent
-                        $surveyLocked->increment('current_reward_spent', (float) $surveyLocked->reward_per_response);
-
-                        // Auto-close removed as per user request to allow continued unpaid submissions
-
-                        // 2. Get or Create Wallet
-                        $wallet = $user->wallet ?: \App\Models\Wallet::create(['user_id' => $user->id, 'balance' => 0]);
-
-                        // 3. Increment Wallet Balance
-                        $wallet->increment('balance', (float) $surveyLocked->reward_per_response);
-
-                        // 4. Record Transaction
-                        \App\Models\Transaction::create([
-                            'wallet_id' => $wallet->id,
-                            'amount' => (float) $surveyLocked->reward_per_response,
-                            'type' => 'credit',
-                            'status' => 'completed',
-                            'reference' => 'REW-' . strtoupper(Str::random(10)),
-                            'description' => "Reward for completing Survey ID: {$surveyLocked->id}"
-                        ]);
-
-                        $earnedAmount = (float) $surveyLocked->reward_per_response;
-                        $rewardMessage = " You earned " . number_format((float) $surveyLocked->reward_per_response, 2) . " " . ($wallet->currency ?? 'KES') . "!";
-                    }
+            // Track invite token if present
+            $inviteToken = $request->input('invite_token') ?: $request->query('invite_token');
+            if ($inviteToken) {
+                $recipient = \App\Models\SurveyInviteRecipient::where('token', $inviteToken)->first();
+                if ($recipient && $recipient->status !== 'responded') {
+                    $recipient->update([
+                        'status' => 'responded',
+                        'responded_at' => now(),
+                    ]);
+                    $recipient->campaign->increment('total_responded');
                 }
             }
-            // --- Reward Logic End ---
 
             $uploadDir = storage_path('app/public/uploads/');
             if (!is_dir($uploadDir)) {
@@ -2051,66 +2085,103 @@ class SurveyController extends Controller
                 $answer->question_id = null;
                 $answer->value = json_encode($jsonData);
                 $answer->save();
+            } else {
+                // Legacy Form Submission logic
+                $questions = $survey->questions;
+                foreach ($questions as $question) {
+                    $inputName = 'question_' . $question->id;
+                    $finalAnswerValue = '';
 
-                \Illuminate\Support\Facades\DB::commit();
+                    if (in_array($question->type, ['video', 'audio', 'image', 'file']) && $request->hasFile($inputName)) {
+                        $file = $request->file($inputName);
+                        $finalAnswerValue = $this->handleSecureUpload($file, $uploadDir, $allowedMimeTypes) ?? '';
+                    } else {
+                        $answerValue = $request->input($inputName, '');
+                        if (is_array($answerValue)) {
+                            $answerValue = implode(', ', $answerValue);
+                        }
+                        $finalAnswerValue = htmlspecialchars($answerValue);
+                    }
 
-                // AI Sentiment Analysis (Background-ish)
-                try {
-                    (new \App\Services\AiService())->analyzeResponseSentiment($response);
-                } catch (\Exception $e) {
-                    \Log::error("AI Background Error: " . $e->getMessage());
-                }
-
-                // Send Notification Email
-                if (auth()->check() && $earnedAmount > 0) {
-                    try {
-                        $user = auth()->user();
-                        $role = $user->role instanceof \App\Enums\UserRole ? $user->role->value : $user->role;
-                        \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\SurveyRewardNotification($survey, $earnedAmount, $user->wallet?->currency ?? 'KES', $role));
-                    } catch (\Exception $e) {
-                        \Log::error("Email Error: " . $e->getMessage());
+                    if ($finalAnswerValue !== '') {
+                        $answer = new \App\Models\Answer();
+                        $answer->response_id = $response->id;
+                        $answer->question_id = $question->id;
+                        $answer->value = $finalAnswerValue;
+                        $answer->save();
                     }
                 }
-
-                session()->flash('success', 'Thank you for completing the survey!' . $rewardMessage);
-                return response()->json(['success' => true]);
             }
 
-            // Legacy Form Submission logic
-            $questions = $survey->questions;
-            foreach ($questions as $question) {
-                $inputName = 'question_' . $question->id;
-                $finalAnswerValue = '';
+            // Run Response Quality & Fraud Analysis
+            app(\App\Services\ResponseQualityService::class)->analyze($response, $request);
 
-                if (in_array($question->type, ['video', 'audio', 'image', 'file']) && $request->hasFile($inputName)) {
-                    $file = $request->file($inputName);
-                    $finalAnswerValue = $this->handleSecureUpload($file, $uploadDir, $allowedMimeTypes) ?? '';
-                } else {
-                    $answerValue = $request->input($inputName, '');
-                    if (is_array($answerValue)) {
-                        $answerValue = implode(', ', $answerValue);
+            // --- Reward Logic Start (Gated by Quality Score) ---
+            $rewardMessage = '';
+            $earnedAmount = 0;
+            if ($survey->is_paid && $survey->reward_per_response > 0 && auth()->check()) {
+                $user = auth()->user();
+
+                // Check if user already responded to this survey to prevent double reward
+                $alreadyRewarded = \App\Models\Transaction::where('wallet_id', $user->wallet?->id)
+                    ->where('type', 'credit')
+                    ->where('description', 'like', "%Survey ID: {$survey->id}%")
+                    ->exists();
+
+                if (!$alreadyRewarded) {
+                    // Lock the survey record to prevent concurrent budget exhaustion Race Condition
+                    $surveyLocked = \App\Models\Survey::where('id', $survey->id)->lockForUpdate()->first();
+
+                    if ($surveyLocked && ($surveyLocked->current_reward_spent + (float) $surveyLocked->reward_per_response <= (float) $surveyLocked->reward_budget)) {
+                        // 1. Update Survey Spent
+                        $surveyLocked->increment('current_reward_spent', (float) $surveyLocked->reward_per_response);
+
+                        // 2. Get or Create Wallet
+                        $wallet = $user->wallet ?: \App\Models\Wallet::create(['user_id' => $user->id, 'balance' => 0]);
+
+                        if ($response->is_flagged) {
+                            // Withhold reward: Create a pending transaction
+                            \App\Models\Transaction::create([
+                                'wallet_id' => $wallet->id,
+                                'amount' => (float) $surveyLocked->reward_per_response,
+                                'type' => 'credit',
+                                'status' => 'pending',
+                                'reference' => 'REW-' . strtoupper(Str::random(10)),
+                                'description' => "Reward pending quality review for Survey ID: {$surveyLocked->id}"
+                            ]);
+                            $rewardMessage = " Your reward is pending quality review.";
+                        } else {
+                            // Credit Wallet Balance
+                            $wallet->increment('balance', (float) $surveyLocked->reward_per_response);
+
+                            // Create completed transaction
+                            \App\Models\Transaction::create([
+                                'wallet_id' => $wallet->id,
+                                'amount' => (float) $surveyLocked->reward_per_response,
+                                'type' => 'credit',
+                                'status' => 'completed',
+                                'reference' => 'REW-' . strtoupper(Str::random(10)),
+                                'description' => "Reward for completing Survey ID: {$surveyLocked->id}"
+                            ]);
+
+                            $earnedAmount = (float) $surveyLocked->reward_per_response;
+                            $rewardMessage = " You earned " . number_format((float) $surveyLocked->reward_per_response, 2) . " " . ($wallet->currency ?? 'KES') . "!";
+                        }
                     }
-                    $finalAnswerValue = htmlspecialchars($answerValue);
-                }
-
-                if ($finalAnswerValue !== '') {
-                    $answer = new \App\Models\Answer();
-                    $answer->response_id = $response->id;
-                    $answer->question_id = $question->id;
-                    $answer->value = $finalAnswerValue;
-                    $answer->save();
                 }
             }
+            // --- Reward Logic End ---
 
             \Illuminate\Support\Facades\DB::commit();
 
+            // AI Sentiment Analysis (Background-ish)
             try {
                 (new \App\Services\AiService())->analyzeResponseSentiment($response);
             } catch (\Exception $e) {
                 \Log::error("AI Background Error: " . $e->getMessage());
             }
 
-            // Send Notification Email
+            // Send Notification Email (only if reward was completed/earned immediately)
             if (auth()->check() && $earnedAmount > 0) {
                 try {
                     $user = auth()->user();
@@ -2119,6 +2190,11 @@ class SurveyController extends Controller
                 } catch (\Exception $e) {
                     \Log::error("Email Error: " . $e->getMessage());
                 }
+            }
+
+            if ($request->has('is_json_submission')) {
+                session()->flash('success', 'Thank you for completing the survey!' . $rewardMessage);
+                return response()->json(['success' => true]);
             }
 
             return redirect()->back()->with('success', 'Thank you for completing the survey!' . $rewardMessage);

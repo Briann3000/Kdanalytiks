@@ -13,6 +13,8 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         $schedule->command('socius:prune-attachments')->daily();
+        $schedule->command('campaigns:process')->everyMinute();
+        $schedule->command('campaigns:send-reminders')->daily();
     }
 
     /**

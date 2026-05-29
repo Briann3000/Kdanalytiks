@@ -15,10 +15,18 @@ class Response extends Model
         'survey_id',
         'respondent_id',
         'ai_metadata',
+        'quality_score',
+        'quality_flags',
+        'is_flagged',
+        'completion_time_seconds',
+        'ip_address',
+        'device_fingerprint',
     ];
 
     protected $casts = [
         'ai_metadata' => 'array',
+        'quality_flags' => 'array',
+        'is_flagged' => 'boolean',
     ];
 
     public function survey(): BelongsTo

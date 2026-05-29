@@ -84,4 +84,24 @@ class Survey extends Model
     {
         return $this->hasMany(SurveyAiThread::class);
     }
+
+    public function versions(): HasMany
+    {
+        return $this->hasMany(SurveyVersion::class);
+    }
+
+    public function latestVersion(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(SurveyVersion::class)->latestOfMany('version_number');
+    }
+
+    public function campaigns(): HasMany
+    {
+        return $this->hasMany(SurveyInviteCampaign::class);
+    }
+
+    public function dashboardConfig(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(SurveyDashboardConfig::class);
+    }
 }
