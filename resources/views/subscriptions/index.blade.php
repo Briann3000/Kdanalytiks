@@ -102,9 +102,45 @@
                                     <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
                                         <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
                                     </div>
+                                    <span class="text-gray-600 font-medium">{{ __('Socius AI Chat Assistant') }}</span>
+                                </li>
+                                <li class="flex items-start gap-3">
+                                    <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
+                                        <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
+                                    </div>
                                     <span class="text-gray-600 font-medium">{{ __('Project Sharing & Team Collaboration') }}</span>
                                 </li>
+                                <li class="flex items-start gap-3">
+                                    <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
+                                        <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
+                                    </div>
+                                    <span class="text-gray-600 font-medium">{{ __('Design Version History') }}</span>
+                                </li>
+                                <li class="flex items-start gap-3">
+                                    <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
+                                        <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
+                                    </div>
+                                    <span class="text-gray-600 font-medium">{{ __('Email Invite Campaigns') }}</span>
+                                </li>
+                                <li class="flex items-start gap-3">
+                                    <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
+                                        <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
+                                    </div>
+                                    <span class="text-gray-600 font-medium">{{ __('Response Quality & Fraud Engine') }}</span>
+                                </li>
                                 @if($tier->slug !== 'free')
+                                    <li class="flex items-start gap-3">
+                                        <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
+                                            <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
+                                        </div>
+                                        <span class="text-gray-600 font-medium">{{ __('Cross-Tabulation & AI Correlation') }}</span>
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
+                                            <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
+                                        </div>
+                                        <span class="text-gray-600 font-medium">{{ __('Interactive Dashboard Builder') }}</span>
+                                    </li>
                                     <li class="flex items-start gap-3">
                                         <div class="mt-1 flex-shrink-0 w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center">
                                             <i class="fa-solid fa-check text-[10px] text-indigo-600"></i>
@@ -126,9 +162,9 @@
                                     </div>
                                     <span class="text-gray-600 font-medium">
                                         @if(strtolower($tier->slug) === 'free')
-                                            {{ __('Basic Exports (CSV, PDF)') }}
+                                            {{ __('Basic Exports (CSV, Branded PDF)') }}
                                         @elseif(strtolower($tier->slug) === 'pro')
-                                            {{ __('Pro Exports (Excel, JSON, PDF)') }}
+                                            {{ __('Pro Exports (Excel, JSON, Brand-Free PDF)') }}
                                         @else
                                             {{ __('Full Export Suite (SPSS, Google Sheets, XML)') }}
                                         @endif
