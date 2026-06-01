@@ -188,11 +188,11 @@
                                             <div
                                                 class="flex items-center justify-between border-t border-gray-100 pt-3 mt-1">
                                                 <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                                    Showing <span class="text-gray-600"
+                                                    {{ __('Showing') }} <span class="text-gray-600"
                                                         x-text="Math.min((widget.currentPage - 1) * 5 + 1, getQuestionAnswers(widget.question_id).length)"></span>
-                                                    to <span class="text-gray-600"
+                                                    {{ __('to') }} <span class="text-gray-600"
                                                         x-text="Math.min(widget.currentPage * 5, getQuestionAnswers(widget.question_id).length)"></span>
-                                                    of <span class="text-gray-600"
+                                                    {{ __('of') }} <span class="text-gray-600"
                                                         x-text="getQuestionAnswers(widget.question_id).length"></span>
                                                 </div>
                                                 <div class="flex items-center gap-1.5">
@@ -200,13 +200,13 @@
                                                         @click="widget.currentPage = Math.max(1, widget.currentPage - 1)"
                                                         :disabled="widget.currentPage === 1"
                                                         class="px-2.5 py-1 bg-gray-50 hover:bg-indigo-50 text-gray-500 hover:text-indigo-600 disabled:opacity-50 disabled:hover:bg-gray-50 disabled:hover:text-gray-500 border border-gray-100 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
-                                                        <i class="fa-solid fa-chevron-left mr-1"></i>Prev
+                                                        <i class="fa-solid fa-chevron-left mr-1"></i>{{ __('Prev') }}
                                                     </button>
                                                     <button
                                                         @click="widget.currentPage = Math.min(getTotalPages(widget), widget.currentPage + 1)"
                                                         :disabled="widget.currentPage >= getTotalPages(widget)"
                                                         class="px-2.5 py-1 bg-gray-50 hover:bg-indigo-50 text-gray-500 hover:text-indigo-600 disabled:opacity-50 disabled:hover:bg-gray-50 disabled:hover:text-gray-500 border border-gray-100 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
-                                                        Next<i class="fa-solid fa-chevron-right ml-1"></i>
+                                                        {{ __('Next') }}<i class="fa-solid fa-chevron-right ml-1"></i>
                                                     </button>
                                                 </div>
                                             </div>
@@ -341,11 +341,16 @@
 
                     const answered = question.answered_count || 0;
                     if (this.isNumericQuestion(questionId)) {
-                        return `Based on ${answered} rating${answered === 1 ? '' : 's'}`;
+                        return answered === 1 
+                            ? '{{ __('Based on :count rating', ['count' => ':count']) }}'.replace(':count', answered)
+                            : '{{ __('Based on :count ratings', ['count' => ':count']) }}'.replace(':count', answered);
                     }
 
                     const pct = this.totalResponses > 0 ? ((answered / this.totalResponses) * 100).toFixed(1) : 0;
-                    return `${pct}% of total respondents (${answered} out of ${this.totalResponses})`;
+                    return '{{ __(':percentage% of total respondents (:count out of :total)') }}'
+                        .replace(':percentage', pct)
+                        .replace(':count', answered)
+                        .replace(':total', this.totalResponses);
                 },
 
                 isChartableQuestion(questionId) {
@@ -506,8 +511,8 @@
                     const link = "{{ route('surveys.dashboard-preview', $survey) }}?token={{ $survey->share_report_token }}";
                     navigator.clipboard.writeText(link).then(() => {
                         Swal.fire({
-                            title: 'Link Copied!',
-                            text: 'Public presentation report link copied to clipboard.',
+                            title: '{{ __('Link Copied!') }}',
+                            text: '{{ __('Public presentation report link copied to clipboard.') }}',
                             icon: 'success',
                             toast: true,
                             position: 'top-end',
@@ -517,8 +522,8 @@
                         });
                     }).catch(() => {
                         Swal.fire({
-                            title: 'Error',
-                            text: 'Failed to copy link. Please manually copy: ' + link,
+                            title: '{{ __('Error') }}',
+                            text: '{{ __('Failed to copy link. Please manually copy: ') }}' + link,
                             icon: 'error',
                             confirmButtonColor: '#4f46e5'
                         });

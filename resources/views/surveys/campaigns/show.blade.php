@@ -33,12 +33,24 @@
                 class="md:col-span-2 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between">
                 <div>
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider
-                            @if($campaign->status === 'completed') bg-emerald-100 text-emerald-600 border border-emerald-200
-                            @elseif($campaign->status === 'scheduled') bg-amber-100 text-amber-600 border border-amber-200
-                            @elseif($campaign->status === 'cancelled') bg-rose-100 text-rose-600 border border-rose-200
-                            @else bg-indigo-100 text-indigo-600 border border-indigo-200
-                            @endif">
-                        {{ ucfirst($campaign->status) }}
+                                @if($campaign->status === 'completed') bg-emerald-100 text-emerald-600 border border-emerald-200
+                                @elseif($campaign->status === 'scheduled') bg-amber-100 text-amber-600 border border-amber-200
+                                @elseif($campaign->status === 'cancelled') bg-rose-100 text-rose-600 border border-rose-200
+                                @else bg-indigo-100 text-indigo-600 border border-indigo-200
+                                @endif">
+                        @if($campaign->status === 'completed')
+                            {{ __('Completed') }}
+                        @elseif($campaign->status === 'scheduled')
+                            {{ __('Scheduled') }}
+                        @elseif($campaign->status === 'cancelled')
+                            {{ __('Cancelled') }}
+                        @elseif($campaign->status === 'sending')
+                            {{ __('Sending') }}
+                        @elseif($campaign->status === 'draft')
+                            {{ __('Draft') }}
+                        @else
+                            {{ ucfirst($campaign->status) }}
+                        @endif
                     </span>
                     <h3 class="text-lg font-black text-gray-900 mt-2 tracking-tight">{{ $campaign->name }}</h3>
                     <p class="text-xs text-gray-400 font-medium mt-1">
@@ -64,7 +76,7 @@
                     <div>
                         <span
                             class="block text-gray-400 font-medium uppercase tracking-wider text-[8px]">{{ __('Auto Reminders') }}</span>
-                        <span>{{ $campaign->auto_reminders ? __('Every ') . $campaign->reminder_interval_days . __(' days') : __('Disabled') }}</span>
+                        <span>{{ $campaign->auto_reminders ? __('Every :days days', ['days' => $campaign->reminder_interval_days]) : __('Disabled') }}</span>
                     </div>
                 </div>
             </div>
@@ -74,9 +86,9 @@
                 <div>
                     <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ __('Response Rate') }}
                     </h4>
-        @php
-            $rate = $campaign->total_recipients > 0 ? round(($campaign->total_responded / $campaign->total_recipients) * 100) : 0;
-        @endphp
+                    @php
+                        $rate = $campaign->total_recipients > 0 ? round(($campaign->total_responded / $campaign->total_recipients) * 100) : 0;
+                    @endphp
                     <div class="text-3xl font-black text-indigo-600 mt-2 tracking-tight">{{ $rate }}%</div>
                 </div>
                 <div class="w-full bg-gray-100 h-2 rounded-full overflow-hidden mt-4">
@@ -118,7 +130,8 @@
                 <div>
                     <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">{{ __('Recipients List') }}</h3>
                     <p class="text-xs text-gray-400 font-medium mt-1">
-                        {{ __('Monitor delivery and response status for all recipient invitations in this campaign.') }}</p>
+                        {{ __('Monitor delivery and response status for all recipient invitations in this campaign.') }}
+                    </p>
                 </div>
                 <div class="flex items-center space-x-2">
                     @if($campaign->status === 'completed' || $campaign->status === 'sending')
@@ -157,15 +170,20 @@
                         <thead>
                             <tr class="border-b border-gray-50 bg-gray-50/50">
                                 <th class="py-4 px-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                    {{ __('Recipient') }}</th>
+                                    {{ __('Recipient') }}
+                                </th>
                                 <th class="py-4 px-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                    {{ __('Status') }}</th>
+                                    {{ __('Status') }}
+                                </th>
                                 <th class="py-4 px-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                    {{ __('Sent At') }}</th>
+                                    {{ __('Sent At') }}
+                                </th>
                                 <th class="py-4 px-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                    {{ __('Responded At') }}</th>
+                                    {{ __('Responded At') }}
+                                </th>
                                 <th class="py-4 px-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                    {{ __('Reminders') }}</th>
+                                    {{ __('Reminders') }}
+                                </th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-50">
@@ -181,13 +199,23 @@
                                     </td>
                                     <td class="py-4 px-6">
                                         <span class="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider
-                                                        @if($recipient->status === 'responded') bg-emerald-100 text-emerald-600 border border-emerald-200
-                                                        @elseif($recipient->status === 'sent') bg-blue-100 text-blue-600 border border-blue-200
-                                                        @elseif($recipient->status === 'opened') bg-indigo-100 text-indigo-600 border border-indigo-200
-                                                        @elseif($recipient->status === 'bounced') bg-rose-100 text-rose-600 border border-rose-200
-                                                        @else bg-gray-100 text-gray-500 border border-gray-200
-                                                        @endif">
-                                            {{ ucfirst($recipient->status) }}
+                                                                    @if($recipient->status === 'responded') bg-emerald-100 text-emerald-600 border border-emerald-200
+                                                                    @elseif($recipient->status === 'sent') bg-blue-100 text-blue-600 border border-blue-200
+                                                                    @elseif($recipient->status === 'opened') bg-indigo-100 text-indigo-600 border border-indigo-200
+                                                                    @elseif($recipient->status === 'bounced') bg-rose-100 text-rose-600 border border-rose-200
+                                                                    @else bg-gray-100 text-gray-500 border border-gray-200
+                                                                    @endif">
+                                            @if($recipient->status === 'responded')
+                                                {{ __('Responded') }}
+                                            @elseif($recipient->status === 'sent')
+                                                {{ __('Sent') }}
+                                            @elseif($recipient->status === 'opened')
+                                                {{ __('Opened') }}
+                                            @elseif($recipient->status === 'bounced')
+                                                {{ __('Bounced') }}
+                                            @else
+                                                {{ ucfirst($recipient->status) }}
+                                            @endif
                                         </span>
                                     </td>
                                     <td class="py-4 px-6 text-xs text-gray-500 font-semibold">
@@ -197,7 +225,7 @@
                                         {{ $recipient->responded_at ? $recipient->responded_at->format('M d, Y g:i A') : '-' }}
                                     </td>
                                     <td class="py-4 px-6 text-xs text-gray-500 font-semibold">
-                                        <span>{{ $recipient->reminder_count }} {{ __('sent') }}</span>
+                                        <span>{{ __(':count sent', ['count' => $recipient->reminder_count]) }}</span>
                                         @if($recipient->last_reminder_at)
                                             <span class="block text-[8px] text-gray-400 font-medium mt-0.5">
                                                 {{ __('Last: ') }} {{ $recipient->last_reminder_at->format('M d, g:i A') }}

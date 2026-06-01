@@ -79,6 +79,6 @@ class SurveyVersionController extends Controller
         ]);
 
         return redirect()->route('surveys.versions', $survey)
-            ->with('success', "Survey successfully restored to Version {$version->version_number}!");
+            ->with('success', __('Survey successfully restored to Version :version!', ['version' => $version->version_number]));
     }
 }

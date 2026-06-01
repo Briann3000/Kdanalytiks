@@ -117,7 +117,7 @@ class InviteCampaignController extends Controller
         }
 
         if (empty($uniqueRecipients)) {
-            return back()->withErrors(['emails' => 'No valid email addresses provided.'])->withInput();
+            return back()->withErrors(['emails' => __('No valid email addresses provided.')])->withInput();
         }
 
         $status = $request->filled('scheduled_at') ? 'scheduled' : 'sending';
@@ -145,9 +145,9 @@ class InviteCampaignController extends Controller
 
         if ($status === 'sending') {
             SendInviteCampaignJob::dispatch($campaign);
-            $message = 'Campaign created and dispatching emails.';
+            $message = __('Campaign created and dispatching emails.');
         } else {
-            $message = 'Campaign scheduled successfully.';
+            $message = __('Campaign scheduled successfully.');
         }
 
         return redirect()->route('surveys.campaigns.index', $survey)->with('success', $message);
@@ -185,14 +185,14 @@ class InviteCampaignController extends Controller
             ->get();
 
         if ($recipients->isEmpty()) {
-            return back()->with('error', 'No non-respondents found to send reminders.');
+            return back()->with('error', __('No non-respondents found to send reminders.'));
         }
 
         foreach ($recipients as $recipient) {
             SendInviteReminderJob::dispatch($recipient);
         }
 
-        return back()->with('success', 'Reminders queued for ' . $recipients->count() . ' non-respondents.');
+        return back()->with('success', __('Reminders queued for :count non-respondents.', ['count' => $recipients->count()]));
     }
 
     /**
@@ -207,11 +207,11 @@ class InviteCampaignController extends Controller
         }
 
         if ($campaign->status === 'completed') {
-            return back()->with('error', 'Cannot cancel a completed campaign.');
+            return back()->with('error', __('Cannot cancel a completed campaign.'));
         }
 
         $campaign->update(['status' => 'cancelled']);
 
-        return back()->with('success', 'Campaign cancelled successfully.');
+        return back()->with('success', __('Campaign cancelled successfully.'));
     }
 }

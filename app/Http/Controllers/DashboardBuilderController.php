@@ -52,7 +52,7 @@ class DashboardBuilderController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Dashboard layout saved successfully.',
+            'message' => __('Dashboard layout saved successfully.'),
         ]);
     }
 
@@ -69,7 +69,7 @@ class DashboardBuilderController extends Controller
         $hasToken = $token && $survey->share_report_token === $token;
 
         if (!$isOwner && !$isAdmin && !$isCollaborator && !$hasToken) {
-            abort(403, 'You do not have permission to view this report.');
+            abort(403, __('You do not have permission to view this report.'));
         }
 
         $responses = $survey->responses()->with('answers.question')->get();

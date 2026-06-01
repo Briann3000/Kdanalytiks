@@ -229,7 +229,7 @@
                         const url = '{{ route('surveys.versions.show', [$survey, ':version']) }}'.replace(':version', versionNumber);
                         
                         Swal.fire({
-                            title: 'Loading version details...',
+                            title: '{{ __('Loading version details...') }}',
                             allowOutsideClick: false,
                             didOpen: () => {
                                 Swal.showLoading();
@@ -259,12 +259,12 @@
                                 
                                 this.open = true;
                             } else {
-                                Swal.fire('Error', 'Could not load version details', 'error');
+                                Swal.fire('{{ __('Error') }}', '{{ __('Could not load version details') }}', 'error');
                             }
                         })
                         .catch(err => {
                             Swal.close();
-                            Swal.fire('Error', 'An error occurred while fetching version data', 'error');
+                            Swal.fire('{{ __('Error') }}', '{{ __('An error occurred while fetching version data') }}', 'error');
                         });
                     },
 
@@ -274,12 +274,12 @@
 
                     confirmRestore(event, versionNumber) {
                         Swal.fire({
-                            title: 'Restore to Version ' + versionNumber + '?',
-                            html: '<p class="text-sm">This will replace your current survey configuration (questions, title, and description) with the state from Version ' + versionNumber + '.<br><br><b class="text-indigo-600">Note: Your current state will be backed up as a new version snapshot.</b></p>',
+                            title: '{{ __('Restore to Version :version?') }}'.replace(':version', versionNumber),
+                            html: `<p class="text-sm">${'{{ __('This will replace your current survey configuration (questions, title, and description) with the state from Version :version.') }}'.replace(':version', versionNumber)}<br><br><b class="text-indigo-600">${'{{ __('Note: Your current state will be backed up as a new version snapshot.') }}'}</b></p>`,
                             icon: 'warning',
                             showCancelButton: true,
-                            confirmButtonText: 'Yes, Restore It',
-                            cancelButtonText: 'Cancel',
+                            confirmButtonText: '{{ __('Yes, Restore It') }}',
+                            cancelButtonText: '{{ __('Cancel') }}',
                             confirmButtonColor: '#4f46e5',
                             cancelButtonColor: '#4b5563',
                             reverseButtons: true,

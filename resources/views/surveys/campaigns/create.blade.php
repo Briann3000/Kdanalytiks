@@ -27,7 +27,7 @@
                         class="block text-xs font-bold text-gray-700 uppercase tracking-wider">{{ __('Campaign Name') }}
                         <span class="text-red-500">*</span></label>
                     <input type="text" name="name" id="name" required
-                        value="{{ old('name', 'Wave ' . (count($survey->campaigns) + 1) . ' Outreach') }}"
+                        value="{{ old('name', __('Wave :count Outreach', ['count' => count($survey->campaigns) + 1])) }}"
                         class="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
                         placeholder="e.g. Wave 1 Customer Outreach">
                     @error('name')
