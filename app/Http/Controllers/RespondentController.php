@@ -16,7 +16,8 @@ class RespondentController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $availableSurveys = Survey::where('type', \App\Enums\SurveyType::Public)
+        $availableSurveys = Survey::where('is_template', false)
+            ->where('type', \App\Enums\SurveyType::Public)
             ->where('status', \App\Enums\SurveyStatus::Active)
             ->whereDoesntHave('responses', function ($query) use ($user) {
                 $query->where('respondent_id', $user->id);

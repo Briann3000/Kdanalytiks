@@ -98,7 +98,8 @@ class InsightController extends Controller
         $user = auth()->user();
         $isTruncated = false;
 
-        if ($user && $user->role === \App\Enums\UserRole::Respondent && !$user->hasActiveSubscription()) {
+        $roleValue = $user ? ($user->role instanceof \UnitEnum ? $user->role->value : $user->role) : null;
+        if ($user && $roleValue === 'respondent' && !$user->hasActiveSubscription()) {
             $isTruncated = true;
             if (isset($insight['key_themes']) && is_array($insight['key_themes'])) {
                 $insight['key_themes'] = array_slice($insight['key_themes'], 0, 1);

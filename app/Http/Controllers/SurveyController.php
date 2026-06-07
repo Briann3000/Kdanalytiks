@@ -75,6 +75,8 @@ class SurveyController extends Controller
         $newSurvey->is_template = false;
         $newSurvey->status = \App\Enums\SurveyStatus::Draft;
         $newSurvey->created_by = $user->id;
+        $newSurvey->share_token = \Illuminate\Support\Str::random(32);
+        $newSurvey->share_report_token = null;
 
         if ($role === 'organization') {
             $newSurvey->organization_id = $user->organization?->id;
@@ -92,7 +94,7 @@ class SurveyController extends Controller
         $user = auth()->user();
         $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
 
-        $query = \App\Models\Survey::where('status', $status)->withCount('responses');
+        $query = \App\Models\Survey::where('is_template', false)->where('status', $status)->withCount('responses');
 
         if (request()->filled('category')) {
             $query->where('category', request('category'));
@@ -131,7 +133,8 @@ class SurveyController extends Controller
             $survey->independent_id = $user->independent?->id;
         }
 
-        if ($user->organization?->hasReachedSurveyLimit()) {
+        $entity = ($role === 'organization') ? $user->organization : (($role === 'independent') ? $user->independent : null);
+        if ($entity?->hasReachedSurveyLimit()) {
             // We allow creation of the DRAFT via GET (relaxed middleware),
             // but we ensure any critical actions are aware of the limit state.
         }
@@ -367,7 +370,9 @@ class SurveyController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
-        if ($user->organization?->hasReachedSurveyLimit()) {
+        $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+        $entity = ($role === 'organization') ? $user->organization : (($role === 'independent') ? $user->independent : null);
+        if ($entity?->hasReachedSurveyLimit()) {
             if ($request->expectsJson() || $request->isXmlHttpRequest()) {
                 return response()->json(['errors' => ['limit' => ["Your subscription plan survey limit has been reached. Please upgrade to create more."]]], 422);
             }
@@ -1655,7 +1660,9 @@ class SurveyController extends Controller
         $this->authorizeOwner($survey);
 
         $user = auth()->user();
-        if ($survey->status !== \App\Enums\SurveyStatus::Active && $user->organization?->hasReachedSurveyLimit()) {
+        $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+        $entity = ($role === 'organization') ? $user->organization : (($role === 'independent') ? $user->independent : null);
+        if ($survey->status !== \App\Enums\SurveyStatus::Active && $entity?->hasReachedSurveyLimit()) {
             return back()->with('error', 'Limit Reached: You cannot publish more surveys on your current plan. Please upgrade.');
         }
 
@@ -1669,9 +1676,11 @@ class SurveyController extends Controller
 
         $limitReached = false;
         $user = auth()->user();
-        if ($user->organization) {
-            $tier = $user->organization->subscriptionTier ?? \App\Models\SubscriptionTier::where('slug', 'free')->first();
-            if ($tier->max_surveys !== -1 && $user->organization->surveys()->count() >= $tier->max_surveys) {
+        $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+        $entity = ($role === 'organization') ? $user->organization : (($role === 'independent') ? $user->independent : null);
+        if ($entity) {
+            $tier = $entity->subscriptionTier ?? \App\Models\SubscriptionTier::where('slug', 'free')->first();
+            if ($tier->max_surveys !== -1 && $entity->surveys()->count() >= $tier->max_surveys) {
                 $limitReached = true;
             }
         }
@@ -1872,6 +1881,13 @@ class SurveyController extends Controller
         $this->authorizeOwner($survey);
         $survey->delete();
 
+        if (request()->expectsJson() || request()->isXmlHttpRequest() || request()->header('Accept') == 'application/json') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Survey deleted successfully.'
+            ]);
+        }
+
         $user = auth()->user();
         $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
 
@@ -1918,7 +1934,8 @@ class SurveyController extends Controller
 
     public function publicIndex(Request $request)
     {
-        $query = \App\Models\Survey::where('status', \App\Enums\SurveyStatus::Active)
+        $query = \App\Models\Survey::where('is_template', false)
+            ->where('status', \App\Enums\SurveyStatus::Active)
             ->where('type', \App\Enums\SurveyType::Public);
 
         if ($request->filled('search')) {

@@ -20,7 +20,7 @@ class SubscriptionTierSeeder extends Seeder
                 'monthly_price' => 0,
                 'yearly_price' => 0,
                 'currency' => 'KES',
-                'max_surveys' => 3,
+                'max_surveys' => 10,
                 'max_responses_per_survey' => 100,
                 'ai_limit_per_month' => 5,
                 'has_custom_branding' => false,

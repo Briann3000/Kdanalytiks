@@ -19,14 +19,14 @@ class AdminController extends Controller
             'totalResponses' => Response::count(),
             'totalOrganizations' => Organization::count(),
             'totalResearchers' => Independent::count(),
-            'totalSurveys' => Survey::count(),
-            'draftSurveys' => Survey::where('status', \App\Enums\SurveyStatus::Draft)->count(),
+            'totalSurveys' => Survey::where('is_template', false)->count(),
+            'draftSurveys' => Survey::where('is_template', false)->where('status', \App\Enums\SurveyStatus::Draft)->count(),
         ];
 
         $publicStats = [
-            'count' => Survey::where('type', \App\Enums\SurveyType::Public)->count(),
+            'count' => Survey::where('is_template', false)->where('type', \App\Enums\SurveyType::Public)->count(),
             'responses' => Response::whereHas('survey', function ($q) {
-                $q->where('type', \App\Enums\SurveyType::Public);
+                $q->where('is_template', false)->where('type', \App\Enums\SurveyType::Public);
             })->count(),
         ];
 
@@ -34,7 +34,8 @@ class AdminController extends Controller
             ? round($publicStats['responses'] / $publicStats['count'], 2)
             : 0;
 
-        $recentPublicSurveys = Survey::where('type', \App\Enums\SurveyType::Public)
+        $recentPublicSurveys = Survey::where('is_template', false)
+            ->where('type', \App\Enums\SurveyType::Public)
             ->withCount('responses')
             ->latest()
             ->take(3)
@@ -47,14 +48,15 @@ class AdminController extends Controller
 
     public function analytics()
     {
-        $totalSurveys = Survey::count();
+        $totalSurveys = Survey::where('is_template', false)->count();
         $totalResponses = Response::count();
         $totalOrganizations = Organization::count();
         $totalRespondents = User::where('role', \App\Enums\UserRole::Respondent->value)
             ->orWhere('role', \App\Enums\UserRole::Respondent)
             ->count();
 
-        $categoryStats = Survey::selectRaw('category, COUNT(*) as count')
+        $categoryStats = Survey::where('is_template', false)
+            ->selectRaw('category, COUNT(*) as count')
             ->groupBy('category')
             ->get();
 
@@ -138,7 +140,7 @@ class AdminController extends Controller
 
     public function surveys(Request $request)
     {
-        $query = Survey::with(['organization', 'independent'])->withCount('responses');
+        $query = Survey::where('is_template', false)->with(['organization', 'independent'])->withCount('responses');
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -186,10 +188,10 @@ class AdminController extends Controller
     public function reports()
     {
         $totalUsers = User::count();
-        $totalSurveys = Survey::count();
+        $totalSurveys = Survey::where('is_template', false)->count();
         $totalResponses = Response::count();
         $usersByRole = User::selectRaw('role, count(*) as count')->groupBy('role')->pluck('count', 'role');
-        $surveysByStatus = Survey::selectRaw('status, count(*) as count')->groupBy('status')->pluck('count', 'status');
+        $surveysByStatus = Survey::where('is_template', false)->selectRaw('status, count(*) as count')->groupBy('status')->pluck('count', 'status');
 
         return view('admin.reports', compact('totalUsers', 'totalSurveys', 'totalResponses', 'usersByRole', 'surveysByStatus'));
     }

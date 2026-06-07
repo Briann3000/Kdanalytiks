@@ -65,7 +65,7 @@
                     <i class="fa-solid fa-comment-dots text-4xl"></i>
                 </div>
                 <p class="text-gray-900 font-black text-lg uppercase tracking-tight">{{ __('No responses captured') }}</p>
-                <p class="text-gray-500 text-sm mt-1 max-w-sm">{{ __('Share your surveys to start collecting data. Once someone fills them, they will appear here grouped by survey.') }}</p>
+                <p class="text-gray-500 text-sm mt-1 max-w-sm">{{ __('Share your surveys to start collecting data.') }}</p>
                 <a href="{{ route('surveys.index', ['status' => 'active']) }}"
                     class="mt-6 inline-flex items-center px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all">
                     {{ __('Go to active surveys') }}

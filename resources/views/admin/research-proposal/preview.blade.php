@@ -222,7 +222,7 @@
         if ($roleValue === 'independent') {
             $targetTier = 'Pro Researcher';
         } elseif ($roleValue === 'organization') {
-            $targetTier = 'Enterprise';
+            $targetTier = 'Pro';
         }
     @endphp
 

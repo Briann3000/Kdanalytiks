@@ -295,7 +295,7 @@
                                     <div class="pt-4 border-t border-gray-100 flex justify-between items-center">
                                         <span class="text-[10px] text-gray-300 font-bold uppercase">{{ __('Activity Log') }}
                                             #{{ $activity->id }}</span>
-                                        <a href="{{ route('surveys.index', ['status' => 'active']) }}"
+                                        <a href="{{ route('surveys.summary', $activity) }}"
                                             class="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase flex items-center">
                                             {{ __('Manage') }} <i class="fa-solid fa-chevron-right ml-1 text-[8px]"></i>
                                         </a>
@@ -304,13 +304,8 @@
                             @endforeach
                         </div>
                     @else
-                        <div class="text-center py-16">
-                            <div class="inline-flex items-center justify-center w-20 h-20 bg-gray-50 rounded-full mb-6">
-                                <i class="fa-solid fa-timeline text-gray-200 text-4xl"></i>
-                            </div>
-                            <p class="text-gray-900 text-lg font-black">{{ __('Waiting for your first move.') }}</p>
-                            <p class="text-sm text-gray-400 font-bold uppercase tracking-widest mt-1">
-                                {{ __('Activities will appear here once you interact with the system.') }}</p>
+                        <div class="text-center py-8">
+                            <p class="text-gray-500 text-sm font-medium">{{ __('no recent activity') }}</p>
                         </div>
                     @endif
                 </div>

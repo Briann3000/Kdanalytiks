@@ -84,7 +84,8 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function isAdmin(): bool
     {
-        return $this->role === \App\Enums\UserRole::Admin;
+        $roleVal = $this->role instanceof \UnitEnum ? $this->role->value : $this->role;
+        return $roleVal === 'admin';
     }
 
     public function hasActiveSubscription(): bool
@@ -94,11 +95,12 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         $entity = null;
-        if ($this->role === \App\Enums\UserRole::Organization) {
+        $roleVal = $this->role instanceof \UnitEnum ? $this->role->value : $this->role;
+        if ($roleVal === 'organization') {
             $entity = $this->organization;
-        } elseif ($this->role === \App\Enums\UserRole::Independent) {
+        } elseif ($roleVal === 'independent') {
             $entity = $this->independent;
-        } elseif ($this->role === \App\Enums\UserRole::Respondent) {
+        } elseif ($roleVal === 'respondent') {
             // Respondents have subscription data directly on the user model
             $entity = $this;
         }
@@ -128,7 +130,8 @@ class User extends Authenticatable implements MustVerifyEmail
         if ($this->isAdmin())
             return true;
 
-        $entity = ($this->role === \App\Enums\UserRole::Organization) ? $this->organization : (($this->role === \App\Enums\UserRole::Independent) ? $this->independent : $this);
+        $roleVal = $this->role instanceof \UnitEnum ? $this->role->value : $this->role;
+        $entity = ($roleVal === 'organization') ? $this->organization : (($roleVal === 'independent') ? $this->independent : $this);
         if (!$entity)
             return false;
 

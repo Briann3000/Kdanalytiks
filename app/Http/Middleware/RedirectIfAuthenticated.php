@@ -21,7 +21,9 @@ class RedirectIfAuthenticated
 
         foreach ($guards as $guard) {
             if (Auth::guard($guard)->check()) {
-                return redirect('/home');
+                $user = Auth::guard($guard)->user();
+                $role = $user->role instanceof \App\Enums\UserRole ? $user->role->value : $user->role;
+                return redirect()->route($role . '.dashboard');
             }
         }
 

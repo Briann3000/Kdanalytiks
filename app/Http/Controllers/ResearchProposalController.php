@@ -27,8 +27,12 @@ class ResearchProposalController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $surveys = \App\Models\Survey::where('created_by', $user->id)
-            ->orWhere('type', \App\Enums\SurveyType::Public)
+        $surveys = \App\Models\Survey::where('is_template', false)
+            ->where('status', \App\Enums\SurveyStatus::Active)
+            ->where(function ($query) use ($user) {
+                $query->where('created_by', $user->id)
+                    ->orWhere('type', \App\Enums\SurveyType::Public);
+            })
             ->get();
 
         return view('admin.research-proposal.index', compact('surveys'));

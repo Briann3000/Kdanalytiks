@@ -54,14 +54,16 @@ class DashboardController extends Controller
                 ->get();
 
         } elseif ($role === 'respondent') {
-            $totalSurveys = Survey::where('status', \App\Enums\SurveyStatus::Active)
+            $totalSurveys = Survey::where('is_template', false)
+                ->where('status', \App\Enums\SurveyStatus::Active)
                 ->where('type', \App\Enums\SurveyType::Public)->count();
             $totalResponses = \App\Models\Response::where('respondent_id', $user->id)->count();
             $pendingSurveys = 0; // Invitations removed
 
             $reportsGenerated = \App\Models\ResearchProposal::where('user_id', $user->id)->count();
 
-            $recentPublicSurveys = Survey::where('status', \App\Enums\SurveyStatus::Active)
+            $recentPublicSurveys = Survey::where('is_template', false)
+                ->where('status', \App\Enums\SurveyStatus::Active)
                 ->where('type', \App\Enums\SurveyType::Public)
                 ->withCount('responses')
                 ->latest()
@@ -75,7 +77,8 @@ class DashboardController extends Controller
                 ->latest()
                 ->get();
 
-            $availableSurveys = Survey::where('type', \App\Enums\SurveyType::Public)
+            $availableSurveys = Survey::where('is_template', false)
+                ->where('type', \App\Enums\SurveyType::Public)
                 ->where('status', \App\Enums\SurveyStatus::Active)
                 ->whereDoesntHave('responses', function ($query) use ($user) {
                     $query->where('respondent_id', $user->id);

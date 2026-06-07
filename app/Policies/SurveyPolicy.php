@@ -39,7 +39,8 @@ class SurveyPolicy
         }
 
         // Respondents who participated
-        if ($user->role === \App\Enums\UserRole::Respondent) {
+        $roleValue = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+        if ($roleValue === 'respondent') {
             $hasResponded = \App\Models\Response::where('survey_id', $survey->id)
                 ->where('respondent_id', $user->id)
                 ->exists();

@@ -57,7 +57,8 @@ class CheckSubscriptionLimits
 
         if ($limitType === 'ai') {
             if (!$this->aiService->checkUsageLimit($entity)) {
-                $limit = $tier->ai_limit_per_month === -1 ? 'Unlimited' : $tier->ai_limit_per_month;
+                $limitVal = (int) $tier->ai_limit_per_month;
+                $limit = $limitVal === -1 ? 'Unlimited' : $limitVal;
                 return response()->json(['error' => "Upgrade Required: Your monthly AI limit of {$limit} has been reached."], 403);
             }
         }

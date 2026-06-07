@@ -24,6 +24,17 @@ class SubscriptionTier extends Model
         'has_advanced_analytics',
     ];
 
+    protected $casts = [
+        'monthly_price' => 'decimal:2',
+        'yearly_price' => 'decimal:2',
+        'max_surveys' => 'integer',
+        'max_responses_per_survey' => 'integer',
+        'ai_limit_per_month' => 'integer',
+        'has_custom_branding' => 'boolean',
+        'has_data_export' => 'boolean',
+        'has_advanced_analytics' => 'boolean',
+    ];
+
     public function organizations(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Organization::class);

@@ -340,16 +340,18 @@
                     <div class="flex items-center">
                         <!-- Sidebar Toggle (Youtube-style) -->
                         @auth
-                            @php
-                                $isReportPage = request()->routeIs('surveys.report', 'surveys.responses') || request()->is('*/report', '*/responses*');
-                            @endphp
+                            @if(auth()->user()->hasVerifiedEmail())
+                                @php
+                                    $isReportPage = request()->routeIs('surveys.report', 'surveys.responses') || request()->is('*/report', '*/responses*');
+                                @endphp
 
-                            <!-- Main Sidebar Toggle -->
-                            <button type="button" @click="desktopSidebarOpen = !desktopSidebarOpen"
-                                class="mr-3 p-2 rounded-xl bg-slate-50 border border-slate-200 text-indigo-700 hover:bg-slate-100 hover:border-slate-300 shadow-sm transition-all flex items-center justify-center w-10 h-10 group">
-                                <i class="fa-solid fa-bars-staggered text-lg group-hover:scale-110 transition-transform"
-                                    :class="desktopSidebarOpen ? 'rotate-0' : 'rotate-180'"></i>
-                            </button>
+                                <!-- Main Sidebar Toggle -->
+                                <button type="button" @click="desktopSidebarOpen = !desktopSidebarOpen"
+                                    class="mr-3 p-2 rounded-xl bg-slate-50 border border-slate-200 text-indigo-700 hover:bg-slate-100 hover:border-slate-300 shadow-sm transition-all flex items-center justify-center w-10 h-10 group">
+                                    <i class="fa-solid fa-bars-staggered text-lg group-hover:scale-110 transition-transform"
+                                        :class="desktopSidebarOpen ? 'rotate-0' : 'rotate-180'"></i>
+                                </button>
+                            @endif
                         @endauth
 
                         <div class="flex-shrink-0 flex items-center">
@@ -362,16 +364,18 @@
 
                         <!-- Desktop Nav Links -->
                         @auth
-                            <div class="hidden sm:ml-8 sm:flex sm:items-center">
-                                @php
-                                    $roleValNav = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
-                                @endphp
+                            @if(auth()->user()->hasVerifiedEmail())
+                                <div class="hidden sm:ml-8 sm:flex sm:items-center">
+                                    @php
+                                        $roleValNav = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
+                                    @endphp
 
-                                <a href="{{ route($roleValNav . '.dashboard') }}"
-                                    class="text-gray-500 hover:text-indigo-700 px-3 py-2 text-sm font-bold transition-colors">
-                                    {{ __('Dashboard') }}
-                                </a>
-                            </div>
+                                    <a href="{{ route($roleValNav . '.dashboard') }}"
+                                        class="text-gray-500 hover:text-indigo-700 px-3 py-2 text-sm font-bold transition-colors">
+                                        {{ __('Dashboard') }}
+                                    </a>
+                                </div>
+                            @endif
                         @endauth
                     </div>
 
@@ -437,13 +441,15 @@
                             </div>
 
                             <!-- Mobile menu button -->
-                            <div class="flex items-center sm:hidden">
-                                <button type="button" onclick="toggleMobileMenu()"
-                                    class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500">
-                                    <span class="sr-only">Open main menu</span>
-                                    <i class="fa-solid fa-bars text-xl" id="menu-icon"></i>
-                                </button>
-                            </div>
+                            @if(auth()->user()->hasVerifiedEmail())
+                                <div class="flex items-center sm:hidden">
+                                    <button type="button" onclick="toggleMobileMenu()"
+                                        class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500">
+                                        <span class="sr-only">Open main menu</span>
+                                        <i class="fa-solid fa-bars text-xl" id="menu-icon"></i>
+                                    </button>
+                                </div>
+                            @endif
                         @else
                             <div class="flex items-center space-x-6">
                                 <!-- Language Picker (Guest) -->
@@ -501,10 +507,12 @@
                             <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">{{ __('ACCOUNT') }}</p>
                             <p class="text-sm font-bold text-gray-800">{{ $displayName }}</p>
                         </div>
-                        <a href="{{ route($roleValMob . '.dashboard') }}"
-                            class="block pl-3 pr-4 py-2 border-l-4 border-indigo-500 text-base font-medium text-indigo-700 bg-indigo-50 rounded-r-md">
-                            {{ __('Dashboard') }}
-                        </a>
+                        @if(auth()->user()->hasVerifiedEmail())
+                            <a href="{{ route($roleValMob . '.dashboard') }}"
+                                class="block pl-3 pr-4 py-2 border-l-4 border-indigo-500 text-base font-medium text-indigo-700 bg-indigo-50 rounded-r-md">
+                                {{ __('Dashboard') }}
+                            </a>
+                        @endif
                         <div class="mt-4 pt-4 border-t border-gray-100">
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
@@ -521,9 +529,9 @@
 
         @php
             // Show sidebar for all authenticated pages except specific full-width ones (like taking a survey)
-            // Also explicitly hide on landing, login, register
-            $excludedRoutes = ['home', 'login', 'register', 'login.role', 'password.request', 'password.reset', 'surveys.show', 'surveys.submit'];
-            $isWorkspace = auth()->check() && !request()->routeIs($excludedRoutes);
+            // Also explicitly hide on landing, login, register, and email verification notice/verify pages
+            $excludedRoutes = ['home', 'login', 'register', 'login.role', 'password.request', 'password.reset', 'surveys.show', 'surveys.submit', 'verification.notice', 'verification.verify', 'admin.login', 'organization.login', 'independent.login', 'respondent.login', 'admin.register', 'organization.register', 'independent.register', 'respondent.register'];
+            $isWorkspace = auth()->check() && auth()->user()->hasVerifiedEmail() && !request()->routeIs($excludedRoutes);
         @endphp
 
         @if($isWorkspace || View::hasSection('sidebar'))
@@ -535,7 +543,8 @@
                 </div>
 
                 <!-- Sidebar -->
-                <aside class="sidebar-pane custom-scrollbar" id="sidebar-pane" x-show="desktopSidebarOpen" x-transition>
+                <aside class="sidebar-pane custom-scrollbar" id="sidebar-pane" x-show="desktopSidebarOpen" x-transition
+                    @if(request()->routeIs('surveys.create', 'surveys.edit')) style="display: none !important;" @endif>
                     <div class="sidebar-nav">
                         @if(View::hasSection('sidebar'))
                             @yield('sidebar')

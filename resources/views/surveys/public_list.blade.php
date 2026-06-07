@@ -17,16 +17,12 @@
 
     <div class="bg-white rounded-3xl p-10 mb-10 shadow-sm border border-gray-100 relative overflow-hidden">
         <div class="relative z-10 max-w-3xl">
-            <div
-                class="inline-flex items-center px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold uppercase tracking-widest mb-4 border border-indigo-100">
-                <span class="flex h-2 w-2 rounded-full bg-indigo-400 mr-2 animate-pulse"></span>
-                {{ __('Community Marketplace') }}
-            </div>
+
             <h1 class="text-5xl font-black mb-6 text-gray-900 tracking-tight leading-tight">
                 {{ __('Explore Public Surveys') }}
             </h1>
             <p class="text-gray-600 text-xl font-medium leading-relaxed">
-                {{ __('Join thousands of contributors. Participate in clinical research, share your feedback, and help shape community knowledge.') }}
+                {{ __('Join thousands of contributors. Participate in social research, share your feedback and help shape community knowledge.') }}
             </p>
         </div>
         <div class="absolute right-[-10%] top-[-20%] w-96 h-96 bg-indigo-50 rounded-full blur-3xl"></div>

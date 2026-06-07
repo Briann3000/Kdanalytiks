@@ -19,7 +19,8 @@
                             <div class="mb-6">
                                 <h3 class="text-xl font-bold text-gray-900">{{ __('Get Started') }}</h3>
                                 <p class="text-sm text-gray-500 mt-1">
-                                    {{ __('Select your account type to sign in or register') }}</p>
+                                    {{ __('Select your account type to sign in or register') }}
+                                </p>
                             </div>
 
                             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -32,7 +33,8 @@
                                     </div>
                                     <h3 class="text-base font-bold text-gray-900">{{ __('Organization') }}</h3>
                                     <p class="mt-1 text-[11px] text-gray-500 leading-tight font-medium">
-                                        {{ __('For companies & institutions') }}</p>
+                                        {{ __('For companies & institutions') }}
+                                    </p>
                                 </a>
 
                                 <!-- Independent Researcher -->
@@ -44,7 +46,8 @@
                                     </div>
                                     <h3 class="text-base font-bold text-gray-900">{{ __('Researcher') }}</h3>
                                     <p class="mt-1 text-[11px] text-gray-500 leading-tight font-medium">
-                                        {{ __('For academicians & practitioners') }}</p>
+                                        {{ __('For academicians & practitioners') }}
+                                    </p>
                                 </a>
 
                                 <!-- Respondent -->
@@ -56,7 +59,8 @@
                                     </div>
                                     <h3 class="text-base font-bold text-gray-900">{{ __('Respondent') }}</h3>
                                     <p class="mt-1 text-[11px] text-gray-500 leading-tight font-medium">
-                                        {{ __('Share feedback & earn') }}</p>
+                                        {{ __('Share feedback & earn') }}
+                                    </p>
                                 </a>
                             </div>
                         </div>
@@ -87,8 +91,7 @@
                             </div>
                             <div>
                                 <h4 class="font-black text-gray-900 leading-tight">{{ __('Public Survey Hub') }}</h4>
-                                <p class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest opacity-60">
-                                    {{ __('Live Marketplace') }}</p>
+
                             </div>
                         </div>
                         <p class="text-sm text-gray-600 leading-relaxed mb-8">
@@ -110,7 +113,8 @@
                     </div>
                     <h3 class="text-lg font-bold text-indigo-950 mb-1">{{ __('State of the Art Experience') }}</h3>
                     <p class="text-[11px] font-medium text-indigo-400 max-w-xs mx-auto">
-                        {{ __('One seamless platform for survey creators, analysts and respondents worldwide.') }}</p>
+                        {{ __('One seamless platform for survey creators, analysts and respondents worldwide.') }}
+                    </p>
                 </div>
             </div>
         </div>

@@ -20,6 +20,7 @@
         "mpdf/mpdf": "^8.3",
         "openai-php/laravel": "^0.11.0",
         "phpoffice/phpword": "^1.4",
+        "predis/predis": "*",
         "ramsey/uuid": "^4.9",
         "smalot/pdfparser": "^2.12",
         "tiamo/spss": "*"

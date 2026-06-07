@@ -56,6 +56,8 @@ class RegisterController extends Controller
             ]);
         }
 
-        return redirect()->route($role . '.login', ['redirect' => $request->input('redirect')])->with('success', 'Registration successful. Please login to continue.');
+        auth()->login($user);
+
+        return redirect()->route('verification.notice')->with('success', 'Registration successful. A verification link has been sent to your email.');
     }
 }

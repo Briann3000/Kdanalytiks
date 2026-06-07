@@ -10,23 +10,24 @@ use Illuminate\Support\Facades\Log;
 class AiService
 {
     /**
-     * Check if an organization has reached its AI limit.
+     * Check if an organization or independent user has reached its AI limit.
      */
-    public function checkUsageLimit(\App\Models\Organization $org): bool
+    public function checkUsageLimit($org): bool
     {
         $tier = $org->subscriptionTier ?? \App\Models\SubscriptionTier::where('slug', 'free')->first();
+        $limit = $tier ? (int) $tier->ai_limit_per_month : 5;
 
-        if ($tier->ai_limit_per_month === -1) {
+        if ($limit === -1) {
             return true; // Unlimited
         }
 
-        return $org->ai_usage_monthly < $tier->ai_limit_per_month;
+        return (int) $org->ai_usage_monthly < $limit;
     }
 
     /**
-     * Increment AI usage for an organization.
+     * Increment AI usage for an organization or independent user.
      */
-    public function incrementUsage(\App\Models\Organization $org): void
+    public function incrementUsage($org): void
     {
         $org->increment('ai_usage_monthly');
     }
@@ -37,10 +38,10 @@ class AiService
     public function analyzeResponseSentiment(Response $response)
     {
         $survey = $response->survey;
-        $org = $survey?->organization;
+        $org = $survey ? ($survey->organization ?? $survey->independent) : null;
 
         if ($org && !$this->checkUsageLimit($org)) {
-            Log::warning("AI Sentiment Analysis Skipped: Limit reached for Organization {$org->id}");
+            Log::warning("AI Sentiment Analysis Skipped: Limit reached for Entity " . get_class($org) . " ID {$org->id}");
             return null;
         }
 
@@ -83,7 +84,7 @@ class AiService
      */
     public function generateSurveySummary(Survey $survey)
     {
-        $org = $survey->organization;
+        $org = $survey->organization ?? $survey->independent;
         if ($org && !$this->checkUsageLimit($org)) {
             return "AI Summary is currently unavailable: Your monthly subscription limit has been reached.";
         }
@@ -433,7 +434,15 @@ class AiService
     public function generateSurveySchema($prompt)
     {
         $user = auth()->user();
-        $org = $user?->organization;
+        $org = null;
+        if ($user) {
+            $role = $user->role instanceof \App\Enums\UserRole ? $user->role->value : $user->role;
+            if ($role === 'organization') {
+                $org = $user->organization;
+            } elseif ($role === 'independent') {
+                $org = $user->independent;
+            }
+        }
 
         if ($org && !$this->checkUsageLimit($org)) {
             return $this->getMockSchema($prompt); // Fallback to mock if limit reached

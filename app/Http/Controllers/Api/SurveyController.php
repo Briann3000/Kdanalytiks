@@ -25,7 +25,7 @@ class SurveyController extends Controller
     {
         // For public surveys, anyone can view the schema.
         // For invitation-only surveys, we might check if they have access.
-        
+
         $schema = json_decode($this->surveyService->getSchema($survey));
 
         return response()->json([
@@ -62,7 +62,7 @@ class SurveyController extends Controller
     public function submit(SubmitSurveyRequest $request, Survey $survey): JsonResponse
     {
         // Fetch respondent ID if authenticated via Sanctum/session in this API context
-        $respondentId = auth('sanctum')->id(); 
+        $respondentId = auth('sanctum')->id();
 
         if ($survey->type === \App\Enums\SurveyType::Invitation && !$respondentId) {
             return response()->json(['message' => 'Authentication required to submit this survey.'], 403);
@@ -90,10 +90,11 @@ class SurveyController extends Controller
         $isCreator = $survey->created_by === $user->id;
         $isOrgOwner = $survey->organization_id && $user->organization?->id === $survey->organization_id;
         $isIndOwner = $survey->independent_id && $user->independent?->id === $survey->independent_id;
-        $isAdmin = $user->role === \App\Enums\UserRole::Admin;
+        $roleValue = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+        $isAdmin = $roleValue === 'admin';
 
         if (!$isCreator && !$isOrgOwner && !$isIndOwner && !$isAdmin) {
-             abort(403, 'Unauthorized. You do not have permission to modify this survey.');
+            abort(403, 'Unauthorized. You do not have permission to modify this survey.');
         }
     }
 }
