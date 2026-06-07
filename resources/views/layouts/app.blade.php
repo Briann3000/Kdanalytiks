@@ -334,7 +334,7 @@
         x-data="{ sidebarOpen: true, desktopSidebarOpen: window.innerWidth > 1024 && !{{ request()->routeIs('surveys.create', 'surveys.edit') ? 'true' : 'false' }} }"
         @close-sidebar.window="desktopSidebarOpen = false" @open-sidebar.window="desktopSidebarOpen = true">
         <!-- Navigation Bar -->
-        <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <nav class="bg-white border-b border-gray-200 sticky top-0 z-[60]">
             <div class="max-w-full mx-auto px-4 sm:px-8 lg:px-12">
                 <div class="flex justify-between h-16">
                     <div class="flex items-center">
