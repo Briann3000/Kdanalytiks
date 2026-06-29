@@ -160,6 +160,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/surveys/{survey}', [SurveyController::class, 'destroy'])->name('surveys.destroy');
     Route::post('/surveys/bulk-destroy', [SurveyController::class, 'bulkDestroy'])->name('surveys.bulk-destroy');
     Route::post('/surveys/initialize', [SurveyController::class, 'initialize'])->name('surveys.initialize');
+    Route::post('/surveys/export-schema-docx', [SurveyController::class, 'exportSchemaDocx'])->name('surveys.export-schema-docx');
+    Route::post('/surveys/import-docx', [SurveyController::class, 'importDocx'])->name('surveys.import-docx');
 
     // Legacy Project Redirects
     Route::redirect('/projects/active', '/surveys?status=active', 301);

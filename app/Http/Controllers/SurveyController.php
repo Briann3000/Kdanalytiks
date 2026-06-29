@@ -2564,4 +2564,142 @@ class SurveyController extends Controller
 
         return 'uploads/' . $safeFileName;
     }
+
+    /**
+     * Export the current survey questionnaire schema as a DOCX file.
+     */
+    public function exportSchemaDocx(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+            'questions' => 'required|string',
+        ]);
+
+        $title = $validated['title'] ?? 'Survey Questionnaire';
+        $description = $validated['description'] ?? '';
+        $questions = json_decode($validated['questions'], true) ?: [];
+
+        $phpWord = new \PhpOffice\PhpWord\PhpWord();
+        
+        // Define styles
+        $phpWord->addTitleStyle(1, ['name' => 'Helvetica Neue', 'size' => 20, 'bold' => true, 'color' => '333333'], ['spaceAfter' => 240]);
+        $phpWord->addTitleStyle(2, ['name' => 'Helvetica Neue', 'size' => 14, 'bold' => true, 'color' => '4F46E5'], ['spaceBefore' => 180, 'spaceAfter' => 120]);
+
+        $section = $phpWord->addSection([
+            'marginTop' => 1440,
+            'marginRight' => 1440,
+            'marginBottom' => 1440,
+            'marginLeft' => 1440,
+        ]);
+
+        // Header/Title
+        $section->addTitle($title, 1);
+        if ($description) {
+            $section->addText($description, ['name' => 'Helvetica Neue', 'size' => 10, 'italic' => true, 'color' => '666666'], ['spaceAfter' => 360]);
+        }
+
+        foreach ($questions as $index => $q) {
+            $num = $index + 1;
+            $qLabel = $q['label'] ?? '';
+            $qType = $q['type'] ?? 'text';
+            $required = !empty($q['required']) ? ' *' : '';
+
+            if ($qType === 'header') {
+                $section->addTitle($qLabel, 2);
+                continue;
+            } elseif ($qType === 'paragraph') {
+                $section->addText($qLabel, ['name' => 'Helvetica Neue', 'size' => 10, 'color' => '555555'], ['spaceAfter' => 180]);
+                continue;
+            }
+
+            $section->addText("Q{$num}. {$qLabel}{$required}", ['name' => 'Helvetica Neue', 'size' => 11, 'bold' => true, 'color' => '111111'], ['spaceBefore' => 120, 'spaceAfter' => 120]);
+
+            if (in_array($qType, ['select_one', 'select_many', 'select', 'ranking'])) {
+                $values = $q['values'] ?? [];
+                foreach ($values as $v) {
+                    $optLabel = is_array($v) ? ($v['label'] ?? '') : $v;
+                    $section->addText("  [ ]  {$optLabel}", ['name' => 'Helvetica Neue', 'size' => 10, 'color' => '333333'], ['spaceAfter' => 60]);
+                }
+            } elseif ($qType === 'likert_matrix') {
+                $rows = $q['rows'] ?? [];
+                $columns = $q['columns'] ?? [];
+                if (count($rows) > 0 && count($columns) > 0) {
+                    $table = $section->addTable(['borderSize' => 6, 'borderColor' => 'CCCCCC', 'cellMargin' => 80]);
+                    // Header Row
+                    $table->addRow();
+                    $table->addCell(3000)->addText('');
+                    foreach ($columns as $col) {
+                        $colLabel = is_array($col) ? ($col['label'] ?? '') : $col;
+                        $table->addCell(1500)->addText($colLabel, ['name' => 'Helvetica Neue', 'size' => 9, 'bold' => true, 'color' => '4F46E5']);
+                    }
+                    // Rows
+                    foreach ($rows as $row) {
+                        $rowLabel = is_array($row) ? ($row['label'] ?? '') : $row;
+                        $table->addRow();
+                        $table->addCell(3000)->addText($rowLabel, ['name' => 'Helvetica Neue', 'size' => 9, 'color' => '111111']);
+                        foreach ($columns as $col) {
+                            $table->addCell(1500)->addText('[ ]', ['name' => 'Helvetica Neue', 'size' => 9, 'color' => 'CCCCCC'], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
+                        }
+                    }
+                }
+            } else {
+                $section->addText('__________________________________________________________________', ['color' => 'DDDDDD'], ['spaceAfter' => 180]);
+            }
+            $section->addTextBreak(1);
+        }
+
+        $objWriter = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'Word2007');
+        $tempFile = tempnam(sys_get_temp_dir(), 'survey_export_');
+        $objWriter->save($tempFile);
+
+        $filename = str($title)->slug() . '-questionnaire.docx';
+
+        return response()->download($tempFile, $filename)->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Import questions from a DOCX file using AI.
+     */
+    public function importDocx(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:docx|max:10240',
+        ]);
+
+        $file = $request->file('file');
+        
+        try {
+            // Store temporarily
+            $path = $file->store('temp_imports', 'local');
+            
+            $extractionService = new \App\Services\DocumentExtractionService();
+            $text = $extractionService->extractText($file, $path);
+            
+            // Clean up temp file
+            \Storage::disk('local')->delete($path);
+
+            $aiService = new \App\Services\AiService();
+            $schema = $aiService->convertTextToSurveySchema($text);
+
+            if (!$schema) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'AI was unable to extract questions from this document. Please verify the content.'
+                ], 422);
+            }
+
+            return response()->json([
+                'success' => true,
+                'schema' => $schema
+            ]);
+
+        } catch (\Throwable $e) {
+            \Log::error('DOCX Import Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to parse file: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

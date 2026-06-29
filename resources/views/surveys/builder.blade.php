@@ -675,9 +675,17 @@
                     </button>
                     <div class="h-6 w-px bg-gray-200 mx-2"></div>
                     <button type="button" @click.stop="showLibrary = !showLibrary"
-                        class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center"
+                        class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center mr-2"
                         :class="showLibrary ? 'bg-green-600 text-white shadow-lg shadow-green-100' : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-100'">
                         <i class="fa-solid fa-book-bookmark mr-2"></i> {{ __('Library') }}
+                    </button>
+                    <button type="button" @click.stop="showImportModal = true"
+                        class="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center mr-2">
+                        <i class="fa-solid fa-file-import mr-2"></i> {{ __('Import') }}
+                    </button>
+                    <button type="button" @click="exportSurvey()"
+                        class="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center">
+                        <i class="fa-solid fa-file-export mr-2"></i> {{ __('Export') }}
                     </button>
                     <button type="button" @click="groupSelected()" x-show="selectedQuestions.length > 0" x-cloak
                         class="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 border border-transparent transition-all flex items-center animate-in fade-in zoom-in duration-300">
@@ -1611,6 +1619,59 @@
             </div>
         </div>
 
+        <!-- Import Modal -->
+        <div id="importModal" x-show="showImportModal" x-cloak
+            class="fixed inset-0 z-[100001] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm"
+            x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+            <div class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden"
+                @click.away="showImportModal = false">
+                <div class="px-8 py-6 border-b border-gray-50 flex items-center justify-between bg-white">
+                    <h3 class="text-xl font-black text-gray-900 flex items-center uppercase tracking-tight">
+                        <i class="fa-solid fa-file-import mr-3 text-indigo-600"></i> Import Survey Questionnaire
+                    </h3>
+                    <button type="button" @click="showImportModal = false"
+                        class="text-gray-500 hover:text-red-500 transition-colors">
+                        <i class="fa-solid fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-8 bg-white">
+                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4 font-bold">Select a Word document (.docx) to extract questions</p>
+                    
+                    <!-- Drag and drop or file click area -->
+                    <div class="relative border-2 border-dashed border-slate-200 hover:border-indigo-500/50 rounded-2xl p-8 text-center transition-all bg-slate-50/50 cursor-pointer">
+                        <input type="file" accept=".docx" @change="importSurveySchema($event)" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                        <div class="space-y-3">
+                            <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto shadow-inner">
+                                <i class="fa-solid fa-file-word text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-gray-700">Click to upload or drag & drop</p>
+                                <p class="text-[10px] text-gray-400 font-bold uppercase mt-1">Supports standard Word Document (.docx)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Loader -->
+                    <div x-show="isImporting"
+                        class="mt-6 bg-indigo-50/30 rounded-2xl p-6 border border-indigo-100 animate-in fade-in zoom-in">
+                        <div class="flex items-center">
+                            <i class="fa-solid fa-circle-notch text-indigo-600 text-xl mr-4 animate-spin"></i>
+                            <div>
+                                <p class="text-xs font-black text-indigo-900 uppercase tracking-widest">AI Agent is extracting questions...</p>
+                                <p class="text-[10px] text-indigo-400 font-bold uppercase mt-0.5">Reading DOCX text and converting it to survey canvas</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-8 py-6 bg-slate-50 border-t border-gray-100 flex justify-end">
+                    <button type="button" @click="showImportModal = false"
+                        class="px-6 py-2.5 bg-white text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 border border-gray-200 transition-all">Close</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Preview Modal -->
         <div id="previewModal" class="fixed inset-0 z-[100000] hidden flex-col bg-slate-50 overflow-hidden" x-cloak>
             <!-- Modal Top Header -->
@@ -1701,6 +1762,8 @@
                 showSkipModal: false,
                 showDisplayModal: false,
                 showAiModal: false,
+                showImportModal: false,
+                isImporting: false,
                 currentQuestionIndex: null,
                 currentDisplayQuestionIndex: null,
                 displayLogicDraft: { field: '', operator: '==', value: '' },
@@ -1792,11 +1855,11 @@
                             console.log(`Mapping type: ${originalType} -> ${type}`);
                         }
 
-                        // Support legacy 'text' property as label
-                        const label = field.label || field.text || '';
+                        // Support legacy and AI-generated properties as label
+                        const label = field.label || field.text || field.title || field.question || field.questionText || '';
 
                         // Ensure values is always an array
-                        let rawValues = field.values || field.options;
+                        let rawValues = field.values || field.options || field.choices;
                         if (typeof rawValues === 'string' && rawValues.trim() !== '') {
                             try {
                                 rawValues = JSON.parse(rawValues);
@@ -1820,8 +1883,8 @@
                             id: field.id || 'q-' + Math.random().toString(36).substr(2, 9),
                             required: !!field.required,
                             values: rawValues.map(v => ({
-                                label: (v && typeof v === 'object' ? v.label : v) || '',
-                                value: (v && typeof v === 'object' ? v.value : v) || '',
+                                label: (v && typeof v === 'object' ? (v.label || v.text || v.value) : v) || '',
+                                value: (v && typeof v === 'object' ? (v.value || v.label || v.text) : v) || '',
                                 next: (v && typeof v === 'object' ? v.next : '') || ''
                             })),
                             visible_if: field.visible_if || null,
@@ -2028,6 +2091,120 @@
                             console.log('Auto-saved successfully');
                         })
                         .catch(err => console.error('Auto-save failed:', err));
+                },
+
+                exportSurvey() {
+                    console.log('--- SURVEY BUILDER: exportSurvey ---');
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = "{{ route('surveys.export-schema-docx') }}";
+                    
+                    const tokenInput = document.createElement('input');
+                    tokenInput.type = 'hidden';
+                    tokenInput.name = '_token';
+                    tokenInput.value = '{{ csrf_token() }}';
+                    form.appendChild(tokenInput);
+
+                    const titleInput = document.createElement('input');
+                    titleInput.type = 'hidden';
+                    titleInput.name = 'title';
+                    titleInput.value = this.surveyTitle;
+                    form.appendChild(titleInput);
+
+                    const descInput = document.createElement('input');
+                    descInput.type = 'hidden';
+                    descInput.name = 'description';
+                    descInput.value = this.surveyDescription;
+                    form.appendChild(descInput);
+
+                    const qsInput = document.createElement('input');
+                    qsInput.type = 'hidden';
+                    qsInput.name = 'questions';
+                    qsInput.value = JSON.stringify(this.mapToLegacy());
+                    form.appendChild(qsInput);
+
+                    document.body.appendChild(form);
+                    form.submit();
+                    form.remove();
+                },
+
+                importSurveySchema(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    console.log('--- SURVEY BUILDER: importSurveySchema ---', file.name);
+                    this.isImporting = true;
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('_token', '{{ csrf_token() }}');
+
+                    // Helper to recursively find the questions array
+                    const findQuestionsArray = (obj) => {
+                        if (Array.isArray(obj)) return obj;
+                        if (obj && typeof obj === 'object') {
+                            if (Array.isArray(obj.questions)) return obj.questions;
+                            if (Array.isArray(obj.fields)) return obj.fields;
+                            for (let key in obj) {
+                                if (obj.hasOwnProperty(key)) {
+                                    const res = findQuestionsArray(obj[key]);
+                                    if (res) return res;
+                                }
+                            }
+                        }
+                        return null;
+                    };
+
+                    fetch("{{ route('surveys.import-docx') }}", {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(r => {
+                            if (!r.ok) {
+                                return r.json().then(err => { throw new Error(err.message || 'Error parsing file.'); });
+                            }
+                            return r.json();
+                        })
+                        .then(data => {
+                            console.log('Import API Response:', data);
+                            if (data.success && data.schema) {
+                                let schemaObj = data.schema;
+                                if (typeof schemaObj === 'string') {
+                                    try {
+                                        schemaObj = JSON.parse(schemaObj);
+                                    } catch (e) {
+                                        console.error('Failed to parse stringified schema:', e);
+                                    }
+                                }
+
+                                const questionsArray = findQuestionsArray(schemaObj);
+
+                                if (questionsArray) {
+                                    this.questions = this.mapFromLegacy(questionsArray);
+                                    
+                                    // Try to resolve title/description from schemaObj or survey metadata
+                                    const title = schemaObj.title || (schemaObj.survey && schemaObj.survey.title);
+                                    const desc = schemaObj.description || (schemaObj.survey && schemaObj.survey.description);
+                                    
+                                    if (title) this.surveyTitle = title;
+                                    if (desc) this.surveyDescription = desc;
+
+                                    this.syncToJson();
+                                    this.showImportModal = false;
+                                    alert('Questionnaire imported successfully!');
+                                    return;
+                                }
+                            }
+                            alert(data.message || 'Failed to import questionnaire.');
+                        })
+                        .catch(err => {
+                            console.error('Import error:', err);
+                            alert(err.message || 'A network error occurred.');
+                        })
+                        .finally(() => {
+                            this.isImporting = false;
+                            event.target.value = ''; // Reset file input
+                        });
                 },
 
                 confirmExit() {

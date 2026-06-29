@@ -516,4 +516,74 @@ class AiService
             ['type' => 'paragraph', 'label' => 'Note: The AI engine encountered an error, this is a simulated response.']
         ];
     }
+
+    /**
+     * Convert an extracted text questionnaire (e.g. from a DOCX file) into a structured JSON survey schema.
+     */
+    public function convertTextToSurveySchema(string $text)
+    {
+        $user = auth()->user();
+        $org = null;
+        if ($user) {
+            $role = $user->role instanceof \App\Enums\UserRole ? $user->role->value : $user->role;
+            if ($role === 'organization') {
+                $org = $user->organization;
+            } elseif ($role === 'independent') {
+                $org = $user->independent;
+            }
+        }
+
+        if ($org && !$this->checkUsageLimit($org)) {
+            return [
+                ['type' => 'header', 'label' => 'Import Limit Reached'],
+                ['type' => 'paragraph', 'label' => 'Your monthly AI subscription limit has been reached. Please upgrade to continue importing documents.']
+            ];
+        }
+
+        $systemPrompt = "You are an expert survey designer. Your task is to analyze the provided text document containing a questionnaire, extract EVERY single question, heading, and instruction, and convert them into a flat JSON array of question objects compatible with 'jQuery FormBuilder'.
+
+        CRITICAL INSTRUCTIONS:
+        1. DO NOT group questions under section headers. The output must be a FLAT array of ALL questions in order.
+        2. Identify sections/headers (e.g., \"Section 1: Demographic Information\") and output them as type: 'header' with the section title as the label.
+        3. Identify paragraphs of instructions/introduction and output them as type: 'paragraph' or 'note' with the text as the label.
+        4. For every individual question (e.g. \"1. What is your role in the school?\"), output a question object. 
+           - Determine the correct type: 'text', 'number', 'select_one' (for single choice/radio), 'select_many' (for multiple choice/checkboxes), etc.
+           - Ensure the question text is mapped to the 'label' property.
+        5. For multiple-choice questions (e.g. Strongly Agree, Agree...), extract the options and map them to the 'values' property as an array of {label: '...', value: '...'}.
+        6. Do not skip any questions. Every single question listed in the document MUST be represented in the final JSON array.
+
+        Supported types:
+        - 'header' (for section titles)
+        - 'paragraph' (for introduction / general instructions)
+        - 'text' (for open text questions)
+        - 'number' (for numeric inputs)
+        - 'select_one' (for multiple choice - single select)
+        - 'select_many' (for checkboxes - multi select)
+        - 'date'
+
+        Example JSON format:
+        [
+          { \"type\": \"header\", \"label\": \"Section 1: Demographic Information\" },
+          { \"type\": \"text\", \"label\": \"What is your role in the school?\", \"name\": \"role\", \"required\": true },
+          { \"type\": \"select_one\", \"label\": \"Do you agree?\", \"name\": \"agree_q\", \"values\": [{\"label\": \"Yes\", \"value\": \"yes\"}, {\"label\": \"No\", \"value\": \"no\"}] }
+        ]";
+
+        try {
+            $aiData = $this->callAi($text, $systemPrompt, true);
+            if ($aiData) {
+                if ($org) {
+                    $this->incrementUsage($org);
+                }
+                // Strip code blocks/fences if present
+                $cleanedData = preg_replace('/^```(?:json)?\s*/i', '', trim($aiData));
+                $cleanedData = preg_replace('/\s*```$/i', '', $cleanedData);
+                $decoded = json_decode($cleanedData, true);
+                return $this->formatSchemaResponse($decoded);
+            }
+            return null;
+        } catch (\Exception $e) {
+            Log::error("AI Text-to-Schema Conversion Error: " . $e->getMessage());
+            return null;
+        }
+    }
 }
