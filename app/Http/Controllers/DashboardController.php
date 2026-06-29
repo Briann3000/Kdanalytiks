@@ -94,8 +94,9 @@ class DashboardController extends Controller
 
         // Resolve subscription tier for org/independent users
         $entity = $user->organization ?? $user->independent ?? null;
-        $subscriptionTier = $entity?->subscriptionTier
-            ?? \App\Models\SubscriptionTier::where('slug', 'free')->first();
+        $subscriptionTier = ($user->hasActiveSubscription() && $entity)
+            ? $entity->subscriptionTier
+            : \App\Models\SubscriptionTier::where('slug', 'free')->first();
 
         return view('dashboard', array_merge(compact(
             'role',

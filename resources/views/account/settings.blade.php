@@ -7,6 +7,7 @@
         <p class="text-gray-500 font-medium mt-2">{{ __('Manage your profile details and global research branding.') }}</p>
     </div>
 
+
     <style>
         .km-toggle-container { display: inline-block; position: relative; }
         .km-toggle-checkbox { display: none; }
@@ -96,6 +97,33 @@
                         </select>
                     </div>
                 </div>
+                @if($user->hasActiveSubscription())
+                    @php
+                        $roleVal = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+                        $entity = ($roleVal === 'organization') ? $user->organization : (($roleVal === 'independent') ? $user->independent : $user);
+                        $tierName = $entity->subscriptionTier?->name ?? 'Premium';
+                        $expiryDate = $entity->subscription_expiry;
+                    @endphp
+                    <div class="p-6 bg-slate-50 border border-gray-100/50 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mt-4">
+                        <div>
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 mb-2">
+                                
+                                {{ __('Active Subscription') }}
+                            </span>
+                            <h4 class="text-sm font-black text-gray-900 uppercase tracking-tight">{{ __($tierName) }} Plan</h4>
+                            <p class="text-gray-400 font-bold text-[10px] mt-1 uppercase tracking-wider">
+                                @if($expiryDate)
+                                    {{ __(' Expires on:') }} <span class="text-gray-700 font-extrabold underline">{{ $expiryDate->format('M d, Y') }}</span>
+                                @else
+                                    {{ __('Lifetime ') }}
+                                @endif
+                            </p>
+                        </div>
+                        <a href="{{ route('subscriptions.index') }}" class="px-5 py-2.5 bg-indigo-600 text-white rounded-lg font-black text-[9px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all hover:scale-[1.02]">
+                            {{ __('Manage Subscription') }} &rsaquo;
+                        </a>
+                    </div>
+                @endif
 
                 <hr class="border-gray-50">
 

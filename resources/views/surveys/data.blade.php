@@ -61,11 +61,14 @@
                                 class="text-[10px] rounded-xl border-gray-150 px-3 py-2 font-black uppercase tracking-wider text-gray-600 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 <option value="">{{ __('All Responses') }}</option>
                                 <option value="clean" {{ request('quality') === 'clean' ? 'selected' : '' }}>🟢
-                                    {{ __('Clean Only') }}</option>
+                                    {{ __('Clean Only') }}
+                                </option>
                                 <option value="review" {{ request('quality') === 'review' ? 'selected' : '' }}>🟡
-                                    {{ __('Review Only') }}</option>
+                                    {{ __('Review Only') }}
+                                </option>
                                 <option value="flagged" {{ request('quality') === 'flagged' ? 'selected' : '' }}>🔴
-                                    {{ __('Flagged Only') }}</option>
+                                    {{ __('Flagged Only') }}
+                                </option>
                             </select>
                         </div>
 
@@ -129,11 +132,7 @@
                             <tbody class="divide-y divide-gray-50 bg-white">
                                 @foreach($responses as $response)
                                     @php
-                                        $tier = auth()->user()->organization?->subscriptionTier?->slug ?? auth()->user()->independent?->subscriptionTier?->slug ?? 'free';
-                                        if (auth()->user()->isAdmin()) {
-                                            $tier = 'enterprise';
-                                        }
-                                        $isPremium = in_array($tier, ['pro', 'enterprise']);
+                                        $isPremium = auth()->user()->hasProAccess();
                                         $transcriptions = $response->ai_metadata['transcriptions'] ?? [];
 
                                         // Quality details calculation
@@ -223,36 +222,36 @@
 
                                                 @if($isMedia)
                                                     <div x-data="{ 
-                                                                            transcribing: false, 
-                                                                            transcription: @js($transcriptions[$valStr] ?? null),
-                                                                            async transcribe() {
-                                                                                @if(!$isPremium)
-                                                                                    Swal.fire({
-                                                                                        title: 'Premium Feature',
-                                                                                        text: 'AI Transcription is only available for Pro and Enterprise plans.',
-                                                                                        icon: 'info',
-                                                                                        showCancelButton: true,
-                                                                                        confirmButtonText: 'Upgrade Now',
-                                                                                        confirmButtonColor: '#4f46e5'
-                                                                                    }).then((result) => {
-                                                                                        if (result.isConfirmed) window.location.href = '{{ route('subscriptions.index') }}';
-                                                                                    });
-                                                                                    return;
-                                                                                @endif
-                                                                                this.transcribing = true;
-                                                                                try {
-                                                                                    const response = await fetch('{{ route('surveys.responses.transcribe', [$survey, $response]) }}', {
-                                                                                        method: 'POST',
-                                                                                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                                                                                        body: JSON.stringify({ file_path: @js($valStr) })
-                                                                                    });
-                                                                                    const data = await response.json();
-                                                                                    if (data.success) this.transcription = data.transcription;
-                                                                                } finally {
-                                                                                    this.transcribing = false;
-                                                                                }
-                                                                            }
-                                                                        }" class="flex flex-col gap-1.5">
+                                                                                                transcribing: false, 
+                                                                                                transcription: @js($transcriptions[$valStr] ?? null),
+                                                                                                async transcribe() {
+                                                                                                    @if(!$isPremium)
+                                                                                                        Swal.fire({
+                                                                                                            title: 'Premium Feature',
+                                                                                                            text: 'AI Transcription is only available for Pro and Enterprise plans.',
+                                                                                                            icon: 'info',
+                                                                                                            showCancelButton: true,
+                                                                                                            confirmButtonText: 'Upgrade Now',
+                                                                                                            confirmButtonColor: '#4f46e5'
+                                                                                                        }).then((result) => {
+                                                                                                            if (result.isConfirmed) window.location.href = '{{ route('subscriptions.index') }}';
+                                                                                                        });
+                                                                                                        return;
+                                                                                                    @endif
+                                                                                                    this.transcribing = true;
+                                                                                                    try {
+                                                                                                        const response = await fetch('{{ route('surveys.responses.transcribe', [$survey, $response]) }}', {
+                                                                                                            method: 'POST',
+                                                                                                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                                                                                                            body: JSON.stringify({ file_path: @js($valStr) })
+                                                                                                        });
+                                                                                                        const data = await response.json();
+                                                                                                        if (data.success) this.transcription = data.transcription;
+                                                                                                    } finally {
+                                                                                                        this.transcribing = false;
+                                                                                                    }
+                                                                                                }
+                                                                                            }" class="flex flex-col gap-1.5">
                                                         <div class="flex flex-col gap-1.5 py-1">
                                                             <a href="{{ asset('storage/' . $valStr) }}" target="_blank"
                                                                 class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-bold group/media">
@@ -372,7 +371,8 @@
                             <i class="fa-solid fa-database text-3xl"></i>
                         </div>
                         <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">
-                            {{ __('No Submissions Detected') }}</h3>
+                            {{ __('No Submissions Detected') }}
+                        </h3>
                         <p class="text-[10px] text-gray-300 font-bold uppercase italic">
                             {{ __('Data will appear here once responses matching this quality tier are submitted.') }}
                         </p>

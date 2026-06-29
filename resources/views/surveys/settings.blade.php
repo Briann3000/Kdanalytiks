@@ -314,8 +314,7 @@
 
                 <!-- Export Branding -->
                 @php
-                    $tier = auth()->user()->organization?->subscriptionTier ?? auth()->user()->independent?->subscriptionTier ?? auth()->user()->subscriptionTier;
-                    $canBrand = $tier && in_array($tier->slug, ['pro', 'enterprise']);
+                    $canBrand = auth()->user()->hasProAccess();
                 @endphp
                 <section class="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div>

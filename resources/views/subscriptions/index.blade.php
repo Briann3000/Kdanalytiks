@@ -28,7 +28,10 @@
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
             @php
-                $currentTierId = $entity->subscription_tier_id ?? ($tiers->firstWhere('slug', 'free')->id ?? null);
+                $freeTierId = $tiers->firstWhere('slug', 'free')->id ?? null;
+                $currentTierId = (auth()->user()->hasActiveSubscription() && $entity)
+                    ? ($entity->subscription_tier_id ?? $freeTierId)
+                    : $freeTierId;
             @endphp
             @foreach($tiers as $tier)
                 @php

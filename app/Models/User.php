@@ -119,7 +119,25 @@ class User extends Authenticatable implements MustVerifyEmail
             return false;
         }
 
-        return $entity->payment_status === 'paid' || $entity->payment_status === 'COMPLETE';
+        return in_array(strtolower($entity->payment_status), ['paid', 'complete', 'completed', 'active']);
+    }
+
+    /**
+     * Get the effective subscription tier slug for this user, respecting expiry/active status.
+     */
+    public function effectiveTierSlug(): string
+    {
+        if ($this->isAdmin()) {
+            return 'enterprise';
+        }
+
+        if (!$this->hasActiveSubscription()) {
+            return 'free';
+        }
+
+        $roleVal = $this->role instanceof \UnitEnum ? $this->role->value : $this->role;
+        $entity = ($roleVal === 'organization') ? $this->organization : (($roleVal === 'independent') ? $this->independent : $this);
+        return $entity?->subscriptionTier?->slug ?? 'free';
     }
 
     /**
@@ -129,6 +147,10 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         if ($this->isAdmin())
             return true;
+
+        if (!$this->hasActiveSubscription()) {
+            return false;
+        }
 
         $roleVal = $this->role instanceof \UnitEnum ? $this->role->value : $this->role;
         $entity = ($roleVal === 'organization') ? $this->organization : (($roleVal === 'independent') ? $this->independent : $this);

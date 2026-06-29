@@ -82,9 +82,7 @@
                         return isset($field['name']) && !in_array($field['type'], ['header', 'paragraph']);
                     });
 
-                    $tier = auth()->user()->organization?->subscriptionTier?->slug ?? auth()->user()->independent?->subscriptionTier?->slug ?? 'free';
-                    if (auth()->user()->isAdmin()) $tier = 'enterprise';
-                    $isPremium = in_array($tier, ['pro', 'enterprise']);
+                    $isPremium = auth()->user()->hasProAccess();
                     $transcriptions = $response->ai_metadata['transcriptions'] ?? [];
                 @endphp
                 
@@ -230,9 +228,7 @@
             @else
                 {{-- Legacy Questions --}}
                 @php
-                    $tier = auth()->user()->organization?->subscriptionTier?->slug ?? auth()->user()->independent?->subscriptionTier?->slug ?? 'free';
-                    if (auth()->user()->isAdmin()) $tier = 'enterprise';
-                    $isPremium = in_array($tier, ['pro', 'enterprise']);
+                    $isPremium = auth()->user()->hasProAccess();
                     $transcriptions = $response->ai_metadata['transcriptions'] ?? [];
                 @endphp
                 @foreach($survey->questions()->orderBy('position')->get() as $question)
