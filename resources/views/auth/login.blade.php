@@ -9,9 +9,10 @@
                 <i class="fa-solid fa-user-lock text-xl"></i>
             </div>
             <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
-                {{ $role == 'independent' ? __('Researcher Login') : __(ucfirst($role) . ' Login') }}</h2>
+                {{ $role == 'independent' ? __('Researcher Login') : __(ucfirst($role) . ' Login') }}
+            </h2>
             <p class="mt-2 text-sm text-gray-600">
-                {{ __('Access your KMSurveyTool account') }}
+                {{ __('Access your KDAnalytics account') }}
             </p>
         </div>
 
@@ -107,7 +108,7 @@
                                 <div class="w-full border-t border-gray-300"></div>
                             </div>
                             <div class="relative flex justify-center text-sm">
-                                <span class="px-2 bg-white text-gray-500">{{ __('New to KMSurveyTool?') }}</span>
+                                <span class="px-2 bg-white text-gray-500">{{ __('New to KDAnalytics?') }}</span>
                             </div>
                         </div>
 

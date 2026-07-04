@@ -78,12 +78,12 @@ class AccountController extends Controller
             'export_org_name' => 'nullable|string|max:255',
             'export_logo' => 'nullable|image|max:2048',
             'brand_color' => 'nullable|string|regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/',
-            'remove_km_branding' => 'nullable',
+            'remove_kd_branding' => 'nullable',
         ]);
 
         return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $user, $validated) {
-            if ($request->has('remove_km_branding_present')) {
-                $user->remove_km_branding = $request->has('remove_km_branding');
+            if ($request->has('remove_kd_branding_present')) {
+                $user->remove_kd_branding = $request->has('remove_kd_branding');
             }
 
             if ($request->has('export_org_name')) {

@@ -1,6 +1,6 @@
 {
-  "appId": "com.prc.kmsurveytool",
-  "appName": "KMSurveyTool",
+  "appId": "com.prc.kdanalytics",
+  "appName": "KDAnalytics",
   "webDir": "public/build",
   "server": {
     "url": "http://localhost:8000",

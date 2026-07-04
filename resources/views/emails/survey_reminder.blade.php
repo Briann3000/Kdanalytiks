@@ -57,7 +57,8 @@
         <div class="content">
             <p>Hello,</p>
             <p>We are following up on our invitation to participate in the survey:
-                <strong>{{ $survey->title }}</strong>.</p>
+                <strong>{{ $survey->title }}</strong>.
+            </p>
 
             <p>If you haven't had a chance to share your thoughts, it's not too late! Your responses are valuable to us
                 and help us improve.</p>
@@ -74,7 +75,7 @@
             </p>
         </div>
         <div class="footer">
-            <p>&copy; {{ date('Y') }} KMSurveyTool. All rights reserved.</p>
+            <p>&copy; {{ date('Y') }} KDAnalytics. All rights reserved.</p>
         </div>
     </div>
 </body>

@@ -25,7 +25,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'subscription_tier_id',
         'subscription_expiry',
         'payment_status',
-        'remove_km_branding',
+        'remove_kd_branding',
         'export_logo_url',
         'export_org_name',
         'free_export_count',

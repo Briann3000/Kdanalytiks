@@ -1,4 +1,4 @@
-package com.prc.kmsurveytool;
+package com.prc.kdanalytics;
 
 import com.getcapacitor.BridgeActivity;
 

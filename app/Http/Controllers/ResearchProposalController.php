@@ -317,13 +317,13 @@ class ResearchProposalController extends Controller
         $canRemove = $user->hasActiveSubscription();
 
         // Global User Settings
-        $userRemoveBranding = $user->remove_km_branding;
+        $userRemoveBranding = $user->remove_kd_branding;
         $userOrgName = $user->export_org_name;
         $userLogo = $user->export_logo_url;
 
         if ($survey) {
             return [
-                'showKmBranding' => !($canRemove && ($userRemoveBranding || $survey->remove_km_branding)),
+                'showKdBranding' => !($canRemove && ($userRemoveBranding || $survey->remove_kd_branding)),
                 'customLogo' => ($canRemove) ? ($survey->export_logo_url ?: $userLogo) : null,
                 'customOrgName' => ($canRemove) ? ($survey->export_org_name ?: $userOrgName) : null,
                 'brandColor' => ($canRemove) ? ($survey->brand_color ?: ($user->brand_color ?: '#4f46e5')) : '#4f46e5',
@@ -331,7 +331,7 @@ class ResearchProposalController extends Controller
         }
 
         return [
-            'showKmBranding' => !($canRemove && $userRemoveBranding),
+            'showKdBranding' => !($canRemove && $userRemoveBranding),
             'customLogo' => ($canRemove && $userLogo) ? $userLogo : null,
             'customOrgName' => ($canRemove && $userOrgName) ? $userOrgName : null,
             'brandColor' => ($canRemove) ? ($user->brand_color ?: '#4f46e5') : '#4f46e5',

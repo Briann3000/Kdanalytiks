@@ -33,7 +33,7 @@ class Survey extends Model
         'reward_currency',
         'logo_url',
         'brand_color',
-        'remove_km_branding',
+        'remove_kd_branding',
         'export_logo_url',
         'export_org_name',
     ];

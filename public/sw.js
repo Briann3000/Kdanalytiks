@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kmsurveytool-v5';
+const CACHE_NAME = 'kdanalytics-v5';
 const urlsToCache = [
     '/',
     '/manifest.json'

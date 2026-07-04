@@ -92,7 +92,7 @@ class AgentController extends Controller
             }
 
             // 3. System Prompt Definition
-            $systemPrompt = "You are KM Agent — the autonomous AI agent for KMSurveyTool, a survey platform.\n\n" .
+            $systemPrompt = "You are KD Agent — the autonomous AI agent for KDAnalytics, a survey platform.\n\n" .
                 "User: {$name} | Role: {$role}\n\n" .
                 "AVAILABLE PAGES FOR YOUR CURRENT ROLE:\n" .
                 $pageList . "\n\n" .

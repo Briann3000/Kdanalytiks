@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.prc.kmsurveytool"
+    namespace = "com.prc.kdanalytics"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.prc.kmsurveytool"
+        applicationId "com.prc.kdanalytics"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

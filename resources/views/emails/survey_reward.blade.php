@@ -101,7 +101,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <a href="{{ config('app.url') }}" class="logo">KMSurveyTool</a>
+            <a href="{{ config('app.url') }}" class="logo">KDAnalytics</a>
         </div>
 
         <div class="content">
@@ -115,7 +115,7 @@
                     <span class="reward-amount">{{ number_format($rewardAmount, 2) }} {{ $currency }}</span>
                 </div>
 
-                <p>{{ __('Your reward has been automatically added to your KMSurveyTool wallet. You can view your balance and initiate withdrawals at any time.') }}
+                <p>{{ __('Your reward has been automatically added to your KDAnalytics wallet. You can view your balance and initiate withdrawals at any time.') }}
                 </p>
             @else
                 <p>{{ __('Your response has been successfully recorded. We appreciate your time and insights!') }}</p>
@@ -125,7 +125,7 @@
         </div>
 
         <div class="footer">
-            <p>&copy; {{ date('Y') }} KMSurveyTool. {{ __('All rights reserved.') }}</p>
+            <p>&copy; {{ date('Y') }} KDAnalytics. {{ __('All rights reserved.') }}</p>
             <p>{{ __('If you did not participate in this survey, please ignore this email.') }}</p>
         </div>
     </div>

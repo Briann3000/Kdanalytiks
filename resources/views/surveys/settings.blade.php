@@ -14,7 +14,7 @@
                     position: relative;
                 }
 
-                .km-toggle-checkbox {
+                .kd-toggle-checkbox {
                     display: none;
                 }
 
@@ -42,11 +42,11 @@
                     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
                 }
 
-                .km-toggle-checkbox:checked+.km-toggle-bg {
+                .kd-toggle-checkbox:checked+.km-toggle-bg {
                     background-color: #4f46e5;
                 }
 
-                .km-toggle-checkbox:checked+.km-toggle-bg .km-toggle-dot {
+                .kd-toggle-checkbox:checked+.km-toggle-bg .km-toggle-dot {
                     transform: translateX(20px);
                 }
             </style>
@@ -101,7 +101,7 @@
                                 <label class="flex items-center space-x-3 cursor-pointer group">
                                     <div class="km-toggle-container">
                                         <input type="hidden" name="is_anonymous_present" value="1">
-                                        <input type="checkbox" name="is_anonymous" value="1" {{ $survey->is_anonymous ? 'checked' : '' }} class="km-toggle-checkbox" id="anon_toggle">
+                                        <input type="checkbox" name="is_anonymous" value="1" {{ $survey->is_anonymous ? 'checked' : '' }} class="kd-toggle-checkbox" id="anon_toggle">
                                         <label for="anon_toggle" class="km-toggle-bg">
                                             <div class="km-toggle-dot"></div>
                                         </label>
@@ -337,17 +337,17 @@
                             class="space-y-6 {{ !$canBrand ? 'opacity-50 pointer-events-none' : '' }}">
                             @csrf
 
-                            <!-- Toggle KMSurveyTool Branding -->
+                            <!-- Toggle KDAnalytics Branding -->
                             <div
                                 class="p-5 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm font-bold text-gray-900">{{ __('Remove KMSurveyTool Branding') }}</p>
+                                    <p class="text-sm font-bold text-gray-900">{{ __('Remove KDAnalytics Branding') }}</p>
                                     <p class="text-[10px] text-gray-400 font-medium mt-1">
-                                        {{ __('Remove the "Powered by KMSurveyTool" marks from all exports.') }}</p>
+                                        {{ __('Remove the "Powered by KDAnalytics" marks from all exports.') }}</p>
                                 </div>
                                 <div class="km-toggle-container">
-                                    <input type="hidden" name="remove_km_branding_present" value="1">
-                                    <input type="checkbox" name="remove_km_branding" value="1" {{ $survey->remove_km_branding ? 'checked' : '' }} class="km-toggle-checkbox"
+                                    <input type="hidden" name="remove_kd_branding_present" value="1">
+                                    <input type="checkbox" name="remove_kd_branding" value="1" {{ $survey->remove_kd_branding ? 'checked' : '' }} class="kd-toggle-checkbox"
                                         id="brand_toggle">
                                     <label for="brand_toggle" class="km-toggle-bg">
                                         <div class="km-toggle-dot"></div>

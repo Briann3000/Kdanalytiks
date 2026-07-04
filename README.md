@@ -1,6 +1,6 @@
-# KMSurveyTool: Phased Migration to Laravel
+# KDAnalytics: Phased Migration to Laravel
 
-KMSurveyTool is a state-of-the-art, role-based survey and data collection platform specifically designed for the Kenyan research ecosystem. Originally built as a flat PHP project, this version represents a full migration to **Laravel 10.50.2**, incorporating modern UI/UX principles, AI-driven analytics, and robust security.
+KDAnalytics is a state-of-the-art, role-based survey and data collection platform specifically designed for the Kenyan research ecosystem. Originally built as a flat PHP project, this version represents a full migration to **Laravel 10.50.2**, incorporating modern UI/UX principles, AI-driven analytics, and robust security.
 
 ## 🚀 Key Features
 
@@ -40,7 +40,7 @@ KMSurveyTool is a state-of-the-art, role-based survey and data collection platfo
     ```bash
     php artisan migrate --seed
     ```
-    *This populates the platform with initial Kenyan institutional data.*
+    _This populates the platform with initial Kenyan institutional data._
 
 ## 📈 Current Migration Status
 
@@ -48,4 +48,4 @@ The project is currently in the "Release Candidate" phase. High-fidelity views a
 
 ---
 
-*Built with ❤️ for the Kenyan research community.*
+_Built with ❤️ for the Kenyan research community._

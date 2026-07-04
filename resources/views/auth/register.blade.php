@@ -10,7 +10,7 @@
             </div>
             <h2 class="mt-6 text-3xl font-extrabold text-gray-900">{{ __(ucfirst($role) . ' Registration') }}</h2>
             <p class="mt-2 text-sm text-gray-600">
-                {{ __('Join KMSurveyTool and start building') }}
+                {{ __('Join KDAnalytics and start building') }}
             </p>
         </div>
 
@@ -38,7 +38,8 @@
                             </div>
                             <div class="ml-3">
                                 <h3 class="text-sm font-medium text-red-800">
-                                    {{ __('There were errors with your registration') }}</h3>
+                                    {{ __('There were errors with your registration') }}
+                                </h3>
                                 <div class="mt-2 text-sm text-red-700">
                                     <ul role="list" class="list-disc pl-5 space-y-1">
                                         @foreach ($errors->all() as $error)
