@@ -1708,6 +1708,7 @@
                     isRegenerating: false,
                     tokenUsage: null,
                     webSearchEnabled: false,
+                    reviewModeEnabled: false,
                     historyOpen: window.innerWidth > 1280,
 
                     // Knowledge Base
@@ -2125,11 +2126,13 @@
                         formData.append('message', content);
                         formData.append('include_survey_context', this.includeSurveyContext ? '1' : '0');
                         formData.append('web_search_enabled', this.webSearchEnabled ? '1' : '0');
+                        formData.append('review_mode_enabled', this.reviewModeEnabled ? '1' : '0');
                         this.pendingFiles.forEach(file => formData.append('attachments[]', file));
 
                         const usedFiles = [...this.pendingFiles];
                         this.draft = '';
                         this.pendingFiles = [];
+                        this.reviewModeEnabled = false;
 
                         try {
                             const response = await fetch(this.threadUrl('streamTemplate', threadId), {

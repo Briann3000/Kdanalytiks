@@ -453,7 +453,8 @@
                     <textarea x-model="draft" x-ref="textarea" rows="2"
                         @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); sendMessage(); }"
                         class="w-full bg-transparent border-0 focus:ring-0 resize-none text-sm text-white placeholder:text-slate-500"
-                        placeholder="{{ __('Message Socius...') }}" :disabled="sending || !canAnalyze"></textarea>
+                        :placeholder="reviewModeEnabled ? '{{ __('Describe supervisor corrections or ask Socius to fix them...') }}' : '{{ __('Message Socius...') }}'"
+                        :disabled="sending || !canAnalyze"></textarea>
 
                     <div class="flex items-center justify-between gap-3 pt-2">
                         <div class="flex flex-wrap items-center gap-2">
@@ -477,6 +478,14 @@
                                 <input type="checkbox" x-model="webSearchEnabled" class="hidden">
                                 <i class="fa-solid fa-globe text-[10px]"></i>
                                 {{ __('Search') }}
+                            </label>
+
+                            <label
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all select-none"
+                                :class="reviewModeEnabled ? 'bg-purple-400/15 border-purple-400/30 text-purple-300' : 'bg-white/[0.06] border-white/10 text-slate-400 hover:text-slate-200'">
+                                <input type="checkbox" x-model="reviewModeEnabled" class="hidden">
+                                <i class="fa-solid fa-clipboard-check text-[10px]"></i>
+                                {{ __('Review') }}
                             </label>
 
                             <button type="button"

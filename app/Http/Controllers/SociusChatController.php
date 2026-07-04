@@ -150,6 +150,7 @@ class SociusChatController extends Controller
         $validated = $request->validate([
             'message' => ['required', 'string', 'max:4000'],
             'include_survey_context' => ['nullable', 'boolean'],
+            'review_mode_enabled' => ['nullable', 'boolean'],
             'attachments' => ['nullable', 'array', 'max:5'],
             'attachments.*' => [
                 'file',
@@ -160,6 +161,7 @@ class SociusChatController extends Controller
 
         $includeSurveyContext = $request->boolean('include_survey_context', true);
         $webSearchEnabled = $request->boolean('web_search_enabled', false);
+        $reviewModeEnabled = $request->boolean('review_mode_enabled', false);
         $storedPaths = [];
 
         $userMessage = $thread->messages()->create([
@@ -170,6 +172,7 @@ class SociusChatController extends Controller
             'metadata' => [
                 'locale' => app()->getLocale(),
                 'web_search_enabled' => $webSearchEnabled,
+                'review_mode_enabled' => $reviewModeEnabled,
             ],
         ]);
 
@@ -417,6 +420,18 @@ class SociusChatController extends Controller
             ['role' => 'system', 'content' => $this->sociusPromptBuilder->getSystemPrompt($memories, $knowledgeBaseRules)],
             ['role' => 'system', 'content' => "User current language: {$currentLanguage}. You must respond in {$currentLanguage} by default. IMPORTANT: If the user communicates in a different language (e.g. Swahili, French, etc.), you MUST automatically detect it and converse in that language instead. Always follow the user's lead on language."],
         ];
+
+        $reviewModeEnabled = false;
+        if ($lastUserMessage = $thread->messages()->where('role', 'user')->latest('id')->first()) {
+            $reviewModeEnabled = data_get($lastUserMessage->metadata, 'review_mode_enabled', false);
+        }
+
+        if ($reviewModeEnabled) {
+            $messages[] = [
+                'role' => 'system',
+                'content' => "SPECIAL INSTRUCTION (Supervisor Review & Correction Mode):\nThe user has uploaded a report, article, draft, or list of comments with supervisor corrections. Your primary goal is to act as an editor to FIX and REVISE the current findings, report draft, or statistics to address all comments and correction notes raised by the supervisor. Write the revised outputs, sections, or corrected tables clearly. Ensure the revised draft fully incorporates all of the supervisor's feedback."
+            ];
+        }
 
         if ($includeSurveyContext) {
             $messages[] = [
