@@ -10,7 +10,7 @@
             </div>
             <h2 class="mt-6 text-3xl font-extrabold text-gray-900">{{ __(ucfirst($role) . ' Registration') }}</h2>
             <p class="mt-2 text-sm text-gray-600">
-                {{ __('Join KDAnalytics and start building') }}
+                {{ __('Join KDAnalytiks and start building') }}
             </p>
         </div>
 

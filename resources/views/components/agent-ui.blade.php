@@ -485,7 +485,7 @@
             <span class="kda-chip" onclick="kmaChip(this)">Login as organization</span>
             <span class="kda-chip" onclick="kmaChip(this)">Register as researcher</span>
             <span class="kda-chip" onclick="kmaChip(this)">Browse public surveys</span>
-            <span class="kda-chip" onclick="kmaChip(this)">What is KDAnalytics?</span>
+            <span class="kda-chip" onclick="kmaChip(this)">What is KDAnalytiks?</span>
         @endif
     </div>
 
@@ -507,7 +507,7 @@
                     👋 Hi <strong>{{ $userName }}</strong>! I'm <strong>KD Agent</strong>.<br>Tell me what you'd like to do
                     — I'll take you there instantly, no clicking needed!
                 @else
-                    👋 Welcome to <strong>KDAnalytics</strong>!<br>I'm <strong>KD Agent</strong>. Tell me what you want and
+                    👋 Welcome to <strong>KDAnalytiks</strong>!<br>I'm <strong>KD Agent</strong>. Tell me what you want and
                     I'll take you there automatically.<br><small>Try: <em>"Take me to register as a researcher"</em></small>
                 @endif
             </div>
@@ -618,13 +618,13 @@
                     : '';
 
                 d.innerHTML = `
-                <div class="kda-ico"><i class="fa fa-robot"></i></div>
-                <div class="kda-action">
-                    <div class="kda-action-top"><i class="fa ${icon}"></i>${fmt(data.message || 'Action ready...')}</div>
-                    <div class="kda-action-sub">${sub}</div>
-                    ${btnHtml}
-                    ${!isPrefill ? '<div class="kda-bar"><div class="kda-bar-fill" id="kda-bar-fill"></div></div>' : ''}
-                </div>`;
+                    <div class="kda-ico"><i class="fa fa-robot"></i></div>
+                    <div class="kda-action">
+                        <div class="kda-action-top"><i class="fa ${icon}"></i>${fmt(data.message || 'Action ready...')}</div>
+                        <div class="kda-action-sub">${sub}</div>
+                        ${btnHtml}
+                        ${!isPrefill ? '<div class="kda-bar"><div class="kda-bar-fill" id="kda-bar-fill"></div></div>' : ''}
+                    </div>`;
                 wrap.appendChild(d);
                 wrap.scrollTop = wrap.scrollHeight;
 

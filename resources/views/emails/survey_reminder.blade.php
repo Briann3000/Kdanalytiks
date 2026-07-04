@@ -75,7 +75,7 @@
             </p>
         </div>
         <div class="footer">
-            <p>&copy; {{ date('Y') }} KDAnalytics. All rights reserved.</p>
+            <p>&copy; {{ date('Y') }} KDAnalytiks. All rights reserved.</p>
         </div>
     </div>
 </body>

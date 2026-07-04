@@ -1,6 +1,6 @@
-# KDAnalytics: Phased Migration to Laravel
+# KDAnalytiks: Phased Migration to Laravel
 
-KDAnalytics is a state-of-the-art, role-based survey and data collection platform specifically designed for the Kenyan research ecosystem. Originally built as a flat PHP project, this version represents a full migration to **Laravel 10.50.2**, incorporating modern UI/UX principles, AI-driven analytics, and robust security.
+KDAnalytiks is a state-of-the-art, role-based survey and data collection platform specifically designed for the Kenyan research ecosystem. Originally built as a flat PHP project, this version represents a full migration to **Laravel 10.50.2**, incorporating modern UI/UX principles, AI-driven analytics, and robust security.
 
 ## 🚀 Key Features
 

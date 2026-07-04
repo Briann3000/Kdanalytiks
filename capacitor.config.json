@@ -1,6 +1,6 @@
 {
-  "appId": "com.prc.kdanalytics",
-  "appName": "KDAnalytics",
+  "appId": "com.prc.kdanalytiks",
+  "appName": "KDAnalytiks",
   "webDir": "public/build",
   "server": {
     "url": "http://localhost:8000",

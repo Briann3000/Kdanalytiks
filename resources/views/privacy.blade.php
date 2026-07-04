@@ -25,7 +25,7 @@
                             <h2 class="text-xl font-bold text-gray-900 border-b border-gray-100 pb-2 mb-4">1. Introduction
                             </h2>
                             <p>
-                                Welcome to <strong>KDAnalytics</strong> ("Company", "we", "our", "us"). We respect your
+                                Welcome to <strong>KDAnalytiks</strong> ("Company", "we", "our", "us"). We respect your
                                 privacy and are committed to
                                 protecting your personal data. This comprehensive Privacy Policy explains how we collect,
                                 use, disclose and safeguard your
@@ -94,9 +94,9 @@
                                 Limitation of Liability for Data Breaches:
                             </p>
                             <p>
-                                While we strive to protect your personal data, KDAnalytics cannot guarantee the absolute
+                                While we strive to protect your personal data, KDAnalytiks cannot guarantee the absolute
                                 security of your data transmitted to our site or stored on our servers. You acknowledge and
-                                agree that KDAnalytics, its affiliates, directors, employees and agents shall not be held
+                                agree that KDAnalytiks, its affiliates, directors, employees and agents shall not be held
                                 liable for any data breaches, unauthorized access, hacking, data loss or other security
                                 intrusions. By using our platform, you accept the inherent risks associated with online data
                                 storage and transmission.
@@ -107,7 +107,7 @@
                             <p>
                                 Software deployment processes, third-party integrations, and platform updates may
                                 occasionally result in unforeseen bugs, configuration errors or temporary vulnerabilities.
-                                KDAnalytics explicitly disclaims any liability for damages, loss of business, or data
+                                KDAnalytiks explicitly disclaims any liability for damages, loss of business, or data
                                 exposure resulting from deployment errors, server misconfigurations, zero-day
                                 vulnerabilities or failures by product managers and engineers to foresee specific security
                                 vectors during routine updates or scaling operations.

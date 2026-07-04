@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="w3-container w3-padding-64 w3-center">
-        <h1 class="w3-xxxlarge w3-text-blue"><i class="fa fa-poll"></i> KDAnalytics</h1>
+        <h1 class="w3-xxxlarge w3-text-blue"><i class="fa fa-poll"></i> KDAnalytiks</h1>
         <p class="w3-large">Create, manage, and analyze surveys with ease</p>
     </div>
 

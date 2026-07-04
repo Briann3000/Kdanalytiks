@@ -1,5 +1,5 @@
 <?php
-// d:\kdanalytics\database\migrations\2026_04_14_083700_add_subscription_fields_to_users_table.php
+// d:\kdanalytiks\database\migrations\2026_04_14_083700_add_subscription_fields_to_users_table.php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;

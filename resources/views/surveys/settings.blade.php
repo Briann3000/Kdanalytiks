@@ -337,13 +337,13 @@
                             class="space-y-6 {{ !$canBrand ? 'opacity-50 pointer-events-none' : '' }}">
                             @csrf
 
-                            <!-- Toggle KDAnalytics Branding -->
+                            <!-- Toggle KDAnalytiks Branding -->
                             <div
                                 class="p-5 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm font-bold text-gray-900">{{ __('Remove KDAnalytics Branding') }}</p>
+                                    <p class="text-sm font-bold text-gray-900">{{ __('Remove KDAnalytiks Branding') }}</p>
                                     <p class="text-[10px] text-gray-400 font-medium mt-1">
-                                        {{ __('Remove the "Powered by KDAnalytics" marks from all exports.') }}</p>
+                                        {{ __('Remove the "Powered by KDAnalytiks" marks from all exports.') }}</p>
                                 </div>
                                 <div class="km-toggle-container">
                                     <input type="hidden" name="remove_kd_branding_present" value="1">

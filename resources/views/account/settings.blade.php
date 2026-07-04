@@ -228,9 +228,9 @@
                         <div class="p-8 rounded-[2rem] border {{ $canCustom ? 'border-indigo-100 bg-indigo-50/10' : 'border-gray-100 bg-gray-50/30' }}">
                             <div class="flex items-start justify-between gap-4">
                                 <div class="flex-1">
-                                    <h5 class="text-xs font-black {{ $canCustom ? 'text-indigo-900' : 'text-gray-400' }} uppercase tracking-widest mb-1">{{ __('Remove KDAnalytics Branding') }}</h5>
+                                    <h5 class="text-xs font-black {{ $canCustom ? 'text-indigo-900' : 'text-gray-400' }} uppercase tracking-widest mb-1">{{ __('Remove KDAnalytiks Branding') }}</h5>
                                     <p class="text-[10px] font-bold {{ $canCustom ? 'text-indigo-400' : 'text-gray-400' }} uppercase tracking-tighter leading-relaxed">
-                                        {{ __('Remove "Exported via KDAnalytics" from all your professional reports and proposals.') }}
+                                        {{ __('Remove "Exported via KDAnalytiks" from all your professional reports and proposals.') }}
                                     </p>
                                 </div>
                                 <div class="km-toggle-container">

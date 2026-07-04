@@ -12,7 +12,7 @@
     <meta name="theme-color" content="#4f46e5">
     <link rel="manifest" href="{{ asset('manifest.json') }}?v=4">
 
-    <title>{{ config('app.name', 'KDAnalytics') }}</title>
+    <title>{{ config('app.name', 'KDAnalytiks') }}</title>
 
     <!-- Tailwind CSS (via Vite) -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -358,7 +358,7 @@
                             <a href="{{ url('/') }}"
                                 class="text-xl font-black text-indigo-700 flex items-center tracking-tighter">
                                 <i class="fa-solid fa-square-poll-vertical mr-2"></i>
-                                <span>KDAnalytics</span>
+                                <span>KDAnalytiks</span>
                             </a>
                         </div>
 
@@ -633,7 +633,7 @@
             <footer class="bg-gray-800 border-t border-gray-700">
                 <div class="max-w-full mx-auto py-8 px-4 sm:px-8 lg:px-12 text-center text-sm text-gray-300">
                     <div class="mb-2">
-                        <span class="font-bold text-white">KDAnalytics</span> &copy; {{ date('Y') }}. All rights reserved.
+                        <span class="font-bold text-white">KDAnalytiks</span> &copy; {{ date('Y') }}. All rights reserved.
                     </div>
                     <div>
                         +254 725 788 400 <span class="mx-2 text-gray-500">|</span>
@@ -657,7 +657,7 @@
     <script>
         function urgeLogin(surveyUrl, isPaid, rewardAmount, currency) {
             let title = `{{ __('Sign in to Participate') }}`;
-            let text = `{{ __('Join KDAnalytics to contribute your insights.') }}`;
+            let text = `{{ __('Join KDAnalytiks to contribute your insights.') }}`;
 
             if (isPaid) {
                 title = `{{ __('Earn') }} ` + rewardAmount + ' ' + currency;

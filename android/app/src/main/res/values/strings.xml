@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8' ?>
 <resources>
-    <string name="app_name">KDAnalytics</string>
-    <string name="title_activity_main">KDAnalytics</string>
-    <string name="package_name">com.prc.kdanalytics</string>
-    <string name="custom_url_scheme">com.prc.kdanalytics</string>
+    <string name="app_name">KDAnalytiks</string>
+    <string name="title_activity_main">KDAnalytiks</string>
+    <string name="package_name">com.prc.kdanalytiks</string>
+    <string name="custom_url_scheme">com.prc.kdanalytiks</string>
 </resources>

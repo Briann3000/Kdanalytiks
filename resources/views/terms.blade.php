@@ -26,8 +26,8 @@
                                 Terms</h2>
                             <p>
                                 These Terms and Conditions constitute a legally binding agreement made between you, whether
-                                personally or on behalf of an entity ("you") and <strong>KDAnalytics</strong> ("Company",
-                                "we", "us", or "our"), concerning your access to and use of the KDAnalytics website as well
+                                personally or on behalf of an entity ("you") and <strong>KDAnalytiks</strong> ("Company",
+                                "we", "us", or "our"), concerning your access to and use of the KDAnalytiks website as well
                                 as any other media form, media channel, mobile website or mobile application related, linked
                                 or otherwise connected thereto (collectively, the "Site").
                             </p>
@@ -119,7 +119,7 @@
                             </h2>
                             <p>
                                 These Terms shall be governed by and defined following the laws of the jurisdiction in which
-                                KDAnalytics is legally registered. KDAnalytics and yourself irrevocably consent that the
+                                KDAnalytiks is legally registered. KDAnalytiks and yourself irrevocably consent that the
                                 courts of that jurisdiction shall have exclusive jurisdiction to resolve any dispute which
                                 may arise in connection with these terms.
                             </p>

@@ -1,4 +1,4 @@
-package com.prc.kdanalytics;
+package com.prc.kdanalytiks;
 
 import com.getcapacitor.BridgeActivity;
 
