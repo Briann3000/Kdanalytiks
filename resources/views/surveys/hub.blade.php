@@ -67,9 +67,56 @@
                         class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.data') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                         <i class="fa-solid fa-database mr-2"></i> {{ __('Data') }}
                     </a>
-                    <a href="{{ route('surveys.reports', $survey) }}"
-                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.reports') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
-                        <i class="fa-solid fa-file-contract mr-2"></i> {{ __('Reports') }}
+                    <div class="relative flex" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+                        <a href="{{ route('surveys.reports', $survey) }}"
+                            class="pb-4 px-1 border-b-2 font-bold text-sm transition-all flex items-center gap-1.5 {{ (request()->routeIs('surveys.reports') && request('reportTab') !== 'analyse') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
+                            <i class="fa-solid fa-file-contract"></i> <span>{{ __('Reports') }}</span>
+                            <i class="fa-solid fa-chevron-down text-[8px] transition-transform duration-200"
+                                :class="open ? 'rotate-180' : ''"></i>
+                        </a>
+                        <!-- Dropdown Menu -->
+                        <div x-show="open" x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute left-0 mt-0 w-60 bg-white border border-gray-100 rounded-2xl shadow-2xl shadow-gray-200/60 z-50 overflow-hidden"
+                            style="display:none; top: 100%;">
+
+                            <!-- Descriptive Section -->
+                            <div class="px-4 py-2 bg-gray-50 border-b border-gray-100">
+                                <span
+                                    class="text-[9px] font-black text-gray-400 uppercase tracking-widest">{{ __('Descriptive Statistics') }}</span>
+                            </div>
+                            <div class="p-1.5 space-y-0.5">
+                                <a href="{{ route('surveys.reports', $survey) }}?reportTab=quantitative"
+                                    class="flex items-center gap-3 px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-colors">
+                                    <i class="fa-solid fa-chart-column text-indigo-500 w-4 text-center"></i>
+                                    {{ __('Quantitative Report') }}
+                                </a>
+                                <a href="{{ route('surveys.reports', $survey) }}?reportTab=qualitative"
+                                    class="flex items-center gap-3 px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-colors">
+                                    <i class="fa-solid fa-comments text-indigo-500 w-4 text-center"></i>
+                                    {{ __('Qualitative Report') }}
+                                </a>
+                            </div>
+
+                            <!-- Inferential Section -->
+                            <div class="px-4 py-2 bg-gray-50 border-t border-b border-gray-100 mt-1">
+                                <span
+                                    class="text-[9px] font-black text-gray-400 uppercase tracking-widest">{{ __('Inferential Statistics') }}</span>
+                            </div>
+                            <div class="p-1.5 space-y-0.5">
+                                <a href="{{ route('surveys.reports', $survey) }}?reportTab=inferential"
+                                    class="flex items-center gap-3 px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-colors">
+                                    <i class="fa-solid fa-calculator text-indigo-500 w-4 text-center"></i>
+                                    {{ __('Analyse') }}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="{{ route('surveys.reports', $survey) }}?reportTab=analyse"
+                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ (request()->routeIs('surveys.reports') && request('reportTab') === 'analyse') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
+                        <i class="fa-solid fa-sparkles mr-2 text-indigo-500"></i> {{ __('Socius Analysis') }}
                     </a>
                     <a href="{{ route('surveys.gallery', $survey) }}"
                         class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.gallery') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">

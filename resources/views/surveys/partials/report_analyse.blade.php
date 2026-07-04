@@ -247,7 +247,7 @@
                             </div>
                             <h4 class="text-4xl font-semibold tracking-tight mt-6">{{ __('Socius') }}</h4>
                             <p class="text-slate-300 mt-4 max-w-2xl mx-auto">
-                                {{ __('Start a new thread to analyze survey findings, uploaded documents, or both. Socius will use the current survey context automatically when the toggle is enabled.') }}
+                                {{ __('Analyze data. I am Socius, your guide') }}
                             </p>
                         </div>
                         <div class="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8">
@@ -537,7 +537,8 @@
                     <div>
                         <h3 class="text-lg font-bold tracking-tight">{{ __('Knowledge Base') }}</h3>
                         <p class="text-xs text-slate-400 mt-0.5">
-                            {{ __('Set custom style and formatting instructions for future answers.') }}</p>
+                            {{ __('Set custom style and formatting instructions for future answers.') }}
+                        </p>
                     </div>
                 </div>
                 <button @click="kbModalOpen = false"
@@ -551,7 +552,8 @@
                 {{-- Add New Rule Form --}}
                 <div class="space-y-3">
                     <h4 class="text-xs font-black uppercase tracking-widest text-slate-400">
-                        {{ __('Add Custom Instruction') }}</h4>
+                        {{ __('Add Custom Instruction') }}
+                    </h4>
                     <div
                         class="rounded-2xl border border-white/10 bg-white/[0.03] p-3 focus-within:border-orange-400/50 transition-all">
                         <textarea x-model="newKbRuleContent" rows="3"
@@ -572,7 +574,8 @@
                 {{-- Rules List --}}
                 <div class="space-y-3">
                     <h4 class="text-xs font-black uppercase tracking-widest text-slate-400">
-                        {{ __('Active Instructions') }}</h4>
+                        {{ __('Active Instructions') }}
+                    </h4>
 
                     <template x-if="loadingKb">
                         <div class="space-y-2">

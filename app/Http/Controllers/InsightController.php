@@ -218,4 +218,183 @@ class InsightController extends Controller
             return response()->json(['error' => 'AI Analysis Failed: ' . $e->getMessage()], 500);
         }
     }
+
+    public function analyzeInferential(Request $request)
+    {
+        $surveyId = $request->input('survey_id');
+        $survey = \App\Models\Survey::findOrFail($surveyId);
+
+        $user = auth()->user();
+        if (!$user || !$user->hasActiveSubscription()) {
+            return response()->json(['success' => false, 'message' => 'Premium subscription required for Statistical Intelligence.'], 403);
+        }
+
+        $feedback = $request->input('feedback');
+        $messages = $request->input('messages');
+
+        if (!empty($feedback) && !empty($messages)) {
+            $method = $request->input('method');
+            $data = $request->input('data');
+
+            $prompt = "You are an expert statistician. We are analyzing a survey titled '{$survey->title}' using the test method '{$method}'.\n";
+            if (!empty($data)) {
+                $prompt .= "Here is the current statistical calculation data and variable settings of the table:\n";
+                $prompt .= json_encode($data) . "\n\n";
+            }
+            $prompt .= "Here is the conversation history with the researcher:\n\n";
+
+            foreach ($messages as $msg) {
+                $roleName = $msg['role'] === 'assistant' ? 'AI' : 'Researcher';
+                $prompt .= "{$roleName}: {$msg['content']}\n\n";
+            }
+
+            $prompt .= "Researcher's latest refinement instruction:\n";
+            $prompt .= "\"\"\"\n{$feedback}\n\"\"\"\n\n";
+            $targetLang = $this->getTargetLanguage();
+            $prompt .= "Instructions:\n";
+            $prompt .= "1. Address the researcher's request and provide a revised, polished analysis.\n";
+            $prompt .= "2. Ensure the statistical details remain correct and academic.\n";
+            $prompt .= "3. Keep the response concise, professional, and return ONLY the updated statistical interpretation with no conversational chat filler or meta-commentary.\n";
+            $prompt .= "4. If the user asks to modify the tables, update metrics, or add/remove rows or columns (e.g. 'reflect it in the table', 'add likelihood ratio to the table', 'add variable X3', etc.), you MUST append a valid JSON block containing the updated metrics or fields at the very end of your response inside a single ```json ... ``` code block. Make sure to preserve existing parameters if they should still be shown. For example, for Chi-Square: {\"likelihoodRatio\": 23.13, \"likelihoodSignificant\": false, \"likelihoodPValue\": 0.0935, \"linearAssociation\": 12.4, \"linearPValue\": 0.045, \"validCases\": 150}. For Regression: {\"equation\": \"Y = ...\", \"r\": \"...\", \"r2\": \"...\", \"adjR2\": \"...\", \"stdErrorEst\": \"...\", \"anova\": {...}, \"coefficients\": [...]}.\n";
+            $prompt .= "5. If the user asks to interchange, swap, or rotate row and column variables, or change grouping/dependent/independent variables (e.g., 'Interchange the rows and columns'), you must return a recalculation action JSON block inside a ```json ... ``` code block indicating which variables to swap/update. For example, if row variable key is 'q_1' and column variable key is 'q_2', return: {\"action\": \"recalculate\", \"rowVar\": \"q_2\", \"colVar\": \"q_1\"}. If they want to change regression/anova variables, return {\"action\": \"recalculate\", \"depVar\": \"new_dep_id\", \"groupVar\": \"new_group_id\", \"indVars\": [\"new_ind_id1\"], \"varX\": \"...\", \"varY\": \"...\"}. Only swap variables that exist in the calculation data structure.\n";
+            $prompt .= "6. You MUST write the entire revised analysis and response in the {$targetLang} language. Do not output it in English if the target language is different.";
+
+            try {
+                $insight = $this->aiService->callAi($prompt, "You are an expert statistician and research advisor. Provide refined, strategically polished statistical interpretations.");
+                return response()->json(['success' => true, 'insight' => $insight]);
+            } catch (\Exception $e) {
+                return response()->json(['success' => false, 'message' => 'AI Refinement Failed: ' . $e->getMessage()], 500);
+            }
+        }
+
+        $method = $request->input('method');
+        $data = $request->input('data');
+
+        if (empty($data)) {
+            return response()->json(['success' => false, 'message' => 'No data to analyze.'], 400);
+        }
+
+        $prompt = "As an expert statistician and research analyst, interpret the results of a statistical test run on survey data from '{$survey->title}'.\n\n";
+
+        switch ($method) {
+            case 'crosstab':
+                $prompt .= "Test: Chi-Square Test of Independence & Cross-Tabulation\n";
+                $prompt .= "Variables: Row='{$data['rowLabel']}', Column='{$data['colLabel']}'\n";
+                $prompt .= "Chi-Square Value: {$data['chiSquare']}, df: {$data['df']}, p-value: {$data['pValue']}\n";
+                $prompt .= "Result is " . ($data['significant'] ? "Statistically Significant (p < 0.05)" : "Not Statistically Significant (p >= 0.05)") . ".\n\n";
+                $prompt .= "Observed Counts: " . json_encode($data['matrix']) . "\n";
+                $prompt .= "Expected Counts: " . json_encode($data['expectedMatrix']) . "\n\n";
+                break;
+            case 'ttest':
+                $prompt .= "Test: Independent Samples T-Test (Comparing 2 Group Means)\n";
+                $prompt .= "Dependent Variable: '{$data['depLabel']}', Grouping Variable: '{$data['groupLabel']}'\n";
+                $prompt .= "t-value: {$data['tValue']}, df: {$data['df']}, p-value: {$data['pValue']}\n";
+                $prompt .= "Mean Difference: {$data['meanDiff']}, Std Error of Difference: {$data['stdErrorDiff']}\n";
+                $prompt .= "Result is " . ($data['significant'] ? "Statistically Significant (p < 0.05)" : "Not Statistically Significant (p >= 0.05)") . ".\n\n";
+                $prompt .= "Group Statistics:\n" . json_encode($data['groups'], JSON_PRETTY_PRINT) . "\n\n";
+                break;
+            case 'correlation':
+                $prompt .= "Test: Pearson Bivariate Correlation (r)\n";
+                $prompt .= "Variables: X='{$data['labelX']}', Y='{$data['labelY']}'\n";
+                $prompt .= "Sample Size (N): {$data['n']}\n";
+                $prompt .= "Pearson r: {$data['r']}, R-squared: {$data['r2']}\n";
+                $prompt .= "t-value: {$data['tValue']}, p-value: {$data['pValue']}\n";
+                $prompt .= "Result is " . ($data['significant'] ? "Statistically Significant (p < 0.05)" : "Not Statistically Significant (p >= 0.05)") . ".\n\n";
+                break;
+            case 'anova':
+                $prompt .= "Test: One-Way ANOVA (Comparing Multiple Group Means)\n";
+                $prompt .= "Dependent Variable: '{$data['depLabel']}', Grouping Variable: '{$data['groupLabel']}'\n";
+                $prompt .= "F-value: {$data['fValue']}, df Between: {$data['dfBetween']}, df Within: {$data['dfWithin']}, p-value: {$data['pValue']}\n";
+                $prompt .= "Sum of Squares Between: {$data['ssb']}, Within: {$data['ssw']}\n";
+                $prompt .= "Result is " . ($data['significant'] ? "Statistically Significant (p < 0.05)" : "Not Statistically Significant (p >= 0.05)") . ".\n\n";
+                $prompt .= "Group Descriptives:\n" . json_encode($data['groupStats'], JSON_PRETTY_PRINT) . "\n\n";
+                break;
+            case 'regression':
+                $prompt .= "Test: Simple Linear Regression\n";
+                $prompt .= "Dependent Variable (Y): '{$data['depLabel']}', Independent Variable (X): '{$data['indLabel']}'\n";
+                $prompt .= "Model: R: {$data['r']}, R-squared: {$data['r2']}, Adj. R-squared: {$data['adjR2']}, Std Error of Estimate: {$data['stdErrorEst']}\n";
+                $prompt .= "ANOVA Regression test: F-value: {$data['anova']['fValue']}, p-value: {$data['anova']['pValue']}\n";
+                $prompt .= "Coefficients:\n" . json_encode($data['coefficients'], JSON_PRETTY_PRINT) . "\n\n";
+                break;
+            case 'regression_multiple':
+                $prompt .= "Test: Multiple Linear Regression\n";
+                $prompt .= "Dependent Variable (Y): '{$data['depLabel']}'\n";
+                $prompt .= "Model Summary: R: {$data['r']}, R-squared: {$data['r2']}, Adj. R-squared: {$data['adjR2']}, Std Error of Estimate: {$data['stdErrorEst']}\n";
+                $prompt .= "Equation: {$data['equation']}\n";
+                $prompt .= "ANOVA Model Fit test: F-value: {$data['anova']['fValue']}, df Regression: {$data['anova']['dfReg']}, df Residual: {$data['anova']['dfRes']}, p-value: {$data['anova']['pValue']}\n";
+                $prompt .= "Coefficients:\n" . json_encode($data['coefficients'], JSON_PRETTY_PRINT) . "\n\n";
+                break;
+        }
+
+        $targetLang = $this->getTargetLanguage();
+        $prompt .= "Instructions:\n";
+        $prompt .= "1. Interpret these results. Explain in simple, plain {$targetLang} what the test results mean (the relationship between variables, effect direction, and magnitude).\n";
+        $prompt .= "2. Explicitly interpret the statistical significance (p-value, confidence/errors) and what it implies for the research hypotheses.\n";
+        $prompt .= "3. Keep the interpretation concise (max 200 words), professional, and highly educational for a researcher.\n";
+        $prompt .= "4. You MUST write the entire response and statistical interpretation in the {$targetLang} language. Do not output it in English if the target language is different.";
+
+        try {
+            $insight = $this->aiService->callAi($prompt, "You are an expert statistician and research advisor. Provide clear, direct, and academically sound interpretation of statistical analysis results.");
+            return response()->json(['success' => true, 'insight' => $insight]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'AI Analysis Failed: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function refineQuantitativeInsight(Request $request, $questionId)
+    {
+        $surveyId = $request->input('survey_id');
+        $survey = \App\Models\Survey::findOrFail($surveyId);
+
+        $user = auth()->user();
+        if (!$user || !$user->canUseAiAnalysis()) {
+            return response()->json(['success' => false, 'message' => 'Premium subscription required for Trend Interpretation.'], 403);
+        }
+
+        $messages = $request->input('messages');
+        $feedback = $request->input('feedback');
+
+        if (empty($messages) || empty($feedback)) {
+            return response()->json(['success' => false, 'message' => 'Conversation history and refinement instructions are required.'], 400);
+        }
+
+        $prompt = "You are an expert research analyst. We are interpreting quantitative trends for a survey titled '{$survey->title}'.\n";
+        $prompt .= "Here is the conversation history with the researcher:\n\n";
+
+        foreach ($messages as $msg) {
+            $roleName = $msg['role'] === 'assistant' ? 'AI' : 'Researcher';
+            $prompt .= "{$roleName}: {$msg['content']}\n\n";
+        }
+
+        $prompt .= "Researcher's latest refinement instruction:\n";
+        $prompt .= "\"\"\"\n{$feedback}\n\"\"\"\n\n";
+        $targetLang = $this->getTargetLanguage();
+        $prompt .= "Instructions:\n";
+        $prompt .= "1. Refine the analysis accordingly, incorporating the feedback.\n";
+        $prompt .= "2. Maintain statistical correctness.\n";
+        $prompt .= "3. Keep the response concise, professional, and directly updated without meta-commentary (do not say 'Here is the refined output').\n";
+        $prompt .= "4. You MUST write the entire response and strategic interpretation in the {$targetLang} language. Do not output it in English if the target language is different.";
+
+        try {
+            $insight = $this->aiService->callAi($prompt, "You are an expert research analyst and statistician. Provide refined, strategic insights based on user feedback.");
+            return response()->json(['success' => true, 'insight' => $insight]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'AI Refinement Failed: ' . $e->getMessage()], 500);
+        }
+    }
+
+    private function getTargetLanguage()
+    {
+        $locale = app()->getLocale();
+        $langNames = [
+            'sw' => 'Swahili (Kiswahili)',
+            'de' => 'German (Deutsch)',
+            'es' => 'Spanish (Español)',
+            'fr' => 'French (Français)',
+            'ar' => 'Arabic (العربية)',
+            'zh' => 'Chinese (中文)',
+            'en' => 'English'
+        ];
+        return $langNames[$locale] ?? 'English';
+    }
 }

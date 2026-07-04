@@ -17,16 +17,13 @@
         }
     </style>
     @php
-        $allowedReportTabs = ['quantitative', 'qualitative', 'crosstab'];
-        if (!isset($isSharedView) || !$isSharedView) {
-            $allowedReportTabs[] = 'analyse';
-        }
+        $allowedReportTabs = ['quantitative', 'qualitative', 'inferential', 'crosstab', 'analyse'];
         $requestedReportTab = request('reportTab', 'quantitative');
         $initialReportTab = in_array($requestedReportTab, $allowedReportTabs, true) ? $requestedReportTab : 'quantitative';
     @endphp
 
     <div class="space-y-12" x-data="{
-            reportTab: @js($initialReportTab),
+            reportTab: @js($initialReportTab) === 'crosstab' ? 'inferential' : @js($initialReportTab),
             switchReportTab(tab) {
                 this.reportTab = tab;
                 const url = new URL(window.location.href);
@@ -38,37 +35,45 @@
             }
         }">
         <!-- Sub Navigation -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-            <div class="flex items-center gap-2 bg-gray-100/50 p-1 rounded-2xl w-fit">
-                <button @click="switchReportTab('quantitative')"
-                    :class="reportTab === 'quantitative' ? 'bg-white text-indigo-700 shadow-sm border border-indigo-50' : 'text-gray-500 hover:text-gray-700'"
-                    class="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all">
-                    <i class="fa-solid fa-chart-column mr-2"></i>
-                    {{ __('Quantitative') }}
-                </button>
-                <button @click="switchReportTab('qualitative')"
-                    :class="reportTab === 'qualitative' ? 'bg-white text-indigo-700 shadow-sm border border-indigo-50' : 'text-gray-500 hover:text-gray-700'"
-                    class="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all">
-                    <i class="fa-solid fa-comments mr-2"></i>
-                    {{ __('Qualitative') }}
-                </button>
-                <button @click="switchReportTab('crosstab')"
-                    :class="reportTab === 'crosstab' ? 'bg-white text-indigo-700 shadow-sm border border-indigo-50' : 'text-gray-500 hover:text-gray-700'"
-                    class="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all">
-                    <i class="fa-solid fa-table-cells mr-2"></i>
-                    {{ __('Cross-Tabulation') }}
-                    @if(!auth()->check() || !auth()->user()->hasActiveSubscription())
-                        <i class="fa-solid fa-lock ml-2 text-[10px] opacity-50"></i>
-                    @endif
-                </button>
-                @if(!isset($isSharedView) || !$isSharedView)
-                    <button @click="switchReportTab('analyse')"
-                        :class="reportTab === 'analyse' ? 'bg-white text-indigo-700 shadow-sm border border-indigo-50' : 'text-gray-500 hover:text-gray-700'"
-                        class="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all">
-                        <i class="fa-solid fa-sparkles mr-2"></i>
-                        {{ __('Analyse') }}
-                    </button>
-                @endif
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 border-b border-gray-100 pb-6">
+            <div class="flex flex-wrap items-center gap-6">
+                <!-- Descriptive Group -->
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest pl-1">{{ __('Descriptive Statistics') }}</span>
+                    <div class="flex items-center gap-1 bg-gray-100/50 p-1 rounded-2xl w-fit">
+                        <button @click="switchReportTab('quantitative')"
+                            :class="reportTab === 'quantitative' ? 'bg-white text-indigo-700 shadow-sm border border-indigo-50' : 'text-gray-500 hover:text-gray-700'"
+                            class="px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all">
+                            <i class="fa-solid fa-chart-column mr-2"></i>
+                            {{ __('Quantitative') }}
+                        </button>
+                        <button @click="switchReportTab('qualitative')"
+                            :class="reportTab === 'qualitative' ? 'bg-white text-indigo-700 shadow-sm border border-indigo-50' : 'text-gray-500 hover:text-gray-700'"
+                            class="px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all">
+                            <i class="fa-solid fa-comments mr-2"></i>
+                            {{ __('Qualitative') }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <div class="hidden lg:block h-10 w-[1px] bg-gray-200 self-end mb-1"></div>
+
+                <!-- Inferential Group -->
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest pl-1">{{ __('Inferential Statistics') }}</span>
+                    <div class="flex items-center gap-1 bg-gray-100/50 p-1 rounded-2xl w-fit">
+                        <button @click="switchReportTab('inferential')"
+                            :class="reportTab === 'inferential' ? 'bg-white text-indigo-700 shadow-sm border border-indigo-50' : 'text-gray-500 hover:text-gray-700'"
+                            class="px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all">
+                            <i class="fa-solid fa-calculator mr-2"></i>
+                            {{ __('Analyse') }}
+                            @if(!auth()->check() || !auth()->user()->hasActiveSubscription())
+                                <i class="fa-solid fa-lock ml-2 text-[10px] opacity-50"></i>
+                            @endif
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="flex items-center gap-3">
@@ -326,113 +331,874 @@
             @include('surveys.partials.report_analyse')
         @endif
 
-        <!-- Crosstab Content -->
-        <div x-show="reportTab === 'crosstab'" class="space-y-8 animate-in fade-in duration-500" style="display: none;">
-            <div x-data="crosstabManager()" class="space-y-8">
+        <!-- Inferential Content -->
+        <div x-show="reportTab === 'inferential'" class="space-y-8 animate-in fade-in duration-500" style="display: none;">
+            <div x-data="inferentialManager()" class="space-y-8">
                 <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm relative overflow-hidden">
                     <div class="mb-8 border-b border-gray-50 pb-6">
-                        <h4 class="text-xl font-black text-gray-900 tracking-tight">{{ __('Cross-Tabulation Analysis') }}</h4>
-                        <p class="text-xs text-gray-500 mt-2">{{ __('Compare two variables to discover correlations and hidden patterns.') }}</p>
+                        <h4 class="text-xl font-black text-gray-900 tracking-tight">{{ __('Basic Inferential Stats') }}</h4>
+                        <p class="text-xs text-gray-500 mt-2">{{ __('Run significance tests, correlations, and regressions on your survey responses.') }}</p>
                     </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Row Variable') }}</label>
-                        <select x-model="rowVar" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
-                            <option value="">{{ __('Select Question...') }}</option>
-                            @foreach($analysis as $item)
-                                @if($item['isChartable'])
-                                    <option value="{{ $item['id'] }}">{{ \Illuminate\Support\Str::limit($item['label'], 60) }}</option>
-                                @endif
-                            @endforeach
+
+                    <!-- Test Selection -->
+                    <div class="mb-8">
+                        <label class="block text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-2">{{ __('Select Statistical Method') }}</label>
+                        <select x-model="testMethod" class="w-full md:w-1/2 bg-gray-50 border border-indigo-100 text-sm font-semibold rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 transition-all">
+                            <option value="crosstab">{{ __('Cross-Tabulation & Chi-Square Test') }}</option>
+                            <option value="ttest">{{ __('Independent Samples T-Test') }}</option>
+                            <option value="correlation">{{ __('Pearson Correlation (r)') }}</option>
+                            <option value="anova">{{ __('One-Way ANOVA') }}</option>
+                            <option value="regression">{{ __('Simple Linear Regression') }}</option>
+                            <option value="regression_multiple">{{ __('Multiple Linear Regression') }}</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Column Variable') }}</label>
-                        <select x-model="colVar" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
-                            <option value="">{{ __('Select Question...') }}</option>
-                            @foreach($analysis as $item)
-                                @if($item['isChartable'])
-                                    <option value="{{ $item['id'] }}">{{ \Illuminate\Support\Str::limit($item['label'], 60) }}</option>
-                                @endif
-                            @endforeach
-                        </select>
+
+                    <!-- Dynamic Input Fields based on Selected Method -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-gray-50 pt-6">
+                        <!-- Case 1: Crosstab / Chi-Square -->
+                        <template x-if="testMethod === 'crosstab'">
+                            <div class="contents">
+                                <div>
+                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Row Variable (Categorical)') }}</label>
+                                    <select x-model="rowVar" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all">
+                                        <option value="">{{ __('Select Question...') }}</option>
+                                        @foreach($analysis as $item)
+                                            <option value="{{ $item['id'] }}">{{ \Illuminate\Support\Str::limit($item['label'], 60) }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Column Variable (Categorical)') }}</label>
+                                    <select x-model="colVar" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all">
+                                        <option value="">{{ __('Select Question...') }}</option>
+                                        @foreach($analysis as $item)
+                                            <option value="{{ $item['id'] }}">{{ \Illuminate\Support\Str::limit($item['label'], 60) }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Case 2: T-Test / ANOVA -->
+                        <template x-if="testMethod === 'ttest' || testMethod === 'anova'">
+                            <div class="contents">
+                                <div>
+                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Dependent Variable (Numeric)') }}</label>
+                                    <select x-model="depVar" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all">
+                                        <option value="">{{ __('Select Question...') }}</option>
+                                        @foreach($analysis as $item)
+                                            @if($item['isChartable'])
+                                                <option value="{{ $item['id'] }}">{{ \Illuminate\Support\Str::limit($item['label'], 60) }}</option>
+                                            @endif
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Grouping Variable (Categorical)') }}</label>
+                                    <select x-model="groupVar" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all">
+                                        <option value="">{{ __('Select Question...') }}</option>
+                                        @foreach($analysis as $item)
+                                            <option value="{{ $item['id'] }}">{{ \Illuminate\Support\Str::limit($item['label'], 60) }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Case 3: Correlation -->
+                        <template x-if="testMethod === 'correlation'">
+                            <div class="contents">
+                                <div>
+                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Variable X (Numeric)') }}</label>
+                                    <select x-model="varX" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all">
+                                        <option value="">{{ __('Select Question...') }}</option>
+                                        @foreach($analysis as $item)
+                                            @if($item['isChartable'])
+                                                <option value="{{ $item['id'] }}">{{ \Illuminate\Support\Str::limit($item['label'], 60) }}</option>
+                                            @endif
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Variable Y (Numeric)') }}</label>
+                                    <select x-model="varY" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all">
+                                        <option value="">{{ __('Select Question...') }}</option>
+                                        @foreach($analysis as $item)
+                                            @if($item['isChartable'])
+                                                <option value="{{ $item['id'] }}">{{ \Illuminate\Support\Str::limit($item['label'], 60) }}</option>
+                                            @endif
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Case 4: Regression -->
+                        <template x-if="testMethod === 'regression'">
+                            <div class="contents">
+                                <div>
+                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Dependent Variable Y (Numeric)') }}</label>
+                                    <select x-model="depVar" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all">
+                                        <option value="">{{ __('Select Question...') }}</option>
+                                        @foreach($analysis as $item)
+                                            @if($item['isChartable'])
+                                                <option value="{{ $item['id'] }}">{{ \Illuminate\Support\Str::limit($item['label'], 60) }}</option>
+                                            @endif
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Independent Variable X (Numeric)') }}</label>
+                                    <select x-model="groupVar" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all">
+                                        <option value="">{{ __('Select Question...') }}</option>
+                                        @foreach($analysis as $item)
+                                            @if($item['isChartable'])
+                                                <option value="{{ $item['id'] }}">{{ \Illuminate\Support\Str::limit($item['label'], 60) }}</option>
+                                            @endif
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Case 5: Multiple Linear Regression -->
+                        <template x-if="testMethod === 'regression_multiple'">
+                            <div class="contents">
+                                <div>
+                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Dependent Variable Y (Numeric)') }}</label>
+                                    <select x-model="depVar" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all">
+                                        <option value="">{{ __('Select Question...') }}</option>
+                                        @foreach($analysis as $item)
+                                            @if($item['isChartable'])
+                                                <option value="{{ $item['id'] }}">{{ \Illuminate\Support\Str::limit($item['label'], 60) }}</option>
+                                            @endif
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Independent Variables X (Select Multiple)') }}</label>
+                                    <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 max-h-[160px] overflow-y-auto space-y-2.5">
+                                        @foreach($analysis as $item)
+                                            @if($item['isChartable'])
+                                                <label class="flex items-center gap-2.5 text-xs font-semibold text-gray-700 hover:text-indigo-600 transition-colors cursor-pointer">
+                                                    <input type="checkbox" :value="'{{ $item['id'] }}'" x-model="indVars" class="rounded text-indigo-600 focus:ring-indigo-500 border-gray-300">
+                                                    <span>{{ \Illuminate\Support\Str::limit($item['label'], 60) }}</span>
+                                                </label>
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="flex justify-end border-t border-gray-50 mt-6 pt-6">
+                        <button @click="runAnalysis()" :disabled="loading"
+                            class="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            <i class="fa-solid fa-calculator" :class="{'fa-spin': loading}"></i> <span x-text="loading ? '{{ __('Calculating...') }}' : '{{ __('Run Analysis') }}'"></span>
+                        </button>
                     </div>
                 </div>
 
-                <div class="flex justify-end border-t border-gray-50 pt-6">
-                    <button @click="generateMatrix()" :disabled="!rowVar || !colVar || loading"
-                        class="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                        <i class="fa-solid fa-table-cells" :class="{'fa-spin': loading}"></i> <span x-text="loading ? '{{ __('Generating...') }}' : '{{ __('Generate Matrix') }}'"></span>
-                    </button>
-                </div>
-
-                <!-- Matrix Results -->
-                <template x-if="matrixData && matrixData.rows && matrixData.rows.length > 0">
-                    <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm animate-in fade-in duration-500">
-                        <div class="overflow-x-auto mb-8">
-                            <table class="w-full text-left border-collapse min-w-[600px]">
-                                <thead>
-                                    <tr>
-                                        <th class="p-4 border-b border-r border-gray-200 bg-gray-50 w-1/4"></th>
-                                        <template x-for="col in matrixData?.columns || []" :key="col">
-                                            <th class="p-4 border-b border-gray-200 bg-gray-50 text-[10px] font-black text-gray-600 uppercase tracking-widest text-center" x-text="col"></th>
-                                        </template>
-                                        <th class="p-4 border-b border-l border-gray-200 bg-indigo-50 text-[10px] font-black text-indigo-800 uppercase tracking-widest text-center">{{ __('Total') }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <template x-for="row in matrixData?.rows || []" :key="row">
-                                        <tr class="hover:bg-gray-50/50 transition-colors">
-                                            <th class="p-4 border-b border-r border-gray-200 text-[11px] font-black text-gray-700" x-text="row"></th>
-                                            <template x-for="col in matrixData?.columns || []" :key="col">
-                                                <td class="p-4 border-b border-gray-100 text-center text-sm font-medium text-gray-600" x-text="getMatrixValue(row, col)"></td>
+                <!-- 1. Crosstab & Chi-Square Results -->
+                <template x-if="testMethod === 'crosstab' && matrixData">
+                    <div class="space-y-8 animate-in fade-in duration-500">
+                        <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+                            <div class="overflow-x-auto mb-8">
+                                <table class="w-full text-left border-collapse min-w-[600px]">
+                                    <thead>
+                                        <tr>
+                                            <th class="p-4 border-b border-r border-gray-200 bg-gray-50 w-1/4"></th>
+                                            <template x-for="col in matrixData.columns" :key="col">
+                                                <th class="p-4 border-b border-gray-200 bg-gray-50 text-[10px] font-black text-gray-600 uppercase tracking-widest text-center" x-text="col"></th>
                                             </template>
-                                            <td class="p-4 border-b border-l border-gray-200 bg-indigo-50/30 text-center text-sm font-black text-indigo-700" x-text="(matrixData?.rowTotals || {})[row] || 0"></td>
+                                            <th class="p-4 border-b border-l border-gray-200 bg-indigo-50 text-[10px] font-black text-indigo-800 uppercase tracking-widest text-center">{{ __('Total') }}</th>
                                         </tr>
-                                    </template>
-                                </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <th class="p-4 border-t border-r border-gray-200 bg-indigo-50 text-[10px] font-black text-indigo-800 uppercase tracking-widest">{{ __('Total') }}</th>
-                                        <template x-for="col in matrixData?.columns || []" :key="col">
-                                            <th class="p-4 border-t border-gray-200 bg-indigo-50 text-center text-sm font-black text-indigo-800" x-text="(matrixData?.colTotals || {})[col] || 0"></th>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="row in matrixData.rows" :key="row">
+                                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                                <th class="p-4 border-b border-r border-gray-200 text-[11px] font-black text-gray-700" x-text="row"></th>
+                                                <template x-for="col in matrixData.columns" :key="col">
+                                                    <td class="p-4 border-b border-gray-100 text-center text-sm font-medium text-gray-600">
+                                                        <div class="font-bold text-gray-900" x-text="getMatrixValue(row, col)"></div>
+                                                        <div class="text-[10px] text-gray-400 mt-0.5">{{ __('Expected:') }} <span x-text="matrixData.expectedMatrix[row][col]"></span></div>
+                                                    </td>
+                                                </template>
+                                                <td class="p-4 border-b border-l border-gray-200 bg-indigo-50/30 text-center text-sm font-black text-indigo-700" x-text="(matrixData.rowTotals || {})[row] || 0"></td>
+                                            </tr>
                                         </template>
-                                        <th class="p-4 border-t border-l border-indigo-200 bg-indigo-100 text-center text-sm font-black text-indigo-900" x-text="matrixData?.grandTotal || 0"></th>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <th class="p-4 border-t border-r border-gray-200 bg-indigo-50 text-[10px] font-black text-indigo-800 uppercase tracking-widest">{{ __('Total') }}</th>
+                                            <template x-for="col in matrixData.columns" :key="col">
+                                                <th class="p-4 border-t border-gray-200 bg-indigo-50 text-center text-sm font-black text-indigo-800" x-text="(matrixData.colTotals || {})[col] || 0"></th>
+                                            </template>
+                                            <th class="p-4 border-t border-l border-indigo-200 bg-indigo-100 text-center text-sm font-black text-indigo-900" x-text="matrixData.grandTotal || 0"></th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
 
-
-            <!-- AI Correlation Intelligence -->
-            <div class="mt-8 pt-8 border-t border-gray-100 flex flex-col items-center">
-                <div x-show="aiLoading" class="flex items-center gap-3 text-indigo-600 py-4">
-                    <i class="fa-solid fa-circle-notch fa-spin text-xl"></i>
-                    <span class="text-[10px] font-black uppercase tracking-widest">{{ __('Analyzing Correlation Patterns...') }}</span>
-                </div>
-                
-                <div x-show="aiInsight" class="w-full bg-gradient-to-br from-indigo-50 to-white rounded-3xl p-8 border border-indigo-100 shadow-inner relative overflow-hidden" style="display: none;">
-                    <i class="fa-solid fa-brain absolute right-[-20px] top-[-20px] text-[120px] text-indigo-600/5"></i>
-                    <div class="relative z-10 flex flex-col md:flex-row gap-6 items-start">
-                        <div class="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-indigo-200">
-                            <i class="fa-solid fa-wand-magic-sparkles text-lg"></i>
-                        </div>
-                        <div>
-                            <h5 class="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-3">{{ __('Correlation Intelligence') }}</h5>
-                            <div class="text-[13px] text-gray-700 leading-relaxed font-medium whitespace-pre-line" x-text="aiInsight"></div>
+                            <!-- Chi-Square Test Results -->
+                            <div class="mt-8 border-t border-gray-100 pt-6">
+                                <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Chi-Square Tests') }}</h5>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                                <th class="p-3 border-b">{{ __('Statistic') }}</th>
+                                                <th class="p-3 border-b text-center">{{ __('Value') }}</th>
+                                                <th class="p-3 border-b text-center">{{ __('df') }}</th>
+                                                <th class="p-3 border-b text-center">{{ __('Asymp. Sig. (2-sided)') }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td class="p-3 border-b text-xs font-semibold text-gray-800">{{ __('Pearson Chi-Square') }}</td>
+                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="matrixData.chiSquare"></td>
+                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="matrixData.df"></td>
+                                                <td class="p-3 border-b text-xs font-black text-center" :class="matrixData.significant ? 'text-green-600' : 'text-gray-500'" x-text="matrixData.pValue"></td>
+                                            </tr>
+                                            <template x-if="matrixData.likelihoodRatio !== undefined && matrixData.likelihoodRatio !== null">
+                                                <tr>
+                                                    <td class="p-3 border-b text-xs font-semibold text-gray-800">{{ __('Likelihood Ratio') }}</td>
+                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="matrixData.likelihoodRatio"></td>
+                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="matrixData.df"></td>
+                                                    <td class="p-3 border-b text-xs font-black text-center" :class="matrixData.likelihoodSignificant ? 'text-green-600' : 'text-gray-500'" x-text="matrixData.likelihoodPValue || matrixData.pValue"></td>
+                                                </tr>
+                                            </template>
+                                            <template x-if="matrixData.linearAssociation !== undefined && matrixData.linearAssociation !== null">
+                                                <tr>
+                                                    <td class="p-3 border-b text-xs font-semibold text-gray-800">{{ __('Linear-by-Linear Association') }}</td>
+                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="matrixData.linearAssociation"></td>
+                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center">1</td>
+                                                    <td class="p-3 border-b text-xs font-black text-center" x-text="matrixData.linearPValue"></td>
+                                                </tr>
+                                            </template>
+                                            <template x-if="(matrixData.validCases !== undefined && matrixData.validCases !== null) || (matrixData.n !== undefined && matrixData.n !== null)">
+                                                <tr>
+                                                    <td class="p-3 border-b text-xs font-semibold text-gray-800">{{ __('N of Valid Cases') }}</td>
+                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="matrixData.validCases || matrixData.n || matrixData.grandTotal"></td>
+                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"></td>
+                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"></td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                    <template x-if="matrixData.footnote">
+                                        <div class="text-[10px] text-gray-500 italic mt-3" x-text="matrixData.footnote"></div>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                </template>
 
-                <button x-show="!aiLoading && !aiInsight && matrixData && matrixData.rows && matrixData.rows.length > 0" @click="getCorrelationIntelligence()"
-                    class="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center gap-3 group">
-                    <i class="fa-solid fa-brain group-hover:scale-110 transition-transform"></i> {{ __('Correlation Intelligence') }}
-                </button>
+                <!-- 2. T-Test Results -->
+                <template x-if="testMethod === 'ttest' && tTestData">
+                    <div class="space-y-8 animate-in fade-in duration-500">
+                        <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+                            <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Group Statistics') }}</h5>
+                            <div class="overflow-x-auto mb-8">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                            <th class="p-3 border-b">{{ __('Grouping Variable') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('N') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('Mean') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('Std. Deviation') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('Std. Error Mean') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="g in tTestData.groups" :key="g.name">
+                                            <tr>
+                                                <td class="p-3 border-b text-xs font-semibold text-gray-800" x-text="g.name"></td>
+                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="g.n"></td>
+                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="g.mean"></td>
+                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="g.stdDev"></td>
+                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="g.stdError"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                             <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Independent Samples Test') }}</h5>
+                             <div class="overflow-x-auto">
+                                 <table class="w-full text-left border-collapse min-w-[800px]">
+                                     <thead>
+                                         <tr class="bg-gray-50 font-bold text-gray-700 text-[10px] uppercase tracking-wider">
+                                             <th class="p-3 border-b" rowspan="2"></th>
+                                             <th class="p-3 border-b text-center border-r" colspan="2">{{ __("Levene's Test for Equality of Variances") }}</th>
+                                             <th class="p-3 border-b text-center" colspan="7">{{ __('t-test for Equality of Means') }}</th>
+                                         </tr>
+                                         <tr class="bg-gray-50 font-bold text-gray-700 text-[10px] uppercase tracking-wider">
+                                             <th class="p-3 border-b text-center">{{ __('F') }}</th>
+                                             <th class="p-3 border-b text-center border-r">{{ __('Sig.') }}</th>
+                                             <th class="p-3 border-b text-center">{{ __('t') }}</th>
+                                             <th class="p-3 border-b text-center">{{ __('df') }}</th>
+                                             <th class="p-3 border-b text-center">{{ __('Sig. (2-tailed)') }}</th>
+                                             <th class="p-3 border-b text-center">{{ __('Mean Difference') }}</th>
+                                             <th class="p-3 border-b text-center">{{ __('Std. Error Difference') }}</th>
+                                             <th class="p-3 border-b text-center">{{ __('95% Confidence Interval (Lower)') }}</th>
+                                             <th class="p-3 border-b text-center">{{ __('95% Confidence Interval (Upper)') }}</th>
+                                         </tr>
+                                     </thead>
+                                     <tbody>
+                                         <tr class="hover:bg-gray-50/50 transition-colors">
+                                             <td class="p-3 border-b text-xs font-semibold text-gray-800">{{ __('Equal variances assumed') }}</td>
+                                             <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="tTestData.leveneF"></td>
+                                             <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r" x-text="tTestData.leveneSig"></td>
+                                             <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="tTestData.tValue"></td>
+                                             <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="tTestData.df"></td>
+                                             <td class="p-3 border-b text-xs font-black text-center" :class="tTestData.significant ? 'text-green-600' : 'text-gray-500'" x-text="tTestData.pValue"></td>
+                                             <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="tTestData.meanDiff"></td>
+                                             <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="tTestData.stdErrorDiff"></td>
+                                             <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="tTestData.ciLower"></td>
+                                             <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="tTestData.ciUpper"></td>
+                                         </tr>
+                                         <tr class="hover:bg-gray-50/50 transition-colors">
+                                             <td class="p-3 border-b text-xs font-semibold text-gray-800">{{ __('Equal variances not assumed') }}</td>
+                                             <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"></td>
+                                             <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r"></td>
+                                             <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="tTestData.tValueWelch || tTestData.tValue"></td>
+                                             <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="tTestData.dfWelch || tTestData.df"></td>
+                                             <td class="p-3 border-b text-xs font-black text-center" :class="(tTestData.significantWelch !== undefined ? tTestData.significantWelch : tTestData.significant) ? 'text-green-600' : 'text-gray-500'" x-text="tTestData.pValueWelch || tTestData.pValue"></td>
+                                             <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="tTestData.meanDiff"></td>
+                                             <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="tTestData.stdErrorDiffWelch || tTestData.stdErrorDiff"></td>
+                                             <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="tTestData.ciLowerWelch || tTestData.ciLower"></td>
+                                             <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="tTestData.ciUpperWelch || tTestData.ciUpper"></td>
+                                         </tr>
+                                     </tbody>
+                                 </table>
+                             </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- 3. Correlation Results -->
+                <template x-if="testMethod === 'correlation' && correlationData">
+                    <div class="space-y-8 animate-in fade-in duration-500">
+                        <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+                            <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Correlations Matrix') }}</h5>
+                             <div class="overflow-x-auto">
+                                 <table class="w-full text-left border-collapse">
+                                     <thead>
+                                         <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                             <th class="p-3 border-b"></th>
+                                             <th class="p-3 border-b" x-text="correlationData.labelX"></th>
+                                             <th class="p-3 border-b" x-text="correlationData.labelY"></th>
+                                         </tr>
+                                     </thead>
+                                     <tbody>
+                                         <tr class="border-b hover:bg-gray-50/30 transition-colors">
+                                             <td class="p-3 text-xs font-bold text-gray-800" x-text="correlationData.labelX"></td>
+                                             <td class="p-3 text-xs text-gray-600">
+                                                 <div>{{ __('Pearson Correlation:') }} <span class="font-bold">1</span></div>
+                                                 <div class="mt-1">{{ __('Sig. (2-tailed):') }} </div>
+                                                 <div class="text-[10px] text-gray-400 mt-1">N: <span x-text="correlationData.n"></span></div>
+                                             </td>
+                                             <td class="p-3 text-xs text-gray-600">
+                                                 <div>{{ __('Pearson Correlation:') }} <span class="font-black text-indigo-600" x-text="correlationData.r + (correlationData.sigMarker || '')"></span></div>
+                                                 <div class="mt-1">{{ __('Sig. (2-tailed):') }} <span class="font-bold text-indigo-700" x-text="correlationData.pValue"></span></div>
+                                                 <div class="text-[10px] text-gray-400 mt-1">N: <span x-text="correlationData.n"></span></div>
+                                             </td>
+                                         </tr>
+                                         <tr class="border-b hover:bg-gray-50/30 transition-colors">
+                                             <td class="p-3 text-xs font-bold text-gray-800" x-text="correlationData.labelY"></td>
+                                             <td class="p-3 text-xs text-gray-600">
+                                                 <div>{{ __('Pearson Correlation:') }} <span class="font-black text-indigo-600" x-text="correlationData.r + (correlationData.sigMarker || '')"></span></div>
+                                                 <div class="mt-1">{{ __('Sig. (2-tailed):') }} <span class="font-bold text-indigo-700" x-text="correlationData.pValue"></span></div>
+                                                 <div class="text-[10px] text-gray-400 mt-1">N: <span x-text="correlationData.n"></span></div>
+                                             </td>
+                                             <td class="p-3 text-xs text-gray-600">
+                                                 <div>{{ __('Pearson Correlation:') }} <span class="font-bold">1</span></div>
+                                                 <div class="mt-1">{{ __('Sig. (2-tailed):') }} </div>
+                                                 <div class="text-[10px] text-gray-400 mt-1">N: <span x-text="correlationData.n"></span></div>
+                                             </td>
+                                         </tr>
+                                     </tbody>
+                                 </table>
+                                 
+                                 <!-- Footnotes -->
+                                 <div class="mt-4 space-y-1 text-[10px] text-gray-500 italic">
+                                     <template x-if="correlationData.sigMarker === '**'">
+                                         <div>{{ __('**. Correlation is significant at the 0.01 level (2-tailed).') }}</div>
+                                     </template>
+                                     <template x-if="correlationData.sigMarker === '*'">
+                                         <div>{{ __('*. Correlation is significant at the 0.05 level (2-tailed).') }}</div>
+                                     </template>
+                                     <div class="text-gray-400 mt-2 font-medium">
+                                         {{ __('Standard Error of r:') }} <span class="font-bold" x-text="correlationData.stdErrorR"></span> | 
+                                         {{ __('Covariance:') }} <span class="font-bold" x-text="correlationData.covariance"></span> | 
+                                         {{ __('95% Confidence Interval for r:') }} [<span x-text="correlationData.ciLower"></span>, <span x-text="correlationData.ciUpper"></span>]
+                                     </div>
+                                 </div>
+                             </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- 4. ANOVA Results -->
+                <template x-if="testMethod === 'anova' && anovaData">
+                    <div class="space-y-8 animate-in fade-in duration-500">
+                        <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+                            <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('ANOVA Descriptives') }}</h5>
+                            <div class="overflow-x-auto mb-8">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                         <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                             <th class="p-3 border-b" rowspan="2">{{ __('Group') }}</th>
+                                             <th class="p-3 border-b text-center" rowspan="2">{{ __('N') }}</th>
+                                             <th class="p-3 border-b text-center" rowspan="2">{{ __('Mean') }}</th>
+                                             <th class="p-3 border-b text-center" rowspan="2">{{ __('Std. Deviation') }}</th>
+                                             <th class="p-3 border-b text-center" rowspan="2">{{ __('Std. Error') }}</th>
+                                             <th class="p-3 border-b text-center border-l" colspan="2">{{ __('95% Confidence Interval for Mean') }}</th>
+                                             <th class="p-3 border-b text-center border-l" rowspan="2">{{ __('Minimum') }}</th>
+                                             <th class="p-3 border-b text-center" rowspan="2">{{ __('Maximum') }}</th>
+                                         </tr>
+                                         <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                             <th class="p-3 border-b text-center border-l">{{ __('Lower Bound') }}</th>
+                                             <th class="p-3 border-b text-center">{{ __('Upper Bound') }}</th>
+                                         </tr>
+                                     </thead>
+                                     <tbody>
+                                         <template x-for="g in anovaData.groupStats" :key="g.name">
+                                             <tr class="hover:bg-gray-50/50 transition-colors">
+                                                 <td class="p-3 border-b text-xs font-semibold text-gray-800" x-text="g.name"></td>
+                                                 <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="g.n"></td>
+                                                 <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="g.mean"></td>
+                                                 <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="g.stdDev"></td>
+                                                 <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="g.stdError"></td>
+                                                 <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-l" x-text="g.ciLower"></td>
+                                                 <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="g.ciUpper"></td>
+                                                 <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-l" x-text="g.min"></td>
+                                                 <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="g.max"></td>
+                                             </tr>
+                                         </template>
+                                     </tbody>
+                                </table>
+                            </div>
+
+                            <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('ANOVA Table') }}</h5>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                            <th class="p-3 border-b"></th>
+                                            <th class="p-3 border-b text-center">{{ __('Sum of Squares') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('df') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('Mean Square') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('F') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('Sig.') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="p-3 border-b text-xs font-semibold text-gray-800">{{ __('Between Groups') }}</td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="anovaData.ssb"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="anovaData.dfBetween"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="anovaData.msb"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="anovaData.fValue" rowspan="2" style="vertical-align: middle;"></td>
+                                            <td class="p-3 border-b text-xs font-black text-center" :class="anovaData.significant ? 'text-green-600' : 'text-gray-500'" x-text="anovaData.pValue" rowspan="2" style="vertical-align: middle;"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-3 border-b text-xs font-semibold text-gray-800">{{ __('Within Groups') }}</td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="anovaData.ssw"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="anovaData.dfWithin"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="anovaData.msw"></td>
+                                        </tr>
+                                        <tr class="bg-indigo-50/10">
+                                            <td class="p-3 border-b text-xs font-bold text-indigo-900">{{ __('Total') }}</td>
+                                            <td class="p-3 border-b text-xs font-bold text-indigo-900 text-center" x-text="anovaData.sst"></td>
+                                            <td class="p-3 border-b text-xs font-bold text-indigo-900 text-center" x-text="anovaData.dfTotal"></td>
+                                            <td class="p-3 border-b" colspan="3"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- 5. Regression Results -->
+                <template x-if="testMethod === 'regression' && regressionData">
+                    <div class="space-y-8 animate-in fade-in duration-500">
+                        <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+                            <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Variables Entered/Removed') }}</h5>
+                            <div class="overflow-x-auto mb-8">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                            <th class="p-3 border-b">{{ __('Model') }}</th>
+                                            <th class="p-3 border-b">{{ __('Variables Entered') }}</th>
+                                            <th class="p-3 border-b">{{ __('Variables Removed') }}</th>
+                                            <th class="p-3 border-b">{{ __('Method') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="hover:bg-gray-50/50 transition-colors">
+                                            <td class="p-3 border-b text-xs font-semibold text-gray-800">1</td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600" x-text="regressionData.indLabel"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600">.</td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600">{{ __('Enter') }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Model Summary') }}</h5>
+                            <div class="overflow-x-auto mb-8">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                            <th class="p-3 border-b text-center">{{ __('Model') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('R') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('R Square') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('Adjusted R Square') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('Std. Error of the Estimate') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="p-3 border-b text-xs font-semibold text-gray-800 text-center">1</td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="regressionData.r"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="regressionData.r2"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="regressionData.adjR2"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="regressionData.stdErrorEst"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('ANOVA (Regression significance)') }}</h5>
+                            <div class="overflow-x-auto mb-8">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                            <th class="p-3 border-b"></th>
+                                            <th class="p-3 border-b text-center">{{ __('Sum of Squares') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('df') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('Mean Square') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('F') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('Sig.') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="p-3 border-b text-xs font-semibold text-gray-800">{{ __('Regression') }}</td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="regressionData.anova.ssr"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="regressionData.anova.dfReg"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="regressionData.anova.msr"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="regressionData.anova.fValue" rowspan="2" style="vertical-align: middle;"></td>
+                                            <td class="p-3 border-b text-xs font-black text-center" :class="regressionData.anova.significant ? 'text-green-600' : 'text-gray-500'" x-text="regressionData.anova.pValue" rowspan="2" style="vertical-align: middle;"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-3 border-b text-xs font-semibold text-gray-800">{{ __('Residual') }}</td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="regressionData.anova.sse"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="regressionData.anova.dfRes"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="regressionData.anova.mse"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Coefficients') }}</h5>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse min-w-[700px]">
+                                    <thead>
+                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                            <th class="p-3 border-b" rowspan="2">{{ __('Model') }}</th>
+                                            <th class="p-3 border-b text-center border-r" colspan="2">{{ __('Unstandardized Coefficients') }}</th>
+                                            <th class="p-3 border-b text-center border-r" rowspan="2">{{ __('Standardized Coefficients (Beta)') }}</th>
+                                            <th class="p-3 border-b text-center border-r" rowspan="2">{{ __('t') }}</th>
+                                            <th class="p-3 border-b text-center border-r" rowspan="2">{{ __('Sig.') }}</th>
+                                            <th class="p-3 border-b text-center" colspan="2">{{ __('95.0% Confidence Interval for B') }}</th>
+                                        </tr>
+                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                            <th class="p-3 border-b text-center">{{ __('B') }}</th>
+                                            <th class="p-3 border-b text-center border-r">{{ __('Std. Error') }}</th>
+                                            <th class="p-3 border-b text-center border-l">{{ __('Lower Bound') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('Upper Bound') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="hover:bg-gray-50/50 transition-colors">
+                                            <td class="p-3 border-b text-xs font-semibold text-gray-800">{{ __('(Constant)') }}</td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="regressionData.coefficients.intercept.coef"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r" x-text="regressionData.coefficients.intercept.stdError"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r" x-text="regressionData.coefficients.intercept.beta"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r" x-text="regressionData.coefficients.intercept.tValue"></td>
+                                            <td class="p-3 border-b text-xs font-black text-center border-r" :class="regressionData.coefficients.intercept.significant ? 'text-green-600' : 'text-gray-500'" x-text="regressionData.coefficients.intercept.pValue"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-l" x-text="regressionData.coefficients.intercept.ciLower"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="regressionData.coefficients.intercept.ciUpper"></td>
+                                        </tr>
+                                        <tr class="hover:bg-gray-50/50 transition-colors">
+                                            <td class="p-3 border-b text-xs font-semibold text-gray-800" x-text="regressionData.indLabel"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="regressionData.coefficients.slope.coef"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r" x-text="regressionData.coefficients.slope.stdError"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r" x-text="regressionData.coefficients.slope.beta"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r" x-text="regressionData.coefficients.slope.tValue"></td>
+                                            <td class="p-3 border-b text-xs font-black text-center border-r" :class="regressionData.coefficients.slope.significant ? 'text-green-600' : 'text-gray-500'" x-text="regressionData.coefficients.slope.pValue"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-l" x-text="regressionData.coefficients.slope.ciLower"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="regressionData.coefficients.slope.ciUpper"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- 5. Multiple Linear Regression Results -->
+                <template x-if="testMethod === 'regression_multiple' && multipleRegressionData">
+                    <div class="space-y-8 animate-in fade-in duration-500">
+                        <!-- Mathematical Formula Banner -->
+                        <div class="bg-gradient-to-r from-indigo-900 to-indigo-950 rounded-3xl p-6 text-white border border-indigo-950 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-300">
+                                    <i class="fa-solid fa-square-root-variable text-lg"></i>
+                                </div>
+                                <div>
+                                    <h5 class="text-[9px] font-black text-indigo-300 uppercase tracking-widest">{{ __('Computed Regression Model Equation') }}</h5>
+                                    <p class="text-sm font-bold mt-1" x-text="multipleRegressionData.equation"></p>
+                                </div>
+                            </div>
+                            <div class="text-[10px] font-medium text-indigo-200 bg-white/10 px-3 py-1.5 rounded-lg border border-white/10">
+                                <i class="fa-solid fa-circle-info mr-1"></i> {{ __('OLS Parameter Estimates') }}
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+                            <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Variables Entered/Removed') }}</h5>
+                            <div class="overflow-x-auto mb-8">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                            <th class="p-3 border-b">{{ __('Model') }}</th>
+                                            <th class="p-3 border-b">{{ __('Variables Entered') }}</th>
+                                            <th class="p-3 border-b">{{ __('Variables Removed') }}</th>
+                                            <th class="p-3 border-b">{{ __('Method') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="hover:bg-gray-50/50 transition-colors">
+                                            <td class="p-3 border-b text-xs font-semibold text-gray-800">1</td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600" x-text="multipleRegressionData.indLabels.join(', ')"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600">.</td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600">{{ __('Enter') }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Model Summary') }}</h5>
+                            <div class="overflow-x-auto mb-8">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                            <th class="p-3 border-b text-center">{{ __('Model') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('R') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('R Square') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('Adjusted R Square') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('Std. Error of the Estimate') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="p-3 border-b text-xs font-semibold text-gray-800 text-center">1</td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="multipleRegressionData.r"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="multipleRegressionData.r2"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="multipleRegressionData.adjR2"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="multipleRegressionData.stdErrorEst"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('ANOVA (Regression significance)') }}</h5>
+                            <div class="overflow-x-auto mb-8">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                            <th class="p-3 border-b"></th>
+                                            <th class="p-3 border-b text-center">{{ __('Sum of Squares') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('df') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('Mean Square') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('F') }}</th>
+                                            <th class="p-3 border-b text-center">{{ __('Sig.') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="p-3 border-b text-xs font-semibold text-gray-800">{{ __('Regression') }}</td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="multipleRegressionData.anova.ssr"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="multipleRegressionData.anova.dfReg"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="multipleRegressionData.anova.msr"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="multipleRegressionData.anova.fValue" rowspan="2" style="vertical-align: middle;"></td>
+                                            <td class="p-3 border-b text-xs font-black text-center" :class="multipleRegressionData.anova.significant ? 'text-green-600' : 'text-gray-500'" x-text="multipleRegressionData.anova.pValue" rowspan="2" style="vertical-align: middle;"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-3 border-b text-xs font-semibold text-gray-800">{{ __('Residual') }}</td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="multipleRegressionData.anova.sse"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="multipleRegressionData.anova.dfRes"></td>
+                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="multipleRegressionData.anova.mse"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Coefficients') }}</h5>
+                             <div class="overflow-x-auto">
+                                 <table class="w-full text-left border-collapse min-w-[700px]">
+                                     <thead>
+                                         <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                             <th class="p-3 border-b" rowspan="2">{{ __('Model') }}</th>
+                                             <th class="p-3 border-b text-center border-r" colspan="2">{{ __('Unstandardized Coefficients') }}</th>
+                                             <th class="p-3 border-b text-center border-r" rowspan="2">{{ __('Standardized Coefficients (Beta)') }}</th>
+                                             <th class="p-3 border-b text-center border-r" rowspan="2">{{ __('t') }}</th>
+                                             <th class="p-3 border-b text-center border-r" rowspan="2">{{ __('Sig.') }}</th>
+                                             <th class="p-3 border-b text-center" colspan="2">{{ __('95.0% Confidence Interval for B') }}</th>
+                                         </tr>
+                                         <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                             <th class="p-3 border-b text-center">{{ __('B') }}</th>
+                                             <th class="p-3 border-b text-center border-r">{{ __('Std. Error') }}</th>
+                                             <th class="p-3 border-b text-center border-l">{{ __('Lower Bound') }}</th>
+                                             <th class="p-3 border-b text-center">{{ __('Upper Bound') }}</th>
+                                         </tr>
+                                     </thead>
+                                     <tbody>
+                                         <template x-for="coef in multipleRegressionData.coefficients" :key="coef.variable">
+                                             <tr class="hover:bg-gray-50/50 transition-colors">
+                                                 <td class="p-3 border-b text-xs font-semibold text-gray-800" x-text="coef.label"></td>
+                                                 <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="coef.coef"></td>
+                                                 <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r" x-text="coef.stdError"></td>
+                                                 <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r font-bold" :class="coef.beta !== 'N/A' ? 'text-indigo-600' : 'text-gray-400'" x-text="coef.beta"></td>
+                                                 <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r" x-text="coef.tValue"></td>
+                                                 <td class="p-3 border-b text-xs font-black text-center border-r" :class="coef.significant ? 'text-green-600' : 'text-gray-500'" x-text="coef.pValue"></td>
+                                                 <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-l" x-text="coef.ciLower"></td>
+                                                 <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="coef.ciUpper"></td>
+                                             </tr>
+                                         </template>
+                                     </tbody>
+                                 </table>
+                             </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Copy / Flow actions for successful calculation -->
+                <template x-if="matrixData || tTestData || anovaData || correlationData || regressionData || multipleRegressionData">
+                    <div class="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-wrap gap-4 items-center justify-between">
+                        <button @click="copyResultsToClipboard()" class="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-copy"></i> {{ __('Copy Results to Clipboard') }}
+                        </button>
+                        
+                        <div class="flex items-center gap-3">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{{ __('Continue Analysis Flow:') }}</span>
+                            <template x-if="testMethod === 'correlation'">
+                                <button @click="testMethod = 'regression'; depVar = varY; groupVar = varX; runAnalysis();" class="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest transition-all">
+                                    {{ __('Run Simple Regression') }} <i class="fa-solid fa-arrow-right ml-1"></i>
+                                </button>
+                            </template>
+                            <template x-if="testMethod === 'regression'">
+                                <button @click="testMethod = 'regression_multiple'; indVars = [groupVar]; runAnalysis();" class="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest transition-all">
+                                    {{ __('Continue to Multiple Regression') }} <i class="fa-solid fa-arrow-right ml-1"></i>
+                                </button>
+                            </template>
+                            <template x-if="testMethod === 'ttest'">
+                                <button @click="testMethod = 'anova'; runAnalysis();" class="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest transition-all">
+                                    {{ __('Run ANOVA check') }} <i class="fa-solid fa-arrow-right ml-1"></i>
+                                </button>
+                            </template>
+                            <template x-if="testMethod === 'crosstab'">
+                                <button @click="testMethod = 'correlation'; varX = rowVar; varY = colVar;" class="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest transition-all">
+                                    {{ __('Check Pearson Correlation') }} <i class="fa-solid fa-arrow-right ml-1"></i>
+                                </button>
+                            </template>
+                            <template x-if="testMethod === 'regression_multiple' || testMethod === 'anova'">
+                                <span class="text-[10px] text-gray-400 italic">{{ __('Analysis flow complete.') }}</span>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- AI Statistical Intelligence Card -->
+                <template x-if="matrixData || tTestData || anovaData || correlationData || regressionData || multipleRegressionData">
+                    <div class="mt-8 pt-8 border-t border-gray-100 flex flex-col items-center">
+                        <div x-show="aiLoading" class="flex items-center gap-3 text-indigo-600 py-4">
+                            <i class="fa-solid fa-circle-notch fa-spin text-xl"></i>
+                            <span class="text-[10px] font-black uppercase tracking-widest">{{ __('Analyzing Statistical Significance...') }}</span>
+                        </div>
+                        
+                        <div x-show="aiMessages.length > 0" class="w-full bg-gradient-to-br from-indigo-50 to-white rounded-3xl p-8 border border-indigo-100 shadow-inner relative overflow-hidden">
+                            <i class="fa-solid fa-brain absolute right-[-20px] top-[-20px] text-[120px] text-indigo-600/5"></i>
+                            <div class="relative z-10 flex flex-col md:flex-row gap-6 items-start">
+                                <div class="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-indigo-200">
+                                    <i class="fa-solid fa-comments text-lg"></i>
+                                </div>
+                                <div class="w-full">
+                                    <h5 class="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-3">{{ __('Statistical Intelligence') }}</h5>
+                                    
+                                    <!-- Chat Logs -->
+                                    <div class="space-y-4 py-2 w-full">
+                                        <template x-for="(msg, index) in aiMessages" :key="index">
+                                            <div class="flex flex-col mb-1" :class="msg.role === 'user' ? 'items-end' : 'items-start'">
+                                                <div class="max-w-[85%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed font-medium"
+                                                     :class="msg.role === 'user' 
+                                                             ? 'bg-indigo-600 text-white rounded-br-none shadow-sm' 
+                                                             : 'bg-white/90 text-gray-800 rounded-bl-none border border-gray-200/50 shadow-sm'">
+                                                    <p class="whitespace-pre-wrap" x-text="msg.content"></p>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    
+                                    <!-- Polish / Refinement Input -->
+                                    <div x-show="!aiPolishing" class="border-t border-indigo-100/50 pt-4 mt-4 w-full">
+                                        <div class="flex flex-col md:flex-row gap-3 items-end">
+                                            <div class="flex-1 w-full">
+                                                <label class="block text-[9px] font-black text-indigo-600 uppercase tracking-widest mb-1.5">{{ __('Refine this statistical interpretation (e.g. "Focus on variable X", "Explain in simple words")') }}</label>
+                                                <input x-model="aiFeedback" type="text" placeholder="{{ __('Type instructions to refine...') }}" @keydown.enter="polishAiInsight()" class="w-full bg-white/70 border border-indigo-100 text-xs font-semibold rounded-xl px-3 py-2.5 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all">
+                                            </div>
+                                            <button @click="polishAiInsight()" :disabled="aiPolishing || !aiFeedback.trim()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-1.5 self-stretch justify-center whitespace-nowrap">
+                                                <i class="fa-solid fa-paper-plane" :class="{'fa-spin': aiPolishing}"></i>
+                                                <span x-text="aiPolishing ? '{{ __('Polishing...') }}' : '{{ __('Polish') }}'"></span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Export Chat Actions -->
+                                    <div x-show="aiMessages.length > 0 && !aiLoading" class="mt-4 pt-3 border-t border-indigo-100/30 flex items-center justify-between" style="display: none;">
+                                        <div class="flex items-center gap-3">
+                                            <button @click="copyFinalOutput()" class="flex items-center gap-1.5 text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors">
+                                                <i class="fa-solid fa-copy"></i>
+                                                {{ __('Copy Output') }}
+                                            </button>
+                                            <button @click="downloadFinalOutput()" class="flex items-center gap-1.5 text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors">
+                                                <i class="fa-solid fa-download"></i>
+                                                {{ __('Export TXT') }}
+                                            </button>
+                                        </div>
+                                        <button @click="aiMessages = []; aiInsight = null; aiFeedback = '';" class="text-[9px] font-black text-red-500 hover:text-red-700 uppercase tracking-widest transition-colors">
+                                            {{ __('Reset') }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button x-show="!aiLoading && aiMessages.length === 0" @click="getAiInterpretation()"
+                            class="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center gap-3 group">
+                            <i class="fa-solid fa-brain group-hover:scale-110 transition-transform"></i> {{ __('Interpret with AI') }}
+                        </button>
+                    </div>
+                </template>
             </div>
-        </template>
-    </div>
-</div>
+        </div>
 
     @push('scripts')
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -545,31 +1311,100 @@
                 return new Chart(ctx, chartConfig);
             }
 
-            window.crosstabManager = function () {
+            window.inferentialManager = function () {
                 return {
+                    testMethod: 'crosstab',
                     rowVar: '',
                     colVar: '',
+                    depVar: '',
+                    groupVar: '',
+                    varX: '',
+                    varY: '',
+                    indVars: [],
                     loading: false,
                     aiLoading: false,
                     aiInsight: null,
+                    aiFeedback: '',
+                    aiPolishing: false,
+                    aiMessages: [],
+                    
                     matrixData: null,
+                    tTestData: null,
+                    anovaData: null,
+                    correlationData: null,
+                    regressionData: null,
+                    multipleRegressionData: null,
 
-                    async generateMatrix() {
-                        if (!this.rowVar || !this.colVar) return;
-                        this.loading = true;
+                    init() {
+                        this.$watch('testMethod', () => {
+                            this.clearResults();
+                        });
+                    },
+
+                    clearResults() {
                         this.matrixData = null;
+                        this.tTestData = null;
+                        this.anovaData = null;
+                        this.correlationData = null;
+                        this.regressionData = null;
+                        this.multipleRegressionData = null;
                         this.aiInsight = null;
+                        this.aiFeedback = '';
+                        this.aiMessages = [];
+                        this.loading = false;
+                        this.aiLoading = false;
+                        this.aiPolishing = false;
+                    },
+
+                    async runAnalysis() {
+                        this.clearResults();
+                        this.loading = true;
+
+                        let url = `{{ route('surveys.reports.inferential', $survey) }}?method=${this.testMethod}`;
+                        if (this.testMethod === 'crosstab') {
+                            if (!this.rowVar || !this.colVar) return this.loading = false;
+                            url += `&row=${this.rowVar}&col=${this.colVar}`;
+                        } else if (this.testMethod === 'ttest' || this.testMethod === 'anova') {
+                            if (!this.depVar || !this.groupVar) return this.loading = false;
+                            url += `&dep=${this.depVar}&group=${this.groupVar}`;
+                        } else if (this.testMethod === 'correlation') {
+                            if (!this.varX || !this.varY) return this.loading = false;
+                            url += `&varX=${this.varX}&varY=${this.varY}`;
+                        } else if (this.testMethod === 'regression') {
+                            if (!this.depVar || !this.groupVar) return this.loading = false;
+                            url += `&dep=${this.depVar}&ind=${this.groupVar}`;
+                        } else if (this.testMethod === 'regression_multiple') {
+                            if (!this.depVar || this.indVars.length === 0) return this.loading = false;
+                            url += `&dep=${this.depVar}&ind=${this.indVars.join(',')}`;
+                        }
 
                         try {
-                            const res = await fetch(`{{ route('surveys.reports.crosstab', $survey) }}?row=${this.rowVar}&col=${this.colVar}`);
-                            if (!res.ok) throw new Error('Failed to generate matrix');
+                            const res = await fetch(url);
+                            if (!res.ok) {
+                                const errData = await res.json();
+                                throw new Error(errData.message || 'Analysis failed.');
+                            }
                             const data = await res.json();
-                            this.matrixData = data.results;
-                            this.matrixData.columns = data.results.cols;
-                            this.matrixData.rowLabel = data.rowLabel;
-                            this.matrixData.colLabel = data.colLabel;
+                            if (this.testMethod === 'crosstab') {
+                                this.matrixData = data;
+                            } else if (this.testMethod === 'ttest') {
+                                this.tTestData = data;
+                            } else if (this.testMethod === 'anova') {
+                                this.anovaData = data;
+                            } else if (this.testMethod === 'correlation') {
+                                this.correlationData = data;
+                            } else if (this.testMethod === 'regression') {
+                                this.regressionData = data;
+                            } else if (this.testMethod === 'regression_multiple') {
+                                this.multipleRegressionData = data;
+                            }
+                            
+                            // Auto-trigger AI Interpretation immediately
+                            this.$nextTick(() => {
+                                this.getAiInterpretation();
+                            });
                         } catch (err) {
-                            alert(err.message);
+                            alert("Analysis Error: " + err.message);
                         } finally {
                             this.loading = false;
                         }
@@ -582,34 +1417,238 @@
                         return 0;
                     },
 
-                    async getCorrelationIntelligence() {
-                        if (!this.matrixData) return;
+                    async getAiInterpretation() {
+                        let currentData = null;
+                        if (this.testMethod === 'crosstab') currentData = this.matrixData;
+                        else if (this.testMethod === 'ttest') currentData = this.tTestData;
+                        else if (this.testMethod === 'anova') currentData = this.anovaData;
+                        else if (this.testMethod === 'correlation') currentData = this.correlationData;
+                        else if (this.testMethod === 'regression') currentData = this.regressionData;
+                        else if (this.testMethod === 'regression_multiple') currentData = this.multipleRegressionData;
+
+                        if (!currentData) return;
                         this.aiLoading = true;
-                        
+                        this.aiInsight = null;
+                        this.aiMessages = [];
+
                         try {
-                            const res = await fetch(`{{ route('ai.insights.crosstab') }}?survey_id={{ $survey->id }}`, {
+                            const res = await fetch(`{{ route('ai.insights.inferential') }}`, {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
                                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                                 },
                                 body: JSON.stringify({
-                                    matrix: this.matrixData.matrix,
-                                    rowLabel: this.matrixData.rowLabel,
-                                    colLabel: this.matrixData.colLabel
+                                    survey_id: "{{ $survey->id }}",
+                                    method: this.testMethod,
+                                    data: currentData
                                 })
                             });
-                            
+                            if (!res.ok) {
+                                const errData = await res.json();
+                                throw new Error(errData.message || 'AI Insight failed.');
+                            }
                             const data = await res.json();
-                            if (data.error) throw new Error(data.error);
                             this.aiInsight = data.insight;
+                            this.aiMessages = [{ role: 'assistant', content: data.insight }];
                         } catch (err) {
-                            alert("Correlation Engine Error: " + err.message);
+                            alert("AI Interpretation Error: " + err.message);
                         } finally {
                             this.aiLoading = false;
                         }
+                    },
+
+                    async polishAiInsight() {
+                        if (!this.aiFeedback.trim() || this.aiMessages.length === 0) return;
+                        const userMsg = this.aiFeedback.trim();
+                        this.aiMessages.push({ role: 'user', content: userMsg });
+                        this.aiFeedback = '';
+                        this.aiPolishing = true;
+                        try {
+                            let currentData = null;
+                            if (this.testMethod === 'crosstab') currentData = this.matrixData;
+                            else if (this.testMethod === 'ttest') currentData = this.tTestData;
+                            else if (this.testMethod === 'anova') currentData = this.anovaData;
+                            else if (this.testMethod === 'correlation') currentData = this.correlationData;
+                            else if (this.testMethod === 'regression') currentData = this.regressionData;
+                            else if (this.testMethod === 'regression_multiple') currentData = this.multipleRegressionData;
+
+                            const res = await fetch(`{{ route('ai.insights.inferential') }}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                },
+                                body: JSON.stringify({
+                                    survey_id: "{{ $survey->id }}",
+                                    messages: this.aiMessages,
+                                    feedback: userMsg,
+                                    method: this.testMethod,
+                                    data: currentData
+                                })
+                            });
+                            if (!res.ok) {
+                                const errData = await res.json();
+                                throw new Error(errData.message || 'AI Polish failed.');
+                            }
+                            const data = await res.json();
+                            if (data.success) {
+                                let insightText = data.insight;
+                                const jsonMatch = insightText.match(/```json\s*([\s\S]*?)\s*```/);
+                                if (jsonMatch) {
+                                    try {
+                                        const parsed = JSON.parse(jsonMatch[1].trim());
+                                        if (parsed.action === 'recalculate') {
+                                            if (parsed.rowVar) this.rowVar = parsed.rowVar;
+                                            if (parsed.colVar) this.colVar = parsed.colVar;
+                                            if (parsed.depVar) this.depVar = parsed.depVar;
+                                            if (parsed.groupVar) this.groupVar = parsed.groupVar;
+                                            if (parsed.varX) this.varX = parsed.varX;
+                                            if (parsed.varY) this.varY = parsed.varY;
+                                            if (parsed.indVars) this.indVars = parsed.indVars;
+                                            if (parsed.testMethod) this.testMethod = parsed.testMethod;
+                                            
+                                            // Pre-append messages thread and trigger re-run
+                                            this.$nextTick(() => {
+                                                this.runAnalysis();
+                                            });
+                                            return;
+                                        }
+
+                                        if (this.testMethod === 'crosstab' && this.matrixData) {
+                                            this.matrixData = { ...this.matrixData, ...parsed };
+                                        } else if (this.testMethod === 'regression' && this.regressionData) {
+                                            this.regressionData = { ...this.regressionData, ...parsed };
+                                        } else if (this.testMethod === 'regression_multiple' && this.multipleRegressionData) {
+                                            this.multipleRegressionData = { ...this.multipleRegressionData, ...parsed };
+                                        }
+                                    } catch (e) {
+                                        console.error("Failed to parse updated table JSON from AI:", e);
+                                    }
+                                    insightText = insightText.replace(/```json\s*[\s\S]*?\s*```/, '').trim();
+                                }
+                                this.aiInsight = insightText;
+                                this.aiMessages.push({ role: 'assistant', content: insightText });
+                            } else {
+                                throw new Error(data.message || 'AI Polish failed.');
+                            }
+                        } catch (err) {
+                            alert("AI Polish Error: " + err.message);
+                            this.aiMessages.pop();
+                            this.aiFeedback = userMsg;
+                        } finally {
+                            this.aiPolishing = false;
+                        }
+                    },
+
+                    copyFinalOutput() {
+                        const lastMsg = [...this.aiMessages].reverse().find(m => m.role === 'assistant');
+                        if (!lastMsg) return;
+                        navigator.clipboard.writeText(lastMsg.content).then(() => {
+                            alert("Copied interpretation to clipboard!");
+                        });
+                    },
+
+                    downloadFinalOutput() {
+                        const lastMsg = [...this.aiMessages].reverse().find(m => m.role === 'assistant');
+                        if (!lastMsg) return;
+                        const blob = new Blob([lastMsg.content], { type: 'text/plain;charset=utf-8' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `statistical_interpretation_${this.testMethod}.txt`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    },
+
+                    copyResultsToClipboard() {
+                        let text = "";
+                        
+                        if (this.testMethod === 'crosstab' && this.matrixData) {
+                            text += "Cross-Tabulation Matrix: " + this.matrixData.rowLabel + " vs " + this.matrixData.colLabel + "\n";
+                            text += "\t" + this.matrixData.columns.join("\t") + "\tTotal\n";
+                            this.matrixData.rows.forEach(r => {
+                                text += r;
+                                this.matrixData.columns.forEach(c => {
+                                    text += "\t" + this.getMatrixValue(r, c);
+                                });
+                                text += "\t" + (this.matrixData.rowTotals[r] || 0) + "\n";
+                            });
+                            text += "Total";
+                            this.matrixData.columns.forEach(c => {
+                                text += "\t" + (this.matrixData.colTotals[c] || 0);
+                            });
+                            text += "\t" + this.matrixData.grandTotal + "\n\n";
+                            text += "Chi-Square Test:\n";
+                            text += "Pearson Chi-Square\tValue: " + this.matrixData.chiSquare + "\tdf: " + this.matrixData.df + "\tSig: " + this.matrixData.pValue + "\n";
+                        }
+                        
+                        else if (this.testMethod === 'ttest' && this.tTestData) {
+                            text += "Independent Samples T-Test: Group Descriptives\n";
+                            text += "Group\tN\tMean\tStd. Deviation\tStd. Error Mean\n";
+                            this.tTestData.groups.forEach(g => {
+                                text += g.name + "\t" + g.n + "\t" + g.mean + "\t" + g.stdDev + "\t" + g.stdError + "\n";
+                            });
+                            text += "\nT-Test statistics:\nt\tdf\tSig. (2-tailed)\tMean Difference\n";
+                            text += this.tTestData.tValue + "\t" + this.tTestData.df + "\t" + this.tTestData.pValue + "\t" + this.tTestData.meanDiff + "\n";
+                        }
+                        
+                        else if (this.testMethod === 'correlation' && this.correlationData) {
+                            text += "Pearson Correlation matrix:\n";
+                            text += "\t" + this.correlationData.labelX + "\t" + this.correlationData.labelY + "\n";
+                            text += this.correlationData.labelX + "\tr=1.000\tr=" + this.correlationData.r + " (p=" + this.correlationData.pValue + ", N=" + this.correlationData.n + ")\n";
+                            text += this.correlationData.labelY + "\tr=" + this.correlationData.r + " (p=" + this.correlationData.pValue + ", N=" + this.correlationData.n + ")\tr=1.000\n";
+                            text += "\nCovariance: " + this.correlationData.covariance + "\tStd. Error: " + this.correlationData.stdErrorR + "\t95% CI: [" + this.correlationData.ciLower + ", " + this.correlationData.ciUpper + "]\n";
+                        }
+                        
+                        else if (this.testMethod === 'anova' && this.anovaData) {
+                            text += "ANOVA Descriptives:\nGroup\tN\tMean\tStd. Deviation\tStd. Error\n";
+                            this.anovaData.groupStats.forEach(g => {
+                                text += g.name + "\t" + g.n + "\t" + g.mean + "\t" + g.stdDev + "\t" + g.stdError + "\n";
+                            });
+                            text += "\nANOVA Source Table:\nSource\tSum of Squares\tdf\tMean Square\tF\tSig.\n";
+                            text += "Between Groups\t" + this.anovaData.ssb + "\t" + this.anovaData.dfBetween + "\t" + this.anovaData.msb + "\t" + this.anovaData.fValue + "\t" + this.anovaData.pValue + "\n";
+                            text += "Within Groups\t" + this.anovaData.ssw + "\t" + this.anovaData.dfWithin + "\t" + this.anovaData.msw + "\n";
+                            text += "Total\t" + this.anovaData.sst + "\t" + this.anovaData.dfTotal + "\n";
+                        }
+                        
+                        else if (this.testMethod === 'regression' && this.regressionData) {
+                            text += "Simple Regression Summary:\nR=" + this.regressionData.r + "\tR Square=" + this.regressionData.r2 + "\tAdj R Square=" + this.regressionData.adjR2 + "\tStd Error=" + this.regressionData.stdErrorEst + "\n";
+                            text += "\nANOVA (Model Fit):\nSource\tSS\tdf\tMS\tF\tSig.\n";
+                            text += "Regression\t" + this.regressionData.anova.ssr + "\t" + this.regressionData.anova.dfReg + "\t" + this.regressionData.anova.msr + "\t" + this.regressionData.anova.fValue + "\t" + this.regressionData.anova.pValue + "\n";
+                            text += "Residual\t" + this.regressionData.anova.sse + "\t" + this.regressionData.anova.dfRes + "\t" + this.regressionData.anova.mse + "\n";
+                            text += "\nCoefficients:\nModel\tB\tStd. Error\tt\tSig.\n";
+                            text += "(Constant)\t" + this.regressionData.coefficients.intercept.coef + "\t" + this.regressionData.coefficients.intercept.stdError + "\t" + this.regressionData.coefficients.intercept.tValue + "\t" + this.regressionData.coefficients.intercept.pValue + "\n";
+                            text += "Slope (X)\t" + this.regressionData.coefficients.slope.coef + "\t" + this.regressionData.coefficients.slope.stdError + "\t" + this.regressionData.coefficients.slope.tValue + "\t" + this.regressionData.coefficients.slope.pValue + "\n";
+                        }
+                        
+                        else if (this.testMethod === 'regression_multiple' && this.multipleRegressionData) {
+                            text += "Multiple Regression Equation: " + this.multipleRegressionData.equation + "\n\n";
+                            text += "Model Summary:\nR=" + this.multipleRegressionData.r + "\tR Square=" + this.multipleRegressionData.r2 + "\tAdj R Square=" + this.multipleRegressionData.adjR2 + "\tStd Error=" + this.multipleRegressionData.stdErrorEst + "\n";
+                            text += "\nANOVA (Model Fit):\nSource\tSS\tdf\tMS\tF\tSig.\n";
+                            text += "Regression\t" + this.multipleRegressionData.anova.ssr + "\t" + this.multipleRegressionData.anova.dfReg + "\t" + this.multipleRegressionData.anova.msr + "\t" + this.multipleRegressionData.anova.fValue + "\t" + this.multipleRegressionData.anova.pValue + "\n";
+                            text += "Residual\t" + this.multipleRegressionData.anova.sse + "\t" + this.multipleRegressionData.anova.dfRes + "\t" + this.multipleRegressionData.anova.mse + "\n";
+                            text += "\nCoefficients:\nModel\tB\tStd. Error\tBeta\tt\tSig.\n";
+                            this.multipleRegressionData.coefficients.forEach(c => {
+                                text += c.label + "\t" + c.coef + "\t" + c.stdError + "\t" + c.beta + "\t" + c.tValue + "\t" + c.pValue + "\n";
+                            });
+                        }
+
+                        if (!text) {
+                            alert("No data available to copy.");
+                            return;
+                        }
+
+                        navigator.clipboard.writeText(text).then(() => {
+                            alert("Results copied in TSV format! You can now paste directly into Excel, Word, or SPSS.");
+                        }).catch(err => {
+                            console.error(err);
+                            alert("Failed to copy results.");
+                        });
                     }
-                }
+                };
             };
 
             window.chartManager = function () {

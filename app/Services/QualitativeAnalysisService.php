@@ -23,17 +23,19 @@ class QualitativeAnalysisService
     {
         // 1. Filter out non-textual or empty content (e.g. signatures, base64 images, files)
         $responses = array_filter($responses, function ($r) {
-            if (empty($r)) return false;
-            
-            $r = is_array($r) ? implode(', ', $r) : (string)$r;
-            
+            if (empty($r))
+                return false;
+
+            $r = is_array($r) ? implode(', ', $r) : (string) $r;
+
             // Skip data URLs (base64) often found in signatures/images
             if (str_starts_with($r, 'data:image/') || str_contains($r, ';base64,')) {
                 return false;
             }
 
             // Skip very short or non-informative strings that look like IDs
-            if (strlen(trim($r)) < 2) return false;
+            if (strlen(trim($r)) < 2)
+                return false;
 
             return true;
         });
@@ -49,7 +51,7 @@ class QualitativeAnalysisService
 
         // Balance between AI context quality and Groq TPM limits
         $responses = array_map(function ($r) {
-            $r = is_array($r) ? implode(', ', $r) : (string)$r;
+            $r = is_array($r) ? implode(', ', $r) : (string) $r;
             return strlen($r) > 200 ? substr($r, 0, 197) . '...' : $r;
         }, $responses);
 
@@ -65,6 +67,7 @@ class QualitativeAnalysisService
     {
         $textData = implode("\n---\n", $batch);
 
+        $targetLang = $this->getTargetLanguage();
         $systemPrompt = "You are a professional Political Data Analyst. 
 Analyze the provided voter responses and return a strict JSON object.
 
@@ -76,12 +79,12 @@ JSON STRUCTURE:
     \"negative\": 0
   },
   \"key_themes\": [
-    { \"theme\": \"Theme Name\", \"explanation\": \"Brief detail of why this is a concern\" }
+    { \"theme\": \"Theme Name in {$targetLang}\", \"explanation\": \"Brief detail of why this is a concern in {$targetLang}\" }
   ],
   \"top_quotes\": [
-    \"Direct, impactful quote 1\",
-    \"Direct, impactful quote 2\",
-    \"Direct, impactful quote 3\"
+    \"Direct, impactful quote 1 in {$targetLang}\",
+    \"Direct, impactful quote 2 in {$targetLang}\",
+    \"Direct, impactful quote 3 in {$targetLang}\"
   ]
 }
 
@@ -89,7 +92,8 @@ RULES:
 1. 'sentiment' values must be percentages summing to 100.
 2. 'key_themes' should be the 3-5 most frequent issues.
 3. 'top_quotes' should be the 3 most representative and emotionally resonant excerpts.
-4. Respond ONLY with the JSON object.";
+4. Respond ONLY with the JSON object.
+5. All text values inside the JSON object (Theme names, explanations, representative quotes) MUST be written in the {$targetLang} language. Do not output them in English if the target language is different.";
 
         try {
             Log::info("QualitativeAnalysisService: Analyzing batch of " . count($batch) . " responses.");
@@ -164,14 +168,17 @@ RULES:
     {
         $statsText = "";
         foreach ($stats as $stat) {
-            if (isset($stat['is_missing']) && $stat['is_missing']) continue;
+            if (isset($stat['is_missing']) && $stat['is_missing'])
+                continue;
             $statsText .= "Choice: " . $stat['value'] . " | Count: " . $stat['count'] . " | Percentage: " . $stat['percentage'] . "%\n";
         }
 
+        $targetLang = $this->getTargetLanguage();
         $systemPrompt = "You are a senior statistical analyst. 
 Analyze the provided frequency data and provide a concise (2-3 sentences) strategic interpretation. 
 Focus on identifying clear majorities, split opinions, or notable trends. 
-Avoid simply restating the numbers; explain what the distribution suggests about respondent behavior or sentiment.";
+Avoid simply restating the numbers; explain what the distribution suggests about respondent behavior or sentiment.
+You MUST write the entire response and strategic interpretation in the {$targetLang} language. Do not output it in English if the target language is different.";
 
         try {
             $response = Http::withToken($this->apiKey)
@@ -185,7 +192,8 @@ Avoid simply restating the numbers; explain what the distribution suggests about
                     'temperature' => 0.1
                 ]);
 
-            if ($response->failed()) return "Analysis temporarily unavailable.";
+            if ($response->failed())
+                return "Analysis temporarily unavailable.";
 
             $result = $response->json();
             return $result['choices'][0]['message']['content'] ?? "No insight generated.";
@@ -194,5 +202,20 @@ Avoid simply restating the numbers; explain what the distribution suggests about
             Log::error('QualitativeAnalysisService Quant Error: ' . $e->getMessage());
             return "Unable to analyze data at this time.";
         }
+    }
+
+    private function getTargetLanguage()
+    {
+        $locale = app()->getLocale();
+        $langNames = [
+            'sw' => 'Swahili (Kiswahili)',
+            'de' => 'German (Deutsch)',
+            'es' => 'Spanish (Español)',
+            'fr' => 'French (Français)',
+            'ar' => 'Arabic (العربية)',
+            'zh' => 'Chinese (中文)',
+            'en' => 'English'
+        ];
+        return $langNames[$locale] ?? 'English';
     }
 }

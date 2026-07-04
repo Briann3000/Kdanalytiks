@@ -869,28 +869,29 @@
                             </button>
                         </div>
 
-                        <div class="p-8 space-y-6 min-h-[500px] bg-slate-50/20" id="questions-list" x-init="
-                                                                                                                            new Sortable($el, {
-                                                                                                                                handle: '.drag-handle',
-                                                                                                                                animation: 150,
-                                                                                                                                ghostClass: 'sortable-ghost',
-                                                                                                                                delay: 150, // Delay to allow scrolling on mobile
-                                                                                                                                delayOnTouchOnly: true, // Only apply delay on touch
-                                                                                                                                onEnd: (evt) => {
-                                                                                                                                    const newQs = [...questions];
-                                                                                                                                    const [movedItem] = newQs.splice(evt.oldIndex, 1);
-                                                                                                                                    newQs.splice(evt.newIndex, 0, movedItem);
-                                                                                                                                    questions = newQs;
-                                                                                                                                    syncToJson();
-                                                                                                                                }
-                                                                                                                            })
-                                                                                                                        ">
+                        <div class="p-8 space-y-6 min-h-[500px] bg-slate-50/20" id="questions-list"
+                            x-init="
+                                                                                                                                    new Sortable($el, {
+                                                                                                                                        handle: '.drag-handle',
+                                                                                                                                        animation: 150,
+                                                                                                                                        ghostClass: 'sortable-ghost',
+                                                                                                                                        delay: 150, // Delay to allow scrolling on mobile
+                                                                                                                                        delayOnTouchOnly: true, // Only apply delay on touch
+                                                                                                                                        onEnd: (evt) => {
+                                                                                                                                            const newQs = [...questions];
+                                                                                                                                            const [movedItem] = newQs.splice(evt.oldIndex, 1);
+                                                                                                                                            newQs.splice(evt.newIndex, 0, movedItem);
+                                                                                                                                            questions = newQs;
+                                                                                                                                            syncToJson();
+                                                                                                                                        }
+                                                                                                                                    })
+                                                                                                                                ">
                             <template x-for="(q, index) in questions" :key="q.id || index">
                                 <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 relative group hover:border-indigo-400 hover:shadow-indigo-100 transition-all ml-16"
                                     :class="[
-                                                                                                                                        q.type === 'group' ? 'border-l-4 border-l-rose-400' : '',
-                                                                                                                                        selectedQuestions.includes(index) ? 'ring-2 ring-indigo-500 bg-indigo-50/10' : ''
-                                                                                                                                     ]">
+                                                                                                                                                q.type === 'group' ? 'border-l-4 border-l-rose-400' : '',
+                                                                                                                                                selectedQuestions.includes(index) ? 'ring-2 ring-indigo-500 bg-indigo-50/10' : ''
+                                                                                                                                             ]">
 
                                     <!-- Sidebar: Selection, Number, Drag -->
                                     <div class="absolute -left-14 top-4 h-full flex flex-col items-center space-y-4 z-20">
@@ -1637,18 +1638,23 @@
                     </button>
                 </div>
                 <div class="p-8 bg-white">
-                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4 font-bold">Select a Word document (.docx) to extract questions</p>
-                    
+                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4 font-bold">Select a Word
+                        document (.docx) to extract questions</p>
+
                     <!-- Drag and drop or file click area -->
-                    <div class="relative border-2 border-dashed border-slate-200 hover:border-indigo-500/50 rounded-2xl p-8 text-center transition-all bg-slate-50/50 cursor-pointer">
-                        <input type="file" accept=".docx" @change="importSurveySchema($event)" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                    <div
+                        class="relative border-2 border-dashed border-slate-200 hover:border-indigo-500/50 rounded-2xl p-8 text-center transition-all bg-slate-50/50 cursor-pointer">
+                        <input type="file" accept=".docx" @change="importSurveySchema($event)"
+                            class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
                         <div class="space-y-3">
-                            <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto shadow-inner">
+                            <div
+                                class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto shadow-inner">
                                 <i class="fa-solid fa-file-word text-xl"></i>
                             </div>
                             <div>
                                 <p class="text-sm font-bold text-gray-700">Click to upload or drag & drop</p>
-                                <p class="text-[10px] text-gray-400 font-bold uppercase mt-1">Supports standard Word Document (.docx)</p>
+                                <p class="text-[10px] text-gray-400 font-bold uppercase mt-1">Supports standard Word
+                                    Document (.docx)</p>
                             </div>
                         </div>
                     </div>
@@ -1659,8 +1665,10 @@
                         <div class="flex items-center">
                             <i class="fa-solid fa-circle-notch text-indigo-600 text-xl mr-4 animate-spin"></i>
                             <div>
-                                <p class="text-xs font-black text-indigo-900 uppercase tracking-widest">AI Agent is extracting questions...</p>
-                                <p class="text-[10px] text-indigo-400 font-bold uppercase mt-0.5">Reading DOCX text and converting it to survey canvas</p>
+                                <p class="text-xs font-black text-indigo-900 uppercase tracking-widest">AI Agent is
+                                    extracting questions...</p>
+                                <p class="text-[10px] text-indigo-400 font-bold uppercase mt-0.5">Reading DOCX text and
+                                    converting it to survey canvas</p>
                             </div>
                         </div>
                     </div>
@@ -2098,7 +2106,7 @@
                     const form = document.createElement('form');
                     form.method = 'POST';
                     form.action = "{{ route('surveys.export-schema-docx') }}";
-                    
+
                     const tokenInput = document.createElement('input');
                     tokenInput.type = 'hidden';
                     tokenInput.name = '_token';
@@ -2181,11 +2189,11 @@
 
                                 if (questionsArray) {
                                     this.questions = this.mapFromLegacy(questionsArray);
-                                    
+
                                     // Try to resolve title/description from schemaObj or survey metadata
                                     const title = schemaObj.title || (schemaObj.survey && schemaObj.survey.title);
                                     const desc = schemaObj.description || (schemaObj.survey && schemaObj.survey.description);
-                                    
+
                                     if (title) this.surveyTitle = title;
                                     if (desc) this.surveyDescription = desc;
 
@@ -2712,13 +2720,13 @@
                             const id = fieldData.name;
                             return {
                                 field: `
-                                                                                                                            <div class="rating-wrapper bg-white py-6 px-4 rounded-2xl mb-4 border border-gray-100 shadow-sm">
-                                                                                                                                <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rating'}</label>
-                                                                                                                                <div class="likert-container" id="likert_${id}" style="display: flex !important; justify-content: space-between !important; gap: 8px !important;">
-                                                                                                                                    ${[1, 2, 3, 4, 5].map(i => `<div class="likert-item" data-value="${i}" onclick="setLikertValue('${id}', ${i})" style="flex:1; text-align:center; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; font-weight:700;">${i}</div>`).join('')}
-                                                                                                                                </div>
-                                                                                                                                <input type="hidden" name="${id}" id="input_${id}" value="" onchange="updatePreviewVisibility()">
-                                                                                                                            </div>`
+                                                                                                                                    <div class="rating-wrapper bg-white py-6 px-4 rounded-2xl mb-4 border border-gray-100 shadow-sm">
+                                                                                                                                        <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rating'}</label>
+                                                                                                                                        <div class="likert-container" id="likert_${id}" style="display: flex !important; justify-content: space-between !important; gap: 8px !important;">
+                                                                                                                                            ${[1, 2, 3, 4, 5].map(i => `<div class="likert-item" data-value="${i}" onclick="setLikertValue('${id}', ${i})" style="flex:1; text-align:center; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; font-weight:700;">${i}</div>`).join('')}
+                                                                                                                                        </div>
+                                                                                                                                        <input type="hidden" name="${id}" id="input_${id}" value="" onchange="updatePreviewVisibility()">
+                                                                                                                                    </div>`
                             };
                         },
                         'ranking_list': function (fieldData) {
@@ -2726,26 +2734,26 @@
                             const options = fieldData.values || [];
                             return {
                                 field: `
-                                                                                                                            <div class="ranking-wrapper bg-white p-6 rounded-2xl mb-4 border border-gray-100 shadow-sm">
-                                                                                                                                <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rank the following'}</label>
-                                                                                                                                <div class="grid grid-cols-2 gap-4">
-                                                                                                                                    <div>
-                                                                                                                                        <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest block mb-2">Choices</span>
-                                                                                                                                        <div id="pool_${id}" class="rank-pool" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;">
-                                                                                                                                            ${options.map(opt => `
-                                                                                                                                                <div class="rank-item" data-value="${opt.value}" onclick="toggleRankItem('${id}', this)">
-                                                                                                                                                    ${opt.label}
+                                                                                                                                    <div class="ranking-wrapper bg-white p-6 rounded-2xl mb-4 border border-gray-100 shadow-sm">
+                                                                                                                                        <label class="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">${fieldData.label || 'Rank the following'}</label>
+                                                                                                                                        <div class="grid grid-cols-2 gap-4">
+                                                                                                                                            <div>
+                                                                                                                                                <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest block mb-2">Choices</span>
+                                                                                                                                                <div id="pool_${id}" class="rank-pool" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;">
+                                                                                                                                                    ${options.map(opt => `
+                                                                                                                                                        <div class="rank-item" data-value="${opt.value}" onclick="toggleRankItem('${id}', this)">
+                                                                                                                                                            ${opt.label}
+                                                                                                                                                        </div>
+                                                                                                                                                    `).join('')}
                                                                                                                                                 </div>
-                                                                                                                                            `).join('')}
+                                                                                                                                            </div>
+                                                                                                                                            <div>
+                                                                                                                                                <span class="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2">Your Order</span>
+                                                                                                                                                <div id="ranked_${id}" class="rank-ordered" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;"></div>
+                                                                                                                                            </div>
                                                                                                                                         </div>
-                                                                                                                                    </div>
-                                                                                                                                    <div>
-                                                                                                                                        <span class="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2">Your Order</span>
-                                                                                                                                        <div id="ranked_${id}" class="rank-ordered" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;"></div>
-                                                                                                                                    </div>
-                                                                                                                                </div>
-                                                                                                                                <input type="hidden" name="${id}" id="input_${id}" value="">
-                                                                                                                            </div>`,
+                                                                                                                                        <input type="hidden" name="${id}" id="input_${id}" value="">
+                                                                                                                                    </div>`,
                                 onRender: () => setupRankingUI(id)
                             };
                         },
@@ -2753,38 +2761,38 @@
                             const id = fieldData.name + '_preview';
                             return {
                                 field: `
-                                                              <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
-                                                                <span class="kobo-status-badge" id="status_${id}">Voice Response</span>
+                                                                      <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
+                                                                        <span class="kobo-status-badge" id="status_${id}">Voice Response</span>
 
-                                                                <div class="kobo-media-row mt-2">
-                                                                    <button type="button" id="start_${id}" class="kobo-record-btn">
-                                                                        <i class="fa-solid fa-microphone"></i>
-                                                                        <span>Start Recording</span>
-                                                                    </button>
+                                                                        <div class="kobo-media-row mt-2">
+                                                                            <button type="button" id="start_${id}" class="kobo-record-btn">
+                                                                                <i class="fa-solid fa-microphone"></i>
+                                                                                <span>Start Recording</span>
+                                                                            </button>
 
-                                                                    <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
-                                                                        <i class="fa-solid fa-square"></i>
-                                                                        <span>Stop</span>
-                                                                        <span class="kobo-timer" id="timer_${id}">00:00</span>
-                                                                    </button>
+                                                                            <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
+                                                                                <i class="fa-solid fa-square"></i>
+                                                                                <span>Stop</span>
+                                                                                <span class="kobo-timer" id="timer_${id}">00:00</span>
+                                                                            </button>
 
-                                                                    <div id="upload_container_${id}">
-                                                                        <label for="file_${id}" class="kobo-upload-btn">
-                                                                            <i class="fa-solid fa-upload"></i>
-                                                                            <span>Upload audio File</span>
-                                                                            <input type="file" id="file_${id}" accept="audio/*" class="hidden" style="display:none;">
-                                                                        </label>
-                                                                    </div>
+                                                                            <div id="upload_container_${id}">
+                                                                                <label for="file_${id}" class="kobo-upload-btn">
+                                                                                    <i class="fa-solid fa-upload"></i>
+                                                                                    <span>Upload audio File</span>
+                                                                                    <input type="file" id="file_${id}" accept="audio/*" class="hidden" style="display:none;">
+                                                                                </label>
+                                                                            </div>
 
-                                                                    <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
-                                                                        <i class="fa-solid fa-trash-can mr-1"></i> Discard
-                                                                    </button>
-                                                                </div>
+                                                                            <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
+                                                                                <i class="fa-solid fa-trash-can mr-1"></i> Discard
+                                                                            </button>
+                                                                        </div>
 
-                                                                <div class="mt-4">
-                                                                    <audio id="player_${id}" controls class="hidden w-full" style="display:none;"></audio>
-                                                                </div>
-                                                            </div>`,
+                                                                        <div class="mt-4">
+                                                                            <audio id="player_${id}" controls class="hidden w-full" style="display:none;"></audio>
+                                                                        </div>
+                                                                    </div>`,
                                 onRender: () => setupPreviewRecorder(id, 'audio')
                             };
                         },
@@ -2792,39 +2800,39 @@
                             const id = fieldData.name + '_preview';
                             return {
                                 field: `
-                                                              <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
-                                                                <span class="kobo-status-badge" id="status_${id}">Video Response</span>
+                                                                      <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
+                                                                        <span class="kobo-status-badge" id="status_${id}">Video Response</span>
 
-                                                                <div class="relative aspect-video bg-black rounded-xl overflow-hidden mb-4" style="background:black; aspect-ratio:16/9; position:relative;">
-                                                                    <video id="preview_${id}" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; opacity:0.8;"></video>
-                                                                    <video id="player_${id}" controls style="display:none; width:100%; height:100%; object-fit:contain;"></video>
-                                                                </div>
+                                                                        <div class="relative aspect-video bg-black rounded-xl overflow-hidden mb-4" style="background:black; aspect-ratio:16/9; position:relative;">
+                                                                            <video id="preview_${id}" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; opacity:0.8;"></video>
+                                                                            <video id="player_${id}" controls style="display:none; width:100%; height:100%; object-fit:contain;"></video>
+                                                                        </div>
 
-                                                                <div class="kobo-media-row">
-                                                                    <button type="button" id="start_${id}" class="kobo-record-btn">
-                                                                        <i class="fa-solid fa-video"></i>
-                                                                        <span>Start Recording</span>
-                                                                    </button>
+                                                                        <div class="kobo-media-row">
+                                                                            <button type="button" id="start_${id}" class="kobo-record-btn">
+                                                                                <i class="fa-solid fa-video"></i>
+                                                                                <span>Start Recording</span>
+                                                                            </button>
 
-                                                                    <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
-                                                                        <i class="fa-solid fa-square"></i>
-                                                                        <span>Stop</span>
-                                                                        <span class="kobo-timer" id="timer_${id}">00:00</span>
-                                                                    </button>
+                                                                            <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
+                                                                                <i class="fa-solid fa-square"></i>
+                                                                                <span>Stop</span>
+                                                                                <span class="kobo-timer" id="timer_${id}">00:00</span>
+                                                                            </button>
 
-                                                                    <div id="upload_container_${id}">
-                                                                        <label for="file_${id}" class="kobo-upload-btn">
-                                                                            <i class="fa-solid fa-upload"></i>
-                                                                            <span>Upload video File</span>
-                                                                            <input type="file" id="file_${id}" accept="video/*" class="hidden" style="display:none;">
-                                                                        </label>
-                                                                    </div>
+                                                                            <div id="upload_container_${id}">
+                                                                                <label for="file_${id}" class="kobo-upload-btn">
+                                                                                    <i class="fa-solid fa-upload"></i>
+                                                                                    <span>Upload video File</span>
+                                                                                    <input type="file" id="file_${id}" accept="video/*" class="hidden" style="display:none;">
+                                                                                </label>
+                                                                            </div>
 
-                                                                    <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
-                                                                        <i class="fa-solid fa-trash-can mr-1"></i> Discard
-                                                                    </button>
-                                                                </div>
-                                                            </div>`,
+                                                                            <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
+                                                                                <i class="fa-solid fa-trash-can mr-1"></i> Discard
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>`,
                                 onRender: () => setupPreviewRecorder(id, 'video')
                             };
                         },

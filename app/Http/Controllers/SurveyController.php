@@ -2905,7 +2905,11 @@ class SurveyController extends Controller
         }
 
         $footnotePercent = $totalCells > 0 ? round(($cellsWithExpectedLessThan5 / $totalCells) * 100, 1) : 0.0;
-        $footnote = "a. {$cellsWithExpectedLessThan5} cells ({$footnotePercent}%) have expected count less than 5. The minimum expected count is " . number_format($minExpected, 2) . ".";
+        $footnote = __("a. :cells cells (:percent%) have expected count less than 5. The minimum expected count is :min.", [
+            'cells' => $cellsWithExpectedLessThan5,
+            'percent' => $footnotePercent,
+            'min' => number_format($minExpected, 2)
+        ]);
 
         return response()->json([
             'success' => true,

@@ -187,6 +187,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/archive', [SurveyController::class, 'archive'])->name('archive');
         Route::post('/toggle-shared-report', [SurveyController::class, 'toggleSharedReport'])->name('reports.toggle-shared');
         Route::get('/crosstab', [SurveyController::class, 'crosstab'])->name('reports.crosstab');
+        Route::get('/inferential-analysis', [SurveyController::class, 'inferentialAnalysis'])->name('reports.inferential');
 
         // Versioning routes
         Route::get('/versions', [\App\Http\Controllers\SurveyVersionController::class, 'index'])->name('versions');
@@ -329,7 +330,9 @@ Route::middleware(['auth', 'verified', 'subscribed:ai', 'throttle:5,1'])->group(
 Route::middleware(['auth', 'verified', 'throttle:10,1'])->group(function () {
     Route::get('/ai/insights/question/{questionId}', [InsightController::class, 'generateQuestionInsight'])->name('ai.insights.question');
     Route::get('/ai/insights/quantitative/{questionId}', [InsightController::class, 'generateQuantitativeInsight'])->name('ai.insights.quantitative');
+    Route::post('/ai/insights/quantitative/{questionId}/refine', [InsightController::class, 'refineQuantitativeInsight'])->name('ai.insights.quantitative.refine');
     Route::post('/ai/insights/crosstab', [InsightController::class, 'analyzeCrosstab'])->name('ai.insights.crosstab');
+    Route::post('/ai/insights/inferential', [InsightController::class, 'analyzeInferential'])->name('ai.insights.inferential');
 
     // Qualitative Reports
     Route::get('/surveys/{survey}/qualitative-report', [\App\Http\Controllers\InsightController::class, 'showQualitativeReport'])->name('surveys.qualitative');
