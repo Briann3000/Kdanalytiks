@@ -637,10 +637,11 @@
                     </div>
                     <div>
                         +254 725 788 400 <span class="mx-2 text-gray-500">|</span>
-                        Powered by <span class="font-semibold text-white">PRC™ Consulting</span> <span
+                        Powered by <a href="https://www.kenpro.org" target="_blank"
+                            class="font-semibold text-white hover:underline">KENPRO</a> <span
                             class="mx-2 text-gray-500">|</span>
-                        <a href="mailto:info@kmsurveytool.com"
-                            class="hover:text-white transition-colors">info@kmsurveytool.com</a>
+                        <a href="mailto:infokdanalytiks@gmail.com"
+                            class="hover:text-white transition-colors">infokdanalytiks@gmail.com</a>
                         <span class="mx-2 text-gray-500">|</span>
                         <a href="{{ route('privacy') }}"
                             class="hover:text-white transition-colors font-medium underline">Privacy Policy</a>

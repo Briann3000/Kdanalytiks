@@ -12,7 +12,7 @@
                         </h1>
                         <p
                             class="mt-3 text-base text-gray-500 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
-                            {{ __('Create surveys in minutes. Analyze results with powerful tools tailored for Organizations, Practitioners, Independent Researchers and Students.') }}
+                            • {{ __('Collect data') }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; • {{ __('Analyze data') }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; • {{ __('Report findings') }}
                         </p>
 
                         <div class="mt-10 max-w-lg lg:mx-0 sm:mx-auto">
@@ -95,7 +95,7 @@
                             </div>
                         </div>
                         <p class="text-sm text-gray-600 leading-relaxed mb-8">
-                            {{ __('Browse active research surveys, share your insights and earn rewards.') }}
+                            {{ __('Browse surveys and earn') }}
                         </p>
                         <a href="{{ route('surveys.public') }}"
                             class="group w-full inline-flex items-center justify-center px-8 py-4 bg-gray-900 text-white font-bold rounded-2xl hover:bg-indigo-600 transition-all shadow-lg active:scale-95">

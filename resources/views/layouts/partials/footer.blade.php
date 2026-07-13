@@ -7,9 +7,11 @@
         <div class="flex flex-col md:flex-row items-center justify-center md:space-x-2 space-y-2 md:space-y-0">
             <span>+254 725 788 400</span>
             <span class="hidden md:inline text-gray-500">|</span>
-            <span>Powered by <span class="font-semibold text-white">PRC™ Consulting</span></span>
+            <span>Powered by <a href="https://www.kenpro.org" target="_blank"
+                    class="font-semibold text-white hover:underline">KENPRO</a></span>
             <span class="hidden md:inline text-gray-500">|</span>
-            <a href="mailto:info@kmsurveytool.com" class="hover:text-white transition-colors">info@kmsurveytool.com</a>
+            <a href="mailto:infokdanalytiks@gmail.com"
+                class="hover:text-white transition-colors">infokdanalytiks@gmail.com</a>
             <span class="hidden md:inline text-gray-500">|</span>
             <a href="{{ route('privacy') }}"
                 class="hover:text-white transition-colors font-medium">{{ __('Privacy Policy') }}</a>

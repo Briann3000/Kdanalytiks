@@ -129,7 +129,7 @@
                             <h2 class="text-lg font-bold text-gray-900 mb-2">Contact Us</h2>
                             <p>In order to resolve a complaint regarding the Site or to receive further information
                                 regarding use of the Site, please contact us at:</p>
-                            <p class="mt-2 text-indigo-600 font-medium">info@kmsurveytool.com</p>
+                            <p class="mt-2 text-indigo-600 font-medium">infokdanalytiks@gmail.com</p>
                         </div>
                     </div>
                 </div>

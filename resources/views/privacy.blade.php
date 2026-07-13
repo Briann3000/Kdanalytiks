@@ -146,7 +146,7 @@
                             <h2 class="text-lg font-bold text-gray-900 mb-2">Contact Us</h2>
                             <p>If you have any questions about this privacy policy or our privacy practices, please contact
                                 us at:</p>
-                            <p class="mt-2 text-indigo-600 font-medium">info@kmsurveytool.com</p>
+                            <p class="mt-2 text-indigo-600 font-medium">infokdanalytiks@gmail.com</p>
                         </div>
                     </div>
                 </div>

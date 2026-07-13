@@ -74,7 +74,7 @@ class IntasendGateway implements PaymentGatewayInterface
 
             // Create Customer object
             $customer = new Customer();
-            $customer->email = $user->email ?? 'info@kmsurveytool.com';
+            $customer->email = $user->email ?? 'infokdanalytiks@gmail.com';
             $customer->first_name = explode(' ', $user->name ?? 'Researcher')[0];
             $customer->last_name = explode(' ', $user->name ?? 'User')[1] ?? 'Admin';
             $customer->country = 'KE';

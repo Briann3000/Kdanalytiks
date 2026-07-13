@@ -16,7 +16,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         User::updateOrCreate(
-            ['email' => 'admin@kmsurveytool.com'],
+            ['email' => 'admin@kdanalytiks.com'],
             [
                 'name' => 'Admin',
                 'password' => bcrypt('Kenya@254'),

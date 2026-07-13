@@ -710,7 +710,7 @@ class AcademicSynthesisService
 
                 $footerHtml = '
                 <div style="border-top: 1px solid #eee; padding-top: 10px; font-size: 10px; color: #666; text-align: center; font-weight: bold;">
-                    THIS RESEARCH PROPOSAL WAS AI-GENERATED VIA kmsurveytool.com. UPGRADE TO REMOVE THIS NOTICE.
+                    THIS RESEARCH PROPOSAL WAS AI-GENERATED VIA kdanalytiks.com. UPGRADE TO REMOVE THIS NOTICE.
                     <br/>
                     <span style="font-size: 8px;">Page {PAGENO} of {nbpg}</span>
                 </div>';

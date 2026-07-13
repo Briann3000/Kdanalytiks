@@ -216,7 +216,7 @@
                 <h4 class="text-2xl font-black text-gray-900 mb-2">{{ __('Need a custom research solution?') }}</h4>
                 <p class="text-gray-500 font-medium">{{ __('For large institutions with unique requirements, custom integrations, and unlimited scale, contact our team for a tailored quote.') }}</p>
             </div>
-            <a href="mailto:info@kmsurveytool.com" class="px-8 py-4 bg-indigo-50 text-indigo-700 font-black rounded-2xl hover:bg-indigo-100 transition-colors uppercase tracking-widest text-xs">
+            <a href="mailto:infokdanalytiks@gmail.com" class="px-8 py-4 bg-indigo-50 text-indigo-700 font-black rounded-2xl hover:bg-indigo-100 transition-colors uppercase tracking-widest text-xs">
                 {{ __('Contact Sales') }}
             </a>
         </div>
