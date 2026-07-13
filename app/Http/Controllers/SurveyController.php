@@ -939,66 +939,17 @@ class SurveyController extends Controller
         $responses = $survey->responses()->with(['answers.question', 'respondent'])->get();
 
         $filename = "survey_{$survey->id}_responses.csv";
-        $handle = fopen('php://temp', 'w+');
-
-        $branding = $this->getBrandingContext($survey);
-
-        if ($branding['showKdBranding']) {
-            fputcsv($handle, ['# Exported via KDAnalytiks — kdanalytiks.com']);
-        } elseif ($branding['customOrgName']) {
-            fputcsv($handle, ['# Exported for ' . $branding['customOrgName']]);
-        }
-
-        $headers = ['Response ID', 'Date', 'Respondent Email', 'Respondent Name'];
-        $isJson = !empty($survey->json_schema) && $survey->json_schema !== '[]';
-        $questions = [];
-
-        if ($isJson) {
-            $headers[] = 'Raw JSON Data';
-        } else {
-            $questions = $survey->questions()->orderBy('position')->get();
-            foreach ($questions as $q) {
-                $headers[] = $q->text;
-            }
-        }
-
-        fputcsv($handle, $headers);
-
-        foreach ($responses as $response) {
-            $row = [
-                $response->id,
-                $response->created_at->format('Y-m-d H:i:s'),
-                $response->respondent ? $response->respondent->email : 'N/A',
-                $response->respondent ? $response->respondent->name : 'Anonymous'
-            ];
-
-            $isJson = !empty($survey->json_schema) && $survey->json_schema !== '[]';
-            if ($isJson) {
-                $jsonAnswer = $response->answers->first();
-                $row[] = $jsonAnswer ? $jsonAnswer->value : '{}';
-            } else {
-                foreach ($questions as $q) {
-                    $answer = $response->answers->where('question_id', $q->id)->first();
-                    $row[] = $answer ? $answer->value : '';
-                }
-            }
-
-            fputcsv($handle, $row);
-        }
-
-        rewind($handle);
-        $csv = stream_get_contents($handle);
-        fclose($handle);
+        $export = new \App\Exports\SurveyResponsesExport($survey, $responses);
 
         // Save for History
         $exportDir = storage_path('app/public/exports/' . $survey->id . '/');
-        if (!is_dir($exportDir))
+        if (!is_dir($exportDir)) {
             mkdir($exportDir, 0755, true);
-        file_put_contents($exportDir . $filename, $csv);
+        }
 
-        return response($csv)
-            ->header('Content-Type', 'text/csv')
-            ->header('Content-Disposition', "attachment; filename=\"{$filename}\"");
+        \Maatwebsite\Excel\Facades\Excel::store($export, 'exports/' . $survey->id . '/' . $filename, 'public');
+
+        return \Maatwebsite\Excel\Facades\Excel::download($export, $filename);
     }
     public function getAnalyticalData(\App\Models\Survey $survey, $responses, $includeAi = false, $forceGenerate = false)
     {
@@ -1014,7 +965,7 @@ class SurveyController extends Controller
             $schema = is_array($schema) ? $schema : [];
 
             foreach ($schema as $field) {
-                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph']))
+                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'group']))
                     continue;
 
                 $fieldId = $field['name'];
@@ -1035,6 +986,20 @@ class SurveyController extends Controller
                                 if (isset($entry['name']) && $entry['name'] === $fieldId && isset($entry['userData'])) {
                                     $val = $entry['userData'];
                                     if ($val !== null && $val !== '') {
+                                        // Resolve options to labels for report charts/frequencies
+                                        if (isset($field['values']) && is_array($field['values'])) {
+                                            if (is_array($val)) {
+                                                $mapped = [];
+                                                foreach ($val as $v) {
+                                                    $opt = collect($field['values'])->firstWhere('value', $v);
+                                                    $mapped[] = $opt ? ($opt['label'] ?? $v) : $v;
+                                                }
+                                                $val = $mapped;
+                                            } else {
+                                                $opt = collect($field['values'])->firstWhere('value', $val);
+                                                $val = $opt ? ($opt['label'] ?? $val) : $val;
+                                            }
+                                        }
                                         $answeredCount++;
                                         $answersList[] = is_array($val) ? implode(', ', $val) : $val;
                                         $found = true;
@@ -1547,7 +1512,7 @@ class SurveyController extends Controller
             $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
             $parsedData = json_decode($response->answers->first()->value ?? '[]', true) ?? [];
             foreach ($schema as $field) {
-                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph']))
+                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'group']))
                     continue;
                 $val = '—';
                 foreach ($parsedData as $data) {
@@ -1558,7 +1523,7 @@ class SurveyController extends Controller
                 }
                 $answers[] = [
                     'label' => $field['label'] ?? $field['name'],
-                    'value' => $val
+                    'value' => $this->resolveResponseValueToLabel($field, $val)
                 ];
             }
         } else {
@@ -1597,7 +1562,7 @@ class SurveyController extends Controller
             $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
             $parsedData = json_decode($response->answers->first()->value ?? '[]', true) ?? [];
             foreach ($schema as $field) {
-                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph']))
+                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'group']))
                     continue;
                 $val = '—';
                 foreach ($parsedData as $data) {
@@ -1608,7 +1573,7 @@ class SurveyController extends Controller
                 }
 
                 $section->addText($field['label'] ?? $field['name'], ['bold' => true, 'size' => 10]);
-                $this->addDocxValue($section, $val);
+                $this->addDocxValue($section, $this->resolveResponseValueToLabel($field, $val));
                 $section->addTextBreak(1);
             }
         } else {
@@ -1655,6 +1620,66 @@ class SurveyController extends Controller
             $section->addText($valStr ?: '—');
         }
     }
+
+    private function resolveResponseValueToLabel($field, $val)
+    {
+        if ($val === '—' || $val === null || $val === '') {
+            return '—';
+        }
+
+        if (in_array($field['type'], ['likert_matrix_grid', 'likert_matrix'])) {
+            $matrixAnswers = is_string($val) ? json_decode($val, true) : $val;
+            if (!is_array($matrixAnswers)) {
+                $matrixAnswers = [];
+            }
+            if (isset($matrixAnswers[0])) {
+                if (is_string($matrixAnswers[0])) {
+                    $decoded = json_decode($matrixAnswers[0], true);
+                    if (is_array($decoded)) {
+                        $matrixAnswers = $decoded;
+                    }
+                } elseif (is_array($matrixAnswers[0])) {
+                    $matrixAnswers = $matrixAnswers[0];
+                }
+            }
+            $rows = $field['rows'] ?? [];
+            $colsDef = $field['columns'] ?? [];
+            $pairs = [];
+            foreach ($rows as $r) {
+                $rk = $r['value'] ?? '';
+                $rowLabel = $r['label'] ?? $rk;
+                if (isset($matrixAnswers[$rk]) && $matrixAnswers[$rk] !== null && $matrixAnswers[$rk] !== '') {
+                    $cv = $matrixAnswers[$rk];
+                    $colLabel = collect($colsDef)->firstWhere('value', $cv)['label'] ?? $cv;
+                    $pairs[] = "• $rowLabel: $colLabel";
+                } else {
+                    $pairs[] = "• $rowLabel: —";
+                }
+            }
+            return empty($pairs) ? '—' : implode("\n", $pairs);
+        }
+
+        if (isset($field['values']) && is_array($field['values'])) {
+            if (is_array($val)) {
+                $mapped = [];
+                foreach ($val as $v) {
+                    $opt = collect($field['values'])->firstWhere('value', $v);
+                    $mapped[] = $opt ? ($opt['label'] ?? $v) : $v;
+                }
+                return implode(', ', $mapped);
+            } else {
+                $opt = collect($field['values'])->firstWhere('value', $val);
+                return $opt ? ($opt['label'] ?? $val) : $val;
+            }
+        }
+
+        if (is_array($val)) {
+            return implode(', ', $val);
+        }
+
+        return $val;
+    }
+
     public function publish(Request $request, \App\Models\Survey $survey)
     {
         $this->authorizeOwner($survey);
@@ -2238,7 +2263,7 @@ class SurveyController extends Controller
             $schema = is_array($schema) ? $schema : [];
 
             foreach ($schema as $field) {
-                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph']))
+                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'group']))
                     continue;
 
                 $analysis[] = [

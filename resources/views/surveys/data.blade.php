@@ -132,6 +132,10 @@
                             <tbody class="divide-y divide-gray-50 bg-white">
                                 @foreach($responses as $response)
                                     @php
+                                        $schemaFields = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
+                                        if (!is_array($schemaFields))
+                                            $schemaFields = [];
+
                                         $isPremium = auth()->user()->hasProAccess();
                                         $transcriptions = $response->ai_metadata['transcriptions'] ?? [];
 
@@ -206,7 +210,58 @@
                                                             $parsed = json_decode($jsonAnswer->value, true) ?? [];
                                                             foreach ($parsed as $item) {
                                                                 if (isset($item['name']) && $item['name'] === $header['id']) {
-                                                                    $val = isset($item['userData']) ? (is_array($item['userData']) ? implode(', ', $item['userData']) : $item['userData']) : '—';
+                                                                    $val = $item['userData'] ?? '—';
+
+                                                                    // Resolve options/Likert values to labels in data tab
+                                                                    $field = collect($schemaFields)->firstWhere('name', $header['id']);
+                                                                    if ($field && $val !== '—' && $val !== null && $val !== '') {
+                                                                        if (in_array($field['type'], ['likert_matrix_grid', 'likert_matrix'])) {
+                                                                            $matrixAnswers = is_string($val) ? json_decode($val, true) : $val;
+                                                                            if (is_array($matrixAnswers)) {
+                                                                                if (isset($matrixAnswers[0])) {
+                                                                                    if (is_string($matrixAnswers[0])) {
+                                                                                        $decoded = json_decode($matrixAnswers[0], true);
+                                                                                        if (is_array($decoded)) {
+                                                                                            $matrixAnswers = $decoded;
+                                                                                        }
+                                                                                    } elseif (is_array($matrixAnswers[0])) {
+                                                                                        $matrixAnswers = $matrixAnswers[0];
+                                                                                    }
+                                                                                }
+                                                                                $pairs = [];
+                                                                                $rowsDef = $field['rows'] ?? [];
+                                                                                $colsDef = $field['columns'] ?? [];
+                                                                                foreach ($rowsDef as $r) {
+                                                                                    $rk = $r['value'] ?? '';
+                                                                                    $rowLabel = $r['label'] ?? $rk;
+                                                                                    if (isset($matrixAnswers[$rk]) && $matrixAnswers[$rk] !== null && $matrixAnswers[$rk] !== '') {
+                                                                                        $cv = $matrixAnswers[$rk];
+                                                                                        $colLabel = collect($colsDef)->firstWhere('value', $cv)['label'] ?? $cv;
+                                                                                        $pairs[] = "• $rowLabel: $colLabel";
+                                                                                    } else {
+                                                                                        $pairs[] = "• $rowLabel: —";
+                                                                                    }
+                                                                                }
+                                                                                $val = implode("\n", $pairs);
+                                                                            }
+                                                                        } elseif (isset($field['values']) && is_array($field['values'])) {
+                                                                            if (is_array($val)) {
+                                                                                $mapped = [];
+                                                                                foreach ($val as $v) {
+                                                                                    $opt = collect($field['values'])->firstWhere('value', $v);
+                                                                                    $mapped[] = $opt ? ($opt['label'] ?? $v) : $v;
+                                                                                }
+                                                                                $val = $mapped;
+                                                                            } else {
+                                                                                $opt = collect($field['values'])->firstWhere('value', $val);
+                                                                                $val = $opt ? ($opt['label'] ?? $val) : $val;
+                                                                            }
+                                                                        }
+                                                                    }
+
+                                                                    if (is_array($val)) {
+                                                                        $val = implode(', ', $val);
+                                                                    }
                                                                     break;
                                                                 }
                                                             }
@@ -222,36 +277,37 @@
 
                                                 @if($isMedia)
                                                     <div x-data="{ 
-                                                                                                transcribing: false, 
-                                                                                                transcription: @js($transcriptions[$valStr] ?? null),
-                                                                                                async transcribe() {
-                                                                                                    @if(!$isPremium)
-                                                                                                        Swal.fire({
-                                                                                                            title: 'Premium Feature',
-                                                                                                            text: 'AI Transcription is only available for Pro and Enterprise plans.',
-                                                                                                            icon: 'info',
-                                                                                                            showCancelButton: true,
-                                                                                                            confirmButtonText: 'Upgrade Now',
-                                                                                                            confirmButtonColor: '#4f46e5'
-                                                                                                        }).then((result) => {
-                                                                                                            if (result.isConfirmed) window.location.href = '{{ route('subscriptions.index') }}';
-                                                                                                        });
-                                                                                                        return;
-                                                                                                    @endif
-                                                                                                    this.transcribing = true;
-                                                                                                    try {
-                                                                                                        const response = await fetch('{{ route('surveys.responses.transcribe', [$survey, $response]) }}', {
-                                                                                                            method: 'POST',
-                                                                                                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                                                                                                            body: JSON.stringify({ file_path: @js($valStr) })
-                                                                                                        });
-                                                                                                        const data = await response.json();
-                                                                                                        if (data.success) this.transcription = data.transcription;
-                                                                                                    } finally {
-                                                                                                        this.transcribing = false;
-                                                                                                    }
-                                                                                                }
-                                                                                            }" class="flex flex-col gap-1.5">
+                                                                                                                                                                                                                                            transcribing: false, 
+                                                                                                                                                                                                                                            transcription: @js($transcriptions[$valStr] ?? null),
+                                                                                                                                                                                                                                            async transcribe() {
+                                                                                                                                                                                                                                                @if(!$isPremium)
+                                                                                                                                                                                                                                                    Swal.fire({
+                                                                                                                                                                                                                                                        title: 'Premium Feature',
+                                                                                                                                                                                                                                                        text: 'AI Transcription is only available for Pro and Enterprise plans.',
+                                                                                                                                                                                                                                                        icon: 'info',
+                                                                                                                                                                                                                                                        showCancelButton: true,
+                                                                                                                                                                                                                                                        confirmButtonText: 'Upgrade Now',
+                                                                                                                                                                                                                                                        confirmButtonColor: '#4f46e5'
+                                                                                                                                                                                                                                                    }).then((result) => {
+                                                                                                                                                                                                                                                        if (result.isConfirmed) window.location.href = '{{ route('subscriptions.index') }}';
+                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                    return;
+                                                                                                                                                                                                                                                @endif
+                                                                                                                                                                                                                                                this.transcribing = true;
+                                                                                                                                                                                                                                                try {
+                                                                                                                                                                                                                                                    const response = await fetch('{{ route('surveys.responses.transcribe', [$survey, $response]) }}', {
+                                                                                                                                                                                                                                                        method: 'POST',
+                                                                                                                                                                                                                                                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                                                                                                                                                                                                                                                        body: JSON.stringify({ file_path: @js($valStr) })
+                                                                                                                                                                                                                                                    });
+                                                                                                                                                                                                                                                    const data = await response.json();
+                                                                                                                                                                                                                                                    if (data.success) this.transcription = data.transcription;
+                                                                                                                                                                                                                                                } finally {
+                                                                                                                                                                                                                                                    this.transcribing = false;
+                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                            }
+                                                                                                                                                                                                                                        }"
+                                                        class="flex flex-col gap-1.5">
                                                         <div class="flex flex-col gap-1.5 py-1">
                                                             <a href="{{ asset('storage/' . $valStr) }}" target="_blank"
                                                                 class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-bold group/media">

@@ -79,7 +79,7 @@
                     if (!is_array($schemaFields)) $schemaFields = [];
                     
                     $schemaFields = array_filter($schemaFields, function($field) {
-                        return isset($field['name']) && !in_array($field['type'], ['header', 'paragraph']);
+                        return isset($field['name']) && !in_array($field['type'], ['header', 'paragraph', 'group']);
                     });
 
                     $isPremium = auth()->user()->hasProAccess();
@@ -87,7 +87,7 @@
                 @endphp
                 
                 @if(count($schemaFields) > 0)
-                    @foreach($schemaFields as $field)
+                     @foreach($schemaFields as $field)
                         @php
                             $val = '—';
                             $label = $field['label'] ?? $field['name'];
@@ -95,6 +95,53 @@
                             foreach ($parsedData as $data) {
                                 if (isset($data['name']) && $data['name'] === $field['name']) {
                                     $val = $data['userData'] ?? '—';
+                                    
+                                    // Resolve options/Likert values to labels in detail view
+                                    if ($val !== '—' && $val !== null && $val !== '') {
+                                        if (in_array($field['type'], ['likert_matrix_grid', 'likert_matrix'])) {
+                                             $matrixAnswers = is_string($val) ? json_decode($val, true) : $val;
+                                             if (is_array($matrixAnswers)) {
+                                                 if (isset($matrixAnswers[0])) {
+                                                     if (is_string($matrixAnswers[0])) {
+                                                         $decoded = json_decode($matrixAnswers[0], true);
+                                                         if (is_array($decoded)) {
+                                                             $matrixAnswers = $decoded;
+                                                         }
+                                                     } elseif (is_array($matrixAnswers[0])) {
+                                                         $matrixAnswers = $matrixAnswers[0];
+                                                     }
+                                                 }
+                                                 $pairs = [];
+                                                 $rowsDef = $field['rows'] ?? [];
+                                                 $colsDef = $field['columns'] ?? [];
+                                                 foreach ($rowsDef as $r) {
+                                                     $rk = $r['value'] ?? '';
+                                                     $rowLabel = $r['label'] ?? $rk;
+                                                     if (isset($matrixAnswers[$rk]) && $matrixAnswers[$rk] !== null && $matrixAnswers[$rk] !== '') {
+                                                         $cv = $matrixAnswers[$rk];
+                                                         $colLabel = collect($colsDef)->firstWhere('value', $cv)['label'] ?? $cv;
+                                                         $pairs[] = "• $rowLabel: $colLabel";
+                                                     } else {
+                                                         $pairs[] = "• $rowLabel: —";
+                                                     }
+                                                 }
+                                                 $val = implode("\n", $pairs);
+                                             }
+                                        } elseif (isset($field['values']) && is_array($field['values'])) {
+                                            if (is_array($val)) {
+                                                $mapped = [];
+                                                foreach ($val as $v) {
+                                                    $opt = collect($field['values'])->firstWhere('value', $v);
+                                                    $mapped[] = $opt ? ($opt['label'] ?? $v) : $v;
+                                                }
+                                                $val = $mapped;
+                                            } else {
+                                                $opt = collect($field['values'])->firstWhere('value', $val);
+                                                $val = $opt ? ($opt['label'] ?? $val) : $val;
+                                            }
+                                        }
+                                    }
+                                    
                                     if (is_array($val)) {
                                         $val = implode(', ', $val);
                                     }

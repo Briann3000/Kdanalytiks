@@ -5,8 +5,9 @@ namespace App\Exports;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 
-class SurveyResponsesExport implements FromCollection, WithHeadings, WithMapping
+class SurveyResponsesExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize
 {
     protected $survey;
     protected $responses;
@@ -17,7 +18,7 @@ class SurveyResponsesExport implements FromCollection, WithHeadings, WithMapping
     {
         $this->survey = $survey;
         $this->responses = $responses;
-        
+
         if (!empty($this->survey->json_schema) && $this->survey->json_schema !== '[]') {
             $this->schemaFields = is_string($this->survey->json_schema) ? json_decode($this->survey->json_schema, true) : $this->survey->json_schema;
             $this->scanForMaxRepeats();
@@ -28,7 +29,8 @@ class SurveyResponsesExport implements FromCollection, WithHeadings, WithMapping
     {
         foreach ($this->responses as $response) {
             $jsonAnswer = $response->answers->first();
-            if (!$jsonAnswer) continue;
+            if (!$jsonAnswer)
+                continue;
             $parsedData = json_decode($jsonAnswer->value, true) ?? [];
             foreach ($parsedData as $data) {
                 if (isset($data['type']) && $data['type'] === 'repeat_container' && isset($data['userData'])) {
@@ -48,13 +50,14 @@ class SurveyResponsesExport implements FromCollection, WithHeadings, WithMapping
     public function headings(): array
     {
         $headers = ['Response ID', 'Date', 'Respondent Email', 'Respondent Name'];
-        
+
         if (!empty($this->schemaFields)) {
             foreach ($this->schemaFields as $field) {
-                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'hidden_field'])) continue;
-                
+                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'hidden_field', 'group']))
+                    continue;
+
                 $label = $field['label'] ?? $field['name'];
-                
+
                 if ($field['type'] === 'repeat_container') {
                     $max = $this->maxRepeats[$field['name']] ?? 1;
                     $innerFields = $field['fields'] ?? [];
@@ -63,7 +66,7 @@ class SurveyResponsesExport implements FromCollection, WithHeadings, WithMapping
                             $headers[] = $label . " (Instance $i) - " . ($inner['label'] ?? $inner['name']);
                         }
                     }
-                } elseif ($field['type'] === 'likert_matrix_grid') {
+                } elseif (in_array($field['type'], ['likert_matrix_grid', 'likert_matrix'])) {
                     $rows = $field['rows'] ?? [];
                     foreach ($rows as $row) {
                         $headers[] = $label . " [" . ($row['label'] ?? $row['value']) . "]";
@@ -84,7 +87,7 @@ class SurveyResponsesExport implements FromCollection, WithHeadings, WithMapping
     {
         $row = [
             $response->id,
-            $response->created_at->format('Y-m-d H:i:s'),
+            $response->created_at->format('M d, Y h:i A'),
             $response->respondent ? $response->respondent->email : 'N/A',
             $response->respondent ? $response->respondent->name : 'Anonymous'
         ];
@@ -92,10 +95,11 @@ class SurveyResponsesExport implements FromCollection, WithHeadings, WithMapping
         if (!empty($this->schemaFields)) {
             $jsonAnswer = $response->answers->first();
             $parsedData = $jsonAnswer ? json_decode($jsonAnswer->value, true) : [];
-            
+
             foreach ($this->schemaFields as $field) {
-                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'hidden_field'])) continue;
-                
+                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'hidden_field', 'group']))
+                    continue;
+
                 $fieldData = collect($parsedData)->firstWhere('name', $field['name']);
                 $val = $fieldData['userData'] ?? '';
 
@@ -103,7 +107,7 @@ class SurveyResponsesExport implements FromCollection, WithHeadings, WithMapping
                     $max = $this->maxRepeats[$field['name']] ?? 1;
                     $instances = is_array($val) ? $val : [];
                     $innerFields = $field['fields'] ?? [];
-                    
+
                     for ($i = 0; $i < $max; $i++) {
                         $instanceData = $instances[$i] ?? [];
                         foreach ($innerFields as $inner) {
@@ -111,28 +115,74 @@ class SurveyResponsesExport implements FromCollection, WithHeadings, WithMapping
                             foreach ($instanceData as $d) {
                                 if (isset($d['name']) && $d['name'] === $inner['name']) {
                                     $innerVal = $d['userData'] ?? '';
-                                    if (is_array($innerVal)) $innerVal = implode(', ', $innerVal);
+
+                                    // Resolve options to labels for nested fields inside repeat container
+                                    if (isset($inner['values']) && is_array($inner['values'])) {
+                                        if (is_array($innerVal)) {
+                                            $mapped = [];
+                                            foreach ($innerVal as $v) {
+                                                $opt = collect($inner['values'])->firstWhere('value', $v);
+                                                $mapped[] = $opt ? ($opt['label'] ?? $v) : $v;
+                                            }
+                                            $innerVal = $mapped;
+                                        } else {
+                                            $opt = collect($inner['values'])->firstWhere('value', $innerVal);
+                                            $innerVal = $opt ? ($opt['label'] ?? $innerVal) : $innerVal;
+                                        }
+                                    }
+
+                                    if (is_array($innerVal))
+                                        $innerVal = implode(', ', $innerVal);
                                     break;
                                 }
                             }
                             $row[] = $innerVal;
                         }
                     }
-                } elseif ($field['type'] === 'likert_matrix_grid') {
-                    $matrixAnswers = is_array($val) ? $val : [];
+                } elseif (in_array($field['type'], ['likert_matrix_grid', 'likert_matrix'])) {
+                    $matrixAnswers = is_array($val) ? $val : (is_string($val) ? json_decode($val, true) : []);
+                    if (!is_array($matrixAnswers)) {
+                        $matrixAnswers = [];
+                    }
+                    if (isset($matrixAnswers[0])) {
+                        if (is_string($matrixAnswers[0])) {
+                            $decoded = json_decode($matrixAnswers[0], true);
+                            if (is_array($decoded)) {
+                                $matrixAnswers = $decoded;
+                            }
+                        } elseif (is_array($matrixAnswers[0])) {
+                            $matrixAnswers = $matrixAnswers[0];
+                        }
+                    }
                     $rows = $field['rows'] ?? [];
+                    $colsDef = $field['columns'] ?? [];
                     foreach ($rows as $r) {
                         $rowVal = '';
-                        foreach ($matrixAnswers as $ma) {
-                            if (isset($ma['row']) && $ma['row'] === ($r['value'] ?? '')) {
-                                $rowVal = $ma['column'] ?? '';
-                                break;
-                            }
+                        $rowId = $r['value'] ?? '';
+                        if (isset($matrixAnswers[$rowId])) {
+                            $colVal = $matrixAnswers[$rowId];
+                            $colOpt = collect($colsDef)->firstWhere('value', $colVal);
+                            $rowVal = $colOpt ? ($colOpt['label'] ?? $colVal) : $colVal;
                         }
                         $row[] = $rowVal;
                     }
                 } else {
-                    if (is_array($val)) $val = implode(', ', $val);
+                    // Resolve options to labels for simple fields
+                    if (isset($field['values']) && is_array($field['values'])) {
+                        if (is_array($val)) {
+                            $mapped = [];
+                            foreach ($val as $v) {
+                                $opt = collect($field['values'])->firstWhere('value', $v);
+                                $mapped[] = $opt ? ($opt['label'] ?? $v) : $v;
+                            }
+                            $val = $mapped;
+                        } else {
+                            $opt = collect($field['values'])->firstWhere('value', $val);
+                            $val = $opt ? ($opt['label'] ?? $val) : $val;
+                        }
+                    }
+                    if (is_array($val))
+                        $val = implode(', ', $val);
                     $row[] = $val;
                 }
             }
