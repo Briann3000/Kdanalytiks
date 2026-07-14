@@ -1,6 +1,11 @@
 @extends('layouts.app')
 
-@section('title', __(ucfirst($role) . ' Registration'))
+@php
+    $roleName = in_array($role, ['independent', 'researcher']) ? 'researcher' : $role;
+    $roleLabel = $roleName === 'researcher' ? 'Researcher' : ucfirst($roleName);
+@endphp
+
+@section('title', __($roleLabel . ' Registration'))
 
 @section('content')
     <div class="min-h-[80vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -8,7 +13,7 @@
             <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
                 <i class="fa-solid fa-user-plus text-xl"></i>
             </div>
-            <h2 class="mt-6 text-3xl font-extrabold text-gray-900">{{ __(ucfirst($role) . ' Registration') }}</h2>
+            <h2 class="mt-6 text-3xl font-extrabold text-gray-900">{{ __($roleLabel . ' Registration') }}</h2>
             <p class="mt-2 text-sm text-gray-600">
                 {{ __('Join KDAnalytiks and start building') }}
             </p>
@@ -69,6 +74,15 @@
                                 class="block text-sm font-medium text-gray-700">{{ __('Email address') }}</label>
                             <div class="mt-1">
                                 <input id="email" name="email" type="email" required
+                                    class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            </div>
+                        </div>
+
+                        <div class="sm:col-span-6">
+                            <label for="phone_number"
+                                class="block text-sm font-medium text-gray-700">{{ __('Phone Number (Optional)') }}</label>
+                            <div class="mt-1">
+                                <input id="phone_number" name="phone_number" type="text"
                                     class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                             </div>
                         </div>
@@ -152,9 +166,9 @@
                     </div>
 
                     <div class="mt-6 text-center">
-                        <a href="{{ route('login.role', ['role' => $role, 'redirect' => request('redirect')]) }}"
+                        <a href="{{ route('login.role', ['role' => $roleName, 'redirect' => request('redirect')]) }}"
                             class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
-                            {{ __('Sign in to your :role account', ['role' => __($role)]) }}
+                            {{ __('Sign in to your :role account', ['role' => __($roleLabel)]) }}
                         </a>
                     </div>
                 </div>

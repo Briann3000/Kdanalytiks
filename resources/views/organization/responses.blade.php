@@ -18,7 +18,7 @@
             @foreach($survey->responses as $response)
                 <tr>
                     <td>{{ $loop->iteration }}</td>
-                    <td>{{ $response->respondent->name ?? __('Anonymous') }}</td>
+                    <td>{{ $response->respondent->name ?? ($response->guest_name ?? __('Anonymous')) }}</td>
                     <td>{{ $response->submitted_at ? $response->submitted_at->format('M d, Y H:i') : 'N/A' }}</td>
                     <td>{{ $response->answers->count() }} {{ __('responses') }}</td>
                 </tr>

@@ -48,7 +48,7 @@
             <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt class="text-sm font-medium text-gray-500">Name</dt>
                 <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                    {{ $response->respondent ? $response->respondent->name : 'Anonymous' }}
+                    {{ $response->respondent ? $response->respondent->name : ($response->guest_name ?? 'Anonymous') }}
                 </dd>
             </div>
             <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
@@ -57,6 +57,14 @@
                     {{ $response->respondent ? $response->respondent->email : 'N/A' }}
                 </dd>
             </div>
+            @if($response->guest_phone || ($response->respondent && $response->respondent->phone_number))
+                <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt class="text-sm font-medium text-gray-500">Phone Number</dt>
+                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                        {{ $response->respondent ? $response->respondent->phone_number : $response->guest_phone }}
+                    </dd>
+                </div>
+            @endif
         </dl>
     </div>
 </div>

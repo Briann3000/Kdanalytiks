@@ -98,8 +98,12 @@
         <div class="meta-item"><span class="meta-label">Submitted On:</span>
             {{ $response->created_at->format('F d, Y \a\t H:i:s') }}</div>
         <div class="meta-item"><span class="meta-label">Respondent:</span>
-            {{ $response->respondent->name ?? 'Anonymous' }}</div>
+            {{ $response->respondent ? $response->respondent->name : ($response->guest_name ?? 'Anonymous') }}</div>
         <div class="meta-item"><span class="meta-label">Email:</span> {{ $response->respondent->email ?? 'N/A' }}</div>
+        @if($response->guest_phone || ($response->respondent && $response->respondent->phone_number))
+            <div class="meta-item"><span class="meta-label">Phone:</span>
+                {{ $response->respondent ? $response->respondent->phone_number : $response->guest_phone }}</div>
+        @endif
     </div>
 
     @foreach($answers as $ans)

@@ -23,7 +23,8 @@
                     <h3 class="text-xl font-black text-gray-900 uppercase tracking-tight">{{ __('Organization Login') }}
                     </h3>
                     <p class="mt-4 text-sm text-gray-500 leading-relaxed font-medium">
-                        {{ __('For companies and institutions managing large-scale research surveys') }}</p>
+                        {{ __('For companies and institutions managing large-scale research surveys') }}
+                    </p>
                     <div class="mt-8 flex justify-center">
                         <span
                             class="text-indigo-600 text-xs font-black uppercase tracking-widest group-hover:translate-x-2 transition-transform">{{ __('Get Started') }}
@@ -32,7 +33,7 @@
                 </a>
 
                 <!-- Independent Researcher -->
-                <a href="{{ route('login.role', ['role' => 'independent', 'redirect' => request('redirect')]) }}"
+                <a href="{{ route('login.role', ['role' => 'researcher', 'redirect' => request('redirect')]) }}"
                     class="group relative bg-white rounded-3xl shadow-sm border border-gray-100 p-10 text-center transition-all hover:shadow-2xl hover:-translate-y-2 hover:border-purple-200">
                     <div
                         class="mx-auto h-20 w-20 flex items-center justify-center rounded-[2rem] bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-all duration-500 mb-8 transform group-hover:-rotate-6">
@@ -40,7 +41,8 @@
                     </div>
                     <h3 class="text-xl font-black text-gray-900 uppercase tracking-tight">{{ __('Researcher Login') }}</h3>
                     <p class="mt-4 text-sm text-gray-500 leading-relaxed font-medium">
-                        {{ __('For academician and practitioners') }}</p>
+                        {{ __('For academician and practitioners') }}
+                    </p>
                     <div class="mt-8 flex justify-center">
                         <span
                             class="text-purple-600 text-xs font-black uppercase tracking-widest group-hover:translate-x-2 transition-transform">{{ __('Get Started') }}

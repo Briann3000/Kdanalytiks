@@ -1,6 +1,11 @@
 @extends('layouts.app')
 
-@section('title', $role == 'independent' ? __('Researcher Login') : __(ucfirst($role) . ' Login'))
+@php
+    $roleName = in_array($role, ['independent', 'researcher']) ? 'researcher' : $role;
+    $roleLabel = $roleName === 'researcher' ? 'Researcher' : ucfirst($roleName);
+@endphp
+
+@section('title', __($roleLabel . ' Login'))
 
 @section('content')
     <div class="min-h-[70vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -9,7 +14,7 @@
                 <i class="fa-solid fa-user-lock text-xl"></i>
             </div>
             <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
-                {{ $role == 'independent' ? __('Researcher Login') : __(ucfirst($role) . ' Login') }}
+                {{ __($roleLabel . ' Login') }}
             </h2>
             <p class="mt-2 text-sm text-gray-600">
                 {{ __('Access your KDAnalytiks account') }}
@@ -113,9 +118,9 @@
                         </div>
 
                         <div class="mt-6 text-center">
-                            <a href="{{ route('register', ['role' => $role]) }}"
+                            <a href="{{ route('register', ['role' => $roleName]) }}"
                                 class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
-                                {{ __('Create a new :role account', ['role' => __($role)]) }}
+                                {{ __('Create a new :role account', ['role' => __($roleLabel)]) }}
                             </a>
                         </div>
                     </div>

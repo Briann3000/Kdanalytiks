@@ -2048,20 +2048,19 @@ class SurveyController extends Controller
 
     public function submit(Request $request, \App\Models\Survey $survey)
     {
-        if ($survey->is_paid && !auth()->check()) {
-            if ($request->has('is_json_submission') || $request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Registration or login is required to participate in paid surveys.'
-                ], 403);
-            }
-            return redirect()->route('login.role', ['role' => 'respondent'])
-                ->with('error', 'Registration or login is required to participate in paid surveys.');
+        if (!auth()->check()) {
+            $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+                'guest_name' => 'required|string|max:255',
+                'guest_phone' => 'nullable|string|max:25',
+                'terms_and_conditions' => 'required|accepted',
+                'json_data' => 'nullable|string|max:65535'
+            ]);
+        } else {
+            $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+                'terms_and_conditions' => 'required|accepted',
+                'json_data' => 'nullable|string|max:65535'
+            ]);
         }
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'terms_and_conditions' => 'required|accepted',
-            'json_data' => 'nullable|string|max:65535'
-        ]);
 
         if ($validator->fails()) {
             if ($request->has('is_json_submission')) {
@@ -2080,6 +2079,10 @@ class SurveyController extends Controller
             $response = new \App\Models\Response();
             $response->survey_id = $survey->id;
             $response->respondent_id = auth()->id(); // Will be null for guests
+            if (!auth()->check()) {
+                $response->guest_name = $request->input('guest_name');
+                $response->guest_phone = $request->input('guest_phone');
+            }
             $response->save();
 
             // Track invite token if present
@@ -2242,6 +2245,21 @@ class SurveyController extends Controller
                 } catch (\Exception $e) {
                     \Log::error("Email Error: " . $e->getMessage());
                 }
+            }
+
+            if ($survey->is_paid && !auth()->check()) {
+                session([
+                    'pending_claim_response_id' => $response->id,
+                    'guest_name' => $request->input('guest_name')
+                ]);
+                $claimUrl = route('surveys.claim', $survey->id);
+                if ($request->has('is_json_submission') || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => true,
+                        'redirect_url' => $claimUrl
+                    ]);
+                }
+                return redirect()->to($claimUrl);
             }
 
             if ($request->has('is_json_submission')) {
@@ -3977,5 +3995,14 @@ class SurveyController extends Controller
             }
         }
         return $I;
+    }
+
+    public function claimRewardPrompt(\App\Models\Survey $survey)
+    {
+        if (!session()->has('pending_claim_response_id') || auth()->check()) {
+            return redirect()->route('surveys.show', $survey->id);
+        }
+
+        return view('surveys.claim', compact('survey'));
     }
 }

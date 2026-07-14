@@ -14,6 +14,8 @@ class Response extends Model
     protected $fillable = [
         'survey_id',
         'respondent_id',
+        'guest_name',
+        'guest_phone',
         'ai_metadata',
         'quality_score',
         'quality_flags',

@@ -258,6 +258,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // Public Survey Views
 Route::get('/surveys/{survey}', [SurveyController::class, 'show'])->name('surveys.show');
 Route::post('/surveys/{survey}/submit', [SurveyController::class, 'submit'])->middleware('throttle:10,1')->name('surveys.submit');
+Route::get('/surveys/{survey}/claim', [SurveyController::class, 'claimRewardPrompt'])->name('surveys.claim');
 Route::get('/reports/shared/{token}', [SurveyController::class, 'sharedReport'])->name('surveys.reports.shared');
 Route::get('/surveys/{survey}/dashboard-preview', [\App\Http\Controllers\DashboardBuilderController::class, 'dashboardPreview'])->name('surveys.dashboard-preview');
 
