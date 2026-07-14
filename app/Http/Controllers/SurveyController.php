@@ -2048,6 +2048,16 @@ class SurveyController extends Controller
 
     public function submit(Request $request, \App\Models\Survey $survey)
     {
+        if ($survey->is_paid && !auth()->check()) {
+            if ($request->has('is_json_submission') || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Registration or login is required to participate in paid surveys.'
+                ], 403);
+            }
+            return redirect()->route('login.role', ['role' => 'respondent'])
+                ->with('error', 'Registration or login is required to participate in paid surveys.');
+        }
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'terms_and_conditions' => 'required|accepted',
             'json_data' => 'nullable|string|max:65535'
