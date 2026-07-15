@@ -57,6 +57,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(Independent::class);
     }
 
+    public function surveyGroups(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(SurveyGroup::class, 'survey_group_users', 'user_id', 'survey_group_id');
+    }
+
     public function responses(): HasMany
     {
         return $this->hasMany(Response::class, 'respondent_id');

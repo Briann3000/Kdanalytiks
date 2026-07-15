@@ -151,6 +151,7 @@
 
 
         <!-- Quantitative Content -->
+        <!-- Quantitative Content -->
         <div x-show="reportTab === 'quantitative'" class="space-y-8 animate-in fade-in duration-500"
             x-data="chartManager()">
             @foreach($analysis as $item)
@@ -194,14 +195,41 @@
                         <div class="flex flex-col gap-12">
                             <!-- Chart Area (Full Width) -->
                             <div
-                                class="h-96 relative flex items-center justify-center bg-gray-50/30 rounded-3xl p-8 border border-gray-100 shadow-inner">
+                                class="h-96 relative flex items-center justify-center bg-gray-50/30 rounded-3xl p-8 border border-gray-100 shadow-inner group/chart">
                                 <canvas id="{{ $item['canvasId'] }}"></canvas>
+                                
+                                <button @click="window.exportChartToPng('{{ $item['canvasId'] }}', '{{ addslashes($item['label']) }}')"
+                                    class="absolute top-4 right-4 inline-flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-indigo-600 hover:text-white text-gray-600 hover:shadow-md rounded-xl text-[10px] font-black uppercase tracking-widest border border-gray-100 shadow-sm transition-all z-20"
+                                    title="{{ __('Export Chart') }}">
+                                    <i class="fa-solid fa-file-image"></i>
+                                    {{ __('Export Chart') }}
+                                </button>
                             </div>
 
                             <!-- Table Area (Below Chart) -->
-                            <div class="overflow-hidden bg-white rounded-2xl border border-gray-100">
+                            <div class="overflow-hidden bg-white rounded-2xl border border-gray-100" id="table-wrapper-{{ $item['canvasId'] }}">
+                                <div class="px-6 py-4 bg-gray-50/50 border-b border-gray-100 flex justify-between items-center">
+                                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ __('Frequency Table') }}</span>
+                                    <div class="flex gap-2" data-html2canvas-ignore>
+                                        <button @click="window.copyTableToClipboard('table-{{ $item['canvasId'] }}')"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 border border-gray-200 text-gray-600 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm">
+                                            <i class="fa-solid fa-copy"></i>
+                                            {{ __('Copy') }}
+                                        </button>
+                                        <button @click="window.exportTableToCsv('table-{{ $item['canvasId'] }}', '{{ addslashes($item['label']) }}')"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-indigo-600 hover:text-white border border-gray-200 text-gray-600 hover:border-indigo-600 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm">
+                                            <i class="fa-solid fa-file-csv"></i>
+                                            {{ __('CSV') }}
+                                        </button>
+                                        <button @click="window.exportTableToPng('table-wrapper-{{ $item['canvasId'] }}', '{{ addslashes($item['label']) }}')"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-emerald-600 hover:text-white border border-gray-200 text-gray-600 hover:border-emerald-600 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm">
+                                            <i class="fa-solid fa-file-image"></i>
+                                            {{ __('PNG') }}
+                                        </button>
+                                    </div>
+                                </div>
                                 <div class="max-h-[300px] overflow-y-auto custom-scrollbar">
-                                    <table class="w-full text-left">
+                                    <table class="w-full text-left" id="table-{{ $item['canvasId'] }}">
                                         <thead class="sticky top-0 bg-white z-10 border-b border-gray-100 shadow-sm">
                                             <tr class="text-[10px] font-black text-gray-500 uppercase tracking-widest">
                                                 <th class="py-4 px-6">{{ __('Value') }}</th>
@@ -256,9 +284,8 @@
             @endforeach
         </div>
 
-        <!-- Qualitative Content -->
         <div x-show="reportTab === 'qualitative'" class="space-y-12 animate-in fade-in duration-500"
-            x-data="chartManager()" style="display: none;">
+            style="display: none;">
             @foreach($analysis as $item)
                 @if(!$item['isChartable'])
                     <div class="bg-white rounded-3xl p-10 shadow-sm border border-gray-100">
@@ -318,16 +345,35 @@
                                 :survey-id="$item['survey_id']" :index="$loop->index" />
                         @endif
 
-                        <div class="mt-6 bg-gray-50 rounded-3xl overflow-hidden border border-gray-100">
+                        <div class="mt-6 bg-gray-50 rounded-3xl overflow-hidden border border-gray-100" id="qual-wrapper-{{ $loop->index }}">
                             <div class="px-8 py-6 border-b border-gray-100 bg-white flex justify-between items-center">
                                 <h5 class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                                     {{ __('Detailed Responses ') }}</h5>
-                                <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase">
-                                    {{ count($item['answers'] ?? []) }} {{ __('Total Entries') }}
-                                </span>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase">
+                                        {{ count($item['answers'] ?? []) }} {{ __('Total Entries') }}
+                                    </span>
+                                    <div class="flex gap-2" data-html2canvas-ignore>
+                                        <button onclick="window.copyTableToClipboard('qual-table-{{ $loop->index }}')"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 border border-gray-200 text-gray-600 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm">
+                                            <i class="fa-solid fa-copy"></i>
+                                            {{ __('Copy') }}
+                                        </button>
+                                        <button onclick="window.exportTableToCsv('qual-table-{{ $loop->index }}', '{{ addslashes($item['label']) }}')"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-indigo-600 hover:text-white border border-gray-200 text-gray-600 hover:border-indigo-600 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm">
+                                            <i class="fa-solid fa-file-csv"></i>
+                                            {{ __('CSV') }}
+                                        </button>
+                                        <button onclick="window.exportTableToPng('qual-wrapper-{{ $loop->index }}', '{{ addslashes($item['label']) }}')"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-emerald-600 hover:text-white border border-gray-200 text-gray-600 hover:border-emerald-600 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm">
+                                            <i class="fa-solid fa-file-image"></i>
+                                            {{ __('PNG') }}
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="max-h-[350px] overflow-y-auto custom-scrollbar">
-                                <table class="w-full text-left border-collapse">
+                                <table class="w-full text-left border-collapse" id="qual-table-{{ $loop->index }}">
                                     <thead>
                                         <tr class="bg-gray-50/50 text-[10px] font-black text-gray-500 uppercase tracking-widest sticky top-0 bg-white border-b border-gray-100 z-10">
                                             <th class="py-4 px-8 w-16 text-center">#</th>
@@ -395,7 +441,9 @@
         </div>
 
         @if(!isset($isSharedView) || !$isSharedView)
-            @include('surveys.partials.report_analyse')
+            <div x-show="reportTab === 'analyse'">
+                @include('surveys.partials.report_analyse')
+            </div>
         @endif
 
         <!-- Inferential Content -->
@@ -1269,6 +1317,7 @@
 
     @push('scripts')
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
         <script>
             const chartConfigs = {!! json_encode($chartConfigs) !!};
             const chartInstances = {};
@@ -1282,9 +1331,121 @@
                 vibrant: ['#6366f1', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#f97316']
             };
 
+            window.exportChartToPng = function(canvasId, title) {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) return;
+
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                const tempCtx = tempCanvas.getContext('2d');
+
+                // Draw white background
+                tempCtx.fillStyle = '#ffffff';
+                tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                tempCtx.drawImage(canvas, 0, 0);
+
+                const url = tempCanvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_chart.png`;
+                link.href = url;
+                link.click();
+            };
+
+            window.exportTableToCsv = function(tableId, filename) {
+                const table = document.getElementById(tableId);
+                if (!table) return;
+
+                const rows = Array.from(table.querySelectorAll('tr'));
+                const csvContent = rows.map(row => {
+                    const cols = Array.from(row.querySelectorAll('th, td'));
+                    return cols.map(col => {
+                        let text = col.innerText.trim();
+                        text = text.replace(/"/g, '""');
+                        return `"${text}"`;
+                    }).join(',');
+                }).join('\n');
+
+                const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `${filename.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_table.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            window.copyTableToClipboard = function(tableId) {
+                const table = document.getElementById(tableId);
+                if (!table) return;
+
+                const rows = Array.from(table.querySelectorAll('tr'));
+                const tsvContent = rows.map(row => {
+                    const cols = Array.from(row.querySelectorAll('th, td'));
+                    return cols.map(col => col.innerText.trim()).join('\t');
+                }).join('\n');
+
+                navigator.clipboard.writeText(tsvContent).then(() => {
+                    Swal.fire({
+                        title: @js(__('Copied!')),
+                        text: @js(__('Table copied to clipboard in Excel-compatible format.')),
+                        icon: 'success',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        customClass: {
+                            popup: 'rounded-2xl shadow-xl border-none'
+                        }
+                    });
+                });
+            };
+
+            window.exportTableToPng = function(containerId, title) {
+                const element = document.getElementById(containerId);
+                if (!element) return;
+
+                let loadingAlert = Swal.fire({
+                    title: @js(__('Exporting Table...')),
+                    text: @js(__('Generating ready-to-use PNG image. Please wait.')),
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                html2canvas(element, {
+                    backgroundColor: '#ffffff',
+                    scale: 2,
+                    useCORS: true,
+                    logging: false
+                }).then(canvas => {
+                    const url = canvas.toDataURL('image/png');
+                    const link = document.createElement('a');
+                    link.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_table.png`;
+                    link.href = url;
+                    link.click();
+                    Swal.close();
+                }).catch(err => {
+                    console.error("html2canvas error", err);
+                    Swal.fire({
+                        title: @js(__('Export Failed')),
+                        text: @js(__('Could not generate the table image.')),
+                        icon: 'error'
+                    });
+                });
+            };
+
             function createChart(canvasId, config, type = 'bar', colorTheme = 'indigo') {
                 const canvasElement = document.getElementById(canvasId);
                 if (!canvasElement) return;
+
+                if (chartInstances[canvasId]) {
+                    chartInstances[canvasId].destroy();
+                    delete chartInstances[canvasId];
+                }
+
                 const ctx = canvasElement.getContext('2d');
 
                 const activeTheme = colorTheme && colorPalettes[colorTheme] ? colorTheme : 'vibrant';
@@ -1719,6 +1880,7 @@
                 };
             };
 
+
             window.chartManager = function () {
                 return {
                     chartTypes: {},
@@ -1776,6 +1938,9 @@
                     editingTitle: '',
                     threadMenuOpen: null,
                     urls: config.urls,
+                    activeGroupId: config.activeGroupId || null,
+                    groups: config.groups || [],
+                    isOwner: config.isOwner || false,
 
                     // Phase 4 Features
                     isListening: false,
@@ -1858,9 +2023,13 @@
                     async loadThreads() {
                         this.loadingThreads = true;
                         this.error = null;
+                        this.currentThreadId = null;
+                        this.currentThread = null;
+                        this.messages = [];
 
                         try {
-                            const response = await fetch(this.urls.list, {
+                            const url = this.activeGroupId ? `${this.urls.list}?group_id=${this.activeGroupId}` : this.urls.list;
+                            const response = await fetch(url, {
                                 headers: { 'Accept': 'application/json' }
                             });
                             const data = await this.parseJsonResponse(response);
@@ -1887,7 +2056,8 @@
                         this.error = null;
 
                         try {
-                            const response = await fetch(this.urls.create, {
+                            const url = this.activeGroupId ? `${this.urls.create}?group_id=${this.activeGroupId}` : this.urls.create;
+                            const response = await fetch(url, {
                                 method: 'POST',
                                 headers: {
                                     'Accept': 'application/json',
@@ -2306,7 +2476,8 @@
 
                     async reloadThreadList() {
                         try {
-                            const response = await fetch(this.urls.list, {
+                            const url = this.activeGroupId ? `${this.urls.list}?group_id=${this.activeGroupId}` : this.urls.list;
+                            const response = await fetch(url, {
                                 headers: { 'Accept': 'application/json' }
                             });
                             const data = await this.parseJsonResponse(response);

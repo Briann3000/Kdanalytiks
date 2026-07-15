@@ -55,6 +55,11 @@ class Survey extends Model
         return $this->hasMany(SurveyPermission::class);
     }
 
+    public function groups(): HasMany
+    {
+        return $this->hasMany(SurveyGroup::class);
+    }
+
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);

@@ -119,6 +119,15 @@ class SurveyPolicy
             return true;
         }
 
+        // Group membership
+        $isGroupMember = \App\Models\SurveyGroup::where('survey_id', $survey->id)
+            ->whereHas('users', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            })->exists();
+        if ($isGroupMember) {
+            return true;
+        }
+
         // Organization ownership
         if ($survey->organization_id && $user->organization && (int) $survey->organization_id === (int) $user->organization->id) {
             return true;

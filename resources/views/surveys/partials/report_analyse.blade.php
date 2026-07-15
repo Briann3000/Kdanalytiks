@@ -1,6 +1,9 @@
-<div x-show="reportTab === 'analyse'" x-data="sociusManager({
+<div x-data="sociusManager({
         canAnalyze: @js($canAnalyze),
         initialThreadId: @js((int) request('thread')),
+        activeGroupId: @js($myGroup?->id ?? null),
+        groups: @js($groups ?? []),
+        isOwner: @js((int) $survey->created_by === (int) auth()->id() || auth()->user()->isAdmin()),
         urls: {
             list: @js(route('surveys.analyse.threads.index', $survey)),
             create: @js(route('surveys.analyse.threads.store', $survey)),
@@ -14,7 +17,7 @@
             kbUpdateTemplate: @js(route('socius.knowledge-base.update', ['knowledgeBase' => '__KB__'])),
             kbDestroyTemplate: @js(route('socius.knowledge-base.destroy', ['knowledgeBase' => '__KB__']))
         }
-    })" x-init="init()" class="animate-in fade-in duration-500" style="display: none;">
+    })" x-init="init()" class="animate-in fade-in duration-500">
     <div class="relative flex gap-4" style="height: calc(100vh - 4.1rem); overflow: hidden;">
         {{-- Sidebar History --}}
         <aside :class="historyOpen ? 'w-64 md:w-72 opacity-100' : 'w-0 opacity-0 -ml-4'"
@@ -37,6 +40,23 @@
                     </div>
                 </template>
             </div>
+
+            <!-- Group Selector for Owner/Teacher -->
+            <template x-if="isOwner && groups.length > 0">
+                <div class="px-4 py-2 border-b border-white/5 bg-white/[0.02]">
+                    <label
+                        class="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">{{ __('Active Group') }}</label>
+                    <select x-model="activeGroupId" @change="loadThreads()"
+                        class="w-full px-3 py-1.5 bg-[#202020] border border-white/10 rounded-xl text-xs font-semibold text-slate-300 focus:outline-none focus:border-orange-300">
+                        <option value="">{{ __('My Personal Threads') }}</option>
+                        <template x-for="group in groups" :key="group.id">
+                            <option :value="group.id"
+                                x-text="`${group.name} (${group.users_count || 0} {{ __('students') }})`"></option>
+                        </template>
+                    </select>
+                </div>
+            </template>
+
 
             <div class="p-4 space-y-3 flex-1 overflow-y-auto custom-scrollbar" style="overscroll-behavior-y: contain;">
                 <template x-if="loadingThreads">

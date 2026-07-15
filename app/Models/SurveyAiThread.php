@@ -15,6 +15,7 @@ class SurveyAiThread extends Model
     protected $fillable = [
         'survey_id',
         'user_id',
+        'survey_group_id',
         'title',
         'is_pinned',
         'last_activity_at',
@@ -28,6 +29,11 @@ class SurveyAiThread extends Model
     public function survey(): BelongsTo
     {
         return $this->belongsTo(Survey::class);
+    }
+
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(SurveyGroup::class, 'survey_group_id');
     }
 
     public function user(): BelongsTo

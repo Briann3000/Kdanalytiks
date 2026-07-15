@@ -312,6 +312,129 @@
 
                 <hr class="border-gray-50">
 
+                <!-- Analysis Groups -->
+                <section class="grid grid-cols-1 md:grid-cols-3 gap-8" x-data="{ addGroupOpen: false }">
+                    <div>
+                        <h4 class="text-xs font-bold text-gray-900 uppercase tracking-wider mb-1">
+                            {{ __('Analysis Groups') }}</h4>
+                        <p class="text-[11px] text-gray-400 font-bold leading-relaxed">
+                            {{ __('Create isolated groups for students or researchers to collaborate on results together.') }}</p>
+                        <button type="button" @click="addGroupOpen = !addGroupOpen"
+                            class="mt-4 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all">
+                            <span x-text="addGroupOpen ? '{{ __('Close') }}' : '{{ __('Create Group') }}'"></span>
+                        </button>
+                    </div>
+
+                    <div class="md:col-span-2 space-y-6">
+                        <!-- Add Group Form -->
+                        <div x-show="addGroupOpen" x-collapse style="display: none;">
+                            <form action="{{ route('surveys.groups.create', $survey) }}" method="POST"
+                                class="p-5 bg-gray-50 border border-gray-100 rounded-2xl">
+                                @csrf
+                                <div class="flex items-center gap-3">
+                                    <div class="flex-1">
+                                        <input type="text" name="name" required
+                                            class="w-full px-4 py-3 bg-white border border-gray-100 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                                            placeholder="{{ __('Group Name (e.g. Group A)...') }}">
+                                    </div>
+                                    <button type="submit"
+                                        class="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
+                                        {{ __('Create') }}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Groups List -->
+                        <div class="grid grid-cols-1 gap-3">
+                            @if($survey->groups->isEmpty())
+                                <div class="p-6 bg-gray-50/50 border border-dashed border-gray-200 rounded-2xl text-center">
+                                    <i class="fa-solid fa-people-group text-2xl text-gray-300 mb-2"></i>
+                                    <p class="text-xs font-semibold text-gray-400">{{ __('No analysis groups created yet.') }}</p>
+                                </div>
+                            @else
+                                @foreach($survey->groups as $group)
+                                    <div class="p-4 bg-white border border-gray-100 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                        <div>
+                                            <p class="text-xs font-black text-gray-900">{{ $group->name }}</p>
+                                            <div class="flex items-center gap-2 mt-1">
+                                                <span class="text-[9px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                                    {{ $group->users_count ?? $group->users()->count() }} {{ __('Members') }}
+                                                </span>
+                                                <span class="text-[9px] text-gray-400 font-bold">
+                                                    {{ __('Created') }} {{ $group->created_at->diffForHumans() }}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        @php
+                                            $joinUrl = route('surveys.groups.join', ['survey' => $survey, 'token' => $group->token]);
+                                        @endphp
+                                        <div class="flex items-center gap-3">
+                                            <!-- Share Menu -->
+                                            <div class="relative" x-data="{ shareOpen: false }" @click.outside="shareOpen = false">
+                                                <button type="button" 
+                                                    @click="if (navigator.share) { 
+                                                                navigator.share({ 
+                                                                    title: '{{ __('Survey Group Analysis') }}', 
+                                                                    text: '{{ __('Join our survey analysis group: ') }}' + '{{ $group->name }}', 
+                                                                    url: '{{ $joinUrl }}' 
+                                                                }).catch(e => {}); 
+                                                            } else { 
+                                                                shareOpen = !shareOpen; 
+                                                            }"
+                                                    class="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all">
+                                                    <i class="fa-solid fa-share-nodes"></i>
+                                                </button>
+                                                <div x-show="shareOpen" x-transition
+                                                    class="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 p-2 space-y-1"
+                                                    style="display: none;">
+                                                    <a href="https://wa.me/?text={{ urlencode(__('Join our survey analysis group: ') . $group->name . ' - ' . $joinUrl) }}" target="_blank"
+                                                        class="flex items-center gap-3 px-3 py-2 text-[11px] font-bold text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-colors">
+                                                        <i class="fa-brands fa-whatsapp text-emerald-500 text-sm"></i>
+                                                        {{ __('Share to WhatsApp') }}
+                                                    </a>
+                                                    <a href="mailto:?subject={{ urlencode(__('Survey Group Analysis Invitation')) }}&body={{ urlencode(__('Join our survey analysis group: ') . $group->name . ' - ') }}{{ urlencode($joinUrl) }}"
+                                                        class="flex items-center gap-3 px-3 py-2 text-[11px] font-bold text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-colors">
+                                                        <i class="fa-solid fa-envelope text-gray-400 text-sm"></i>
+                                                        {{ __('Share via Email') }}
+                                                    </a>
+                                                    <a href="https://twitter.com/intent/tweet?url={{ urlencode($joinUrl) }}&text={{ urlencode(__('Join our survey analysis group: ') . $group->name) }}" target="_blank"
+                                                        class="flex items-center gap-3 px-3 py-2 text-[11px] font-bold text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-colors">
+                                                        <i class="fa-brands fa-twitter text-slate-900 text-sm"></i>
+                                                        {{ __('Share to Twitter') }}
+                                                    </a>
+                                                </div>
+                                            </div>
+
+                                            <div class="relative flex items-center" x-data="{ copied: false }">
+                                                <input type="text" readonly value="{{ $joinUrl }}" 
+                                                    class="px-3 py-2 bg-gray-50 border border-gray-100 rounded-xl text-[10px] font-semibold text-gray-500 w-48 focus:outline-none">
+                                                <button type="button" 
+                                                    @click="navigator.clipboard.writeText('{{ $joinUrl }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                                                    class="absolute right-1 px-2.5 py-1 bg-white border border-gray-100 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-gray-50 transition-all">
+                                                    <span x-text="copied ? '{{ __('Copied') }}' : '{{ __('Copy') }}'"></span>
+                                                </button>
+                                            </div>
+
+                                            <form action="{{ route('surveys.groups.destroy', [$survey, $group]) }}" method="POST">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit"
+                                                    class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">
+                                                    <i class="fa-solid fa-trash-can"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            @endif
+                        </div>
+                    </div>
+                </section>
+
+                <hr class="border-gray-50">
+
                 <!-- Export Branding -->
                 @php
                     $canBrand = auth()->user()->hasProAccess();

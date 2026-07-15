@@ -183,6 +183,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/branding-logo', [SurveyController::class, 'serveBrandingLogo'])->name('branding.logo');
         Route::post('/collaborators', [SurveyController::class, 'addCollaborator'])->name('collaborators.add');
         Route::delete('/collaborators/{permission}', [SurveyController::class, 'removeCollaborator'])->name('collaborators.remove');
+        Route::post('/groups', [SurveyController::class, 'createGroup'])->name('groups.create');
+        Route::delete('/groups/{group}', [SurveyController::class, 'deleteGroup'])->name('groups.destroy');
+        Route::get('/group-join/{token}', [SurveyController::class, 'joinGroup'])->name('groups.join');
         Route::post('/publish', [SurveyController::class, 'publish'])->name('publish');
         Route::post('/archive', [SurveyController::class, 'archive'])->name('archive');
         Route::post('/toggle-shared-report', [SurveyController::class, 'toggleSharedReport'])->name('reports.toggle-shared');

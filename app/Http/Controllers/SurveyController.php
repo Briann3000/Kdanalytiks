@@ -1274,7 +1274,14 @@ class SurveyController extends Controller
             $aiSummary = "TRIAL LIMIT REACHED: Upgrade to Pro or Enterprise to unlock continuous AI Executive Summaries and Strategic Synthesis.";
         }
 
-        return view('surveys.reports', compact('survey', 'responses', 'analysis', 'chartConfigs', 'aiSummary', 'canAnalyze'));
+        $groups = collect();
+        $isOwnerOrAdmin = (int) $survey->created_by === (int) $user->id || $user->isAdmin();
+        if ($isOwnerOrAdmin) {
+            $groups = $survey->groups()->withCount('users')->get();
+        }
+        $myGroup = $user->surveyGroups()->where('survey_id', $survey->id)->first();
+
+        return view('surveys.reports', compact('survey', 'responses', 'analysis', 'chartConfigs', 'aiSummary', 'canAnalyze', 'groups', 'myGroup'));
     }
 
     public function exportPdf(\App\Models\Survey $survey)
@@ -4143,4 +4150,45 @@ class SurveyController extends Controller
 
         return $val;
     }
+
+    public function createGroup(Request $request, Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $survey->groups()->create([
+            'name' => $request->name,
+            'token' => \Illuminate\Support\Str::random(32),
+        ]);
+
+        return back()->with('success', 'Analysis group created successfully.');
+    }
+
+    public function deleteGroup(Survey $survey, \App\Models\SurveyGroup $group)
+    {
+        $this->authorizeOwner($survey);
+        abort_unless((int) $group->survey_id === (int) $survey->id, 404);
+
+        $group->delete();
+
+        return back()->with('success', 'Analysis group deleted successfully.');
+    }
+
+    public function joinGroup(Survey $survey, $token)
+    {
+        $group = \App\Models\SurveyGroup::where('survey_id', $survey->id)
+            ->where('token', $token)
+            ->firstOrFail();
+
+        $user = auth()->user();
+        if (!$group->users()->where('users.id', $user->id)->exists()) {
+            $group->users()->attach($user->id);
+        }
+
+        return redirect()->route('surveys.reports', $survey)->with('success', "You have joined the analysis group '{$group->name}' for this survey.");
+    }
 }
+

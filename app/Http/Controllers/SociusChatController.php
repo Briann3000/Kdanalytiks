@@ -54,8 +54,25 @@ class SociusChatController extends Controller
         $this->authorizeSurvey($survey);
         $this->ensureAiEligible($request);
 
+        $user = $request->user();
+        $groupId = null;
+
+        // If not owner/admin, associate with their group
+        if (!$user->isAdmin() && (int) $survey->created_by !== (int) $user->id) {
+            $group = $user->surveyGroups()->where('survey_id', $survey->id)->first();
+            if ($group) {
+                $groupId = $group->id;
+            }
+        } else {
+            // Survey owner can specify which group this thread belongs to
+            if ($request->has('group_id') && $request->group_id !== 'personal' && $request->group_id !== '') {
+                $groupId = $request->group_id;
+            }
+        }
+
         $thread = $survey->aiThreads()->create([
-            'user_id' => $request->user()->id,
+            'user_id' => $user->id,
+            'survey_group_id' => $groupId,
             'title' => 'New chat',
             'last_activity_at' => now(),
         ]);
@@ -292,8 +309,24 @@ class SociusChatController extends Controller
 
         abort_unless((int) $thread->survey_id === (int) $survey->id, 404);
 
-        if (!$request->user()->isAdmin()) {
-            abort_unless((int) $thread->user_id === (int) $request->user()->id, 404);
+        $user = $request->user();
+        if (!$user->isAdmin()) {
+            // Survey owner/creator can see any thread of the survey
+            if ((int) $survey->created_by === (int) $user->id) {
+                return;
+            }
+
+            // If the thread is tagged with a group, the student must be a member of that group
+            if ($thread->survey_group_id) {
+                $isMember = \DB::table('survey_group_users')
+                    ->where('survey_group_id', $thread->survey_group_id)
+                    ->where('user_id', $user->id)
+                    ->exists();
+                abort_unless($isMember, 404);
+            } else {
+                // Otherwise, the thread must belong to them directly
+                abort_unless((int) $thread->user_id === (int) $user->id, 404);
+            }
         }
     }
 
@@ -305,9 +338,26 @@ class SociusChatController extends Controller
     private function threadQuery(Survey $survey, Request $request)
     {
         $query = $survey->aiThreads()->getQuery();
+        $user = $request->user();
 
-        if (!$request->user()->isAdmin()) {
-            $query->where('user_id', $request->user()->id);
+        // If the user is the survey creator or an admin
+        if ($user->isAdmin() || (int) $survey->created_by === (int) $user->id) {
+            if ($request->has('group_id') && $request->group_id !== 'personal' && $request->group_id !== '') {
+                $query->where('survey_group_id', $request->group_id);
+            } else {
+                // Default to threads with no group (the owner's personal threads)
+                $query->whereNull('survey_group_id');
+            }
+        } else {
+            // For students/normal users, find their group for this survey
+            $group = $user->surveyGroups()->where('survey_id', $survey->id)->first();
+            if ($group) {
+                $query->where('survey_group_id', $group->id);
+            } else {
+                // If they are not in a group but are direct collaborators (via SurveyPermission),
+                // they can see their own personal threads.
+                $query->whereNull('survey_group_id')->where('user_id', $user->id);
+            }
         }
 
         return $query;
