@@ -29,17 +29,40 @@ class DataAggregatorService
         // If legacy questions table is empty, parse from JSON schema
         if ($questions->isEmpty() && $isJson) {
             $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
+            $schema = is_array($schema) ? $schema : [];
+
+            $expandedSchema = [];
             foreach ($schema as $field) {
-                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph']))
+                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'group']))
                     continue;
 
-                // Create a transient question-like object for aggregation logic
-                $qObj = (object) [
-                    'id' => $field['name'],
-                    'name' => $field['name'],
-                    'type' => $field['type'] ?? 'text',
-                    'label' => $field['label'] ?? $field['name'],
-                ];
+                if (in_array($field['type'], ['likert_matrix_grid', 'likert_matrix'])) {
+                    $rows = $field['rows'] ?? [];
+                    foreach ($rows as $r) {
+                        $rowVal = $r['value'] ?? '';
+                        $rowLabel = $r['label'] ?? $rowVal;
+                        $expandedSchema[] = (object) [
+                            'id' => $field['name'] . '___' . $rowVal,
+                            'name' => $field['name'] . '___' . $rowVal,
+                            'type' => 'radio',
+                            'label' => ($field['label'] ?? $field['name']) . ' - ' . $rowLabel,
+                            'is_virtual_likert' => true,
+                            'parent_likert_name' => $field['name'],
+                            'likert_row_value' => $rowVal,
+                            'columns' => $field['columns'] ?? [],
+                        ];
+                    }
+                } else {
+                    $expandedSchema[] = (object) [
+                        'id' => $field['name'],
+                        'name' => $field['name'],
+                        'type' => $field['type'] ?? 'text',
+                        'label' => $field['label'] ?? $field['name'],
+                    ];
+                }
+            }
+
+            foreach ($expandedSchema as $qObj) {
                 $aggregatedData['questions'][] = $this->aggregateQuestionData($qObj, $totalResponses);
             }
         } else {
@@ -85,7 +108,7 @@ class DataAggregatorService
     private function aggregateFromJsonBlobs($question, &$data, $totalResponses)
     {
         // Find the "name" or identifier in the schema if applicable
-        $name = $question->name ?? $question->id;
+        $name = isset($question->is_virtual_likert) ? $question->parent_likert_name : ($question->name ?? $question->id);
 
         $responses = DB::table('answers')
             ->whereNull('question_id')
@@ -100,15 +123,45 @@ class DataAggregatorService
             foreach ($parsed as $entry) {
                 if (isset($entry['name']) && $entry['name'] == $name && isset($entry['userData'])) {
                     $val = $entry['userData'];
-                    if (is_array($val)) {
-                        foreach ($val as $v) {
-                            $frequencyCount[$v] = ($frequencyCount[$v] ?? 0) + 1;
-                        }
-                    } else {
-                        if (in_array($data['type'], ['text', 'textarea'])) {
-                            $textInsights[] = $val;
+
+                    if (isset($question->is_virtual_likert)) {
+                        $matrixAnswers = is_string($val) ? json_decode($val, true) : $val;
+                        if (is_array($matrixAnswers)) {
+                            if (isset($matrixAnswers[0])) {
+                                if (is_string($matrixAnswers[0])) {
+                                    $decoded = json_decode($matrixAnswers[0], true);
+                                    if (is_array($decoded)) {
+                                        $matrixAnswers = $decoded;
+                                    }
+                                } elseif (is_array($matrixAnswers[0])) {
+                                    $matrixAnswers = $matrixAnswers[0];
+                                }
+                            }
+                            $rowKey = $question->likert_row_value;
+                            $val = $matrixAnswers[$rowKey] ?? null;
                         } else {
-                            $frequencyCount[$val] = ($frequencyCount[$val] ?? 0) + 1;
+                            $val = null;
+                        }
+
+                        // Map option value to option label for virtual likert columns
+                        if ($val !== null && $val !== '') {
+                            $colsDef = $question->columns ?? [];
+                            $colLabel = collect($colsDef)->firstWhere('value', $val)['label'] ?? $val;
+                            $val = $colLabel;
+                        }
+                    }
+
+                    if ($val !== null && $val !== '') {
+                        if (is_array($val)) {
+                            foreach ($val as $v) {
+                                $frequencyCount[$v] = ($frequencyCount[$v] ?? 0) + 1;
+                            }
+                        } else {
+                            if (in_array($data['type'], ['text', 'textarea'])) {
+                                $textInsights[] = $val;
+                            } else {
+                                $frequencyCount[$val] = ($frequencyCount[$val] ?? 0) + 1;
+                            }
                         }
                     }
                 }

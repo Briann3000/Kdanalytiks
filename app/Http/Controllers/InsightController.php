@@ -63,14 +63,35 @@ class InsightController extends Controller
 
         $insight = Cache::remember($cacheKey, 86400, function () use ($survey, $questionId) {
             $responses = [];
+            $questionText = $questionId;
+            $isVirtualLikert = str_contains($questionId, '___');
+            $matchName = $isVirtualLikert ? explode('___', $questionId)[0] : $questionId;
+            $rowKey = $isVirtualLikert ? explode('___', $questionId)[1] : null;
 
             if (is_numeric($questionId)) {
+                $question = \App\Models\Question::find($questionId);
+                if ($question) {
+                    $questionText = $question->text;
+                }
                 $responses = Answer::where('question_id', $questionId)
                     ->whereNotNull('value')
                     ->where('value', '!=', '')
                     ->pluck('value')
                     ->toArray();
             } else {
+                $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
+                $schema = is_array($schema) ? $schema : [];
+                $field = collect($schema)->firstWhere('name', $matchName);
+                if ($field) {
+                    if ($isVirtualLikert) {
+                        $rows = $field['rows'] ?? [];
+                        $rowLabel = collect($rows)->firstWhere('value', $rowKey)['label'] ?? $rowKey;
+                        $questionText = ($field['label'] ?? $field['name']) . ' - ' . $rowLabel;
+                    } else {
+                        $questionText = $field['label'] ?? $field['name'];
+                    }
+                }
+
                 $surveyId = $survey->id;
                 $rawAnswers = Answer::whereHas('response', function ($q) use ($surveyId) {
                     $q->where('survey_id', $surveyId);
@@ -82,8 +103,35 @@ class InsightController extends Controller
                 foreach ($rawAnswers as $jsonBlob) {
                     $parsed = json_decode($jsonBlob, true) ?? [];
                     foreach ($parsed as $entry) {
-                        if (isset($entry['name']) && $entry['name'] === $questionId && isset($entry['userData'])) {
+                        if (isset($entry['name']) && $entry['name'] === $matchName && isset($entry['userData'])) {
                             $val = $entry['userData'];
+                            if ($isVirtualLikert) {
+                                $matrixAnswers = is_string($val) ? json_decode($val, true) : $val;
+                                if (is_array($matrixAnswers)) {
+                                    if (isset($matrixAnswers[0])) {
+                                        if (is_string($matrixAnswers[0])) {
+                                            $decoded = json_decode($matrixAnswers[0], true);
+                                            if (is_array($decoded)) {
+                                                $matrixAnswers = $decoded;
+                                            }
+                                        } elseif (is_array($matrixAnswers[0])) {
+                                            $matrixAnswers = $matrixAnswers[0];
+                                        }
+                                    }
+                                    $val = $matrixAnswers[$rowKey] ?? null;
+                                } else {
+                                    $val = null;
+                                }
+
+                                if ($val !== null && $val !== '' && $field && isset($field['columns']) && is_array($field['columns'])) {
+                                    $opt = collect($field['columns'])->firstWhere('value', $val);
+                                    $val = $opt ? ($opt['label'] ?? $val) : $val;
+                                }
+                            } else {
+                                if ($field) {
+                                    $val = \App\Http\Controllers\SurveyController::formatResponseValue($val, $field);
+                                }
+                            }
                             if ($val !== null && $val !== '') {
                                 $responses[] = is_array($val) ? implode(', ', $val) : $val;
                             }
@@ -92,7 +140,7 @@ class InsightController extends Controller
                 }
             }
 
-            return $this->analysisService->analyzeResponses($responses);
+            return $this->analysisService->analyzeResponses($responses, $questionText);
         });
 
         $user = auth()->user();

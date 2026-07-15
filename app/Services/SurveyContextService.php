@@ -131,9 +131,31 @@ class SurveyContextService
             $firstAnswer = $response->answers->first();
             $data = json_decode($firstAnswer ? $firstAnswer->value : '[]', true);
 
+            $isVirtualLikert = str_contains($questionId, '___');
+            $matchName = $isVirtualLikert ? explode('___', $questionId)[0] : $questionId;
+            $rowKey = $isVirtualLikert ? explode('___', $questionId)[1] : null;
+
             foreach ((array) $data as $entry) {
-                if (($entry['name'] ?? null) === $questionId) {
+                if (($entry['name'] ?? null) === $matchName) {
                     $value = $entry['userData'] ?? null;
+                    if ($isVirtualLikert) {
+                        $matrixAnswers = is_string($value) ? json_decode($value, true) : $value;
+                        if (is_array($matrixAnswers)) {
+                            if (isset($matrixAnswers[0])) {
+                                if (is_string($matrixAnswers[0])) {
+                                    $decoded = json_decode($matrixAnswers[0], true);
+                                    if (is_array($decoded)) {
+                                        $matrixAnswers = $decoded;
+                                    }
+                                } elseif (is_array($matrixAnswers[0])) {
+                                    $matrixAnswers = $matrixAnswers[0];
+                                }
+                            }
+                            $value = $matrixAnswers[$rowKey] ?? null;
+                        } else {
+                            $value = null;
+                        }
+                    }
                     return is_array($value) ? implode(', ', $value) : (filled($value) ? (string) $value : null);
                 }
             }

@@ -45,7 +45,7 @@
             this.insight = await response.json();
             if (this.insight.error) throw new Error(this.insight.error);
         } catch (err) {
-            this.error = @js(__('Unable to analyze responses. There might be too few answers or a network issue.'));
+            this.error = @js(__('Responses not enough to get analysis'));
             console.error(err);
         } finally {
             this.loading = false;
@@ -89,7 +89,8 @@
         </div>
         <h5 class="text-xl font-black text-gray-900 mb-2">{{ __('Analyzing Responses') }}</h5>
         <p class="text-gray-400 text-sm max-w-[280px] font-medium leading-relaxed">
-            {{ __('Please wait while our AI maps recurring themes and sentiment trends...') }}</p>
+            {{ __('Please wait while our AI maps recurring themes and sentiment trends...') }}
+        </p>
     </div>
 
     <!-- Error State -->
@@ -231,7 +232,8 @@
                             </h5>
                             <p class="text-gray-500 text-sm mb-8 leading-relaxed font-medium">{{ __('Upgrade to') }}
                                 <span class="text-indigo-600 font-bold">{{ __('Respondent Pro') }}</span>
-                                {{ __('to reveal all recurring themes, quotes, and deep qualitative mapping.') }}</p>
+                                {{ __('to reveal all recurring themes, quotes, and deep qualitative mapping.') }}
+                            </p>
                             <a href="{{ route('subscriptions.index') }}"
                                 class="inline-flex items-center justify-center w-full px-8 py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 hover:scale-[1.02] active:scale-[0.98]">
                                 {{ __('Unlock Full Report') }}

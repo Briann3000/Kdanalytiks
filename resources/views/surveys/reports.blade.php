@@ -22,8 +22,30 @@
         $initialReportTab = in_array($requestedReportTab, $allowedReportTabs, true) ? $requestedReportTab : 'quantitative';
     @endphp
 
-    <div class="space-y-12" x-data="{
+    <div :class="reportTab === 'analyse' ? '' : 'space-y-12'" x-data="{
             reportTab: @js($initialReportTab) === 'crosstab' ? 'inferential' : @js($initialReportTab),
+            init() {
+                this.$watch('reportTab', (tab) => {
+                    if (tab === 'analyse') {
+                        this.$nextTick(() => {
+                            const inputEl = document.getElementById('socius-prompt-input');
+                            if (inputEl) {
+                                inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                inputEl.focus();
+                            }
+                        });
+                    }
+                });
+                if (this.reportTab === 'analyse') {
+                    this.$nextTick(() => {
+                        const inputEl = document.getElementById('socius-prompt-input');
+                        if (inputEl) {
+                            inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            inputEl.focus();
+                        }
+                    });
+                }
+            },
             switchReportTab(tab) {
                 this.reportTab = tab;
                 const url = new URL(window.location.href);
@@ -35,7 +57,7 @@
             }
         }">
         <!-- Sub Navigation -->
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 border-b border-gray-100 pb-6">
+        <div x-show="reportTab !== 'analyse'" class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 border-b border-gray-100 pb-6">
             <div class="flex flex-wrap items-center gap-6">
                 <!-- Descriptive Group -->
                 <div class="flex flex-col gap-1.5">
@@ -235,7 +257,8 @@
         </div>
 
         <!-- Qualitative Content -->
-        <div x-show="reportTab === 'qualitative'" class="space-y-12 animate-in fade-in duration-500" style="display: none;">
+        <div x-show="reportTab === 'qualitative'" class="space-y-12 animate-in fade-in duration-500"
+            x-data="chartManager()" style="display: none;">
             @foreach($analysis as $item)
                 @if(!$item['isChartable'])
                     <div class="bg-white rounded-3xl p-10 shadow-sm border border-gray-100">
@@ -246,6 +269,50 @@
                             </h4>
                         </div>
 
+                        @if($item['isChartable'] && !empty($item['stats']))
+                            <div class="mb-10 p-6 bg-gray-50/50 border border-gray-100 rounded-3xl animate-in fade-in duration-300">
+                                <div class="mb-6 flex justify-between items-end">
+                                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ __('Frequency Distribution') }}</span>
+                                    <div class="flex gap-1 bg-gray-100 p-1 rounded-lg border border-gray-100">
+                                        @foreach(['bar', 'horizontal', 'line', 'pie', 'doughnut'] as $type)
+                                            <button @click="switchChartType('qual-{{ $item['canvasId'] }}', '{{ $type }}')"
+                                                :class="chartTypes['qual-{{ $item['canvasId'] }}'] === '{{ $type }}' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-600'"
+                                                class="p-1 px-2 rounded-md text-[9px] font-black uppercase transition-all">
+                                                {{ substr($type, 0, 3) }}
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                
+                                <div class="grid md:grid-cols-2 gap-8 items-start">
+                                    <div class="h-64 relative flex items-center justify-center bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+                                        <canvas id="qual-{{ $item['canvasId'] }}"></canvas>
+                                    </div>
+                                    
+                                    <div class="overflow-hidden bg-white rounded-2xl border border-gray-100 max-h-64 overflow-y-auto custom-scrollbar">
+                                        <table class="w-full text-left">
+                                            <thead class="sticky top-0 bg-white z-10 border-b border-gray-100 shadow-sm">
+                                                <tr class="text-[9px] font-black text-gray-500 uppercase tracking-widest">
+                                                    <th class="py-3 px-4">{{ __('Option') }}</th>
+                                                    <th class="py-3 px-4 text-right">{{ __('Count') }}</th>
+                                                    <th class="py-3 px-4 text-right">{{ __('Ratio') }}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-50">
+                                                @foreach($item['stats'] as $stat)
+                                                    <tr class="hover:bg-gray-50/30 transition-colors">
+                                                        <td class="py-3 px-4 text-[10px] font-bold text-gray-700 uppercase tracking-tight">{{ $stat['value'] }}</td>
+                                                        <td class="py-3 px-4 text-right text-[10px] font-black text-gray-900">{{ number_format($stat['count']) }}</td>
+                                                        <td class="py-3 px-4 text-right text-[10px] font-black text-indigo-600">{{ $stat['percentage'] }}%</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
                         @if($item['isAnalyzable'])
                             <x-ai-insight-card :question-id="$item['id']" :question-title="$item['label']"
                                 :survey-id="$item['survey_id']" :index="$loop->index" />
@@ -254,7 +321,7 @@
                         <div class="mt-6 bg-gray-50 rounded-3xl overflow-hidden border border-gray-100">
                             <div class="px-8 py-6 border-b border-gray-100 bg-white flex justify-between items-center">
                                 <h5 class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                    {{ __('Detailed Responses (Verbatims)') }}</h5>
+                                    {{ __('Detailed Responses ') }}</h5>
                                 <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase">
                                     {{ count($item['answers'] ?? []) }} {{ __('Total Entries') }}
                                 </span>
@@ -1220,7 +1287,8 @@
                 if (!canvasElement) return;
                 const ctx = canvasElement.getContext('2d');
 
-                const palette = colorPalettes[colorTheme];
+                const activeTheme = colorTheme && colorPalettes[colorTheme] ? colorTheme : 'vibrant';
+                const palette = colorPalettes[activeTheme] || colorPalettes['vibrant'];
                 // Ensure we have enough colors by repeating the palette if needed
                 const colors = config.labels.map((_, i) => palette[i % palette.length]);
                 const primaryColor = palette[0];
@@ -1657,9 +1725,12 @@
                     activeColors: {},
                     init() {
                         chartConfigs.forEach(config => {
-                            this.chartTypes[config.canvas_id] = 'bar';
-                            this.activeColors[config.canvas_id] = 'vibrant';
-                            chartInstances[config.canvas_id] = createChart(config.canvas_id, config, 'bar', 'vibrant');
+                            const el = document.getElementById(config.canvas_id);
+                            if (el) {
+                                this.chartTypes[config.canvas_id] = 'bar';
+                                this.activeColors[config.canvas_id] = 'vibrant';
+                                chartInstances[config.canvas_id] = createChart(config.canvas_id, config, 'bar', 'vibrant');
+                            }
                         });
                     },
                     switchChartType(canvasId, type) {
@@ -1672,8 +1743,14 @@
                     },
                     refreshChart(canvasId) {
                         const config = chartConfigs.find(c => c.canvas_id === canvasId);
-                        if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
-                        chartInstances[canvasId] = createChart(canvasId, config, this.chartTypes[canvasId], this.activeColors[canvasId]);
+                        if (chartInstances[canvasId]) {
+                            chartInstances[canvasId].destroy();
+                            delete chartInstances[canvasId];
+                        }
+                        const el = document.getElementById(canvasId);
+                        if (el && config) {
+                            chartInstances[canvasId] = createChart(canvasId, config, this.chartTypes[canvasId] || 'bar', this.activeColors[canvasId] || 'vibrant');
+                        }
                     }
                 }
             };
@@ -1710,6 +1787,52 @@
                     webSearchEnabled: false,
                     reviewModeEnabled: false,
                     historyOpen: window.innerWidth > 1280,
+                    scrolledUp: false,
+                    activePromptId: null,
+
+                    handleScroll() {
+                        const el = this.$refs.messageList;
+                        if (!el) return;
+                        this.scrolledUp = (el.scrollHeight - el.scrollTop - el.clientHeight) > 150;
+
+                        // Find which user message is closest to the middle of the scroll container
+                        const userMsgs = this.messages.filter(m => m.role === 'user');
+                        let closestId = null;
+                        let minDiff = Infinity;
+                        
+                        const containerRect = el.getBoundingClientRect();
+                        const centerY = containerRect.top + containerRect.height / 2;
+                        
+                        userMsgs.forEach(m => {
+                            const msgEl = document.getElementById(`msg-${m.id}`);
+                            if (msgEl) {
+                                const rect = msgEl.getBoundingClientRect();
+                                const msgCenterY = rect.top + rect.height / 2;
+                                const diff = Math.abs(msgCenterY - centerY);
+                                if (diff < minDiff) {
+                                    minDiff = diff;
+                                    closestId = m.id;
+                                }
+                            }
+                        });
+                        
+                        if (closestId) {
+                            this.activePromptId = closestId;
+                        }
+                    },
+                    scrollToBottom() {
+                        const el = this.$refs.messageList;
+                        if (el) {
+                            el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+                        }
+                    },
+                    scrollToPrompt(msgId) {
+                        const el = document.getElementById(`msg-${msgId}`);
+                        if (el) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            this.activePromptId = msgId;
+                        }
+                    },
 
                     // Knowledge Base
                     kbModalOpen: false,
@@ -1954,6 +2077,10 @@
                             this.error = error.message;
                         } finally {
                             this.loadingMessages = false;
+                            this.$nextTick(() => {
+                                const inputEl = document.getElementById('socius-prompt-input');
+                                if (inputEl) inputEl.focus();
+                            });
                         }
                     },
 
@@ -2170,6 +2297,10 @@
                             this.streamingUserId = null;
                             this.streamingAssistantId = null;
                             this.sending = false;
+                            this.$nextTick(() => {
+                                const inputEl = document.getElementById('socius-prompt-input');
+                                if (inputEl) inputEl.focus();
+                            });
                         }
                     },
 

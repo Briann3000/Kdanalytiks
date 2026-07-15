@@ -19,7 +19,7 @@ class QualitativeAnalysisService
     /**
      * Analyze a collection of text responses.
      */
-    public function analyzeResponses(array $responses): array
+    public function analyzeResponses(array $responses, string $questionText = null): array
     {
         // 1. Filter out non-textual or empty content (e.g. signatures, base64 images, files)
         $responses = array_filter($responses, function ($r) {
@@ -57,21 +57,25 @@ class QualitativeAnalysisService
 
         $chunks = array_chunk($responses, 25);
 
-        return $this->processChunk($chunks[0]);
+        return $this->processChunk($chunks[0], $questionText);
     }
 
     /**
      * Send a specific chunk of responses to Groq.
      */
-    protected function processChunk(array $batch): array
+    protected function processChunk(array $batch, string $questionText = null): array
     {
         $textData = implode("\n---\n", $batch);
 
         $targetLang = $this->getTargetLanguage();
         $systemPrompt = "You are a professional Political Data Analyst. 
-Analyze the provided voter responses and return a strict JSON object.
+Analyze the provided responses and return a strict JSON object.";
 
-JSON STRUCTURE:
+        if ($questionText) {
+            $systemPrompt .= "\nThese responses were gathered specifically in response to the question: \"{$questionText}\". Ensure your analysis directly targets and answers this question.";
+        }
+
+        $systemPrompt .= "\n\nJSON STRUCTURE:
 {
   \"sentiment\": {
     \"positive\": 0, 

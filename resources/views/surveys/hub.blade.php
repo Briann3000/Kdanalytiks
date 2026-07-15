@@ -5,8 +5,8 @@
 @endsection
 
 @section('content')
-    <div class="container-fluid px-4 py-6">
-        @if(!isset($isSharedView) || !$isSharedView)
+    <div class="container-fluid {{ request('reportTab') === 'analyse' ? 'p-0 overflow-hidden' : 'px-4 py-6' }}">
+        @if((!isset($isSharedView) || !$isSharedView) && request('reportTab') !== 'analyse')
             <!-- Survey Header -->
             <header class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>

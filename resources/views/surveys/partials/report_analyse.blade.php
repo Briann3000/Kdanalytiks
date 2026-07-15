@@ -15,7 +15,7 @@
             kbDestroyTemplate: @js(route('socius.knowledge-base.destroy', ['knowledgeBase' => '__KB__']))
         }
     })" x-init="init()" class="animate-in fade-in duration-500" style="display: none;">
-    <div class="relative flex gap-4 h-[calc(100vh-14rem)] min-h-[600px] overflow-hidden">
+    <div class="relative flex gap-4" style="height: calc(100vh - 4.1rem); overflow: hidden;">
         {{-- Sidebar History --}}
         <aside :class="historyOpen ? 'w-64 md:w-72 opacity-100' : 'w-0 opacity-0 -ml-4'"
             class="bg-[#2b2b2b] text-white rounded-[2rem] border border-white/5 overflow-hidden flex flex-col h-full transition-all duration-300 ease-in-out flex-shrink-0">
@@ -38,7 +38,7 @@
                 </template>
             </div>
 
-            <div class="p-4 space-y-3 flex-1 overflow-y-auto custom-scrollbar">
+            <div class="p-4 space-y-3 flex-1 overflow-y-auto custom-scrollbar" style="overscroll-behavior-y: contain;">
                 <template x-if="loadingThreads">
                     <div class="space-y-3">
                         <div class="h-20 rounded-3xl bg-white/5 animate-pulse"></div>
@@ -163,12 +163,51 @@
                 </div>
             </template>
 
+            {{-- Floating Prompt Timeline Navigation Bar (ChatGPT-style indicator) --}}
+            <div class="absolute right-4 top-1/2 -translate-y-1/2 z-40 flex items-center gap-3"
+                x-data="{ hovered: false }" @mouseenter="hovered = true" @mouseleave="hovered = false"
+                x-show="currentThreadId && messages.filter(m => m.role === 'user').length > 0" style="display: none;">
+
+                {{-- Popover list panel --}}
+                <div x-show="hovered" x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="opacity-0 translate-x-2"
+                    x-transition:enter-end="opacity-100 translate-x-0"
+                    class="w-64 max-h-[300px] overflow-y-auto custom-scrollbar bg-[#202020]/95 backdrop-blur-md rounded-2xl border border-white/10 p-3 shadow-2xl flex flex-col gap-1 text-slate-300"
+                    style="overscroll-behavior-y: contain; display: none;">
+                    <template x-for="(userMsg, idx) in messages.filter(m => m.role === 'user')" :key="userMsg.id">
+                        <button @click="scrollToPrompt(userMsg.id)"
+                            class="w-full text-left px-3 py-1.5 rounded-xl text-xs transition-all truncate"
+                            :class="activePromptId === userMsg.id ? 'bg-white/10 text-orange-400 font-bold' : 'hover:bg-white/5 text-slate-300'"
+                            x-text="userMsg.content">
+                        </button>
+                    </template>
+                </div>
+
+                {{-- Timeline dashes --}}
+                <div
+                    class="flex flex-col gap-2 p-2 bg-black/40 backdrop-blur-md rounded-2xl border border-white/5 shadow-2xl max-h-[80vh] overflow-y-auto custom-scrollbar">
+                    <template x-for="(userMsg, idx) in messages.filter(m => m.role === 'user')" :key="userMsg.id">
+                        <button @click="scrollToPrompt(userMsg.id)"
+                            class="w-5 h-1.5 rounded-full transition-all duration-200"
+                            :class="activePromptId === userMsg.id ? 'bg-orange-400 w-8' : 'bg-white/20 hover:bg-white/60'">
+                        </button>
+                    </template>
+                </div>
+            </div>
+
             <div class="px-5 py-3 border-b border-white/10 flex items-center justify-between gap-4">
                 <div class="flex items-center gap-3">
                     <button @click="historyOpen = !historyOpen"
-                        class="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-all">
+                        class="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-all"
+                        title="{{ __('Toggle History') }}">
                         <i class="fa-solid fa-bars-staggered"></i>
                     </button>
+                    <a href="{{ route('surveys.reports', $survey) }}?reportTab=quantitative"
+                        class="p-2 rounded-xl bg-white/5 border border-white/10 text-orange-400 hover:text-orange-300 hover:bg-white/10 transition-all font-bold text-[10px] flex items-center gap-1.5 uppercase tracking-wider"
+                        title="{{ __('Back to Dashboard Reports') }}">
+                        <i class="fa-solid fa-arrow-left text-[9px]"></i>
+                        {{ __('Stats Dashboard') }}
+                    </a>
                     <h3 class="text-base font-semibold tracking-tight truncate max-w-[200px] md:max-w-md"
                         x-text="currentThread ? currentThread.title : '{{ __('Socius') }}'"></h3>
                 </div>
@@ -218,7 +257,18 @@
                 </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto custom-scrollbar px-4 md:px-8 py-6 space-y-6" x-ref="messageList">
+            <div class="flex-1 overflow-y-auto custom-scrollbar px-4 md:px-8 py-6 space-y-6 relative"
+                x-ref="messageList" @scroll="handleScroll()" style="overscroll-behavior-y: contain;">
+
+                {{-- Scroll to bottom floating button --}}
+                <div x-show="scrolledUp" x-transition class="absolute bottom-4 left-1/2 -translate-x-1/2 z-30"
+                    style="display: none;">
+                    <button @click="scrollToBottom()"
+                        class="w-10 h-10 rounded-full bg-orange-400 text-slate-950 flex items-center justify-center shadow-lg hover:bg-orange-500 hover:scale-105 active:scale-95 transition-all"
+                        title="{{ __('Scroll to bottom') }}">
+                        <i class="fa-solid fa-arrow-down"></i>
+                    </button>
+                </div>
                 <template x-if="!canAnalyze">
                     <div
                         class="max-w-2xl mx-auto rounded-[2rem] border border-amber-400/20 bg-amber-400/10 p-8 text-center">
@@ -257,7 +307,7 @@
                                         {{ __('Quantitative') }}
                                     </p>
                                     <p class="text-sm text-slate-200 mt-3">
-                                        {{ __('Interpret trends, frequencies, and cross-tab patterns directly from the live report.') }}
+                                        {{ __('Interpret trends, frequencies and cross-tab patterns directly from the live report.') }}
                                     </p>
                                 </div>
                                 <div class="rounded-3xl bg-white/[0.04] p-5 border border-white/10">
@@ -299,7 +349,7 @@
                 </template>
 
                 <template x-for="(message, index) in messages" :key="message.id">
-                    <div class="max-w-4xl mx-auto group/msg"
+                    <div :id="'msg-' + message.id" class="max-w-4xl mx-auto group/msg"
                         :class="message.role === 'user' ? 'flex justify-end' : 'flex justify-start'">
                         <div class="relative w-full md:w-auto md:max-w-[80%] rounded-[2rem] px-5 py-4 border" :class="message.role === 'user'
                                 ? 'bg-orange-400 text-slate-950 border-orange-300 shadow-lg shadow-orange-500/10'
@@ -450,7 +500,7 @@
                         </div>
                     </template>
 
-                    <textarea x-model="draft" x-ref="textarea" rows="2"
+                    <textarea id="socius-prompt-input" x-model="draft" x-ref="textarea" rows="2"
                         @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); sendMessage(); }"
                         class="w-full bg-transparent border-0 focus:ring-0 resize-none text-sm text-white placeholder:text-slate-500"
                         :placeholder="reviewModeEnabled ? '{{ __('Describe supervisor corrections or ask Socius to fix them...') }}' : '{{ __('Message Socius...') }}'"

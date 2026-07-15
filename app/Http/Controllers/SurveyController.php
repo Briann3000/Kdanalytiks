@@ -964,10 +964,32 @@ class SurveyController extends Controller
             $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
             $schema = is_array($schema) ? $schema : [];
 
+            $expandedSchema = [];
             foreach ($schema as $field) {
                 if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'group']))
                     continue;
 
+                if (in_array($field['type'], ['likert_matrix_grid', 'likert_matrix'])) {
+                    $rows = $field['rows'] ?? [];
+                    foreach ($rows as $r) {
+                        $rowVal = $r['value'] ?? '';
+                        $rowLabel = $r['label'] ?? $rowVal;
+                        $expandedSchema[] = [
+                            'name' => $field['name'] . '___' . $rowVal,
+                            'label' => ($field['label'] ?? $field['name']) . ' - ' . $rowLabel,
+                            'type' => 'radio',
+                            'values' => $field['columns'] ?? [],
+                            'is_virtual_likert' => true,
+                            'parent_likert_name' => $field['name'],
+                            'likert_row_value' => $rowVal,
+                        ];
+                    }
+                } else {
+                    $expandedSchema[] = $field;
+                }
+            }
+
+            foreach ($expandedSchema as $field) {
                 $fieldId = $field['name'];
                 $label = $field['label'] ?? $fieldId;
                 $type = $field['type'] ?? 'text';
@@ -983,23 +1005,34 @@ class SurveyController extends Controller
                         $data = is_string($jsonAnswer->value) ? json_decode($jsonAnswer->value, true) : $jsonAnswer->value;
                         if (is_array($data)) {
                             foreach ($data as $entry) {
-                                if (isset($entry['name']) && $entry['name'] === $fieldId && isset($entry['userData'])) {
+                                $matchName = isset($field['is_virtual_likert']) ? $field['parent_likert_name'] : $fieldId;
+                                if (isset($entry['name']) && $entry['name'] === $matchName && isset($entry['userData'])) {
                                     $val = $entry['userData'];
-                                    if ($val !== null && $val !== '') {
-                                        // Resolve options to labels for report charts/frequencies
-                                        if (isset($field['values']) && is_array($field['values'])) {
-                                            if (is_array($val)) {
-                                                $mapped = [];
-                                                foreach ($val as $v) {
-                                                    $opt = collect($field['values'])->firstWhere('value', $v);
-                                                    $mapped[] = $opt ? ($opt['label'] ?? $v) : $v;
+
+                                    if (isset($field['is_virtual_likert'])) {
+                                        $matrixAnswers = is_string($val) ? json_decode($val, true) : $val;
+                                        if (is_array($matrixAnswers)) {
+                                            if (isset($matrixAnswers[0])) {
+                                                if (is_string($matrixAnswers[0])) {
+                                                    $decoded = json_decode($matrixAnswers[0], true);
+                                                    if (is_array($decoded)) {
+                                                        $matrixAnswers = $decoded;
+                                                    }
+                                                } elseif (is_array($matrixAnswers[0])) {
+                                                    $matrixAnswers = $matrixAnswers[0];
                                                 }
-                                                $val = $mapped;
-                                            } else {
-                                                $opt = collect($field['values'])->firstWhere('value', $val);
-                                                $val = $opt ? ($opt['label'] ?? $val) : $val;
                                             }
+                                            $rowKey = $field['likert_row_value'];
+                                            $val = $matrixAnswers[$rowKey] ?? null;
+                                        } else {
+                                            $val = null;
                                         }
+                                    }
+
+                                    // Format complex structures like repeating containers or select groups
+                                    $val = self::formatResponseValue($val, $field);
+
+                                    if ($val !== null && $val !== '') {
                                         $answeredCount++;
                                         $answersList[] = is_array($val) ? implode(', ', $val) : $val;
                                         $found = true;
@@ -1014,8 +1047,8 @@ class SurveyController extends Controller
                 }
 
                 $missingCount = $totalResponses - $answeredCount;
-                $isChartable = in_array($field['type'], ['radio', 'checkbox', 'select', 'number', 'select-one', 'select-multiple', 'radio-group', 'checkbox-group', 'rating', 'range', 'ranking', 'decimal', 'starRating', 'toggle']);
-                $isAnalyzable = $field['type'] === 'textarea';
+                $isChartable = !in_array($field['type'], ['text', 'textarea', 'multimedia', 'signature', 'gps', 'qr', 'file', 'image', 'signature-pad', 'file-upload', 'header', 'paragraph', 'group', 'note', 'date', 'time', 'audio', 'video', 'photo', 'email']);
+                $isAnalyzable = in_array($field['type'], ['textarea', 'text', 'radio', 'checkbox', 'select', 'select-one', 'select-multiple', 'radio-group', 'checkbox-group', 'likert_matrix', 'likert_matrix_grid']);
                 $canvasId = 'chart-' . $fieldId;
 
                 $stats = [];
@@ -1047,6 +1080,11 @@ class SurveyController extends Controller
                         'labels' => array_keys($frequencyCount),
                         'data' => array_values($frequencyCount)
                     ];
+                    $chartConfigs[] = [
+                        'canvas_id' => 'qual-' . $canvasId,
+                        'labels' => array_keys($frequencyCount),
+                        'data' => array_values($frequencyCount)
+                    ];
 
                     $qcConfig = [
                         'type' => 'bar',
@@ -1065,8 +1103,8 @@ class SurveyController extends Controller
                         if ($isAnalyzable) {
                             // Qualitative Analysis - FREE (Standard)
                             if ($forceGenerate) {
-                                $aiInsight = \Illuminate\Support\Facades\Cache::remember("qualitative_analysis_{$survey->id}_{$fieldId}", 86400, function () use ($answersList) {
-                                    return (new \App\Services\QualitativeAnalysisService())->analyzeResponses($answersList);
+                                $aiInsight = \Illuminate\Support\Facades\Cache::remember("qualitative_analysis_{$survey->id}_{$fieldId}", 86400, function () use ($answersList, $label) {
+                                    return (new \App\Services\QualitativeAnalysisService())->analyzeResponses($answersList, $label);
                                 });
                             }
                         } elseif ($isChartable && $canAnalyze) {
@@ -1117,8 +1155,8 @@ class SurveyController extends Controller
                 }
 
                 $missingCount = $totalResponses - $answeredCount;
-                $isChartable = in_array($question->type, ['radio', 'checkbox', 'select', 'number', 'select_one', 'select_many', 'select-one', 'select-multiple', 'radio-group', 'checkbox-group', 'rating', 'range', 'ranking', 'decimal', 'starRating', 'toggle']);
-                $isAnalyzable = $question->type === 'textarea';
+                $isChartable = !in_array($question->type, ['text', 'textarea', 'multimedia', 'signature', 'gps', 'qr', 'file', 'image', 'signature-pad', 'file-upload', 'header', 'paragraph', 'group', 'note', 'date', 'time', 'audio', 'video', 'photo', 'email']);
+                $isAnalyzable = in_array($question->type, ['textarea', 'text', 'radio', 'checkbox', 'select', 'select_one', 'select_many', 'select-one', 'select-multiple', 'radio-group', 'checkbox-group', 'likert_matrix', 'likert_matrix_grid']);
                 $canvasId = 'chart-question_' . $question->id;
 
                 $stats = [];
@@ -1143,6 +1181,11 @@ class SurveyController extends Controller
                         'labels' => array_keys($frequencyCount),
                         'data' => array_values($frequencyCount)
                     ];
+                    $chartConfigs[] = [
+                        'canvas_id' => 'qual-' . $canvasId,
+                        'labels' => array_keys($frequencyCount),
+                        'data' => array_values($frequencyCount)
+                    ];
 
                     $qcConfig = [
                         'type' => 'bar',
@@ -1161,8 +1204,8 @@ class SurveyController extends Controller
                         if ($isAnalyzable) {
                             // Qualitative Analysis - FREE (Standard)
                             if ($forceGenerate) {
-                                $aiInsight = \Illuminate\Support\Facades\Cache::remember("qualitative_analysis_{$survey->id}_{$question->id}", 86400, function () use ($answersList) {
-                                    return (new \App\Services\QualitativeAnalysisService())->analyzeResponses($answersList);
+                                $aiInsight = \Illuminate\Support\Facades\Cache::remember("qualitative_analysis_{$survey->id}_{$question->id}", 86400, function () use ($answersList, $question) {
+                                    return (new \App\Services\QualitativeAnalysisService())->analyzeResponses($answersList, $question->text);
                                 });
                             }
                         } elseif ($isChartable && $canAnalyze) {
@@ -4004,5 +4047,100 @@ class SurveyController extends Controller
         }
 
         return view('surveys.claim', compact('survey'));
+    }
+
+    public static function formatResponseValue($val, $field)
+    {
+        $type = $field['type'] ?? 'text';
+
+        // Auto-decode JSON strings if they are passed as strings
+        if (is_string($val) && (str_starts_with($val, '[') || str_starts_with($val, '{'))) {
+            $decoded = json_decode($val, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $val = $decoded;
+            }
+        }
+
+        if (in_array($type, ['likert_matrix_grid', 'likert_matrix'])) {
+            $matrixAnswers = $val;
+            if (is_array($matrixAnswers)) {
+                if (isset($matrixAnswers[0])) {
+                    if (is_string($matrixAnswers[0])) {
+                        $decoded = json_decode($matrixAnswers[0], true);
+                        if (is_array($decoded)) {
+                            $matrixAnswers = $decoded;
+                        }
+                    } elseif (is_array($matrixAnswers[0])) {
+                        $matrixAnswers = $matrixAnswers[0];
+                    }
+                }
+                $pairs = [];
+                $rowsDef = $field['rows'] ?? [];
+                $colsDef = $field['columns'] ?? [];
+                foreach ($rowsDef as $r) {
+                    $rk = $r['value'] ?? '';
+                    $rowLabel = $r['label'] ?? $rk;
+                    if (isset($matrixAnswers[$rk]) && $matrixAnswers[$rk] !== null && $matrixAnswers[$rk] !== '') {
+                        $cv = $matrixAnswers[$rk];
+                        $colLabel = collect($colsDef)->firstWhere('value', $cv)['label'] ?? $cv;
+                        $pairs[] = "$rowLabel: $colLabel";
+                    } else {
+                        $pairs[] = "$rowLabel: —";
+                    }
+                }
+                return implode(" | ", $pairs);
+            }
+        }
+
+        if ($type === 'repeat_container') {
+            $instances = $val;
+            if (is_array($instances)) {
+                $entryStrings = [];
+                foreach ($instances as $idx => $inst) {
+                    $innerPairs = [];
+                    if (is_array($inst)) {
+                        foreach ($inst as $elem) {
+                            if (isset($elem['name']) && isset($elem['userData'])) {
+                                $innerField = null;
+                                if (isset($field['fields']) && is_array($field['fields'])) {
+                                    $innerField = collect($field['fields'])->firstWhere('name', $elem['name']);
+                                }
+                                $elemLabel = $innerField['label'] ?? $elem['name'];
+                                $elemVal = $elem['userData'];
+                                if (is_array($elemVal)) {
+                                    $elemVal = implode(', ', $elemVal);
+                                }
+                                $innerPairs[] = "$elemLabel: $elemVal";
+                            }
+                        }
+                    }
+                    if (!empty($innerPairs)) {
+                        $entryStrings[] = "Entry " . ($idx + 1) . " (" . implode(', ', $innerPairs) . ")";
+                    }
+                }
+                return implode(" | ", $entryStrings);
+            }
+        }
+
+        // Resolve select/checkbox/radio option values to their labels if present
+        if (isset($field['values']) && is_array($field['values'])) {
+            if (is_array($val)) {
+                $mapped = [];
+                foreach ($val as $v) {
+                    $opt = collect($field['values'])->firstWhere('value', $v);
+                    $mapped[] = $opt ? ($opt['label'] ?? $v) : $v;
+                }
+                return implode(', ', $mapped);
+            } else {
+                $opt = collect($field['values'])->firstWhere('value', $val);
+                return $opt ? ($opt['label'] ?? $val) : $val;
+            }
+        }
+
+        if (is_array($val)) {
+            return implode(', ', $val);
+        }
+
+        return $val;
     }
 }
