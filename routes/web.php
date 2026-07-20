@@ -39,6 +39,17 @@ Route::get('/terms-and-conditions', function () {
 
 Route::get('/surveys/public', [SurveyController::class, 'publicIndex'])->name('surveys.public');
 
+// Documentation Routes
+Route::get('/docs', [\App\Http\Controllers\DocsController::class, 'index'])->name('docs');
+Route::get('/docs/{article}', [\App\Http\Controllers\DocsController::class, 'show'])->name('docs.show');
+
+// Help & Support Routes
+Route::get('/help', [\App\Http\Controllers\HelpController::class, 'index'])->name('help');
+Route::get('/help/tours/{tour}', [\App\Http\Controllers\HelpController::class, 'launchTour'])
+    ->middleware(['auth', 'verified'])
+    ->name('help.tours.launch');
+
+
 Route::post('/logout', function () {
     \Illuminate\Support\Facades\Auth::logout();
     return redirect('/');

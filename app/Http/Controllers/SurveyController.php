@@ -18,6 +18,7 @@ class SurveyController extends Controller
 {
     public function index(Request $request)
     {
+        \App\Models\Survey::cleanupEmptyDrafts(auth()->id());
         $statusParam = $request->get('status', 'active');
         $status = match ($statusParam) {
             'draft' => \App\Enums\SurveyStatus::Draft,
@@ -141,7 +142,13 @@ class SurveyController extends Controller
 
         $survey->save();
 
-        return redirect()->route('surveys.edit', $survey);
+        $redirectParams = [$survey];
+
+        if (request()->filled('start_tour')) {
+            $redirectParams['start_tour'] = request('start_tour');
+        }
+
+        return redirect()->route('surveys.edit', $redirectParams);
     }
 
     /**
@@ -173,7 +180,13 @@ class SurveyController extends Controller
 
         $survey->save();
 
-        return redirect()->route('surveys.edit', $survey);
+        $redirectParams = [$survey];
+
+        if ($request->filled('start_tour')) {
+            $redirectParams['start_tour'] = $request->input('start_tour');
+        }
+
+        return redirect()->route('surveys.edit', $redirectParams);
     }
 
     public function projectSummary(\App\Models\Survey $survey)
@@ -1078,12 +1091,14 @@ class SurveyController extends Controller
                     $chartConfigs[] = [
                         'canvas_id' => $canvasId,
                         'labels' => array_keys($frequencyCount),
-                        'data' => array_values($frequencyCount)
+                        'data' => array_values($frequencyCount),
+                        'question_name' => $field['label'] ?? $field['name'] ?? ''
                     ];
                     $chartConfigs[] = [
                         'canvas_id' => 'qual-' . $canvasId,
                         'labels' => array_keys($frequencyCount),
-                        'data' => array_values($frequencyCount)
+                        'data' => array_values($frequencyCount),
+                        'question_name' => $field['label'] ?? $field['name'] ?? ''
                     ];
 
                     $qcConfig = [
@@ -1179,12 +1194,14 @@ class SurveyController extends Controller
                     $chartConfigs[] = [
                         'canvas_id' => $canvasId,
                         'labels' => array_keys($frequencyCount),
-                        'data' => array_values($frequencyCount)
+                        'data' => array_values($frequencyCount),
+                        'question_name' => $field['label'] ?? $field['name'] ?? ''
                     ];
                     $chartConfigs[] = [
                         'canvas_id' => 'qual-' . $canvasId,
                         'labels' => array_keys($frequencyCount),
-                        'data' => array_values($frequencyCount)
+                        'data' => array_values($frequencyCount),
+                        'question_name' => $field['label'] ?? $field['name'] ?? ''
                     ];
 
                     $qcConfig = [

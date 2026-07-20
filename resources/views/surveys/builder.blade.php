@@ -646,50 +646,50 @@
             style="position: sticky; top: -1px; z-index: 50;">
             <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div class="flex flex-wrap items-center gap-2">
-                    <button type="button" @click="showDetails = !showDetails"
+                    <button type="button" id="builderDetailsBtn" @click="showDetails = !showDetails"
                         class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center"
-                        :class="showDetails ? 'bg-indigo-600 text-white shadow-lg' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
-                        <i class="fa-solid fa-circle-info mr-2"></i> {{ __('Details') }}
+                        :class="showDetails ? 'bg-[#2271b1] text-white shadow-lg' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
+                        {{ __('Details') }}
                     </button>
                     <div class="h-6 w-px bg-gray-200 mx-2"></div>
-                    <button type="button" @click="activeMode = 'visual'; showDetails = false"
+                    <button type="button" id="builderVisualBtn" @click="activeMode = 'visual'; showDetails = false"
                         class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center"
-                        :class="activeMode === 'visual' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'">
-                        <i class="fa-solid fa-paint-brush mr-2"></i> {{ __('Visual') }}
+                        :class="activeMode === 'visual' ? 'bg-[#2271b1] text-white shadow-lg shadow-zinc-200/50' : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'">
+                        {{ __('Visual') }}
                     </button>
-                    <button type="button"
+                    <button type="button" id="builderCodeBtn"
                         @click="activeMode = 'json'; showDetails = false; $nextTick(() => document.getElementById('jsonInput').focus())"
                         class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center"
                         :class="activeMode === 'json' ? 'bg-slate-900 text-white shadow-lg' : 'bg-gray-200 text-gray-500 hover:bg-gray-300 border border-transparent shadow-inner'">
-                        <i class="fa-solid fa-code mr-2"></i> {{ __('Code') }}
+                        {{ __('Code') }}
                     </button>
-                    <button type="button"
+                    <button type="button" id="builderAiArchitectBtn"
                         @click="showLibrary = false; showAiModal = true; $nextTick(() => document.getElementById('aiPrompt').focus())"
                         class="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black border border-transparent transition-all flex items-center shadow-lg shadow-slate-200 group">
                         <i class="fa-solid fa-sparkles mr-2 text-cyan-400 group-hover:animate-pulse"></i>
                         {{ __('AI Architect') }}
                     </button>
-                    <button type="button" onclick="openFullScreenPreview()"
+                    <button type="button" id="builderPreviewBtn" onclick="openFullScreenPreview()"
                         class="px-4 py-2 bg-amber-50 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-100 border border-transparent transition-all flex items-center">
                         <i class="fa-solid fa-eye mr-2"></i> {{ __('Preview') }}
                     </button>
                     <div class="h-6 w-px bg-gray-200 mx-2"></div>
-                    <button type="button" @click.stop="showLibrary = !showLibrary"
+                    <button type="button" id="builderLibraryBtn" @click.stop="showLibrary = !showLibrary"
                         class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center mr-2"
                         :class="showLibrary ? 'bg-green-600 text-white shadow-lg shadow-green-100' : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-100'">
-                        <i class="fa-solid fa-book-bookmark mr-2"></i> {{ __('Library') }}
+                        {{ __('Library') }}
                     </button>
-                    <button type="button" @click.stop="showImportModal = true"
-                        class="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center mr-2">
-                        <i class="fa-solid fa-file-import mr-2"></i> {{ __('Import') }}
+                    <button type="button" id="builderImportBtn" @click.stop="showImportModal = true"
+                        class="px-4 py-2 bg-zinc-100 text-[#135e96] hover:bg-zinc-200 border border-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center mr-2">
+                        {{ __('Import') }}
                     </button>
-                    <button type="button" @click="exportSurvey()"
-                        class="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center">
-                        <i class="fa-solid fa-file-export mr-2"></i> {{ __('Export') }}
+                    <button type="button" id="builderExportBtn" @click="exportSurvey()"
+                        class="px-4 py-2 bg-zinc-100 text-[#135e96] hover:bg-zinc-200 border border-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center">
+                        {{ __('Export') }}
                     </button>
                     <button type="button" @click="groupSelected()" x-show="selectedQuestions.length > 0" x-cloak
                         class="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 border border-transparent transition-all flex items-center animate-in fade-in zoom-in duration-300">
-                        <i class="fa-solid fa-object-group mr-2"></i> {{ __('Group') }} (<span
+                        {{ __('Group') }} (<span
                             x-text="selectedQuestions.length"></span>)
                     </button>
                 </div>
@@ -697,13 +697,10 @@
                 <div class="flex items-center gap-3">
                     <button type="button" @click="confirmExit()"
                         class="px-4 py-2.5 bg-white text-gray-500 hover:text-rose-600 hover:bg-rose-50 border border-gray-200 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center">
-                        <i class="fa-solid fa-xmark mr-2 text-xs"></i>
                         {{ __('Exit') }}
                     </button>
                     <button type="submit" form="surveyForm" id="headerSaveBtn"
-                        class="px-8 py-2.5 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all hover:-translate-y-0.5 active:scale-95 flex items-center group">
-                        <i
-                            class="fa-solid fa-cloud-arrow-up mr-2 text-indigo-200 group-hover:text-white transition-colors"></i>
+                        class="px-8 py-2.5 bg-[#2271b1] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#135e96] shadow-xl shadow-zinc-200/50 transition-all hover:-translate-y-0.5 active:scale-95 flex items-center group">
                         {{ __('Save') }}
                     </button>
                 </div>
@@ -711,7 +708,7 @@
 
             <!-- Collapsible Survey Details (Now Sticky too) -->
             <div x-show="showDetails" x-collapse x-cloak class="mt-4 max-w-7xl mx-auto overflow-hidden">
-                <div class="bg-indigo-50/50 rounded-2xl p-6 border border-indigo-100 relative">
+                <div class="bg-zinc-100/50 rounded-2xl p-6 border border-zinc-200 relative">
                     <form method="POST"
                         action="{{ isset($survey) ? route('surveys.update', $survey) : route('surveys.store') }}"
                         id="surveyForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10"
@@ -726,14 +723,14 @@
                             <label
                                 class="block text-[9px] font-black text-gray-500 uppercase tracking-widest">{{ __('Survey Title') }}</label>
                             <input type="text" name="title" id="title" required x-model="surveyTitle"
-                                class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-gray-900 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm">
+                                class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-gray-900 text-sm focus:ring-2 focus:ring-[#2271b1] focus:border-[#2271b1] transition-all shadow-sm">
                         </div>
 
                         <div class="space-y-1">
                             <label
                                 class="block text-[9px] font-black text-gray-500 uppercase tracking-widest">{{ __('Category') }}</label>
                             <select name="category" id="category" required x-model="surveyCategory"
-                                class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-gray-900 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all appearance-none shadow-sm">
+                                class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-gray-900 text-sm focus:ring-2 focus:ring-[#2271b1] focus:border-[#2271b1] transition-all appearance-none shadow-sm">
                                 <option value="">{{ __('Select Category') }}</option>
                                 <option value="academic">{{ __('Academic') }}</option>
                                 <option value="market_research">{{ __('Market Research') }}</option>
@@ -748,7 +745,7 @@
                             <label
                                 class="block text-[9px] font-black text-gray-500 uppercase tracking-widest">{{ __('Type') }}</label>
                             <select name="type" id="type" required x-model="surveyType"
-                                class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-gray-900 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all appearance-none shadow-sm">
+                                class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-gray-900 text-sm focus:ring-2 focus:ring-[#2271b1] focus:border-[#2271b1] transition-all appearance-none shadow-sm">
                                 <option value="public">{{ __('Public') }}</option>
                                 <option value="invitation">{{ __('Invitation Only') }}</option>
                             </select>
@@ -758,7 +755,7 @@
                             <label
                                 class="block text-[9px] font-black text-gray-500 uppercase tracking-widest">{{ __('Survey Description') }}</label>
                             <textarea name="description" id="description" rows="1" x-model="surveyDescription"
-                                class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-gray-900 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm"
+                                class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-gray-900 text-sm focus:ring-2 focus:ring-[#2271b1] focus:border-[#2271b1] transition-all shadow-sm"
                                 placeholder="{{ __('Describe the purpose of this survey...') }}">{{ $survey->description ?? '' }}</textarea>
                         </div>
 
@@ -813,7 +810,7 @@
 
                         <div class="flex items-end space-x-2">
                             <button type="button" @click="updateSurveyDetails()"
-                                class="flex-1 flex justify-center items-center py-2 px-4 border border-transparent rounded-xl shadow-lg text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none transition-all active:scale-95">
+                                class="flex-1 flex justify-center items-center py-2 px-4 border border-transparent rounded-xl shadow-lg text-[10px] font-black uppercase tracking-widest text-white bg-[#2271b1] hover:bg-zinc-1000 focus:outline-none transition-all active:scale-95">
                                 <i class="fa-solid fa-save mr-2"></i> {{ isset($survey) ? __('Update') : __('Save') }}
                             </button>
                             <button type="button" @click="showDetails = false"
@@ -839,7 +836,7 @@
                         <div class="px-8 py-6 border-b border-gray-50 flex justify-between items-center bg-white">
                             <div class="flex items-center">
                                 <div
-                                    class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 mr-4">
+                                    class="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center text-[#2271b1] mr-4">
                                     <i class="fa-solid fa-layer-group text-lg"></i>
                                 </div>
                                 <div>
@@ -848,9 +845,9 @@
                                     </h5>
                                     <div x-show="questions.length === 0" class="mt-2">
                                         <button type="button" @click="addQuestion()"
-                                            class="flex items-center space-x-2 text-indigo-600 hover:text-indigo-700 transition-all group">
+                                            class="flex items-center space-x-2 text-[#2271b1] hover:text-[#135e96] transition-all group">
                                             <div
-                                                class="w-6 h-6 bg-indigo-50 rounded-lg flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                                                class="w-6 h-6 bg-zinc-100 rounded-lg flex items-center justify-center group-hover:bg-[#2271b1] group-hover:text-white transition-all">
                                                 <i class="fa-solid fa-plus text-[10px]"></i>
                                             </div>
                                             <span
@@ -871,34 +868,34 @@
 
                         <div class="p-8 space-y-6 min-h-[500px] bg-slate-50/20" id="questions-list"
                             x-init="
-                                                                                                                                                            new Sortable($el, {
-                                                                                                                                                                handle: '.drag-handle',
-                                                                                                                                                                animation: 150,
-                                                                                                                                                                ghostClass: 'sortable-ghost',
-                                                                                                                                                                delay: 150, // Delay to allow scrolling on mobile
-                                                                                                                                                                delayOnTouchOnly: true, // Only apply delay on touch
-                                                                                                                                                                onEnd: (evt) => {
-                                                                                                                                                                    const newQs = [...questions];
-                                                                                                                                                                    const [movedItem] = newQs.splice(evt.oldIndex, 1);
-                                                                                                                                                                    newQs.splice(evt.newIndex, 0, movedItem);
-                                                                                                                                                                    questions = newQs;
-                                                                                                                                                                    syncToJson();
-                                                                                                                                                                }
-                                                                                                                                                            })
-                                                                                                                                                        ">
+                                                                                                                                                                new Sortable($el, {
+                                                                                                                                                                    handle: '.drag-handle',
+                                                                                                                                                                    animation: 150,
+                                                                                                                                                                    ghostClass: 'sortable-ghost',
+                                                                                                                                                                    delay: 150, // Delay to allow scrolling on mobile
+                                                                                                                                                                    delayOnTouchOnly: true, // Only apply delay on touch
+                                                                                                                                                                    onEnd: (evt) => {
+                                                                                                                                                                        const newQs = [...questions];
+                                                                                                                                                                        const [movedItem] = newQs.splice(evt.oldIndex, 1);
+                                                                                                                                                                        newQs.splice(evt.newIndex, 0, movedItem);
+                                                                                                                                                                        questions = newQs;
+                                                                                                                                                                        syncToJson();
+                                                                                                                                                                    }
+                                                                                                                                                                })
+                                                                                                                                                            ">
                             <template x-for="(q, index) in questions" :key="q.id || index">
-                                <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 relative group hover:border-indigo-400 hover:shadow-indigo-100 transition-all ml-16"
+                                <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 relative group hover:border-zinc-300 hover:shadow-zinc-200/50 transition-all ml-16"
                                     :class="[
-                                                                                                                                                                        q.type === 'group' ? 'border-l-4 border-l-rose-400' : '',
-                                                                                                                                                                        selectedQuestions.includes(index) ? 'ring-2 ring-indigo-500 bg-indigo-50/10' : ''
-                                                                                                                                                                     ]">
+                                                                                                                                                                            q.type === 'group' ? 'border-l-4 border-l-rose-400' : '',
+                                                                                                                                                                            selectedQuestions.includes(index) ? 'ring-2 ring-[#2271b1] bg-zinc-100/50' : ''
+                                                                                                                                                                         ]">
 
                                     <!-- Sidebar: Selection, Number, Drag -->
                                     <div class="absolute -left-14 top-4 h-full flex flex-col items-center space-y-4 z-20">
                                         <!-- Checkbox -->
                                         <input type="checkbox" :checked="selectedQuestions.includes(index)"
                                             @change="toggleSelection(index)"
-                                            class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shadow-sm transition-transform hover:scale-110">
+                                            class="w-5 h-5 rounded border-gray-300 text-[#2271b1] focus:ring-[#2271b1] cursor-pointer shadow-sm transition-transform hover:scale-110">
 
                                         <!-- Question Number -->
                                         <div class="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center font-black text-xs shadow-lg border-2 border-white"
@@ -906,7 +903,7 @@
 
                                         <!-- Drag Handle (Bigger for touch) -->
                                         <div
-                                            class="drag-handle text-gray-300 hover:text-indigo-600 transition-colors p-3 cursor-grab active:cursor-grabbing">
+                                            class="drag-handle text-gray-300 hover:text-[#2271b1] transition-colors p-3 cursor-grab active:cursor-grabbing">
                                             <i class="fa-solid fa-grip-vertical text-2xl"></i>
                                         </div>
                                     </div>
@@ -916,16 +913,16 @@
                                             <div class="mb-4">
                                                 <input type="text" x-model="q.label" @input="syncToJson()"
                                                     placeholder="{{ __('Enter your question here...') }}"
-                                                    class="w-full text-lg font-bold text-gray-900 placeholder-gray-200 border-2 border-gray-100 rounded-2xl px-6 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 bg-white transition-all shadow-sm">
+                                                    class="w-full text-lg font-bold text-gray-900 placeholder-gray-200 border-2 border-gray-100 rounded-2xl px-6 py-4 focus:ring-4 focus:ring-[#2271b1]/10 focus:border-[#2271b1] bg-white transition-all shadow-sm">
                                             </div>
                                             <div class="flex items-center space-x-3">
                                                 <div
-                                                    class="flex items-center px-4 py-2 bg-gray-50 rounded-xl border border-gray-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200 transition-all">
+                                                    class="flex items-center px-4 py-2 bg-gray-50 rounded-xl border border-gray-200 focus-within:border-[#2271b1] focus-within:ring-2 focus-within:ring-[#2271b1]/20 transition-all">
                                                     <span
                                                         class="text-[9px] font-black text-gray-400 uppercase tracking-widest mr-2">{{ __('Data Type:') }}</span>
                                                     <select x-model="q.type"
                                                         @change="if(q.type === 'header' && !q.subtype) q.subtype = 'h3'; syncToJson()"
-                                                        class="bg-transparent border-none p-0 text-[10px] font-black uppercase tracking-widest text-indigo-700 focus:ring-0 cursor-pointer">
+                                                        class="bg-transparent border-none p-0 text-[10px] font-black uppercase tracking-widest text-[#135e96] focus:ring-0 cursor-pointer">
                                                         <option value="" disabled selected>{{ __('Choose data type') }}
                                                         </option>
                                                         <option value="text">{{ __('Text') }}</option>
@@ -968,7 +965,7 @@
 
                                         <div class="flex items-center space-x-2" x-data="{ confirmingDelete: false }">
                                             <button type="button" @click="duplicateQuestion(index)"
-                                                class="px-3 h-9 rounded-xl text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all flex items-center justify-center border border-gray-100 space-x-2"
+                                                class="px-3 h-9 rounded-xl text-gray-500 hover:bg-zinc-100 hover:text-[#2271b1] transition-all flex items-center justify-center border border-gray-100 space-x-2"
                                                 title="{{ __('Duplicate') }}">
                                                 <i class="fa-solid fa-copy text-sm"></i>
                                                 <span
@@ -1013,7 +1010,7 @@
                                                     <div
                                                         class="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl border border-gray-100 group/opt">
                                                         <div class="w-1.5 h-1.5 rounded-full"
-                                                            :class="q.type === 'select_one' ? 'bg-indigo-400' : 'bg-green-400'">
+                                                            :class="q.type === 'select_one' ? 'bg-zinc-500' : 'bg-green-400'">
                                                         </div>
                                                         <input type="text" x-model="opt.label" @input="syncToJson()"
                                                             class="flex-1 text-xs font-bold text-gray-600 border-none p-0 focus:ring-0 bg-transparent">
@@ -1027,7 +1024,7 @@
                                                 </template>
                                                 <button type="button"
                                                     @click="q.values.push({label: 'New Option', value: 'option-' + Date.now(), next: ''}); syncToJson()"
-                                                    class="flex items-center justify-center p-3 border-2 border-dashed border-gray-100 rounded-xl text-[10px] font-black text-indigo-500 uppercase tracking-widest hover:border-indigo-200 hover:bg-indigo-50 transition-all">
+                                                    class="flex items-center justify-center p-3 border-2 border-dashed border-gray-100 rounded-xl text-[10px] font-black text-zinc-2000 uppercase tracking-widest hover:border-zinc-300 hover:bg-zinc-100 transition-all">
                                                     <i class="fa-solid fa-plus mr-2"></i> {{ __('Add Choice') }}
                                                 </button>
                                             </div>
@@ -1043,7 +1040,7 @@
                                                     <template x-for="level in ['h1', 'h2', 'h3']">
                                                         <button type="button" @click="q.subtype = level; syncToJson()"
                                                             class="px-4 py-2 rounded-lg text-[10px] font-bold uppercase transition-all"
-                                                            :class="q.subtype === level ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'"
+                                                            :class="q.subtype === level ? 'bg-[#2271b1] text-white' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'"
                                                             x-text="level === 'h1' ? 'Large' : (level === 'h2' ? 'Medium' : 'Small')">
                                                         </button>
                                                     </template>
@@ -1071,7 +1068,7 @@
                                             </p>
                                             <input type="text" x-model="q.default_value" @input="syncToJson()"
                                                 placeholder="{{ __('Default value...') }}"
-                                                class="w-full text-xs font-bold text-gray-700 border border-gray-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500 bg-white">
+                                                class="w-full text-xs font-bold text-gray-700 border border-gray-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-[#2271b1] bg-white">
                                             <p class="text-[8px] text-gray-400 mt-1">
                                                 {{ __('This value is stored but not shown to the respondent.') }}
                                             </p>
@@ -1133,10 +1130,10 @@
 
                                         <!-- Likert Matrix Config -->
                                         <div x-show="q.type === 'likert_matrix'">
-                                            <div class="p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100 space-y-4">
+                                            <div class="p-4 bg-zinc-100 rounded-2xl border border-zinc-200 space-y-4">
                                                 <div>
                                                     <p
-                                                        class="text-[9px] font-black text-indigo-600 uppercase tracking-widest mb-2">
+                                                        class="text-[9px] font-black text-[#2271b1] uppercase tracking-widest mb-2">
                                                         {{ __('Row Items (Sub-Questions)') }}
                                                     </p>
                                                     <template x-for="(row, rIdx) in (q.rows || [])" :key="rIdx">
@@ -1152,12 +1149,12 @@
                                                     </template>
                                                     <button type="button"
                                                         @click="if(!q.rows) q.rows = []; q.rows.push({label: 'Item ' + (q.rows.length+1), value: 'item-' + Date.now()}); syncToJson()"
-                                                        class="text-[9px] font-black text-indigo-500 uppercase hover:text-indigo-700"><i
+                                                        class="text-[9px] font-black text-zinc-2000 uppercase hover:text-[#135e96]"><i
                                                             class="fa-solid fa-plus mr-1"></i>{{ __('Add Row') }}</button>
                                                 </div>
                                                 <div>
                                                     <p
-                                                        class="text-[9px] font-black text-indigo-600 uppercase tracking-widest mb-2">
+                                                        class="text-[9px] font-black text-[#2271b1] uppercase tracking-widest mb-2">
                                                         {{ __('Scale Columns') }}
                                                     </p>
                                                     <template x-for="(col, cIdx) in (q.columns || [])" :key="cIdx">
@@ -1173,7 +1170,7 @@
                                                     </template>
                                                     <button type="button"
                                                         @click="if(!q.columns) q.columns = []; q.columns.push({label: 'Scale ' + (q.columns.length+1), value: 'scale-' + Date.now()}); syncToJson()"
-                                                        class="text-[9px] font-black text-indigo-500 uppercase hover:text-indigo-700"><i
+                                                        class="text-[9px] font-black text-zinc-2000 uppercase hover:text-[#135e96]"><i
                                                             class="fa-solid fa-plus mr-1"></i>{{ __('Add Column') }}</button>
                                                 </div>
                                             </div>
@@ -1182,7 +1179,7 @@
                                         <div class="mt-6 flex items-center justify-between border-t border-gray-50 pt-4">
                                             <label class="flex items-center space-x-3 cursor-pointer group/toggle">
                                                 <input type="checkbox" x-model="q.required" @change="syncToJson()"
-                                                    class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 transition-all cursor-pointer">
+                                                    class="w-5 h-5 rounded border-gray-300 text-[#2271b1] focus:ring-[#2271b1] transition-all cursor-pointer">
                                                 <span
                                                     class="text-[10px] font-black text-gray-500 uppercase tracking-widest group-hover:text-gray-600">{{ __('Mandatory Field') }}</span>
                                             </label>
@@ -1190,14 +1187,14 @@
                                             <div class="space-y-2 mb-4 border-t border-gray-100 pt-4 mt-4">
                                                 <button type="button" @click.prevent.stop="openDisplayLogic(index)"
                                                     class="text-[10px] font-black uppercase flex items-center transition-colors group/btn"
-                                                    :class="q.visible_if && q.visible_if.field ? 'text-indigo-600' : 'text-gray-400 hover:text-indigo-600'">
+                                                    :class="q.visible_if && q.visible_if.field ? 'text-[#2271b1]' : 'text-gray-400 hover:text-[#2271b1]'">
                                                     <i
                                                         class="fa-solid fa-eye mr-2 group-hover/btn:scale-110 transition-transform"></i>
                                                     {{ __('Display Logic') }}
                                                 </button>
 
                                                 <button type="button" @click.prevent.stop="openSkipLogic(index)"
-                                                    class="text-[10px] font-black uppercase text-indigo-500 flex items-center hover:text-indigo-700 transition-colors group/btn">
+                                                    class="text-[10px] font-black uppercase text-zinc-2000 flex items-center hover:text-[#135e96] transition-colors group/btn">
                                                     <i
                                                         class="fa-solid fa-code-branch mr-2 group-hover/btn:scale-110 transition-transform"></i>
                                                     {{ __('Skip Logic') }}
@@ -1235,7 +1232,7 @@
                                     <div
                                         class="absolute -bottom-3 left-1/2 transform -translate-x-1/2 z-30 opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity">
                                         <button type="button" @click.stop="addQuestionBelow(index)"
-                                            class="w-6 h-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-all ring-2 ring-white"
+                                            class="w-6 h-6 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-all ring-2 ring-white"
                                             title="Add Question Below">
                                             <i class="fa-solid fa-plus text-[10px]"></i>
                                         </button>
@@ -1270,10 +1267,10 @@
                         <div class="flex p-1 bg-gray-100 rounded-xl">
                             <button type="button" @click="libTab = 'templates'"
                                 class="flex-1 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all"
-                                :class="libTab === 'templates' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-600'">{{ __('Templates') }}</button>
+                                :class="libTab === 'templates' ? 'bg-white text-[#2271b1] shadow-sm' : 'text-gray-500 hover:text-gray-600'">{{ __('Templates') }}</button>
                             <button type="button" @click="libTab = 'questions'"
                                 class="flex-1 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all"
-                                :class="libTab === 'questions' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-600'">{{ __('Library') }}</button>
+                                :class="libTab === 'questions' ? 'bg-white text-[#2271b1] shadow-sm' : 'text-gray-500 hover:text-gray-600'">{{ __('Library') }}</button>
                         </div>
                     </div>
 
@@ -1335,7 +1332,7 @@
                 <div class="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-gray-900">
                     <div>
                         <h5 class="text-sm font-black text-white uppercase tracking-widest flex items-center">
-                            <i class="fa-solid fa-code mr-3 text-indigo-400"></i> {{ __('JSON Blueprint Editor') }}
+                            <i class="fa-solid fa-code mr-3 text-zinc-500"></i> {{ __('JSON Blueprint Editor') }}
                         </h5>
                         <p class="text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-tight">
                             {{ __('Direct schema manipulation') }}
@@ -1350,7 +1347,7 @@
 
                     <div class="mt-8 flex space-x-4">
                         <button type="button"
-                            class="px-8 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-900/40 transition-all font-bold"
+                            class="px-8 py-3 bg-[#2271b1] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-zinc-1000 shadow-xl shadow-zinc-950/20 transition-all font-bold"
                             @click="validateJSON()">
                             {{ __('Validate and Load') }}
                         </button>
@@ -1383,7 +1380,7 @@
                 @click.away="closeSkipLogic()">
                 <div class="px-8 py-6 border-b border-gray-50 flex items-center justify-between bg-white">
                     <h3 class="text-xl font-black text-gray-900 flex items-center uppercase tracking-tight">
-                        <i class="fa-solid fa-code-branch mr-3 text-indigo-500"></i> {{ __('Skip Logic') }}
+                        <i class="fa-solid fa-code-branch mr-3 text-zinc-2000"></i> {{ __('Skip Logic') }}
                     </h3>
                     <button type="button" @click="closeSkipLogic()"
                         class="text-gray-500 hover:text-red-500 transition-colors">
@@ -1401,13 +1398,13 @@
                                 <div class="space-y-3">
                                     <template x-for="(opt, oIdx) in questions[currentQuestionIndex].values" :key="oIdx">
                                         <div
-                                            class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 shadow-sm transition-all hover:border-indigo-200">
+                                            class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 shadow-sm transition-all hover:border-zinc-300">
                                             <span class="text-xs font-bold text-gray-700" x-text="opt.label"></span>
                                             <div class="flex items-center space-x-3">
                                                 <span
                                                     class="text-[9px] font-black text-gray-500 uppercase tracking-widest">{{ __('Jump to:') }}</span>
                                                 <select x-model="opt.next" @change="syncToJson()"
-                                                    class="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-[10px] font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer">
+                                                    class="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-[10px] font-bold text-[#2271b1] focus:ring-2 focus:ring-[#2271b1] outline-none transition-all cursor-pointer">
                                                     <option value="">{{ __('Next Question') }}</option>
                                                     <template x-for="(qNext, qIdx) in questions" :key="qIdx">
                                                         <option x-show="qIdx > currentQuestionIndex" :value="qNext.name"
@@ -1442,7 +1439,7 @@
                 </div>
                 <div class="px-8 py-6 bg-gray-50 border-t border-gray-100 flex justify-end">
                     <button type="button" @click="closeSkipLogic()"
-                        class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 shadow-lg shadow-indigo-100 transition-all active:scale-95">{{ __('Done') }}</button>
+                        class="px-6 py-2.5 bg-[#2271b1] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-1000 shadow-lg shadow-zinc-200/50 transition-all active:scale-95">{{ __('Done') }}</button>
                 </div>
             </div>
         </div>
@@ -1467,7 +1464,7 @@
                     x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                     class="inline-block align-bottom bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-white/20">
 
-                    <div class="bg-gradient-to-r from-indigo-600 to-indigo-800 px-8 py-6 flex items-center justify-between">
+                    <div class="bg-gradient-to-r from-[#2271b1] to-[#135e96] px-8 py-6 flex items-center justify-between">
                         <div class="flex items-center space-x-3">
                             <div class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
                                 <i class="fa-solid fa-eye text-white text-lg"></i>
@@ -1476,7 +1473,7 @@
                                 <h3 class="text-lg font-black text-white uppercase tracking-tight leading-none">
                                     {{ __('Display Logic') }}
                                 </h3>
-                                <p class="text-[10px] text-indigo-100 font-bold uppercase tracking-widest mt-1">
+                                <p class="text-[10px] text-zinc-300 font-bold uppercase tracking-widest mt-1">
                                     {{ __('Conditional Visibility') }}
                                 </p>
                             </div>
@@ -1500,7 +1497,7 @@
                                     <select x-model="displayLogicDraft.field"
                                         x-init="$nextTick(() => { if(displayLogicDraft.field) $el.value = displayLogicDraft.field })"
                                         @change="displayLogicDraft.value = ''; draftOptions = getQuestionOptions(displayLogicDraft.field)"
-                                        class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-xs font-bold text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                                        class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-xs font-bold text-gray-700 focus:ring-2 focus:ring-[#2271b1] outline-none transition-all">
                                         <option value="">({{ __('Always Visible') }})</option>
                                         <template
                                             x-for="(qTrigger, qIdx) in questions.filter((q, idx) => idx < currentDisplayQuestionIndex && ['select_one', 'select_many', 'select', 'radio-group', 'checkbox-group'].includes(q.type))"
@@ -1519,7 +1516,7 @@
                                                 <label
                                                     class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ __('Operator') }}</label>
                                                 <select x-model="displayLogicDraft.operator"
-                                                    class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-xs font-bold text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer shadow-sm">
+                                                    class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-xs font-bold text-gray-700 focus:ring-2 focus:ring-[#2271b1] outline-none transition-all cursor-pointer shadow-sm">
                                                     <option value="==">{{ __('Is Equal To') }}</option>
                                                     <option value="!=">{{ __('Is Not Equal To') }}</option>
                                                 </select>
@@ -1532,7 +1529,7 @@
                                                     <template x-if="displayLogicDraft.field && draftOptions.length > 0">
                                                         <select x-model="displayLogicDraft.value"
                                                             x-init="$nextTick(() => { if(displayLogicDraft.value) $el.value = displayLogicDraft.value })"
-                                                            class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-xs font-bold text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer shadow-sm">
+                                                            class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-xs font-bold text-gray-700 focus:ring-2 focus:ring-[#2271b1] outline-none transition-all cursor-pointer shadow-sm">
                                                             <option value="">{{ __('Select an option...') }}</option>
                                                             <template x-for="opt in draftOptions" :key="opt.value || opt">
                                                                 <option :value="opt.label || opt.value || opt"
@@ -1544,7 +1541,7 @@
                                                     <template x-if="displayLogicDraft.field && draftOptions.length === 0">
                                                         <input type="text" x-model="displayLogicDraft.value"
                                                             placeholder="Enter value..."
-                                                            class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-xs font-bold text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm">
+                                                            class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-xs font-bold text-gray-700 focus:ring-2 focus:ring-[#2271b1] outline-none transition-all shadow-sm">
                                                     </template>
                                                 </div>
                                             </div>
@@ -1553,9 +1550,9 @@
                                 </template>
 
                                 <template x-if="!displayLogicDraft.field">
-                                    <div class="p-6 bg-indigo-50/50 rounded-2xl border border-indigo-100 text-center">
-                                        <i class="fa-solid fa-circle-info text-indigo-400 text-xl mb-2"></i>
-                                        <p class="text-[10px] text-indigo-700 font-bold uppercase tracking-tight">This
+                                    <div class="p-6 bg-zinc-100/50 rounded-2xl border border-zinc-200 text-center">
+                                        <i class="fa-solid fa-circle-info text-zinc-500 text-xl mb-2"></i>
+                                        <p class="text-[10px] text-[#135e96] font-bold uppercase tracking-tight">This
                                             question will be shown to everyone.</p>
                                     </div>
                                 </template>
@@ -1567,7 +1564,7 @@
                         <button type="button" @click="displayLogicDraft = {field:'', operator:'==', value:''}"
                             class="px-6 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all">Reset</button>
                         <button type="button" @click="saveDisplayLogic()"
-                            class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 shadow-lg shadow-indigo-100 transition-all active:scale-95">Done</button>
+                            class="px-6 py-2.5 bg-[#2271b1] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-1000 shadow-lg shadow-zinc-200/50 transition-all active:scale-95">Done</button>
                     </div>
                 </div>
             </div>
@@ -1614,7 +1611,7 @@
                     <button type="button" @click="showAiModal = false"
                         class="px-6 py-2.5 bg-white text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 border border-gray-200 transition-all">Cancel</button>
                     <button type="button" onclick="generateWithAi()"
-                        class="px-8 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black shadow-2xl shadow-indigo-200 transition-all active:scale-95 flex items-center">
+                        class="px-8 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black shadow-2xl shadow-zinc-300/40 transition-all active:scale-95 flex items-center">
                         <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Generate Survey Blueprint
                     </button>
                 </div>
@@ -1631,7 +1628,7 @@
                 @click.away="showImportModal = false">
                 <div class="px-8 py-6 border-b border-gray-50 flex items-center justify-between bg-white">
                     <h3 class="text-xl font-black text-gray-900 flex items-center uppercase tracking-tight">
-                        <i class="fa-solid fa-file-import mr-3 text-indigo-600"></i> Import Survey Questionnaire
+                        <i class="fa-solid fa-file-import mr-3 text-[#2271b1]"></i> Import Survey Questionnaire
                     </h3>
                     <button type="button" @click="showImportModal = false"
                         class="text-gray-500 hover:text-red-500 transition-colors">
@@ -1644,12 +1641,12 @@
 
                     <!-- Drag and drop or file click area -->
                     <div
-                        class="relative border-2 border-dashed border-slate-200 hover:border-indigo-500/50 rounded-2xl p-8 text-center transition-all bg-slate-50/50 cursor-pointer">
+                        class="relative border-2 border-dashed border-slate-200 hover:border-[#2271b1]/50 rounded-2xl p-8 text-center transition-all bg-slate-50/50 cursor-pointer">
                         <input type="file" accept=".docx" @change="importSurveySchema($event)"
                             class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
                         <div class="space-y-3">
                             <div
-                                class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto shadow-inner">
+                                class="w-12 h-12 rounded-2xl bg-zinc-100 text-[#2271b1] flex items-center justify-center mx-auto shadow-inner">
                                 <i class="fa-solid fa-file-word text-xl"></i>
                             </div>
                             <div>
@@ -1662,13 +1659,13 @@
 
                     <!-- Loader -->
                     <div x-show="isImporting"
-                        class="mt-6 bg-indigo-50/30 rounded-2xl p-6 border border-indigo-100 animate-in fade-in zoom-in">
+                        class="mt-6 bg-zinc-100 rounded-2xl p-6 border border-zinc-200 animate-in fade-in zoom-in">
                         <div class="flex items-center">
-                            <i class="fa-solid fa-circle-notch text-indigo-600 text-xl mr-4 animate-spin"></i>
+                            <i class="fa-solid fa-circle-notch text-[#2271b1] text-xl mr-4 animate-spin"></i>
                             <div>
-                                <p class="text-xs font-black text-indigo-900 uppercase tracking-widest">AI Agent is
+                                <p class="text-xs font-black text-zinc-900 uppercase tracking-widest">AI Agent is
                                     extracting questions...</p>
-                                <p class="text-[10px] text-indigo-400 font-bold uppercase mt-0.5">Reading DOCX text and
+                                <p class="text-[10px] text-zinc-500 font-bold uppercase mt-0.5">Reading DOCX text and
                                     converting it to survey canvas</p>
                             </div>
                         </div>
@@ -1714,10 +1711,10 @@
             <div class="flex-1 overflow-y-auto p-4 sm:p-12 custom-scrollbar bg-slate-50">
                 <div class="max-w-4xl mx-auto">
                     <div
-                        class="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl shadow-indigo-100/40 border border-gray-100 overflow-hidden relative">
+                        class="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl shadow-zinc-200/50/40 border border-gray-100 overflow-hidden relative">
                         <!-- Hero Banner in Preview -->
                         <div
-                            class="h-24 sm:h-32 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 relative overflow-hidden">
+                            class="h-24 sm:h-32 bg-gradient-to-r from-zinc-700 via-zinc-800 to-zinc-900 relative overflow-hidden">
                             <div class="absolute inset-0 opacity-10">
                                 <div
                                     class="absolute top-0 left-0 w-24 h-24 bg-white rounded-full -translate-x-12 -translate-y-12">
@@ -1740,7 +1737,7 @@
                                     class="px-6 sm:px-8 py-3 sm:py-4 bg-gray-100 text-gray-500 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest cursor-not-allowed">Previous
                                     Page</button>
                                 <button type="button" onclick="alert('Success! This prototype works as expected.')"
-                                    class="px-6 sm:px-10 py-3 sm:py-4 bg-indigo-600 text-white rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all hover:-translate-y-1 active:scale-95">Complete
+                                    class="px-6 sm:px-10 py-3 sm:py-4 bg-[#2271b1] text-white rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-[#135e96] shadow-xl shadow-zinc-300/40 transition-all hover:-translate-y-1 active:scale-95">Complete
                                     Survey</button>
                             </div>
 
@@ -2227,7 +2224,7 @@
                         denyButtonText: '<i class="fa-solid fa-trash mr-2"></i>' + "{{ __('Discard Draft') }}",
                         cancelButtonText: "{{ __('Cancel') }}",
                         customClass: {
-                            confirmButton: 'px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md mx-2 cursor-pointer',
+                            confirmButton: 'px-4 py-2 bg-[#2271b1] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#135e96] transition-all shadow-md mx-2 cursor-pointer',
                             denyButton: 'px-4 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-md mx-2 cursor-pointer',
                             cancelButton: 'px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-200 transition-all border border-gray-200 mx-2 cursor-pointer'
                         },
@@ -2721,12 +2718,12 @@
                             const id = fieldData.name;
                             return {
                                 field: `
-                                                                                                                                                            <div class="rating-wrapper bg-white py-6 px-4 rounded-2xl mb-4 border border-gray-100 shadow-sm">
-                                                                                                                                                                <div class="likert-container" id="likert_${id}" style="display: flex !important; justify-content: space-between !important; gap: 8px !important;">
-                                                                                                                                                                    ${[1, 2, 3, 4, 5].map(i => `<div class="likert-item" data-value="${i}" onclick="setLikertValue('${id}', ${i})" style="flex:1; text-align:center; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; font-weight:700;">${i}</div>`).join('')}
-                                                                                                                                                                </div>
-                                                                                                                                                                <input type="hidden" name="${id}" id="input_${id}" value="" onchange="updatePreviewVisibility()">
-                                                                                                                                                            </div>`
+                                                                                                                                                                <div class="rating-wrapper bg-white py-6 px-4 rounded-2xl mb-4 border border-gray-100 shadow-sm">
+                                                                                                                                                                    <div class="likert-container" id="likert_${id}" style="display: flex !important; justify-content: space-between !important; gap: 8px !important;">
+                                                                                                                                                                        ${[1, 2, 3, 4, 5].map(i => `<div class="likert-item" data-value="${i}" onclick="setLikertValue('${id}', ${i})" style="flex:1; text-align:center; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; font-weight:700;">${i}</div>`).join('')}
+                                                                                                                                                                    </div>
+                                                                                                                                                                    <input type="hidden" name="${id}" id="input_${id}" value="" onchange="updatePreviewVisibility()">
+                                                                                                                                                                </div>`
                             };
                         },
                         'ranking_list': function (fieldData) {
@@ -2734,25 +2731,25 @@
                             const options = fieldData.values || [];
                             return {
                                 field: `
-                                                                                                                                                            <div class="ranking-wrapper bg-white p-6 rounded-2xl mb-4 border border-gray-100 shadow-sm">
-                                                                                                                                                                <div class="grid grid-cols-2 gap-4">
-                                                                                                                                                                    <div>
-                                                                                                                                                                        <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest block mb-2">Choices</span>
-                                                                                                                                                                        <div id="pool_${id}" class="rank-pool" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;">
-                                                                                                                                                                            ${options.map(opt => `
-                                                                                                                                                                                <div class="rank-item" data-value="${opt.value}" onclick="toggleRankItem('${id}', this)">
-                                                                                                                                                                                    ${opt.label}
-                                                                                                                                                                                </div>
-                                                                                                                                                                            `).join('')}
+                                                                                                                                                                <div class="ranking-wrapper bg-white p-6 rounded-2xl mb-4 border border-gray-100 shadow-sm">
+                                                                                                                                                                    <div class="grid grid-cols-2 gap-4">
+                                                                                                                                                                        <div>
+                                                                                                                                                                            <span class="text-[10px] font-black text-zinc-2000 uppercase tracking-widest block mb-2">Choices</span>
+                                                                                                                                                                            <div id="pool_${id}" class="rank-pool" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;">
+                                                                                                                                                                                ${options.map(opt => `
+                                                                                                                                                                                    <div class="rank-item" data-value="${opt.value}" onclick="toggleRankItem('${id}', this)">
+                                                                                                                                                                                        ${opt.label}
+                                                                                                                                                                                    </div>
+                                                                                                                                                                                `).join('')}
+                                                                                                                                                                            </div>
+                                                                                                                                                                        </div>
+                                                                                                                                                                        <div>
+                                                                                                                                                                            <span class="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2">Your Order</span>
+                                                                                                                                                                            <div id="ranked_${id}" class="rank-ordered" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;"></div>
                                                                                                                                                                         </div>
                                                                                                                                                                     </div>
-                                                                                                                                                                    <div>
-                                                                                                                                                                        <span class="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2">Your Order</span>
-                                                                                                                                                                        <div id="ranked_${id}" class="rank-ordered" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;"></div>
-                                                                                                                                                                    </div>
-                                                                                                                                                                </div>
-                                                                                                                                                                <input type="hidden" name="${id}" id="input_${id}" value="">
-                                                                                                                                                            </div>`,
+                                                                                                                                                                    <input type="hidden" name="${id}" id="input_${id}" value="">
+                                                                                                                                                                </div>`,
                                 onRender: () => setupRankingUI(id)
                             };
                         },
@@ -2760,38 +2757,38 @@
                             const id = fieldData.name + '_preview';
                             return {
                                 field: `
-                                                                                              <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
-                                                                                                <span class="kobo-status-badge" id="status_${id}">Voice Response</span>
+                                                                                                  <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
+                                                                                                    <span class="kobo-status-badge" id="status_${id}">Voice Response</span>
 
-                                                                                                <div class="kobo-media-row mt-2">
-                                                                                                    <button type="button" id="start_${id}" class="kobo-record-btn">
-                                                                                                        <i class="fa-solid fa-microphone"></i>
-                                                                                                        <span>Start Recording</span>
-                                                                                                    </button>
+                                                                                                    <div class="kobo-media-row mt-2">
+                                                                                                        <button type="button" id="start_${id}" class="kobo-record-btn">
+                                                                                                            <i class="fa-solid fa-microphone"></i>
+                                                                                                            <span>Start Recording</span>
+                                                                                                        </button>
 
-                                                                                                    <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
-                                                                                                        <i class="fa-solid fa-square"></i>
-                                                                                                        <span>Stop</span>
-                                                                                                        <span class="kobo-timer" id="timer_${id}">00:00</span>
-                                                                                                    </button>
+                                                                                                        <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
+                                                                                                            <i class="fa-solid fa-square"></i>
+                                                                                                            <span>Stop</span>
+                                                                                                            <span class="kobo-timer" id="timer_${id}">00:00</span>
+                                                                                                        </button>
 
-                                                                                                    <div id="upload_container_${id}">
-                                                                                                        <label for="file_${id}" class="kobo-upload-btn">
-                                                                                                            <i class="fa-solid fa-upload"></i>
-                                                                                                            <span>Upload audio File</span>
-                                                                                                            <input type="file" id="file_${id}" accept="audio/*" class="hidden" style="display:none;">
-                                                                                                        </label>
+                                                                                                        <div id="upload_container_${id}">
+                                                                                                            <label for="file_${id}" class="kobo-upload-btn">
+                                                                                                                <i class="fa-solid fa-upload"></i>
+                                                                                                                <span>Upload audio File</span>
+                                                                                                                <input type="file" id="file_${id}" accept="audio/*" class="hidden" style="display:none;">
+                                                                                                            </label>
+                                                                                                        </div>
+
+                                                                                                        <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
+                                                                                                            <i class="fa-solid fa-trash-can mr-1"></i> Discard
+                                                                                                        </button>
                                                                                                     </div>
 
-                                                                                                    <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
-                                                                                                        <i class="fa-solid fa-trash-can mr-1"></i> Discard
-                                                                                                    </button>
-                                                                                                </div>
-
-                                                                                                <div class="mt-4">
-                                                                                                    <audio id="player_${id}" controls class="hidden w-full" style="display:none;"></audio>
-                                                                                                </div>
-                                                                                            </div>`,
+                                                                                                    <div class="mt-4">
+                                                                                                        <audio id="player_${id}" controls class="hidden w-full" style="display:none;"></audio>
+                                                                                                    </div>
+                                                                                                </div>`,
                                 onRender: () => setupPreviewRecorder(id, 'audio')
                             };
                         },
@@ -2799,60 +2796,60 @@
                             const id = fieldData.name + '_preview';
                             return {
                                 field: `
-                                                                                              <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
-                                                                                                <span class="kobo-status-badge" id="status_${id}">Video Response</span>
+                                                                                                  <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
+                                                                                                    <span class="kobo-status-badge" id="status_${id}">Video Response</span>
 
-                                                                                                <div class="relative aspect-video bg-black rounded-xl overflow-hidden mb-4" style="background:black; aspect-ratio:16/9; position:relative;">
-                                                                                                    <video id="preview_${id}" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; opacity:0.8;"></video>
-                                                                                                    <video id="player_${id}" controls style="display:none; width:100%; height:100%; object-fit:contain;"></video>
-                                                                                                </div>
-
-                                                                                                <div class="kobo-media-row">
-                                                                                                    <button type="button" id="start_${id}" class="kobo-record-btn">
-                                                                                                        <i class="fa-solid fa-video"></i>
-                                                                                                        <span>Start Recording</span>
-                                                                                                    </button>
-
-                                                                                                    <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
-                                                                                                        <i class="fa-solid fa-square"></i>
-                                                                                                        <span>Stop</span>
-                                                                                                        <span class="kobo-timer" id="timer_${id}">00:00</span>
-                                                                                                    </button>
-
-                                                                                                    <div id="upload_container_${id}">
-                                                                                                        <label for="file_${id}" class="kobo-upload-btn">
-                                                                                                            <i class="fa-solid fa-upload"></i>
-                                                                                                            <span>Upload video File</span>
-                                                                                                            <input type="file" id="file_${id}" accept="video/*" class="hidden" style="display:none;">
-                                                                                                        </label>
+                                                                                                    <div class="relative aspect-video bg-black rounded-xl overflow-hidden mb-4" style="background:black; aspect-ratio:16/9; position:relative;">
+                                                                                                        <video id="preview_${id}" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; opacity:0.8;"></video>
+                                                                                                        <video id="player_${id}" controls style="display:none; width:100%; height:100%; object-fit:contain;"></video>
                                                                                                     </div>
 
-                                                                                                    <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
-                                                                                                        <i class="fa-solid fa-trash-can mr-1"></i> Discard
-                                                                                                    </button>
-                                                                                                </div>
-                                                                                            </div>`,
+                                                                                                    <div class="kobo-media-row">
+                                                                                                        <button type="button" id="start_${id}" class="kobo-record-btn">
+                                                                                                            <i class="fa-solid fa-video"></i>
+                                                                                                            <span>Start Recording</span>
+                                                                                                        </button>
+
+                                                                                                        <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
+                                                                                                            <i class="fa-solid fa-square"></i>
+                                                                                                            <span>Stop</span>
+                                                                                                            <span class="kobo-timer" id="timer_${id}">00:00</span>
+                                                                                                        </button>
+
+                                                                                                        <div id="upload_container_${id}">
+                                                                                                            <label for="file_${id}" class="kobo-upload-btn">
+                                                                                                                <i class="fa-solid fa-upload"></i>
+                                                                                                                <span>Upload video File</span>
+                                                                                                                <input type="file" id="file_${id}" accept="video/*" class="hidden" style="display:none;">
+                                                                                                            </label>
+                                                                                                        </div>
+
+                                                                                                        <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
+                                                                                                            <i class="fa-solid fa-trash-can mr-1"></i> Discard
+                                                                                                        </button>
+                                                                                                    </div>
+                                                                                                </div>`,
                                 onRender: () => setupPreviewRecorder(id, 'video')
                             };
                         },
                         'datetime_picker': function (fieldData) {
-                            return { field: `<div class="form-group mb-4"><input type="datetime-local" name="${fieldData.name}" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl font-bold text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" ${fieldData.required ? 'required' : ''}></div>` };
+                            return { field: `<div class="form-group mb-4"><input type="datetime-local" name="${fieldData.name}" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl font-bold text-gray-700 focus:ring-2 focus:ring-[#2271b1] focus:border-[#2271b1]" ${fieldData.required ? 'required' : ''}></div>` };
                         },
                         'acknowledge_box': function (fieldData) {
-                            return { field: `<div class="p-5 bg-amber-50/50 rounded-2xl border border-amber-100 mb-4"><label class="flex items-start cursor-pointer gap-3"><input type="checkbox" name="${fieldData.name}" value="true" class="w-5 h-5 mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" ${fieldData.required ? 'required' : ''}><span class="text-sm font-bold text-gray-700">${fieldData.label || 'I acknowledge'}</span></label></div>` };
+                            return { field: `<div class="p-5 bg-amber-50/50 rounded-2xl border border-amber-100 mb-4"><label class="flex items-start cursor-pointer gap-3"><input type="checkbox" name="${fieldData.name}" value="true" class="w-5 h-5 mt-0.5 rounded border-gray-300 text-[#2271b1] focus:ring-[#2271b1]" ${fieldData.required ? 'required' : ''}><span class="text-sm font-bold text-gray-700">${fieldData.label || 'I acknowledge'}</span></label></div>` };
                         },
                         'hidden_field': function (fieldData) {
                             return { field: `<div class="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 mb-4 flex items-center gap-3"><i class="fa-solid fa-eye-slash text-slate-400"></i><span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hidden Field: ${fieldData.name}</span><input type="hidden" name="${fieldData.name}" value="${fieldData.default_value || ''}"></div>` };
                         },
                         'calculate_display': function (fieldData) {
                             return {
-                                field: `<div class="p-5 bg-gray-50 rounded-2xl border border-gray-100 mb-4"><div class="text-2xl font-black text-indigo-600" id="calc_display_${fieldData.name}">&mdash;</div><p class="text-[8px] text-gray-400 uppercase mt-2">Formula: ${fieldData.formula || 'Not set'}</p><input type="hidden" name="${fieldData.name}" id="input_${fieldData.name}" value=""></div>`,
+                                field: `<div class="p-5 bg-gray-50 rounded-2xl border border-gray-100 mb-4"><div class="text-2xl font-black text-[#2271b1]" id="calc_display_${fieldData.name}">&mdash;</div><p class="text-[8px] text-gray-400 uppercase mt-2">Formula: ${fieldData.formula || 'Not set'}</p><input type="hidden" name="${fieldData.name}" id="input_${fieldData.name}" value=""></div>`,
                                 onRender: () => window.setupCalculateField(fieldData.name, fieldData.formula)
                             };
                         },
                         'location_picker': function (fieldData) {
                             const id = fieldData.name;
-                            return { field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4"><div id="map_${id}" style="height:220px; border-radius:1rem; background:#e2e8f0; display:flex; align-items:center; justify-content:center;"><span class="text-gray-400 font-bold text-xs uppercase"><i class="fa-solid fa-map-location-dot mr-2"></i>Map loads on live survey</span></div><div class="flex items-center gap-3 mt-3"><button type="button" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold uppercase"><i class="fa-solid fa-location-crosshairs mr-2"></i>Capture Location</button></div><input type="hidden" name="${id}" value=""></div>` };
+                            return { field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4"><div id="map_${id}" style="height:220px; border-radius:1rem; background:#e2e8f0; display:flex; align-items:center; justify-content:center;"><span class="text-gray-400 font-bold text-xs uppercase"><i class="fa-solid fa-map-location-dot mr-2"></i>Map loads on live survey</span></div><div class="flex items-center gap-3 mt-3"><button type="button" class="px-4 py-2 bg-[#2271b1] text-white rounded-xl text-xs font-bold uppercase"><i class="fa-solid fa-location-crosshairs mr-2"></i>Capture Location</button></div><input type="hidden" name="${id}" value=""></div>` };
                         },
                         'qrcode_scanner': function (fieldData) {
                             return { field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4"><div style="height:200px; border-radius:1rem; background:#1e293b; display:flex; align-items:center; justify-content:center; flex-direction:column;"><i class="fa-solid fa-qrcode text-4xl text-white/30 mb-3"></i><span class="text-white/50 font-bold text-xs uppercase">Camera activates on live survey</span></div><input type="hidden" name="${fieldData.name}" value=""></div>` };
@@ -2875,7 +2872,7 @@
                             return { field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4"><div style="overflow-x:auto;"><table class="likert-matrix-table"><thead><tr>${hdr}</tr></thead><tbody>${body}</tbody></table></div><input type="hidden" name="${id}" id="input_${id}" value="" onchange="updatePreviewVisibility()"></div>` };
                         },
                         'repeat_container': function (fieldData) {
-                            return { field: `<div class="p-5 rounded-2xl border-2 border-dashed border-indigo-200 mb-4 bg-indigo-50/20"><div class="flex items-center gap-2 mb-3"><i class="fa-solid fa-repeat text-indigo-500"></i><span class="text-sm font-bold text-indigo-700">Repeating Section</span></div><div class="repeat-entry"><p class="text-xs text-gray-400 font-bold">Entry #1 (respondent adds more on live survey)</p></div><button type="button" class="mt-3 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold uppercase"><i class="fa-solid fa-plus mr-2"></i>Add Entry</button><input type="hidden" name="${fieldData.name}" value="[]"></div>` };
+                            return { field: `<div class="p-5 rounded-2xl border-2 border-dashed border-zinc-300 mb-4 bg-zinc-100"><div class="flex items-center gap-2 mb-3"><i class="fa-solid fa-repeat text-zinc-2000"></i><span class="text-sm font-bold text-[#135e96]">Repeating Section</span></div><div class="repeat-entry"><p class="text-xs text-gray-400 font-bold">Entry #1 (respondent adds more on live survey)</p></div><button type="button" class="mt-3 px-4 py-2 bg-zinc-100 text-[#2271b1] rounded-xl text-xs font-bold uppercase"><i class="fa-solid fa-plus mr-2"></i>Add Entry</button><input type="hidden" name="${fieldData.name}" value="[]"></div>` };
                         }
                     }
                 };
