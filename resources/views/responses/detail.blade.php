@@ -11,9 +11,9 @@
                     @php 
                         $userRoleVal = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
                     @endphp
-                    <li><a href="{{ $userRoleVal === 'admin' ? route('admin.surveys.index') : route('surveys.index') }}" class="hover:text-indigo-600">Surveys</a></li>
+                    <li><a href="{{ $userRoleVal === 'admin' ? route('admin.surveys.index') : route('surveys.index') }}" class="hover:text-[#2271b1]">Surveys</a></li>
                     <li><i class="fa-solid fa-chevron-right text-[10px]"></i></li>
-                    <li><a href="{{ route('surveys.responses', $survey) }}" class="hover:text-indigo-600">{{ $survey->title }}</a></li>
+                    <li><a href="{{ route('surveys.responses', $survey) }}" class="hover:text-[#2271b1]">{{ $survey->title }}</a></li>
                     <li><i class="fa-solid fa-chevron-right text-[10px]"></i></li>
                     <li class="font-medium text-gray-900">Response #{{ $response->id }}</li>
                 </ol>
@@ -212,7 +212,7 @@
                                         }
                                     }" class="space-y-3">
                                         <div class="flex items-center gap-4">
-                                            <a href="{{ asset('storage/' . $valStr) }}" target="_blank" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
+                                            <a href="{{ asset('storage/' . $valStr) }}" target="_blank" class="inline-flex items-center text-[#2271b1] hover:text-[#135e96] font-bold bg-zinc-100 px-3 py-1.5 rounded-lg border border-zinc-200">
                                                 <i class="fa-solid fa-play-circle mr-2"></i> {{ __('View Media') }}
                                             </a>
                                             
@@ -235,7 +235,7 @@
                                                         <span class="w-1.5 h-4 bg-emerald-500 rounded-full"></span>
                                                         <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ __('AI Transcription') }}</span>
                                                     </div>
-                                                    <button @click="transcribe" :disabled="transcribing" class="text-[9px] font-black uppercase text-indigo-500 hover:text-indigo-700 transition-colors flex items-center gap-1">
+                                                    <button @click="transcribe" :disabled="transcribing" class="text-[9px] font-black uppercase text-zinc-2000 hover:text-[#135e96] transition-colors flex items-center gap-1">
                                                         <i class="fa-solid fa-rotate mr-0.5" :class="transcribing ? 'fa-spin' : ''"></i> 
                                                         <span x-text="transcribing ? '{{ __('Regenerating...') }}' : '{{ __('Regenerate') }}'"></span>
                                                     </button>
@@ -249,7 +249,7 @@
                                         </template>
                                     </div>
                                 @elseif (str_contains($valStr, 'base64,'))
-                                    <a href="javascript:void(0)" onclick="Swal.fire({title:'Signature', imageUrl:'{{ $valStr }}', imageAlt:'Signature', customClass: {image: 'rounded-xl border border-gray-100 shadow-lg'}})" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
+                                    <a href="javascript:void(0)" onclick="Swal.fire({title:'Signature', imageUrl:'{{ $valStr }}', imageAlt:'Signature', customClass: {image: 'rounded-xl border border-gray-100 shadow-lg'}})" class="inline-flex items-center text-[#2271b1] hover:text-[#135e96] font-bold bg-zinc-100 px-3 py-1.5 rounded-lg border border-zinc-200">
                                         <i class="fa-solid fa-signature mr-2"></i> {{ __('View Signature') }}
                                     </a>
                                 @elseif (preg_match('/^-?\d+\.\d+,-?\d+\.\d+$/', $valStr))
@@ -344,7 +344,7 @@
                                     }
                                 }" class="space-y-3">
                                     <div class="flex items-center gap-4">
-                                        <a href="{{ asset('storage/' . $valStr) }}" target="_blank" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
+                                        <a href="{{ asset('storage/' . $valStr) }}" target="_blank" class="inline-flex items-center text-[#2271b1] hover:text-[#135e96] font-bold bg-zinc-100 px-3 py-1.5 rounded-lg border border-zinc-200">
                                             <i class="fa-solid fa-play-circle mr-2"></i> {{ __('View Media') }}
                                         </a>
                                         

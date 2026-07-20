@@ -7,7 +7,8 @@
         <div class="mb-8">
             <h2 class="text-2xl font-bold text-gray-900 leading-tight">{{ __('Create New User') }}</h2>
             <p class="mt-1 text-sm text-gray-500">
-                {{ __('Add a new user to the system with a specific role and access level.') }}</p>
+                {{ __('Add a new user to the system with a specific role and access level.') }}
+            </p>
         </div>
 
         @if($errors->any())
@@ -35,21 +36,21 @@
                         <label for="name"
                             class="block text-sm font-bold text-gray-700 uppercase tracking-wider">{{ __('Full Name') }}</label>
                         <input type="text" name="name" id="name" value="{{ old('name') }}" required
-                            class="mt-1 block w-full sm:text-sm border-2 border-gray-400/50 rounded-md py-2.5 px-4 focus:ring-indigo-500 focus:border-indigo-600 transition-all shadow-sm">
+                            class="mt-1 block w-full sm:text-sm border-2 border-gray-400/50 rounded-md py-2.5 px-4 focus:ring-[#2271b1] focus:border-[#2271b1] transition-all shadow-sm">
                     </div>
 
                     <div class="sm:col-span-2">
                         <label for="email"
                             class="block text-sm font-bold text-gray-700 uppercase tracking-wider">{{ __('Email Address') }}</label>
                         <input type="email" name="email" id="email" value="{{ old('email') }}" required
-                            class="mt-1 block w-full sm:text-sm border-2 border-gray-400/50 rounded-md py-2.5 px-4 focus:ring-indigo-500 focus:border-indigo-600 transition-all shadow-sm">
+                            class="mt-1 block w-full sm:text-sm border-2 border-gray-400/50 rounded-md py-2.5 px-4 focus:ring-[#2271b1] focus:border-[#2271b1] transition-all shadow-sm">
                     </div>
 
                     <div class="sm:col-span-2">
                         <label for="role"
                             class="block text-sm font-bold text-gray-700 uppercase tracking-wider">{{ __('Role') }}</label>
                         <select name="role" id="role" required
-                            class="mt-1 block w-full pl-3 pr-10 py-2.5 text-base border-2 border-gray-400/50 focus:outline-none focus:ring-indigo-500 focus:border-indigo-600 sm:text-sm rounded-md transition-all shadow-sm">
+                            class="mt-1 block w-full pl-3 pr-10 py-2.5 text-base border-2 border-gray-400/50 focus:outline-none focus:ring-[#2271b1] focus:border-[#2271b1] sm:text-sm rounded-md transition-all shadow-sm">
                             @foreach($roles as $role)
                                 <option value="{{ $role->value }}" {{ old('role') == $role->value ? 'selected' : '' }}>
                                     {{ __($role->name) }}
@@ -62,14 +63,14 @@
                         <label for="password"
                             class="block text-sm font-bold text-gray-700 uppercase tracking-wider">{{ __('Password') }}</label>
                         <input type="password" name="password" id="password" required
-                            class="mt-1 block w-full sm:text-sm border-2 border-gray-400/50 rounded-md py-2.5 px-4 focus:ring-indigo-500 focus:border-indigo-600 transition-all shadow-sm">
+                            class="mt-1 block w-full sm:text-sm border-2 border-gray-400/50 rounded-md py-2.5 px-4 focus:ring-[#2271b1] focus:border-[#2271b1] transition-all shadow-sm">
                     </div>
 
                     <div>
                         <label for="password_confirmation"
                             class="block text-sm font-bold text-gray-700 uppercase tracking-wider">{{ __('Confirm Password') }}</label>
                         <input type="password" name="password_confirmation" id="password_confirmation" required
-                            class="mt-1 block w-full sm:text-sm border-2 border-gray-400/50 rounded-md py-2.5 px-4 focus:ring-indigo-500 focus:border-indigo-600 transition-all shadow-sm">
+                            class="mt-1 block w-full sm:text-sm border-2 border-gray-400/50 rounded-md py-2.5 px-4 focus:ring-[#2271b1] focus:border-[#2271b1] transition-all shadow-sm">
                     </div>
                 </div>
 
@@ -79,7 +80,7 @@
                         {{ __('Cancel and return') }}
                     </a>
                     <button type="submit"
-                        class="inline-flex items-center px-6 py-2.5 border border-transparent shadow-sm text-sm font-black uppercase tracking-widest rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-indigo-100 transition-all">
+                        class="inline-flex items-center px-6 py-2.5 border border-transparent shadow-sm text-sm font-black uppercase tracking-widest rounded-lg text-white bg-[#2271b1] hover:bg-[#135e96] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2271b1] shadow-zinc-200/50 transition-all">
                         {{ __('Create User Account') }}
                     </button>
                 </div>

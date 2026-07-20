@@ -14,11 +14,11 @@
             </div>
             <div class="flex items-center gap-3">
                 <button @click="previewDashboard()"
-                    class="px-5 py-3 bg-white text-gray-700 border border-gray-200 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-gray-50 hover:text-indigo-600 transition-all flex items-center gap-2">
+                    class="px-5 py-3 bg-white text-gray-700 border border-gray-200 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-gray-50 hover:text-[#2271b1] transition-all flex items-center gap-2">
                     <i class="fa-solid fa-eye"></i> {{ __('Live Preview') }}
                 </button>
                 <button @click="saveLayout()" :disabled="saving"
-                    class="px-5 py-3 bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center gap-2 disabled:opacity-50">
+                    class="px-5 py-3 bg-[#2271b1] text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-zinc-200/50 hover:bg-[#135e96] transition-all flex items-center gap-2 disabled:opacity-50">
                     <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
                     <span x-text="saving ? '{{ __('Saving...') }}' : '{{ __('Save Layout') }}'"></span>
                 </button>
@@ -39,7 +39,7 @@
                     <div class="flex flex-col gap-3 max-h-[600px] overflow-y-auto pr-1">
                         <template x-for="question in analysisData" :key="question.id">
                             <div draggable="true" @dragstart="draggedPaletteQuestion = question"
-                                class="p-4 bg-gray-50/50 hover:bg-indigo-50/50 border border-gray-100 hover:border-indigo-100 rounded-2xl cursor-grab active:cursor-grabbing transition-all group flex items-start justify-between gap-3">
+                                class="p-4 bg-gray-50/50 hover:bg-zinc-100/50 border border-gray-100 hover:border-zinc-200 rounded-2xl cursor-grab active:cursor-grabbing transition-all group flex items-start justify-between gap-3">
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-1.5 mb-1">
                                         <span
@@ -54,7 +54,7 @@
                                     <h5 class="text-xs font-semibold text-gray-700 truncate" x-text="question.label"></h5>
                                 </div>
                                 <button @click="addWidget(question)"
-                                    class="text-gray-400 hover:text-indigo-600 transition-colors">
+                                    class="text-gray-400 hover:text-[#2271b1] transition-colors">
                                     <i class="fa-solid fa-plus-circle text-lg"></i>
                                 </button>
                             </div>
@@ -67,13 +67,13 @@
             <div class="flex-grow w-full min-w-0">
                 <div @dragover.prevent="canvasDragOver = true" @dragleave="canvasDragOver = false"
                     @drop="dropPaletteQuestion()"
-                    :class="canvasDragOver ? 'border-2 border-dashed border-indigo-400 bg-indigo-50/10' : 'border-2 border-transparent'"
+                    :class="canvasDragOver ? 'border-2 border-dashed border-zinc-300 bg-zinc-100/50' : 'border-2 border-transparent'"
                     class="rounded-3xl transition-all min-h-[500px]">
                     <template x-if="widgets.length === 0">
                         <div
                             class="bg-white rounded-3xl border border-gray-100 shadow-sm p-16 flex flex-col items-center justify-center text-center">
                             <div
-                                class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center mb-4">
+                                class="w-16 h-16 bg-zinc-100 text-zinc-2000 rounded-2xl flex items-center justify-center mb-4">
                                 <i class="fa-solid fa-table-cells-large text-2xl animate-pulse"></i>
                             </div>
                             <h4 class="text-sm font-bold text-gray-800 uppercase tracking-wider">
@@ -89,7 +89,7 @@
                             <div draggable="true" @dragstart="draggedWidgetIndex = index"
                                 @dragover.prevent="widgetDragOverIndex = index" @dragleave="widgetDragOverIndex = null"
                                 @drop="dropWidget(index)" :class="[
-                                    widgetDragOverIndex === index ? 'ring-2 ring-indigo-400 ring-offset-2' : '',
+                                    widgetDragOverIndex === index ? 'ring-2 ring-zinc-400 ring-offset-2' : '',
                                     !widget.visible ? 'opacity-60 bg-gray-50 border-dashed' : 'bg-white'
                                 ]"
                                 :style="widget.width === 'full' ? 'grid-column: span 2 / span 2;' : 'grid-column: span 1 / span 1;'"
@@ -102,13 +102,13 @@
                                             <i class="fa-solid fa-grip-vertical"></i>
                                         </div>
                                         <input type="text" x-model="widget.title"
-                                            class="w-full text-xs font-bold text-gray-800 bg-transparent border-0 border-b border-transparent focus:border-indigo-400 focus:ring-0 px-0 py-0.5"
+                                            class="w-full text-xs font-bold text-gray-800 bg-transparent border-0 border-b border-transparent focus:border-zinc-300 focus:ring-0 px-0 py-0.5"
                                             @change="widgetTitleChanged(widget)" />
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <!-- Settings Toggle -->
                                         <button @click="widget.showSettings = !widget.showSettings"
-                                            :class="widget.showSettings ? 'text-indigo-600 bg-indigo-50' : 'text-gray-400 hover:text-gray-600 bg-transparent'"
+                                            :class="widget.showSettings ? 'text-[#2271b1] bg-zinc-100' : 'text-gray-400 hover:text-gray-600 bg-transparent'"
                                             class="w-8 h-8 rounded-lg flex items-center justify-center transition-all">
                                             <i class="fa-solid fa-cog"></i>
                                         </button>
@@ -129,7 +129,7 @@
                                         <label
                                             class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{{ __('Widget Type') }}</label>
                                         <select x-model="widget.chart_type" @change="updateWidgetType(widget)"
-                                            class="w-full text-xs rounded-xl border-gray-200 focus:border-indigo-400 focus:ring focus:ring-indigo-100 font-medium">
+                                            class="w-full text-xs rounded-xl border-gray-200 focus:border-zinc-300 focus:ring focus:ring-zinc-200 font-medium">
                                             <option value="bar">{{ __('Bar Chart') }}</option>
                                             <option value="horizontal">{{ __('Horizontal Bar') }}</option>
                                             <option value="pie">{{ __('Pie Chart') }}</option>
@@ -146,7 +146,7 @@
                                         <label
                                             class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{{ __('Widget Width') }}</label>
                                         <select x-model="widget.width"
-                                            class="w-full text-xs rounded-xl border-gray-200 focus:border-indigo-400 focus:ring focus:ring-indigo-100 font-medium">
+                                            class="w-full text-xs rounded-xl border-gray-200 focus:border-zinc-300 focus:ring focus:ring-zinc-200 font-medium">
                                             <option value="half">{{ __('Half Width (50%)') }}</option>
                                             <option value="full">{{ __('Full Width (100%)') }}</option>
                                         </select>
@@ -158,7 +158,7 @@
                                             class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{{ __('Color Scheme') }}</label>
                                         <select x-model="widget.config.color_scheme"
                                             @change="refreshChart(widget.widget_id)"
-                                            class="w-full text-xs rounded-xl border-gray-200 focus:border-indigo-400 focus:ring focus:ring-indigo-100 font-medium">
+                                            class="w-full text-xs rounded-xl border-gray-200 focus:border-zinc-300 focus:ring focus:ring-zinc-200 font-medium">
                                             <option value="indigo">{{ __('Indigo Accent') }}</option>
                                             <option value="vibrant">{{ __('Vibrant Palette') }}</option>
                                             <option value="emerald">{{ __('Emerald Cool') }}</option>
@@ -172,7 +172,7 @@
                                     <div class="flex flex-col justify-center gap-3">
                                         <label class="flex items-center gap-2 cursor-pointer">
                                             <input type="checkbox" x-model="widget.visible"
-                                                class="rounded text-indigo-600 focus:ring-indigo-100 border-gray-300">
+                                                class="rounded text-[#2271b1] focus:ring-zinc-200 border-gray-300">
                                             <span
                                                 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{{ __('Visible in Report') }}</span>
                                         </label>
@@ -180,7 +180,7 @@
                                             x-show="['bar', 'horizontal', 'pie', 'donut'].includes(widget.chart_type)">
                                             <input type="checkbox" x-model="widget.config.show_percentages"
                                                 @change="refreshChart(widget.widget_id)"
-                                                class="rounded text-indigo-600 focus:ring-indigo-100 border-gray-300">
+                                                class="rounded text-[#2271b1] focus:ring-zinc-200 border-gray-300">
                                             <span
                                                 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{{ __('Show Percentages') }}</span>
                                         </label>
@@ -194,7 +194,7 @@
                                         <div class="text-center py-8 flex flex-col items-center justify-center">
                                             <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2"
                                                 x-text="widget.title"></p>
-                                            <h2 class="text-5xl font-black text-indigo-600 tracking-tight"
+                                            <h2 class="text-5xl font-black text-[#2271b1] tracking-tight"
                                                 x-text="getMetricValue(widget.question_id)"></h2>
 
                                             <!-- Stars for Star/Rating Questions -->
@@ -252,7 +252,7 @@
                                                                         <span x-text="row.percentage + '%'"></span>
                                                                         <div
                                                                             class="w-16 bg-gray-100 h-1.5 rounded-full inline-block ml-2 overflow-hidden">
-                                                                            <div class="bg-indigo-500 h-full"
+                                                                            <div class="bg-zinc-1000 h-full"
                                                                                 :style="'width: ' + row.percentage + '%'">
                                                                             </div>
                                                                         </div>
@@ -272,7 +272,7 @@
                                                         <template x-for="(ans, idx) in getPaginatedAnswers(widget)"
                                                             :key="idx">
                                                             <div
-                                                                class="text-xs font-medium text-gray-700 leading-relaxed italic border-l-4 border-indigo-500 pl-3 bg-gray-50/50 p-2.5 rounded-r-xl flex items-center justify-between gap-4">
+                                                                class="text-xs font-medium text-gray-700 leading-relaxed italic border-l-4 border-[#2271b1] pl-3 bg-gray-50/50 p-2.5 rounded-r-xl flex items-center justify-between gap-4">
                                                                 <div class="flex-1">
                                                                     <template
                                                                         x-if="!ans.includes('base64,') && !ans.startsWith('uploads/')">
@@ -281,16 +281,16 @@
                                                                     <template x-if="ans.startsWith('uploads/')">
                                                                         <div class="flex items-center gap-2">
                                                                             <i
-                                                                                class="fa-solid fa-file-arrow-down text-indigo-500"></i>
+                                                                                class="fa-solid fa-file-arrow-down text-zinc-2000"></i>
                                                                             <a :href="'/' + ans" target="_blank"
-                                                                                class="text-indigo-600 hover:underline font-bold"
+                                                                                class="text-[#2271b1] hover:underline font-bold"
                                                                                 x-text="ans.split('/').pop()"></a>
                                                                         </div>
                                                                     </template>
                                                                 </div>
                                                                 <template x-if="ans.includes('base64,')">
                                                                     <button @click="showSignature(ans)"
-                                                                        class="px-3 py-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
+                                                                        class="px-3 py-1 bg-zinc-100 text-[#2271b1] hover:bg-zinc-200 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
                                                                         <i
                                                                             class="fa-solid fa-signature mr-1"></i>{{ __('View Signature') }}
                                                                     </button>
@@ -324,13 +324,13 @@
                                                                 <button
                                                                     @click="widget.currentPage = Math.max(1, widget.currentPage - 1)"
                                                                     :disabled="widget.currentPage === 1"
-                                                                    class="px-2.5 py-1 bg-gray-50 hover:bg-indigo-50 text-gray-500 hover:text-indigo-600 disabled:opacity-50 disabled:hover:bg-gray-50 disabled:hover:text-gray-500 border border-gray-100 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
+                                                                    class="px-2.5 py-1 bg-gray-50 hover:bg-zinc-100 text-gray-500 hover:text-[#2271b1] disabled:opacity-50 disabled:hover:bg-gray-50 disabled:hover:text-gray-500 border border-gray-100 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
                                                                     <i class="fa-solid fa-chevron-left mr-1"></i>{{ __('Prev') }}
                                                                 </button>
                                                                 <button
                                                                     @click="widget.currentPage = Math.min(getTotalPages(widget), widget.currentPage + 1)"
                                                                     :disabled="widget.currentPage >= getTotalPages(widget)"
-                                                                    class="px-2.5 py-1 bg-gray-50 hover:bg-indigo-50 text-gray-500 hover:text-indigo-600 disabled:opacity-50 disabled:hover:bg-gray-50 disabled:hover:text-gray-500 border border-gray-100 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
+                                                                    class="px-2.5 py-1 bg-gray-50 hover:bg-zinc-100 text-gray-500 hover:text-[#2271b1] disabled:opacity-50 disabled:hover:bg-gray-50 disabled:hover:text-gray-500 border border-gray-100 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
                                                                     {{ __('Next') }}<i class="fa-solid fa-chevron-right ml-1"></i>
                                                                 </button>
                                                             </div>

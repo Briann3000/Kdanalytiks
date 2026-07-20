@@ -26,7 +26,7 @@
                                 <i class="fa-solid fa-envelope text-gray-400"></i>
                             </div>
                             <input id="email" name="email" type="email" autocomplete="email" required
-                                class="bg-gray-50 focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md @error('email') border-red-300 text-red-900 placeholder-red-300 focus:outline-none focus:ring-red-500 focus:border-red-500 @enderror"
+                                class="bg-gray-50 focus:ring-[#2271b1] focus:border-[#2271b1] block w-full pl-10 sm:text-sm border-gray-300 rounded-md @error('email') border-red-300 text-red-900 placeholder-red-300 focus:outline-none focus:ring-red-500 focus:border-red-500 @enderror"
                                 value="{{ $email ?? old('email') }}" readonly>
                         </div>
                         @error('email')
@@ -39,10 +39,10 @@
                             New Password
                         </label>
                         <input id="password" name="password" type="password" required
-                            class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-10 sm:text-sm border-gray-300 rounded-md @error('password') border-red-300 text-red-900 placeholder-red-300 focus:outline-none focus:ring-red-500 focus:border-red-500 @enderror">
+                            class="focus:ring-[#2271b1] focus:border-[#2271b1] block w-full pl-10 pr-10 sm:text-sm border-gray-300 rounded-md @error('password') border-red-300 text-red-900 placeholder-red-300 focus:outline-none focus:ring-red-500 focus:border-red-500 @enderror">
                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
                             <button type="button" onclick="togglePassword('password', 'password-icon')"
-                                class="text-gray-400 hover:text-indigo-600 focus:outline-none">
+                                class="text-gray-400 hover:text-[#2271b1] focus:outline-none">
                                 <i id="password-icon" class="fa-solid fa-eye text-xs"></i>
                             </button>
                         </div>
@@ -57,10 +57,10 @@
                     Confirm New Password
                 </label>
                 <input id="password_confirmation" name="password_confirmation" type="password" required
-                    class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-10 sm:text-sm border-gray-300 rounded-md">
+                    class="focus:ring-[#2271b1] focus:border-[#2271b1] block w-full pl-10 pr-10 sm:text-sm border-gray-300 rounded-md">
                 <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
                     <button type="button" onclick="togglePassword('password_confirmation', 'conf-password-icon')"
-                        class="text-gray-400 hover:text-indigo-600 focus:outline-none">
+                        class="text-gray-400 hover:text-[#2271b1] focus:outline-none">
                         <i id="conf-password-icon" class="fa-solid fa-eye text-xs"></i>
                     </button>
                 </div>
@@ -69,7 +69,7 @@
 
         <div>
             <button type="submit"
-                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#2271b1] hover:bg-[#135e96] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2271b1]">
                 Reset Password
             </button>
         </div>

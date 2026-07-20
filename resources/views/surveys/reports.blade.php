@@ -61,7 +61,7 @@
             <div class="flex flex-wrap items-center gap-6">
                 <!-- Descriptive Group -->
                 <div class="flex flex-col gap-1.5">
-                    <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest pl-1">{{ __('Descriptive Statistics') }}</span>
+                    <span class="text-xs font-bold text-zinc-500 tracking-tight pl-1">{{ __('Descriptive Statistics') }}</span>
                     <div class="flex items-center gap-1 bg-gray-100/50 p-1 rounded-2xl w-fit">
                         <button @click="switchReportTab('quantitative')"
                             :class="reportTab === 'quantitative' ? 'bg-white text-indigo-700 shadow-sm border border-indigo-50' : 'text-gray-500 hover:text-gray-700'"
@@ -83,7 +83,7 @@
 
                 <!-- Inferential Group -->
                 <div class="flex flex-col gap-1.5">
-                    <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest pl-1">{{ __('Inferential Statistics') }}</span>
+                    <span class="text-xs font-bold text-zinc-500 tracking-tight pl-1">{{ __('Inferential Statistics') }}</span>
                     <div class="flex items-center gap-1 bg-gray-100/50 p-1 rounded-2xl w-fit">
                         <button @click="switchReportTab('inferential')"
                             :class="reportTab === 'inferential' ? 'bg-white text-indigo-700 shadow-sm border border-indigo-50' : 'text-gray-500 hover:text-gray-700'"
@@ -100,6 +100,11 @@
 
             <div class="flex items-center gap-3">
                 @if(!isset($isSharedView) || !$isSharedView)
+                    <button type="button" onclick="window.startReportsDashboardTour()"
+                        class="inline-flex items-center gap-2 px-5 py-3 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all">
+                        <i class="fa-solid fa-compass text-sm"></i>
+                        {{ __('Tour') }}
+                    </button>
                     <div class="relative" x-data="{ open: false }" @click.outside="open = false">
                         <button @click="open = !open"
                             class="inline-flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
@@ -174,7 +179,7 @@
                                     @endforeach
                                 </div>
                                 <div class="flex justify-end gap-1">
-                                    @foreach(['vibrant', 'indigo', 'emerald', 'rose', 'amber', 'purple'] as $color)
+                                    @foreach(['vibrant', 'indigo', 'emerald', 'rose', 'amber', 'purple', 'greyscale'] as $color)
                                         <button @click="switchColor('{{ $item['canvasId'] }}', '{{ $color }}')"
                                             class="w-4 h-4 rounded-full border border-white ring-1 ring-gray-200 transition-transform hover:scale-125 shadow-sm"
                                             :class="{
@@ -184,6 +189,7 @@
                                                                 'bg-rose-500': '{{ $color }}' === 'rose',
                                                                 'bg-amber-500': '{{ $color }}' === 'amber',
                                                                 'bg-purple-500': '{{ $color }}' === 'purple',
+                                                                'bg-gray-500': '{{ $color }}' === 'greyscale',
                                                                 'ring-2 ring-offset-2 ring-indigo-600 scale-125': activeColors['{{ $item['canvasId'] }}'] === '{{ $color }}'
                                                             }">
                                         </button>
@@ -193,23 +199,31 @@
                         </div>
 
                         <div class="flex flex-col gap-12">
-                            <!-- Chart Area (Full Width) -->
+                            <!-- Chart Area (Reduced Width) -->
                             <div
-                                class="h-96 relative flex items-center justify-center bg-gray-50/30 rounded-3xl p-8 border border-gray-100 shadow-inner group/chart">
+                                class="h-96 w-full max-w-4xl mx-auto relative flex items-center justify-center bg-gray-50/30 rounded-3xl p-8 border border-gray-100 shadow-inner group/chart">
                                 <canvas id="{{ $item['canvasId'] }}"></canvas>
                                 
-                                <button @click="window.exportChartToPng('{{ $item['canvasId'] }}', '{{ addslashes($item['label']) }}')"
-                                    class="absolute top-4 right-4 inline-flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-indigo-600 hover:text-white text-gray-600 hover:shadow-md rounded-xl text-[10px] font-black uppercase tracking-widest border border-gray-100 shadow-sm transition-all z-20"
-                                    title="{{ __('Export Chart') }}">
-                                    <i class="fa-solid fa-file-image"></i>
-                                    {{ __('Export Chart') }}
-                                </button>
+                                <div class="absolute top-4 right-4 flex gap-2 z-20">
+                                    <button @click="window.copyChartToClipboard('{{ $item['canvasId'] }}', $event.currentTarget)"
+                                        class="inline-flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-emerald-600 hover:text-white text-gray-600 hover:shadow-md rounded-xl text-[10px] font-black uppercase tracking-widest border border-gray-100 shadow-sm transition-all"
+                                        title="{{ __('Copy Chart') }}">
+                                        <i class="fa-solid fa-copy"></i>
+                                        <span>{{ __('Copy') }}</span>
+                                    </button>
+                                    <button @click="window.exportChartToPng('{{ $item['canvasId'] }}', '{{ addslashes($item['label']) }}')"
+                                        class="inline-flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-indigo-600 hover:text-white text-gray-600 hover:shadow-md rounded-xl text-[10px] font-black uppercase tracking-widest border border-gray-100 shadow-sm transition-all"
+                                        title="{{ __('Export Chart') }}">
+                                        <i class="fa-solid fa-file-image"></i>
+                                        {{ __('Export') }}
+                                    </button>
+                                </div>
                             </div>
 
                             <!-- Table Area (Below Chart) -->
                             <div class="overflow-hidden bg-white rounded-2xl border border-gray-100" id="table-wrapper-{{ $item['canvasId'] }}">
                                 <div class="px-6 py-4 bg-gray-50/50 border-b border-gray-100 flex justify-between items-center">
-                                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ __('Frequency Table') }}</span>
+                                    <span class="text-xs font-bold text-zinc-500 tracking-tight">{{ __('Frequency Table') }}</span>
                                     <div class="flex gap-2" data-html2canvas-ignore>
                                         <button @click="window.copyTableToClipboard('table-{{ $item['canvasId'] }}')"
                                             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 border border-gray-200 text-gray-600 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm">
@@ -234,21 +248,21 @@
                                             <tr class="text-[10px] font-black text-gray-500 uppercase tracking-widest">
                                                 <th class="py-4 px-6">{{ __('Value') }}</th>
                                                 <th class="py-4 px-6 text-right">{{ __('Frequency') }}</th>
-                                                <th class="py-4 px-6 text-right">{{ __('Ratio') }}</th>
+                                                <th class="py-4 px-6 text-right">{{ __('Percentage') }}</th>
                                             </tr>
                                         </thead>
                                     <tbody class="divide-y divide-gray-50">
                                         @php 
                                             $totalFreq = 0;
-                                            $totalRatio = 0;
+                                            $totalPerc = 0;
                                         @endphp
                                         @foreach($item['stats'] as $stat)
                                             @php 
                                                 $totalFreq += $stat['count'];
-                                                $totalRatio += (float)$stat['percentage'];
+                                                $totalPerc += (float)$stat['percentage'];
                                             @endphp
                                             <tr class="hover:bg-gray-50/30 transition-colors">
-                                                <td class="py-4 px-6 text-[11px] font-black text-gray-700 uppercase tracking-tight">
+                                                <td class="py-4 px-6 text-[11px] font-black text-gray-700 tracking-tight">
                                                     {{ $stat['value'] }}</td>
                                                 <td class="py-4 px-6 text-right text-[11px] font-black text-gray-900">{{ number_format($stat['count']) }}
                                                 </td>
@@ -263,7 +277,7 @@
                                         <tr class="font-black text-indigo-900">
                                             <td class="py-4 px-6 text-[11px] uppercase tracking-widest">{{ __('Total') }}</td>
                                             <td class="py-4 px-6 text-right text-[11px]">{{ number_format($totalFreq) }}</td>
-                                            <td class="py-4 px-6 text-right text-[11px]">{{ round($totalRatio) }}%</td>
+                                            <td class="py-4 px-6 text-right text-[11px]">{{ round($totalPerc) }}%</td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -274,7 +288,7 @@
                                 <x-ai-quant-insight-card :question-id="$item['id']" :survey-id="$survey->id" :stats="$item['stats']" />
                             @else
                                 <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100 text-center mt-6">
-                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{{ __('Quantitative AI Insights') }}</p>
+                                    <p class="text-xs font-bold text-zinc-500 tracking-tight mb-1">{{ __('Quantitative AI Insights') }}</p>
                                     <p class="text-xs text-gray-500 font-medium">{{ __('Upgrade to Pro to unlock automated trend interpretation for numerical data.') }}</p>
                                 </div>
                             @endif
@@ -299,12 +313,12 @@
                         @if($item['isChartable'] && !empty($item['stats']))
                             <div class="mb-10 p-6 bg-gray-50/50 border border-gray-100 rounded-3xl animate-in fade-in duration-300">
                                 <div class="mb-6 flex justify-between items-end">
-                                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ __('Frequency Distribution') }}</span>
+                                    <span class="text-xs font-bold text-zinc-500 tracking-tight">{{ __('Frequency Distribution') }}</span>
                                     <div class="flex gap-1 bg-gray-100 p-1 rounded-lg border border-gray-100">
                                         @foreach(['bar', 'horizontal', 'line', 'pie', 'doughnut'] as $type)
                                             <button @click="switchChartType('qual-{{ $item['canvasId'] }}', '{{ $type }}')"
                                                 :class="chartTypes['qual-{{ $item['canvasId'] }}'] === '{{ $type }}' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-600'"
-                                                class="p-1 px-2 rounded-md text-[9px] font-black uppercase transition-all">
+                                                class="p-1 px-2 rounded-md text-[10px] font-bold tracking-tight transition-all">
                                                 {{ substr($type, 0, 3) }}
                                             </button>
                                         @endforeach
@@ -319,18 +333,18 @@
                                     <div class="overflow-hidden bg-white rounded-2xl border border-gray-100 max-h-64 overflow-y-auto custom-scrollbar">
                                         <table class="w-full text-left">
                                             <thead class="sticky top-0 bg-white z-10 border-b border-gray-100 shadow-sm">
-                                                <tr class="text-[9px] font-black text-gray-500 uppercase tracking-widest">
-                                                    <th class="py-3 px-4">{{ __('Option') }}</th>
-                                                    <th class="py-3 px-4 text-right">{{ __('Count') }}</th>
-                                                    <th class="py-3 px-4 text-right">{{ __('Ratio') }}</th>
+                                                <tr class="text-xs font-bold text-zinc-500 tracking-tight">
+                                                    <th class="py-3 px-4 font-bold">{{ __('Option') }}</th>
+                                                    <th class="py-3 px-4 text-right font-bold">{{ __('Count') }}</th>
+                                                    <th class="py-3 px-4 text-right font-bold">{{ __('Percentage') }}</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-50">
                                                 @foreach($item['stats'] as $stat)
                                                     <tr class="hover:bg-gray-50/30 transition-colors">
-                                                        <td class="py-3 px-4 text-[10px] font-bold text-gray-700 uppercase tracking-tight">{{ $stat['value'] }}</td>
-                                                        <td class="py-3 px-4 text-right text-[10px] font-black text-gray-900">{{ number_format($stat['count']) }}</td>
-                                                        <td class="py-3 px-4 text-right text-[10px] font-black text-indigo-600">{{ $stat['percentage'] }}%</td>
+                                                        <td class="py-3 px-4 text-[11px] font-medium text-gray-700 tracking-tight">{{ $stat['value'] }}</td>
+                                                        <td class="py-3 px-4 text-right text-[11px] font-bold text-gray-900">{{ number_format($stat['count']) }}</td>
+                                                        <td class="py-3 px-4 text-right text-[11px] font-bold text-indigo-600">{{ $stat['percentage'] }}%</td>
                                                     </tr>
                                                 @endforeach
                                             </tbody>
@@ -347,25 +361,25 @@
 
                         <div class="mt-6 bg-gray-50 rounded-3xl overflow-hidden border border-gray-100" id="qual-wrapper-{{ $loop->index }}">
                             <div class="px-8 py-6 border-b border-gray-100 bg-white flex justify-between items-center">
-                                <h5 class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                    {{ __('Detailed Responses ') }}</h5>
+                                <h5 class="text-xs font-bold text-zinc-500 tracking-tight">
+                                    {{ __('Detailed Responses') }}</h5>
                                 <div class="flex items-center gap-3">
-                                    <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase">
+                                    <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
                                         {{ count($item['answers'] ?? []) }} {{ __('Total Entries') }}
                                     </span>
                                     <div class="flex gap-2" data-html2canvas-ignore>
                                         <button onclick="window.copyTableToClipboard('qual-table-{{ $loop->index }}')"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 border border-gray-200 text-gray-600 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm">
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 border border-gray-200 text-gray-600 rounded-xl text-[10px] font-bold tracking-tight transition-all shadow-sm">
                                             <i class="fa-solid fa-copy"></i>
                                             {{ __('Copy') }}
                                         </button>
                                         <button onclick="window.exportTableToCsv('qual-table-{{ $loop->index }}', '{{ addslashes($item['label']) }}')"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-indigo-600 hover:text-white border border-gray-200 text-gray-600 hover:border-indigo-600 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm">
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-indigo-600 hover:text-white border border-gray-200 text-gray-600 hover:border-indigo-600 rounded-xl text-[10px] font-bold tracking-tight transition-all shadow-sm">
                                             <i class="fa-solid fa-file-csv"></i>
                                             {{ __('CSV') }}
                                         </button>
                                         <button onclick="window.exportTableToPng('qual-wrapper-{{ $loop->index }}', '{{ addslashes($item['label']) }}')"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-emerald-600 hover:text-white border border-gray-200 text-gray-600 hover:border-emerald-600 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm">
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-emerald-600 hover:text-white border border-gray-200 text-gray-600 hover:border-emerald-600 rounded-xl text-[10px] font-bold tracking-tight transition-all shadow-sm">
                                             <i class="fa-solid fa-file-image"></i>
                                             {{ __('PNG') }}
                                         </button>
@@ -375,9 +389,9 @@
                             <div class="max-h-[350px] overflow-y-auto custom-scrollbar">
                                 <table class="w-full text-left border-collapse" id="qual-table-{{ $loop->index }}">
                                     <thead>
-                                        <tr class="bg-gray-50/50 text-[10px] font-black text-gray-500 uppercase tracking-widest sticky top-0 bg-white border-b border-gray-100 z-10">
-                                            <th class="py-4 px-8 w-16 text-center">#</th>
-                                            <th class="py-4 px-8">{{ __('Response Content') }}</th>
+                                        <tr class="bg-gray-50/50 text-xs font-bold text-zinc-500 tracking-tight sticky top-0 bg-white border-b border-gray-100 z-10">
+                                            <th class="py-4 px-8 w-16 text-center font-bold">#</th>
+                                            <th class="py-4 px-8 font-bold">{{ __('Response Content') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-gray-100 bg-white">
@@ -1328,7 +1342,129 @@
                 rose: ['#f43f5e', '#e11d48', '#fb7185', '#fda4af', '#fecdd3', '#fff1f2', '#9f1239', '#881337'],
                 amber: ['#f59e0b', '#d97706', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7', '#b45309', '#92400e'],
                 purple: ['#8b5cf6', '#7c3aed', '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe', '#5b21b6', '#4c1d95'],
-                vibrant: ['#6366f1', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#f97316']
+                vibrant: ['#6366f1', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#f97316'],
+                greyscale: ['#374151', '#4b5563', '#6b7280', '#9ca3af', '#d1d5db', '#e5e7eb', '#1f2937', '#111827']
+            };
+
+            window.copyChartToClipboard = function(canvasId, btn = null) {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) return;
+
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                const tempCtx = tempCanvas.getContext('2d');
+
+                // Draw solid white background
+                tempCtx.fillStyle = '#ffffff';
+                tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                tempCtx.drawImage(canvas, 0, 0);
+
+                const dataUrl = tempCanvas.toDataURL('image/png');
+                const chart = chartInstances[canvasId];
+                let htmlContent = '';
+
+                if (chart) {
+                    const mapName = `map-${canvasId}-${Math.random().toString(36).substr(2, 9)}`;
+                    let areas = [];
+                    const datasets = chart.data.datasets;
+                    
+                    if (datasets && datasets[0]) {
+                        const meta = chart.getDatasetMeta(0);
+                        const labels = chart.data.labels;
+                        const data = datasets[0].data;
+
+                        if (chart.config.type === 'bar') {
+                            const isHorizontal = chart.config.options?.indexAxis === 'y';
+                            meta.data.forEach((element, index) => {
+                                const view = element;
+                                const label = labels[index] || '';
+                                const rawVal = data[index] || 0;
+                                let left, right, top, bottom;
+
+                                if (isHorizontal) {
+                                    left = view.base;
+                                    right = view.x;
+                                    top = view.y - view.height / 2;
+                                    bottom = view.y + view.height / 2;
+                                } else {
+                                    left = view.x - view.width / 2;
+                                    right = view.x + view.width / 2;
+                                    top = view.y;
+                                    bottom = view.base;
+                                }
+                                areas.push(`<area shape="rect" coords="${Math.round(left)},${Math.round(top)},${Math.round(right)},${Math.round(bottom)}" title="${label}: ${rawVal}%" alt="${label}" />`);
+                            });
+                        } else if (['pie', 'doughnut', 'polarArea'].includes(chart.config.type)) {
+                            meta.data.forEach((element, index) => {
+                                const view = element;
+                                const label = labels[index] || '';
+                                const rawVal = data[index] || 0;
+                                const cx = view.x;
+                                const cy = view.y;
+                                const r = view.outerRadius;
+                                const start = view.startAngle;
+                                const end = view.endAngle;
+                                
+                                let coords = [];
+                                coords.push(`${cx},${cy}`);
+                                const steps = 16;
+                                for (let i = 0; i <= steps; i++) {
+                                    const angle = start + (end - start) * (i / steps);
+                                    const px = cx + r * Math.cos(angle);
+                                    const py = cy + r * Math.sin(angle);
+                                    coords.push(`${Math.round(px)},${Math.round(py)}`);
+                                }
+                                areas.push(`<area shape="poly" coords="${coords.join(',')}" title="${label}: ${rawVal}%" alt="${label}" />`);
+                            });
+                        }
+                    }
+
+                    if (areas.length > 0) {
+                        htmlContent = `<img src="${dataUrl}" usemap="#${mapName}" style="max-width:100%;height:auto;" />
+<map name="${mapName}">
+  ${areas.join('\n  ')}
+</map>`;
+                    }
+                }
+
+                if (!htmlContent) {
+                    htmlContent = `<img src="${dataUrl}" style="max-width:100%;height:auto;" />`;
+                }
+
+                tempCanvas.toBlob(blob => {
+                    if (!blob) return;
+                    const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
+                    
+                    navigator.clipboard.write([
+                        new ClipboardItem({
+                            'image/png': blob,
+                            'text/html': htmlBlob
+                        })
+                    ]).then(() => {
+                        if (btn) {
+                            const btnSpan = btn.querySelector('span');
+                            const originalText = btnSpan.innerText;
+                            btnSpan.innerText = 'Copied!';
+                            btn.classList.add('bg-green-600', 'text-white');
+                            setTimeout(() => {
+                                btnSpan.innerText = originalText;
+                                btn.classList.remove('bg-green-600', 'text-white');
+                            }, 2000);
+                        }
+                    }).catch(err => {
+                        console.error('Copy chart failed:', err);
+                        Swal.fire({
+                            title: @js(__('Copy Failed')),
+                            text: @js(__('Could not copy chart to clipboard.')),
+                            icon: 'error',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 2000
+                        });
+                    });
+                }, 'image/png');
             };
 
             window.exportChartToPng = function(canvasId, title) {
@@ -1380,25 +1516,115 @@
                 const table = document.getElementById(tableId);
                 if (!table) return;
 
-                const rows = Array.from(table.querySelectorAll('tr'));
-                const tsvContent = rows.map(row => {
-                    const cols = Array.from(row.querySelectorAll('th, td'));
-                    return cols.map(col => col.innerText.trim()).join('\t');
-                }).join('\n');
+                const clone = table.cloneNode(true);
+                clone.style.borderCollapse = 'collapse';
+                clone.style.width = '100%';
+                clone.style.fontFamily = 'Arial, sans-serif';
+                clone.style.fontSize = '13px';
 
-                navigator.clipboard.writeText(tsvContent).then(() => {
+                clone.querySelectorAll('th').forEach(th => {
+                    th.style.border = '1px solid #d4d4d8';
+                    th.style.padding = '8px 12px';
+                    th.style.backgroundColor = '#f4f4f5';
+                    th.style.fontWeight = 'bold';
+                    th.style.textAlign = th.classList.contains('text-right') ? 'right' : 'left';
+                });
+                clone.querySelectorAll('td').forEach(td => {
+                    td.style.border = '1px solid #d4d4d8';
+                    td.style.padding = '8px 12px';
+                    td.style.textAlign = td.classList.contains('text-right') ? 'right' : 'left';
+                });
+
+                const htmlContent = `<table>${clone.innerHTML}</table>`;
+                const plainText = Array.from(table.querySelectorAll('tr'))
+                    .map(row => Array.from(row.querySelectorAll('th, td')).map(c => c.innerText.trim()).join('\t'))
+                    .join('\n');
+
+                const blobHtml = new Blob([htmlContent], { type: 'text/html' });
+                const blobText = new Blob([plainText], { type: 'text/plain' });
+
+                navigator.clipboard.write([
+                    new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })
+                ]).then(() => {
                     Swal.fire({
                         title: @js(__('Copied!')),
-                        text: @js(__('Table copied to clipboard in Excel-compatible format.')),
+                        text: @js(__('Table copied. Paste directly into Word or Google Docs.')),
                         icon: 'success',
                         toast: true,
                         position: 'top-end',
                         showConfirmButton: false,
                         timer: 3000,
-                        customClass: {
-                            popup: 'rounded-2xl shadow-xl border-none'
-                        }
+                        customClass: { popup: 'rounded-2xl shadow-xl border-none' }
                     });
+                }).catch(() => {
+                    navigator.clipboard.writeText(plainText);
+                });
+            };
+
+            window.copyChartToClipboard = function(canvasId, btn = null) {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) return;
+
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.fillStyle = '#ffffff';
+                tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                tempCtx.drawImage(canvas, 0, 0);
+
+                tempCanvas.toBlob(blob => {
+                    if (!blob) return;
+                    navigator.clipboard.write([
+                        new ClipboardItem({ 'image/png': blob })
+                    ]).then(() => {
+                        if (btn) {
+                            const span = btn.querySelector('span');
+                            const orig = span ? span.innerText : btn.innerHTML;
+                            if (span) span.innerText = 'Copied!';
+                            btn.classList.add('!bg-emerald-600', '!text-white');
+                            setTimeout(() => {
+                                if (span) span.innerText = orig;
+                                btn.classList.remove('!bg-emerald-600', '!text-white');
+                            }, 2000);
+                        }
+                    }).catch(err => {
+                        console.error('Copy chart failed:', err);
+                        Swal.fire({
+                            title: @js(__('Copy Failed')),
+                            text: @js(__('Your browser blocked clipboard access. Try exporting instead.')),
+                            icon: 'warning', toast: true, position: 'top-end',
+                            showConfirmButton: false, timer: 3000
+                        });
+                    });
+                }, 'image/png');
+            };
+
+            window.copyRenderedSociusTable = function(tableId, btn = null) {
+                const table = document.getElementById(tableId);
+                if (!table) return;
+
+                let text = '';
+                const rows = table.querySelectorAll('tr');
+                rows.forEach((row) => {
+                    const cols = row.querySelectorAll('th, td');
+                    const rowData = [];
+                    cols.forEach(col => {
+                        rowData.push(col.innerText.trim());
+                    });
+                    text += rowData.join('\t') + '\n';
+                });
+
+                navigator.clipboard.writeText(text).then(() => {
+                    if (btn) {
+                        const originalHtml = btn.innerHTML;
+                        btn.innerHTML = '<i class="fa-solid fa-check text-[10px] text-green-400"></i> Copied!';
+                        setTimeout(() => {
+                            btn.innerHTML = originalHtml;
+                        }, 2000);
+                    }
+                }).catch(err => {
+                    console.error('Failed to copy table: ', err);
                 });
             };
 
@@ -1448,9 +1674,8 @@
 
                 const ctx = canvasElement.getContext('2d');
 
-                const activeTheme = colorTheme && colorPalettes[colorTheme] ? colorTheme : 'vibrant';
-                const palette = colorPalettes[activeTheme] || colorPalettes['vibrant'];
-                // Ensure we have enough colors by repeating the palette if needed
+                const activeTheme = colorTheme && colorPalettes[colorTheme] ? colorTheme : 'indigo';
+                const palette = colorPalettes[activeTheme] || colorPalettes['indigo'];
                 const colors = config.labels.map((_, i) => palette[i % palette.length]);
                 const primaryColor = palette[0];
 
@@ -1466,15 +1691,51 @@
                     fill = true;
                 }
 
+                // 1. Calculate overall responses sum to compute percentage values
+                const totalResponses = config.data.reduce((sum, val) => sum + val, 0);
+                const percentageData = config.data.map(val => 
+                    totalResponses > 0 ? parseFloat(((val / totalResponses) * 100).toFixed(1)) : 0
+                );
+
                 const isCategorical = ['pie', 'doughnut', 'polarArea', 'bar', 'horizontal'].includes(type);
+
+                // 2. Custom inline plugin to render frequency and percentage above elements
+                const datalabelsPlugin = {
+                    id: 'customDatalabels',
+                    afterDatasetsDraw(chart) {
+                        const { ctx } = chart;
+                        ctx.save();
+                        chart.data.datasets.forEach((dataset, i) => {
+                            const meta = chart.getDatasetMeta(i);
+                            meta.data.forEach((element, index) => {
+                                const pctVal = dataset.data[index];
+                                const text = `${pctVal}%`;
+
+                                ctx.fillStyle = '#475569';
+                                ctx.font = 'bold 9px Inter, sans-serif';
+                                
+                                if (chart.options.indexAxis === 'y') {
+                                    ctx.textAlign = 'left';
+                                    ctx.textBaseline = 'middle';
+                                    ctx.fillText(text, element.x + 6, element.y);
+                                } else {
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'bottom';
+                                    ctx.fillText(text, element.x, element.y - 6);
+                                }
+                            });
+                        });
+                        ctx.restore();
+                    }
+                };
 
                 const chartConfig = {
                     type: chartType,
                     data: {
                         labels: config.labels,
                         datasets: [{
-                            label: 'Responses',
-                            data: config.data,
+                            label: 'Responses (%)',
+                            data: percentageData, // Y-axis uses percentages
                             backgroundColor: isCategorical ? colors : (fill ? `${primaryColor}44` : primaryColor),
                             borderColor: isCategorical ? (type === 'bar' || type === 'horizontal' ? colors : '#fff') : primaryColor,
                             borderWidth: (type === 'line' || type === 'radar' || type === 'area') ? 3 : 1,
@@ -1506,23 +1767,57 @@
                                 titleFont: { size: 12, weight: '800' },
                                 bodyFont: { size: 12, weight: '600' },
                                 cornerRadius: 12,
-                                displayColors: true
+                                displayColors: true,
+                                callbacks: {
+                                    label: function(context) {
+                                        const index = context.dataIndex;
+                                        const rawVal = config.data[index];
+                                        return ` ${rawVal} (${context.raw}%)`;
+                                    }
+                                }
                             }
                         }
                     }
                 };
 
+                // Add the custom inline text labels plugin for bar & line layouts
                 if (chartType === 'bar' || chartType === 'line') {
-                    chartConfig.options.scales = {
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: '#f8fafc', drawBorder: false },
-                            ticks: { font: { weight: '600', size: 10, color: '#64748b' } }
+                    chartConfig.plugins = [datalabelsPlugin];
+                }
+
+                if (chartType === 'bar' || chartType === 'line') {
+                    const isHorizontal = indexAxis === 'y';
+                    const valueAxisConfig = {
+                        beginAtZero: true,
+                        grace: '12%', // Add top padding to keep values from clipping
+                        grid: { color: '#f8fafc', drawBorder: false },
+                        ticks: { 
+                            font: { weight: '600', size: 10, color: '#64748b' },
+                            callback: function(value) {
+                                return value + '%';
+                            }
                         },
-                        x: {
-                            grid: { display: false },
-                            ticks: { font: { weight: '600', size: 10, color: '#64748b' } }
+                        title: {
+                            display: true,
+                            text: 'Percentage of Responses (%)',
+                            color: '#64748b',
+                            font: { weight: '600', size: 10 }
                         }
+                    };
+                    const labelAxisConfig = {
+                        grid: { display: false },
+                        ticks: { font: { weight: '600', size: 10, color: '#64748b' } },
+                        title: {
+                            display: true,
+                            text: config.question_name || 'Choices',
+                            color: '#64748b',
+                            font: { weight: '600', size: 10 }
+                        }
+                    };
+
+                    chartConfig.options.scales = {
+                        y: isHorizontal ? labelAxisConfig : valueAxisConfig,
+                        x: isHorizontal ? valueAxisConfig : labelAxisConfig
                     };
                 }
 
@@ -1890,8 +2185,8 @@
                             const el = document.getElementById(config.canvas_id);
                             if (el) {
                                 this.chartTypes[config.canvas_id] = 'bar';
-                                this.activeColors[config.canvas_id] = 'vibrant';
-                                chartInstances[config.canvas_id] = createChart(config.canvas_id, config, 'bar', 'vibrant');
+                                this.activeColors[config.canvas_id] = 'indigo';
+                                chartInstances[config.canvas_id] = createChart(config.canvas_id, config, 'bar', 'indigo');
                             }
                         });
                     },
@@ -1911,7 +2206,7 @@
                         }
                         const el = document.getElementById(canvasId);
                         if (el && config) {
-                            chartInstances[canvasId] = createChart(canvasId, config, this.chartTypes[canvasId] || 'bar', this.activeColors[canvasId] || 'vibrant');
+                            chartInstances[canvasId] = createChart(canvasId, config, this.chartTypes[canvasId] || 'bar', this.activeColors[canvasId] || 'indigo');
                         }
                     }
                 }
@@ -1954,6 +2249,10 @@
                     historyOpen: window.innerWidth > 1280,
                     scrolledUp: false,
                     activePromptId: null,
+                    showQuoteButton: false,
+                    quoteButtonX: 0,
+                    quoteButtonY: 0,
+                    selectedText: '',
 
                     handleScroll() {
                         const el = this.$refs.messageList;
@@ -2018,6 +2317,61 @@
                         });
                         
                         this.$nextTick(() => this.renderVisuals());
+
+                        // Setup selection change listener to dynamically show the quote reference popover
+                        document.addEventListener('selectionchange', () => {
+                            if (this.currentThreadId === null) {
+                                this.showQuoteButton = false;
+                                return;
+                            }
+                            const selection = window.getSelection();
+                            const selected = selection.toString().trim();
+                            if (!selected || selected.length < 3) {
+                                this.showQuoteButton = false;
+                                return;
+                            }
+                            
+                            let node = selection.anchorNode;
+                            let isInsideSociusProse = false;
+                            while (node) {
+                                if (node.classList && node.classList.contains('socius-prose')) {
+                                    isInsideSociusProse = true;
+                                    break;
+                                }
+                                node = node.parentNode;
+                            }
+                            
+                            if (!isInsideSociusProse) {
+                                this.showQuoteButton = false;
+                                return;
+                            }
+                            
+                            this.selectedText = selected;
+                            
+                            try {
+                                const range = selection.getRangeAt(0);
+                                const rect = range.getBoundingClientRect();
+                                const wrapper = document.querySelector('section.flex-1.bg-\\[\\#252525\\]');
+                                if (wrapper) {
+                                    const wrapperRect = wrapper.getBoundingClientRect();
+                                    this.quoteButtonX = rect.left - wrapperRect.left + (rect.width / 2) - 40;
+                                    this.quoteButtonY = rect.top - wrapperRect.top - 40;
+                                    this.showQuoteButton = true;
+                                }
+                            } catch (e) {
+                                this.showQuoteButton = false;
+                            }
+                        });
+                    },
+
+                    quoteSelection() {
+                        if (!this.selectedText) return;
+                        const quote = `> "${this.selectedText}"\n\n`;
+                        this.draft = quote + this.draft;
+                        this.showQuoteButton = false;
+                        window.getSelection().removeAllRanges();
+                        const inputEl = document.getElementById('socius-prompt-input');
+                        if (inputEl) inputEl.focus();
                     },
 
                     async loadThreads() {
@@ -2214,11 +2568,138 @@
                         });
                     },
 
-                    copyMessage(content) {
-                        const plain = content
-                            .replace(/<[^>]*>/g, '')
-                            .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#039;/g, "'");
-                        navigator.clipboard.writeText(plain).catch(() => {});
+                    copyMessage(content, messageId, btn = null) {
+                        const element = document.getElementById(`socius-message-body-${messageId}`);
+                        if (element) {
+                            const clone = element.cloneNode(true);
+                            
+                            // Remove scripts, styles, helper textareas and control buttons
+                            const controls = clone.querySelectorAll('.visual-header button, .socius-visual-loading, script, style, textarea.visual-source');
+                            controls.forEach(el => el.remove());
+                            
+                            // Replace visual graphs/diagrams with inline data summary tables
+                            const visuals = clone.querySelectorAll('.socius-visual');
+                            visuals.forEach(visual => {
+                                const type = visual.dataset.visualType || 'visual';
+                                const visualId = visual.dataset.visualId || '';
+                                const titleEl = visual.querySelector('.visual-header span');
+                                const title = titleEl ? titleEl.innerText : type;
+
+                                let replacement;
+
+                                if ((type === 'chartjs' || type === 'chart.js') && visualId) {
+                                    // Try to extract chart data from the Chart.js instance
+                                    const canvasEl = document.querySelector(`#${visualId} canvas`);
+                                    const chartInstance = canvasEl && typeof Chart !== 'undefined'
+                                        ? Chart.getChart(canvasEl) : null;
+
+                                    if (chartInstance && chartInstance.data) {
+                                        const labels = chartInstance.data.labels || [];
+                                        const dataset = chartInstance.data.datasets?.[0] || {};
+                                        const values = dataset.data || [];
+
+                                        // Build an HTML summary table
+                                        const wrapper = document.createElement('div');
+                                        wrapper.style.margin = '12px 0';
+
+                                        const heading = document.createElement('p');
+                                        heading.style.fontWeight = 'bold';
+                                        heading.style.marginBottom = '6px';
+                                        heading.style.fontSize = '13px';
+                                        heading.innerText = `Chart: ${title}`;
+                                        wrapper.appendChild(heading);
+
+                                        const tbl = document.createElement('table');
+                                        tbl.style.borderCollapse = 'collapse';
+                                        tbl.style.width = '100%';
+                                        tbl.style.fontFamily = 'Arial, sans-serif';
+                                        tbl.style.fontSize = '12px';
+
+                                        // Header row
+                                        const thead = tbl.createTHead();
+                                        const hRow = thead.insertRow();
+                                        ['Option', 'Value'].forEach(h => {
+                                            const th = document.createElement('th');
+                                            th.innerText = h;
+                                            th.style.border = '1px solid #d4d4d8';
+                                            th.style.padding = '6px 10px';
+                                            th.style.backgroundColor = '#f4f4f5';
+                                            th.style.fontWeight = 'bold';
+                                            th.style.textAlign = 'left';
+                                            hRow.appendChild(th);
+                                        });
+
+                                        // Data rows
+                                        const tbody = tbl.createTBody();
+                                        labels.forEach((label, i) => {
+                                            const row = tbody.insertRow();
+                                            [label, values[i] ?? ''].forEach(val => {
+                                                const td = row.insertCell();
+                                                td.innerText = val;
+                                                td.style.border = '1px solid #d4d4d8';
+                                                td.style.padding = '6px 10px';
+                                            });
+                                        });
+
+                                        wrapper.appendChild(tbl);
+                                        replacement = wrapper;
+                                    }
+                                }
+
+                                // Fallback: simple bold label
+                                if (!replacement) {
+                                    replacement = document.createElement('p');
+                                    replacement.style.fontWeight = 'bold';
+                                    replacement.style.color = '#3f3f46';
+                                    replacement.style.fontStyle = 'italic';
+                                    replacement.innerText = `[${title} — chart not available in this format]`;
+                                }
+
+                                visual.parentNode.replaceChild(replacement, visual);
+                            });
+
+                            // Style tables for clipboard pasting to Word/Google Docs
+                            const tables = clone.querySelectorAll('table');
+                            tables.forEach(table => {
+                                table.style.width = '100%';
+                                table.style.borderCollapse = 'collapse';
+                                table.style.margin = '12px 0';
+                                
+                                table.querySelectorAll('th, td').forEach(cell => {
+                                    cell.style.border = '1px solid #d4d4d8';
+                                    cell.style.padding = '8px 12px';
+                                    cell.style.textAlign = 'left';
+                                });
+                                table.querySelectorAll('th').forEach(th => {
+                                    th.style.backgroundColor = '#f4f4f5';
+                                    th.style.fontWeight = 'bold';
+                                });
+                            });
+
+                            const rawHtml = clone.innerHTML;
+                            const rawText = clone.innerText || clone.textContent;
+
+                            const blobHtml = new Blob([rawHtml], { type: 'text/html' });
+                            const blobText = new Blob([rawText], { type: 'text/plain' });
+                            
+                            navigator.clipboard.write([
+                                new ClipboardItem({
+                                    'text/html': blobHtml,
+                                    'text/plain': blobText
+                                })
+                            ]).then(() => {
+                                if (btn) {
+                                    const original = btn.innerHTML;
+                                    btn.innerHTML = '<i class="fa-solid fa-check text-green-400"></i>';
+                                    setTimeout(() => { btn.innerHTML = original; }, 2000);
+                                }
+                            }).catch(err => {
+                                console.error('Failed to copy message:', err);
+                                navigator.clipboard.writeText(rawText);
+                            });
+                        } else {
+                            navigator.clipboard.writeText(content);
+                        }
                     },
 
                     async selectThread(threadId) {
@@ -2569,6 +3050,10 @@
 
                     syncQuery() {
                         const url = new URL(window.location.href);
+                        const currentTab = url.searchParams.get('reportTab') || 'quantitative';
+                        if (currentTab !== 'analyse') {
+                            return;
+                        }
                         url.searchParams.set('reportTab', 'analyse');
                         if (this.currentThreadId) {
                             url.searchParams.set('thread', this.currentThreadId);
@@ -2693,9 +3178,8 @@
                                              data-visual-type="${type}" 
                                              data-visual-id="${id}">
                                             <div class="visual-header flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/5">
-                                                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">${isImage ? '{{ __('AI Image') }}' : type}</span>
-                                                <div class="flex gap-2">
-                                                    <button onclick="window.sociusVisuals.copy('${id}')" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
+                                                <div class="flex gap-2 ml-auto">
+                                                    <button onclick="window.sociusVisuals.copy('${id}', this)" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
                                                         <i class="fa-solid fa-copy mr-1"></i> {{ __('Copy') }}
                                                     </button>
                                                     <button onclick="window.sociusVisuals.download('${id}', 'png')" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
@@ -2706,7 +3190,7 @@
                                             <div id="${id}" class="visual-body p-6 flex justify-center overflow-x-auto min-h-[100px] relative">
                                                 <textarea class="visual-source hidden">${this.escapeHtml(content)}</textarea>
                                                 <div class="visual-target w-full flex justify-center">
-                                                    ${isImage ? '<div class="animate-pulse flex flex-col items-center gap-3 p-8"><i class="fa-solid fa-wand-magic-sparkles text-orange-400 text-2xl"></i><span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">{{ __('Generating Image...') }}</span></div>' : ''}
+                                                    ${isImage ? '<div class="animate-pulse flex flex-col items-center gap-3 p-8"><i class="fa-solid fa-wand-magic-sparkles text-[#3894dc] text-2xl"></i><span class="text-[10px] text-slate-500 font-bold">{{ __('Generating Image...') }}</span></div>' : ''}
                                                 </div>
                                             </div>
                                         </div>
@@ -2724,7 +3208,8 @@
                             const rawLine = lines[i];
                             const line = rawLine.trim();
 
-                            if (line.startsWith('```')) {
+                            const codeBlockMatch = line.match(/^`{3,}(.*)$/);
+                            if (codeBlockMatch) {
                                 if (inCodeBlock) {
                                     flushCodeBlock();
                                 } else {
@@ -2732,7 +3217,7 @@
                                     flushList();
                                     flushTable();
                                     inCodeBlock = true;
-                                    codeBlockType = line.slice(3).trim().toLowerCase();
+                                    codeBlockType = codeBlockMatch[1].trim().toLowerCase();
                                 }
                                 continue;
                             }
@@ -2762,7 +3247,7 @@
                             if (headingMatch) {
                                 flushParagraph();
                                 flushList();
-                                blocks.push(`<h4 class="text-sm font-black text-orange-200 mt-6 mb-3 uppercase tracking-wider">${this.inlineFormat(headingMatch[1])}</h4>`);
+                                blocks.push(`<h4 class="text-base font-bold text-slate-100 mt-6 mb-3 tracking-tight">${this.inlineFormat(headingMatch[1])}</h4>`);
                                 continue;
                             }
 
@@ -2793,8 +3278,8 @@
                                 const isImage = type === 'pollinations';
                                 blocks.push(`
                                     <div class="socius-visual-loading my-6 bg-white/5 rounded-2xl border border-white/10 border-dashed p-8 text-center animate-pulse">
-                                        <i class="fa-solid ${isImage ? 'fa-wand-magic-sparkles' : 'fa-chart-simple'} text-orange-400/50 text-2xl mb-3"></i>
-                                        <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">{{ __('Socius is generating an image...') }}</p>
+                                        <i class="fa-solid ${isImage ? 'fa-wand-magic-sparkles' : 'fa-chart-simple'} text-[#3894dc]/50 text-2xl mb-3"></i>
+                                        <p class="text-[10px] text-slate-500 font-bold">{{ __('Socius is generating an image...') }}</p>
                                     </div>
                                 `);
                             } else {
@@ -2837,22 +3322,33 @@
                         const header = rows[0];
                         const body = rows.slice(2);
 
+                        const tableId = `socius-table-${Math.random().toString(36).slice(2, 10)}`;
+
                         return `
-                            <div class="overflow-x-auto my-4">
-                                <table class="min-w-full text-left text-sm border-separate border-spacing-0">
-                                    <thead>
-                                        <tr>
-                                            ${header.map(cell => `<th class="px-4 py-3 text-[11px] font-black uppercase tracking-widest text-orange-200 border-b border-white/10">${this.inlineFormat(cell)}</th>`).join('')}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${body.map(row => `
+                            <div class="my-4 rounded-2xl border border-white/10 overflow-hidden bg-white/[0.02]">
+                                <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-white/[0.05] border-b border-white/10">
+                                    <span class="text-[10px] font-semibold text-slate-400 tracking-normal">{{ __('Table') }}</span>
+                                    <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 border border-white/10 text-[10px] font-semibold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
+                                        <i class="fa-regular fa-copy text-[10px]"></i>
+                                        {{ __('Copy Table') }}
+                                    </button>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table id="${tableId}" class="min-w-full text-left text-sm border-separate border-spacing-0">
+                                        <thead>
                                             <tr>
-                                                ${row.map(cell => `<td class="px-4 py-3 border-b border-white/5 text-slate-100">${this.inlineFormat(cell)}</td>`).join('')}
+                                                ${header.map(cell => `<th class="px-4 py-3 text-[11px] font-bold text-blue-300 border-b border-white/10 bg-transparent">${this.inlineFormat(cell)}</th>`).join('')}
                                             </tr>
-                                        `).join('')}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            ${body.map(row => `
+                                                <tr>
+                                                    ${row.map(cell => `<td class="px-4 py-3 border-b border-white/5 text-slate-100 bg-transparent">${this.inlineFormat(cell)}</td>`).join('')}
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         `;
                     },
@@ -2901,7 +3397,124 @@
                                     const canvas = document.createElement('canvas');
                                     target.innerHTML = '';
                                     target.appendChild(canvas);
-                                    
+                                                                        // Make sure config structure matches percentages config
+                                    if (config.data && Array.isArray(config.data.datasets) && config.data.datasets[0]) {
+                                        const isMultiDataset = config.data.datasets.length > 1;
+
+                                        if (!isMultiDataset) {
+                                            const dataset = config.data.datasets[0];
+                                            const rawData = Array.isArray(dataset.data) ? dataset.data : [];
+                                            const totalResponses = rawData.reduce((sum, val) => sum + Number(val || 0), 0);
+                                            const percentageData = rawData.map(val => 
+                                                totalResponses > 0 ? parseFloat(((Number(val || 0) / totalResponses) * 100).toFixed(1)) : 0
+                                            );
+
+                                            // Apply percentage dataset values
+                                            dataset.data = percentageData;
+                                            if (!dataset.label) dataset.label = 'Responses (%)';
+                                        }
+
+                                        const chartType = config.type || 'bar';
+                                        const isCartesian = ['bar', 'line'].includes(chartType);
+
+                                        if (isCartesian) {
+                                            // Only add datalabels plugin if single-dataset
+                                            if (!isMultiDataset) {
+                                                const datalabelsPlugin = {
+                                                    id: 'customDatalabels',
+                                                    afterDatasetsDraw(chart) {
+                                                        const { ctx } = chart;
+                                                        ctx.save();
+                                                        chart.data.datasets.forEach((dt, i) => {
+                                                            const meta = chart.getDatasetMeta(i);
+                                                            meta.data.forEach((element, index) => {
+                                                                const pctVal = dt.data[index] || 0;
+                                                                const text = `${pctVal}%`;
+
+                                                                ctx.fillStyle = (chart.options.scales?.x?.ticks?.color === '#333333' || chart.options.scales?.y?.ticks?.color === '#333333') ? '#333333' : '#e2e8f0';
+                                                                ctx.font = 'bold 9px Inter, sans-serif';
+                                                                
+                                                                if (chart.options.indexAxis === 'y') {
+                                                                    ctx.textAlign = 'left';
+                                                                    ctx.textBaseline = 'middle';
+                                                                    ctx.fillText(text, element.x + 6, element.y);
+                                                                } else {
+                                                                    ctx.textAlign = 'center';
+                                                                    ctx.textBaseline = 'bottom';
+                                                                    ctx.fillText(text, element.x, element.y - 6);
+                                                                }
+                                                            });
+                                                        });
+                                                        ctx.restore();
+                                                    }
+                                                };
+
+                                                if (!config.plugins) config.plugins = [];
+                                                config.plugins.push(datalabelsPlugin);
+                                            }
+
+                                            // Set scales
+                                            if (!config.options) config.options = {};
+                                            const isHorizontal = config.options.indexAxis === 'y';
+                                            
+                                            const valueAxisConfig = {
+                                                beginAtZero: true,
+                                                grace: '12%',
+                                                grid: { color: 'rgba(255, 255, 255, 0.08)', drawBorder: false },
+                                                ticks: { 
+                                                    font: { weight: '600', size: 10, color: '#94a3b8' },
+                                                    callback: function(value) {
+                                                        return value + '%';
+                                                    }
+                                                },
+                                                title: {
+                                                    display: true,
+                                                    text: (config.options?.scales?.[isHorizontal ? 'x' : 'y']?.title?.text) || 'Percentage of Responses (%)',
+                                                    color: '#94a3b8',
+                                                    font: { weight: '600', size: 10 }
+                                                }
+                                            };
+                                            const labelAxisConfig = {
+                                                grid: { display: false },
+                                                ticks: { font: { weight: '600', size: 10, color: '#94a3b8' } },
+                                                title: {
+                                                    display: true,
+                                                    text: (config.options?.scales?.[isHorizontal ? 'y' : 'x']?.title?.text) || (config.options.plugins?.title?.text) || 'Categories',
+                                                    color: '#94a3b8',
+                                                    font: { weight: '600', size: 10 }
+                                                }
+                                            };
+
+                                            config.options.scales = {
+                                                y: isHorizontal ? labelAxisConfig : valueAxisConfig,
+                                                x: isHorizontal ? valueAxisConfig : labelAxisConfig
+                                            };
+                                        } else {
+                                            // Make sure options has no scales for pie, doughnut, polarArea
+                                            if (config.options) {
+                                                delete config.options.scales;
+                                            }
+                                        }
+
+                                        // Tooltip adjustments
+                                        if (!config.options.plugins) config.options.plugins = {};
+                                        config.options.plugins.tooltip = {
+                                            backgroundColor: '#0f172a',
+                                            padding: 12,
+                                            titleFont: { size: 12, weight: '800' },
+                                            bodyFont: { size: 12, weight: '600' },
+                                            cornerRadius: 12,
+                                            displayColors: true,
+                                            callbacks: {
+                                                label: function(context) {
+                                                    const index = context.dataIndex;
+                                                    const rawVal = rawData[index] || 0;
+                                                    return ` ${rawVal} (${context.raw}%)`;
+                                                }
+                                            }
+                                        };
+                                    }
+
                                     if (!config.options) config.options = {};
                                     config.options.responsive = true;
                                     config.options.maintainAspectRatio = false;
@@ -3167,42 +3780,181 @@
             };
 
             window.sociusVisuals = {
-                async copy(id) {
+                async copy(id, btn = null) {
                     const target = document.querySelector(`#${id} .visual-target`);
-                    if (!target || typeof htmlToImage === 'undefined') return;
+                    if (!target) return;
+
+                    const canvas = target.querySelector('canvas');
+                    if (canvas && typeof Chart !== 'undefined') {
+                        const chartInstance = Chart.getChart(canvas);
+                        if (chartInstance) {
+                            const originalScaleXColor = chartInstance.options.scales?.x?.ticks?.color;
+                            const originalScaleYColor = chartInstance.options.scales?.y?.ticks?.color;
+                            const originalLegendColor = chartInstance.options.plugins?.legend?.labels?.color;
+                            const originalTitleColor = chartInstance.options.plugins?.title?.color;
+
+                            if (chartInstance.options.scales?.x?.ticks) chartInstance.options.scales.x.ticks.color = '#333333';
+                            if (chartInstance.options.scales?.y?.ticks) chartInstance.options.scales.y.ticks.color = '#333333';
+                            if (chartInstance.options.plugins?.legend?.labels) chartInstance.options.plugins.legend.labels.color = '#333333';
+                            if (chartInstance.options.plugins?.title) chartInstance.options.plugins.title.color = '#333333';
+                            
+                            chartInstance.update('none');
+
+                            const tempCanvas = document.createElement('canvas');
+                            tempCanvas.width = canvas.width;
+                            tempCanvas.height = canvas.height;
+                            const tempCtx = tempCanvas.getContext('2d');
+                            tempCtx.fillStyle = '#ffffff';
+                            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                            tempCtx.drawImage(canvas, 0, 0);
+
+                            if (chartInstance.options.scales?.x?.ticks) chartInstance.options.scales.x.ticks.color = originalScaleXColor;
+                            if (chartInstance.options.scales?.y?.ticks) chartInstance.options.scales.y.ticks.color = originalScaleYColor;
+                            if (chartInstance.options.plugins?.legend?.labels) chartInstance.options.plugins.legend.labels.color = originalLegendColor;
+                            if (chartInstance.options.plugins?.title) chartInstance.options.plugins.title.color = originalTitleColor;
+                            
+                            chartInstance.update('none');
+
+                            tempCanvas.toBlob(async (blob) => {
+                                if (!blob) return;
+                                try {
+                                    await navigator.clipboard.write([
+                                        new ClipboardItem({ 'image/png': blob })
+                                    ]);
+                                    if (btn) {
+                                        const original = btn.innerHTML;
+                                        btn.innerHTML = '<i class="fa-solid fa-check mr-1 text-green-400"></i> Copied';
+                                        setTimeout(() => { btn.innerHTML = original; }, 2000);
+                                    }
+                                } catch (err) {
+                                    console.error('Copy chart failed:', err);
+                                }
+                            }, 'image/png');
+                            return;
+                        }
+                    }
+
+                    if (typeof htmlToImage === 'undefined') return;
+
+                    const styleSheetsFilter = (sheet) => {
+                        try {
+                            const rules = sheet.cssRules;
+                            return true;
+                        } catch (e) {
+                            return false;
+                        }
+                    };
+
+                    const orgConsoleError = console.error;
+                    console.error = function(...args) {
+                        if (args[0] && typeof args[0] === 'string' && args[0].includes('cssRules')) {
+                            return;
+                        }
+                        orgConsoleError.apply(console, args);
+                    };
+
                     try {
                         const dataUrl = await htmlToImage.toPng(target, { 
-                            backgroundColor: '#1a1a1a',
-                            style: { padding: '20px' }
+                            backgroundColor: '#ffffff',
+                            style: { padding: '20px', color: '#111111' },
+                            styleSheetsFilter
                         });
+
                         const response = await fetch(dataUrl);
                         const blob = await response.blob();
                         await navigator.clipboard.write([
                             new ClipboardItem({ 'image/png': blob })
                         ]);
-                        // Simple toast-like feedback
-                        const btn = event.currentTarget;
-                        const original = btn.innerHTML;
-                        btn.innerHTML = '<i class="fa-solid fa-check mr-1 text-green-400"></i> Copied';
-                        setTimeout(() => btn.innerHTML = original, 2000);
+
+                        if (btn) {
+                            const original = btn.innerHTML;
+                            btn.innerHTML = '<i class="fa-solid fa-check mr-1 text-green-400"></i> Copied';
+                            setTimeout(() => { btn.innerHTML = original; }, 2000);
+                        }
                     } catch (e) {
                         console.error('Copy failed:', e);
+                    } finally {
+                        console.error = orgConsoleError;
                     }
                 },
                 async download(id, format) {
                     const target = document.querySelector(`#${id} .visual-target`);
-                    if (!target || typeof htmlToImage === 'undefined') return;
+                    if (!target) return;
+
+                    const canvas = target.querySelector('canvas');
+                    if (canvas && typeof Chart !== 'undefined') {
+                        const chartInstance = Chart.getChart(canvas);
+                        if (chartInstance) {
+                            const originalScaleXColor = chartInstance.options.scales?.x?.ticks?.color;
+                            const originalScaleYColor = chartInstance.options.scales?.y?.ticks?.color;
+                            const originalLegendColor = chartInstance.options.plugins?.legend?.labels?.color;
+                            const originalTitleColor = chartInstance.options.plugins?.title?.color;
+
+                            if (chartInstance.options.scales?.x?.ticks) chartInstance.options.scales.x.ticks.color = '#333333';
+                            if (chartInstance.options.scales?.y?.ticks) chartInstance.options.scales.y.ticks.color = '#333333';
+                            if (chartInstance.options.plugins?.legend?.labels) chartInstance.options.plugins.legend.labels.color = '#333333';
+                            if (chartInstance.options.plugins?.title) chartInstance.options.plugins.title.color = '#333333';
+                            
+                            chartInstance.update('none');
+
+                            const tempCanvas = document.createElement('canvas');
+                            tempCanvas.width = canvas.width;
+                            tempCanvas.height = canvas.height;
+                            const tempCtx = tempCanvas.getContext('2d');
+                            tempCtx.fillStyle = '#ffffff';
+                            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                            tempCtx.drawImage(canvas, 0, 0);
+
+                            if (chartInstance.options.scales?.x?.ticks) chartInstance.options.scales.x.ticks.color = originalScaleXColor;
+                            if (chartInstance.options.scales?.y?.ticks) chartInstance.options.scales.y.ticks.color = originalScaleYColor;
+                            if (chartInstance.options.plugins?.legend?.labels) chartInstance.options.plugins.legend.labels.color = originalLegendColor;
+                            if (chartInstance.options.plugins?.title) chartInstance.options.plugins.title.color = originalTitleColor;
+                            
+                            chartInstance.update('none');
+
+                            const dataUrl = tempCanvas.toDataURL('image/png');
+                            const link = document.createElement('a');
+                            link.download = `socius-visual-${id}.png`;
+                            link.href = dataUrl;
+                            link.click();
+                            return;
+                        }
+                    }
+
+                    if (typeof htmlToImage === 'undefined') return;
+
+                    const styleSheetsFilter = (sheet) => {
+                        try {
+                            const rules = sheet.cssRules;
+                            return true;
+                        } catch (e) {
+                            return false;
+                        }
+                    };
+
+                    const orgConsoleError = console.error;
+                    console.error = function(...args) {
+                        if (args[0] && typeof args[0] === 'string' && args[0].includes('cssRules')) {
+                            return;
+                        }
+                        orgConsoleError.apply(console, args);
+                    };
+
                     try {
                         const dataUrl = await htmlToImage.toPng(target, { 
-                            backgroundColor: '#1a1a1a',
-                            style: { padding: '20px' }
+                            backgroundColor: '#ffffff',
+                            style: { padding: '20px', color: '#111111' },
+                            styleSheetsFilter
                         });
+
                         const link = document.createElement('a');
                         link.download = `socius-visual-${id}.png`;
                         link.href = dataUrl;
                         link.click();
                     } catch (e) {
                         console.error('Download failed:', e);
+                    } finally {
+                        console.error = orgConsoleError;
                     }
                 }
             };

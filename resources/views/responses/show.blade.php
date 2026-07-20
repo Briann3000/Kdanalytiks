@@ -16,14 +16,14 @@
                 <div>
                     <h1 class="text-xl font-black text-gray-900 tracking-tight leading-none mb-1">{{ $survey->title }}</h1>
                     <div class="flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                        <span class="w-2 h-2 rounded-full bg-zinc-1000 animate-pulse"></span>
                         <p class="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">Responses Dataset</p>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-2">
                     <a href="{{ route('surveys.export', $survey) }}"
-                        class="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-gray-200 hover:border-indigo-600 hover:text-indigo-600 transition-all shadow-sm">
+                        class="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-gray-200 hover:border-[#2271b1] hover:text-[#2271b1] transition-all shadow-sm">
                         <i class="fa-solid fa-file-csv"></i> Export CSV
                     </a>
                 </div>
@@ -36,7 +36,7 @@
                             Dataset Statistics
                         </h3>
                         <span
-                            class="px-3 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-black rounded-lg border border-indigo-100 uppercase tracking-tighter">
+                            class="px-3 py-1 bg-zinc-100 text-[#135e96] text-[10px] font-black rounded-lg border border-zinc-200 uppercase tracking-tighter">
                             {{ $responses->total() }} Total Responses
                         </span>
                     </div>
@@ -98,7 +98,7 @@
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
                                                 <a href="{{ route('surveys.responses.show', [$survey, $response]) }}"
-                                                    class="text-indigo-600 hover:text-indigo-900 font-black text-[11px] uppercase tracking-wider">Details</a>
+                                                    class="text-[#2271b1] hover:text-zinc-900 font-black text-[11px] uppercase tracking-wider">Details</a>
                                             </td>
                                         </tr>
                                     @endforeach

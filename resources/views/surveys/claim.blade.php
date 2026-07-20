@@ -4,7 +4,7 @@
 
 @section('content')
     <div
-        class="min-h-[85vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50/20 via-white to-purple-50/20">
+        class="min-h-[85vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gradient-to-br from-zinc-50/20 via-white to-purple-50/20">
         <div class="sm:mx-auto sm:w-full sm:max-w-xl text-center px-4">
             <!-- Animated Reward Icon -->
             <div class="relative w-32 h-32 mx-auto mb-8 animate-bounce">
@@ -29,9 +29,9 @@
 
             <!-- Reward Summary Card -->
             <div
-                class="mt-8 bg-white/80 backdrop-blur-md rounded-3xl p-8 shadow-xl shadow-gray-100/50 border border-gray-100 max-w-md mx-auto relative overflow-hidden group hover:shadow-2xl hover:border-indigo-100 transition-all duration-300">
+                class="mt-8 bg-white/80 backdrop-blur-md rounded-3xl p-8 shadow-xl shadow-gray-100/50 border border-gray-100 max-w-md mx-auto relative overflow-hidden group hover:shadow-2xl hover:border-zinc-200 transition-all duration-300">
                 <div
-                    class="absolute -right-16 -top-16 w-36 h-36 bg-indigo-50 rounded-full opacity-40 group-hover:scale-110 transition-transform duration-500">
+                    class="absolute -right-16 -top-16 w-36 h-36 bg-zinc-100 rounded-full opacity-40 group-hover:scale-110 transition-transform duration-500">
                 </div>
                 <div
                     class="absolute -left-16 -bottom-16 w-36 h-36 bg-purple-50 rounded-full opacity-40 group-hover:scale-110 transition-transform duration-500">
@@ -43,7 +43,7 @@
                     </span>
                     <div class="text-5xl font-black text-gray-900 tracking-tight mb-2">
                         {{ number_format($survey->reward_per_response, 0) }}
-                        <span class="text-2xl font-bold text-indigo-600">{{ $survey->reward_currency ?? 'KES' }}</span>
+                        <span class="text-2xl font-bold text-[#2271b1]">{{ $survey->reward_currency ?? 'KES' }}</span>
                     </div>
                     <div
                         class="inline-flex items-center text-xs font-bold text-gray-500 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
@@ -65,7 +65,7 @@
                 <div class="flex flex-col sm:flex-row gap-4">
                     <!-- Register Button -->
                     <a href="{{ route('register', ['role' => 'respondent']) }}"
-                        class="flex-1 flex items-center justify-center px-6 py-4 bg-indigo-600 text-white text-[11px] font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all transform hover:-translate-y-0.5">
+                        class="flex-1 flex items-center justify-center px-6 py-4 bg-[#2271b1] text-white text-[11px] font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-zinc-300/40 hover:bg-[#135e96] transition-all transform hover:-translate-y-0.5">
                         <i class="fa-solid fa-user-plus mr-2"></i> {{ __('Create Account') }}
                     </a>
 

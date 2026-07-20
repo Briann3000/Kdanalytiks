@@ -31,7 +31,7 @@
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
                                     <div
-                                        class="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 mr-3">
+                                        class="h-8 w-8 rounded-lg bg-zinc-100 flex items-center justify-center text-[#2271b1] mr-3">
                                         <i class="fa-solid fa-file-invoice"></i>
                                     </div>
                                     <span class="text-sm font-bold text-gray-900">{{ $survey->title }}</span>
@@ -48,7 +48,7 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <a href="{{ route('surveys.data', $survey) }}"
-                                    class="inline-flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-all">
+                                    class="inline-flex items-center px-4 py-2 bg-zinc-100 text-[#135e96] rounded-xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">
                                     <i class="fa-solid fa-list-ul mr-2"></i> {{ __('VIEW ALL') }}
                                 </a>
                             </td>
@@ -67,7 +67,7 @@
                 <p class="text-gray-900 font-black text-lg uppercase tracking-tight">{{ __('No responses captured') }}</p>
                 <p class="text-gray-500 text-sm mt-1 max-w-sm">{{ __('Share your surveys to start collecting data.') }}</p>
                 <a href="{{ route('surveys.index', ['status' => 'active']) }}"
-                    class="mt-6 inline-flex items-center px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all">
+                    class="mt-6 inline-flex items-center px-6 py-3 bg-[#2271b1] text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-[#135e96] shadow-lg shadow-zinc-200/50 transition-all">
                     {{ __('Go to active surveys') }}
                 </a>
             </div>

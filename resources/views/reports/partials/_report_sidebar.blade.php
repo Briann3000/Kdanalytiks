@@ -17,7 +17,7 @@
             @php
                 $isReportPage = request()->routeIs('surveys.report');
                 $reportUrl = route('surveys.report', $survey);
-                $activeClass = 'bg-indigo-50 text-indigo-700';
+                $activeClass = 'bg-zinc-100 text-[#135e96]';
                 $inactiveClass = 'text-gray-500 hover:bg-gray-50';
                 $commonClasses = 'w-full flex items-center px-3 py-2.5 text-[13px] font-black rounded-xl transition-all group';
             @endphp
@@ -27,7 +27,7 @@
                 @if($isReportPage) @click.prevent="$store.workspace.setTab('overview')" @endif
                 :class="($store.workspace.activeTab === 'overview' && {{ $isReportPage ? 'true' : 'false' }}) ? '{{ $activeClass }}' : '{{ $inactiveClass }}'"
                 class="{{ $commonClasses }}">
-                <i class="fa-solid fa-gauge-high w-5 text-center mr-3" :class="($store.workspace.activeTab === 'overview' && {{ $isReportPage ? 'true' : 'false' }}) ? 'text-indigo-600' : 'text-gray-300 group-hover:text-indigo-400'"></i>
+                <i class="fa-solid fa-gauge-high w-5 text-center mr-3" :class="($store.workspace.activeTab === 'overview' && {{ $isReportPage ? 'true' : 'false' }}) ? 'text-[#2271b1]' : 'text-gray-300 group-hover:text-zinc-500'"></i>
                 <span x-show="sidebarOpen">Overview</span>
             </a>
 
@@ -37,14 +37,14 @@
                     @if($isReportPage) @click.prevent="$store.workspace.setTab('quantitative')" @endif
                     :class="($store.workspace.activeTab === 'quantitative' && {{ $isReportPage ? 'true' : 'false' }}) ? '{{ $activeClass }}' : '{{ $inactiveClass }}'"
                     class="{{ $commonClasses }}">
-                    <i class="fa-solid fa-chart-line w-5 text-center mr-3" :class="($store.workspace.activeTab === 'quantitative' && {{ $isReportPage ? 'true' : 'false' }}) ? 'text-indigo-600' : 'text-gray-300 group-hover:text-indigo-400'"></i>
+                    <i class="fa-solid fa-chart-line w-5 text-center mr-3" :class="($store.workspace.activeTab === 'quantitative' && {{ $isReportPage ? 'true' : 'false' }}) ? 'text-[#2271b1]' : 'text-gray-300 group-hover:text-zinc-500'"></i>
                     <span x-show="sidebarOpen">Quantitative</span>
                 </a>
                 @if(isset($analysis) && $isReportPage)
                 <div x-show="$store.workspace.activeTab === 'quantitative' && sidebarOpen" x-transition class="ml-8 space-y-1 pt-1 pb-2 border-l border-gray-100 pl-4">
                     @foreach($analysis as $item)
                     @if($item['isChartable'])
-                    <button @click="$store.workspace.scrollTo('q-{{ $item['id'] }}')" class="block w-full text-left text-[10px] font-bold text-gray-400 hover:text-indigo-600 transition-colors truncate">
+                    <button @click="$store.workspace.scrollTo('q-{{ $item['id'] }}')" class="block w-full text-left text-[10px] font-bold text-gray-400 hover:text-[#2271b1] transition-colors truncate">
                         #{{ $loop->iteration }} {{ str($item['label'])->limit(20) }}
                     </button>
                     @endif
@@ -59,14 +59,14 @@
                     @if($isReportPage) @click.prevent="$store.workspace.setTab('qualitative')" @endif
                     :class="($store.workspace.activeTab === 'qualitative' && {{ $isReportPage ? 'true' : 'false' }}) ? '{{ $activeClass }}' : '{{ $inactiveClass }}'"
                     class="{{ $commonClasses }}">
-                    <i class="fa-solid fa-brain w-5 text-center mr-3" :class="($store.workspace.activeTab === 'qualitative' && {{ $isReportPage ? 'true' : 'false' }}) ? 'text-indigo-600' : 'text-gray-300 group-hover:text-indigo-400'"></i>
+                    <i class="fa-solid fa-brain w-5 text-center mr-3" :class="($store.workspace.activeTab === 'qualitative' && {{ $isReportPage ? 'true' : 'false' }}) ? 'text-[#2271b1]' : 'text-gray-300 group-hover:text-zinc-500'"></i>
                     <span x-show="sidebarOpen">AI Insights</span>
                 </a>
                 @if(isset($analysis) && $isReportPage)
                 <div x-show="$store.workspace.activeTab === 'qualitative' && sidebarOpen" x-transition class="ml-8 space-y-1 pt-1 pb-2 border-l border-gray-100 pl-4">
                     @foreach($analysis as $item)
                     @if(!$item['isChartable'])
-                    <button @click="$store.workspace.scrollTo('ql-{{ $item['id'] }}')" class="block w-full text-left text-[10px] font-bold text-gray-400 hover:text-indigo-600 transition-colors truncate">
+                    <button @click="$store.workspace.scrollTo('ql-{{ $item['id'] }}')" class="block w-full text-left text-[10px] font-bold text-gray-400 hover:text-[#2271b1] transition-colors truncate">
                         Q{{ $loop->iteration }} {{ str($item['label'])->limit(20) }}
                     </button>
                     @endif
@@ -80,14 +80,14 @@
                 @if($isReportPage) @click.prevent="$store.workspace.setTab('tables')" @endif
                 :class="($store.workspace.activeTab === 'tables' && {{ $isReportPage ? 'true' : 'false' }}) ? '{{ $activeClass }}' : '{{ $inactiveClass }}'"
                 class="{{ $commonClasses }}">
-                <i class="fa-solid fa-table w-5 text-center mr-3" :class="($store.workspace.activeTab === 'tables' && {{ $isReportPage ? 'true' : 'false' }}) ? 'text-indigo-600' : 'text-gray-300 group-hover:text-indigo-400'"></i>
+                <i class="fa-solid fa-table w-5 text-center mr-3" :class="($store.workspace.activeTab === 'tables' && {{ $isReportPage ? 'true' : 'false' }}) ? 'text-[#2271b1]' : 'text-gray-300 group-hover:text-zinc-500'"></i>
                 <span x-show="sidebarOpen">Data Table</span>
             </a>
 
             <!-- Submissions (Responses) Link -->
             <a href="{{ route('surveys.responses', $survey) }}" 
                 class="{{ $commonClasses }} {{ request()->routeIs('surveys.responses') ? $activeClass : $inactiveClass }}">
-                <i class="fa-solid fa-users w-5 text-center mr-3 {{ request()->routeIs('surveys.responses') ? 'text-indigo-600' : 'text-gray-300 group-hover:text-indigo-400' }}"></i>
+                <i class="fa-solid fa-users w-5 text-center mr-3 {{ request()->routeIs('surveys.responses') ? 'text-[#2271b1]' : 'text-gray-300 group-hover:text-zinc-500' }}"></i>
                 <span x-show="sidebarOpen">Submissions</span>
             </a>
 
@@ -96,7 +96,7 @@
                 @if($isReportPage) @click.prevent="$store.workspace.setTab('gallery')" @endif
                 :class="($store.workspace.activeTab === 'gallery' && {{ $isReportPage ? 'true' : 'false' }}) ? '{{ $activeClass }}' : '{{ $inactiveClass }}'"
                 class="{{ $commonClasses }}">
-                <i class="fa-solid fa-images w-5 text-center mr-3" :class="($store.workspace.activeTab === 'gallery' && {{ $isReportPage ? 'true' : 'false' }}) ? 'text-indigo-600' : 'text-gray-300 group-hover:text-indigo-400'"></i>
+                <i class="fa-solid fa-images w-5 text-center mr-3" :class="($store.workspace.activeTab === 'gallery' && {{ $isReportPage ? 'true' : 'false' }}) ? 'text-[#2271b1]' : 'text-gray-300 group-hover:text-zinc-500'"></i>
                 <span x-show="sidebarOpen">Gallery</span>
             </a>
         </nav>

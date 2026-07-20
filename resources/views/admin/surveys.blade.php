@@ -105,7 +105,7 @@
     <!-- Status Tabs -->
     <div class="flex flex-wrap gap-2 mb-6">
         <a href="{{ route('admin.surveys.index') }}" 
-           class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all {{ !request('status') ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-white text-gray-400 hover:text-indigo-600 border border-gray-100' }}">
+           class="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all {{ !request('status') ? 'bg-[#2271b1] text-white shadow-lg shadow-zinc-200/50' : 'bg-white text-gray-400 hover:text-[#2271b1] border border-gray-100' }}">
             {{ __('All Surveys') }}
         </a>
         <a href="{{ route('admin.surveys.index', ['status' => 'active']) }}" 
@@ -123,7 +123,7 @@
         <form action="{{ route('admin.surveys.index') }}" method="GET" class="flex flex-wrap gap-3 items-center">
             <div class="w-40">
                 <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{{ __('Status') }}</label>
-                <select name="status" class="w-full text-[10px] font-bold border-gray-100 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-1.5 shadow-sm">
+                <select name="status" class="w-full text-[10px] font-bold border-gray-100 rounded-lg focus:ring-[#2271b1] focus:border-[#2271b1] py-1.5 shadow-sm">
                     <option value="">{{ __('All Statuses') }}</option>
                     @foreach(collect(\App\Enums\SurveyStatus::cases())->filter(fn($s) => $s->value !== 'pending_approval')->sortBy(fn($s) => strtoupper(str_replace('_', ' ', $s->value))) as $status)
                         <option value="{{ $status->value }}" {{ request('status') == $status->value ? 'selected' : '' }}>{{ __(strtoupper(str_replace('_', ' ', $status->value))) }}</option>
@@ -132,7 +132,7 @@
             </div>
             <div class="w-40">
                 <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{{ __('Category') }}</label>
-                <select name="category" class="w-full text-[10px] font-bold border-gray-100 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-1.5 shadow-sm">
+                <select name="category" class="w-full text-[10px] font-bold border-gray-100 rounded-lg focus:ring-[#2271b1] focus:border-[#2271b1] py-1.5 shadow-sm">
                     <option value="">{{ __('All Categories') }}</option>
                     @foreach(collect(\App\Enums\SurveyCategory::cases())->sortBy('value') as $cat)
                         <option value="{{ $cat->value }}" {{ request('category') == $cat->value ? 'selected' : '' }}>{{ __($cat->value) }}</option>
@@ -141,7 +141,7 @@
             </div>
             <div class="w-40">
                 <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{{ __('Source') }}</label>
-                <select name="source" class="w-full text-[10px] font-bold border-gray-100 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-1.5 shadow-sm">
+                <select name="source" class="w-full text-[10px] font-bold border-gray-100 rounded-lg focus:ring-[#2271b1] focus:border-[#2271b1] py-1.5 shadow-sm">
                     <option value="">{{ __('All Sources') }}</option>
                     <option value="admin" {{ request('source') == 'admin' ? 'selected' : '' }}>{{ __('ADMIN') }}</option>
                     <option value="independent" {{ request('source') == 'independent' ? 'selected' : '' }}>{{ __('INDEPENDENT') }}</option>
@@ -150,10 +150,10 @@
             </div>
             <div class="flex-grow max-w-xs">
                 <label class="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{{ __('Search') }}</label>
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="{{ __('Title or Owner...') }}" class="w-full text-[10px] font-bold border-gray-100 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-1.5 shadow-sm">
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="{{ __('Title or Owner...') }}" class="w-full text-[10px] font-bold border-gray-100 rounded-lg focus:ring-[#2271b1] focus:border-[#2271b1] py-1.5 shadow-sm">
             </div>
             <div class="flex items-end self-end">
-                <button type="submit" class="inline-flex justify-center py-1.5 px-6 border border-transparent shadow-md text-[10px] font-black rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-all uppercase tracking-wider">
+                <button type="submit" class="inline-flex justify-center py-1.5 px-6 border border-transparent shadow-md text-[10px] font-black rounded-lg text-white bg-[#2271b1] hover:bg-[#135e96] transition-all uppercase tracking-wider">
                     {{ __('Filter') }}
                 </button>
             </div>
@@ -178,60 +178,60 @@
                                    class="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500 cursor-pointer transition-all">
                         </th>
                         <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">
-                            <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'title', 'sort_dir' => $sortBy === 'title' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-indigo-600 transition-colors">
+                            <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'title', 'sort_dir' => $sortBy === 'title' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-[#2271b1] transition-colors">
                                 {{ __('Survey Detail') }}
                                 @if($sortBy === 'title')
-                                    <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-indigo-600"></i>
+                                    <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-[#2271b1]"></i>
                                 @else
                                     <i class="fa-solid fa-sort ml-1.5 text-gray-300"></i>
                                 @endif
                             </a>
                         </th>
                         <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">
-                            <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'created_by', 'sort_dir' => $sortBy === 'created_by' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-indigo-600 transition-colors">
+                            <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'created_by', 'sort_dir' => $sortBy === 'created_by' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-[#2271b1] transition-colors">
                                 {{ __('Owner') }}
                                 @if($sortBy === 'created_by')
-                                    <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-indigo-600"></i>
+                                    <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-[#2271b1]"></i>
                                 @else
                                     <i class="fa-solid fa-sort ml-1.5 text-gray-300"></i>
                                 @endif
                             </a>
                         </th>
                         <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">
-                            <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'type', 'sort_dir' => $sortBy === 'type' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-indigo-600 transition-colors">
+                            <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'type', 'sort_dir' => $sortBy === 'type' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-[#2271b1] transition-colors">
                                 {{ __('Type') }}
                                 @if($sortBy === 'type')
-                                    <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-indigo-600"></i>
+                                    <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-[#2271b1]"></i>
                                 @else
                                     <i class="fa-solid fa-sort ml-1.5 text-gray-300"></i>
                                 @endif
                             </a>
                         </th>
                         <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">
-                            <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'status', 'sort_dir' => $sortBy === 'status' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-indigo-600 transition-colors">
+                            <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'status', 'sort_dir' => $sortBy === 'status' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-[#2271b1] transition-colors">
                                 {{ __('Status') }}
                                 @if($sortBy === 'status')
-                                    <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-indigo-600"></i>
+                                    <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-[#2271b1]"></i>
                                 @else
                                     <i class="fa-solid fa-sort ml-1.5 text-gray-300"></i>
                                 @endif
                             </a>
                         </th>
                         <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">
-                            <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'responses_count', 'sort_dir' => $sortBy === 'responses_count' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-indigo-600 transition-colors">
+                            <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'responses_count', 'sort_dir' => $sortBy === 'responses_count' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-[#2271b1] transition-colors">
                                 {{ __('Responses') }}
                                 @if($sortBy === 'responses_count')
-                                    <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-indigo-600"></i>
+                                    <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-[#2271b1]"></i>
                                 @else
                                     <i class="fa-solid fa-sort ml-1.5 text-gray-300"></i>
                                 @endif
                             </a>
                         </th>
                         <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-900 uppercase tracking-wider">
-                            <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'created_at', 'sort_dir' => $sortBy === 'created_at' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-indigo-600 transition-colors">
+                            <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'created_at', 'sort_dir' => $sortBy === 'created_at' ? $nextDir : 'asc']) }}" class="flex items-center hover:text-[#2271b1] transition-colors">
                                 {{ __('Date Created') }}
                                 @if($sortBy === 'created_at')
-                                    <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-indigo-600"></i>
+                                    <i class="fa-solid fa-sort-{{ $sortDir === 'asc' ? 'up' : 'down' }} ml-1.5 text-[#2271b1]"></i>
                                 @else
                                     <i class="fa-solid fa-sort ml-1.5 text-gray-300"></i>
                                 @endif
@@ -292,7 +292,7 @@
                                 {{ __(str_replace('_', ' ', $statusVal)) }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 text-sm font-bold text-indigo-600">
+                        <td class="px-6 py-4 text-sm font-bold text-[#2271b1]">
                             {{ $survey->responses_count }}
                         </td>
                         <td class="px-6 py-4">
@@ -301,7 +301,7 @@
                         </td>
                         <td class="px-6 py-4 text-right pr-20">
                             <div class="flex items-center justify-end gap-2">
-                                <a href="{{ route('surveys.report', $survey) }}" class="w-7 h-7 bg-gray-50 text-gray-400 rounded-lg flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all">
+                                <a href="{{ route('surveys.report', $survey) }}" class="w-7 h-7 bg-gray-50 text-gray-400 rounded-lg flex items-center justify-center hover:bg-[#2271b1] hover:text-white transition-all">
                                     <i class="fa-solid fa-chart-line text-[10px]"></i>
                                 </a>
                                 <div x-data="{ confirming: false }" class="inline-flex items-center gap-1">
@@ -357,7 +357,7 @@
     </div>
 
     <div class="mt-6 pb-20">
-        <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center text-xs font-black text-gray-400 uppercase tracking-widest hover:text-indigo-600 transition-colors">
+        <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center text-xs font-black text-gray-400 uppercase tracking-widest hover:text-[#2271b1] transition-colors">
             <i class="fa-solid fa-arrow-left mr-2"></i> {{ __('Back to Dashboard') }}
         </a>
     </div>

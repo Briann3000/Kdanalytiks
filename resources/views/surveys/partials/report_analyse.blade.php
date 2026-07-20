@@ -23,19 +23,19 @@
         <aside :class="historyOpen ? 'w-64 md:w-72 opacity-100' : 'w-0 opacity-0 -ml-4'"
             class="bg-[#2b2b2b] text-white rounded-[2rem] border border-white/5 overflow-hidden flex flex-col h-full transition-all duration-300 ease-in-out flex-shrink-0">
             <div class="px-4 py-3 border-b border-white/10 flex items-center justify-between gap-2">
-                <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                <p class="text-[10px] font-bold text-slate-400">
                     {{ __('Conversation History') }}
                 </p>
                 <button @click="createThread()" :disabled="creatingThread || !canAnalyze"
-                    class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-orange-400 text-slate-950 text-[9px] font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed">
+                    class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#2271b1] text-white text-[9px] font-bold disabled:opacity-40 disabled:cursor-not-allowed">
                     <i class="fa-solid fa-plus text-[9px]" :class="{ 'fa-spin': creatingThread }"></i>
                     {{ __('New') }}
                 </button>
 
                 <template x-if="tokenUsage">
                     <div
-                        class="px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                        <i class="fa-solid fa-bolt-lightning text-orange-300 mr-1"></i>
+                        class="px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-[9px] font-bold text-slate-400">
+                        <i class="fa-solid fa-bolt-lightning text-[#3894dc] mr-1"></i>
                         <span x-text="`${tokenUsage.total_tokens} {{ __('tokens') }}`"></span>
                     </div>
                 </template>
@@ -44,10 +44,9 @@
             <!-- Group Selector for Owner/Teacher -->
             <template x-if="isOwner && groups.length > 0">
                 <div class="px-4 py-2 border-b border-white/5 bg-white/[0.02]">
-                    <label
-                        class="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">{{ __('Active Group') }}</label>
+                    <label class="block text-[8px] font-bold text-slate-500 mb-1">{{ __('Active Group') }}</label>
                     <select x-model="activeGroupId" @change="loadThreads()"
-                        class="w-full px-3 py-1.5 bg-[#202020] border border-white/10 rounded-xl text-xs font-semibold text-slate-300 focus:outline-none focus:border-orange-300">
+                        class="w-full px-3 py-1.5 bg-[#202020] border border-white/10 rounded-xl text-xs font-semibold text-slate-300 focus:outline-none focus:border-[#2271b1]">
                         <option value="">{{ __('My Personal Threads') }}</option>
                         <template x-for="group in groups" :key="group.id">
                             <option :value="group.id"
@@ -69,7 +68,7 @@
                 <template x-if="!loadingThreads && threads.length === 0">
                     <div class="rounded-3xl border border-dashed border-white/15 bg-white/[0.03] p-6 text-center">
                         <div
-                            class="w-12 h-12 rounded-2xl bg-white/10 mx-auto mb-4 flex items-center justify-center text-orange-300">
+                            class="w-12 h-12 rounded-2xl bg-white/10 mx-auto mb-4 flex items-center justify-center text-[#3894dc]">
                             <i class="fa-solid fa-comments"></i>
                         </div>
                         <p class="text-sm font-semibold">{{ __('No Socius threads yet') }}</p>
@@ -89,11 +88,11 @@
                                 <input type="text" x-model="editingTitle"
                                     @keydown.enter="renameThread(thread.id, editingTitle)"
                                     @keydown.escape="renamingThreadId = null" @click.stop
-                                    class="w-full rounded-lg bg-white/10 border border-white/20 px-2 py-1.5 text-xs text-white focus:outline-none focus:border-orange-400"
+                                    class="w-full rounded-lg bg-white/10 border border-white/20 px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#2271b1]"
                                     x-init="$nextTick(() => $el.focus())">
                                 <div class="flex gap-1.5 mt-2">
                                     <button @click.stop="renameThread(thread.id, editingTitle)"
-                                        class="flex-1 text-[9px] px-2 py-1 rounded-lg bg-orange-400 text-slate-900 font-black">{{ __('Save') }}</button>
+                                        class="flex-1 text-[9px] px-2 py-1 rounded-lg bg-[#2271b1] text-white font-bold">{{ __('Save') }}</button>
                                     <button @click.stop="renamingThreadId = null"
                                         class="flex-1 text-[9px] px-2 py-1 rounded-lg bg-white/10 text-white">{{ __('Cancel') }}</button>
                                 </div>
@@ -111,14 +110,14 @@
                                     <div class="flex items-center gap-1.5 overflow-hidden">
                                         <template x-if="thread.is_pinned">
                                             <i
-                                                class="fa-solid fa-thumbtack text-[9px] text-orange-400 rotate-45 flex-shrink-0"></i>
+                                                class="fa-solid fa-thumbtack text-[9px] text-[#3894dc] rotate-45 flex-shrink-0"></i>
                                         </template>
                                         <p class="text-xs font-semibold truncate leading-snug" x-text="thread.title">
                                         </p>
                                     </div>
                                     <p class="mt-1 text-[10px] opacity-60 line-clamp-1"
                                         x-text="thread.latest_message_preview || '{{ __('Fresh thread') }}'"></p>
-                                    <p class="mt-1.5 text-[9px] font-bold uppercase tracking-widest opacity-40"
+                                    <p class="mt-1.5 text-[9px] font-bold opacity-40"
                                         x-text="formatRelativeTime(thread.last_activity_at)"></p>
                                 </button>
 
@@ -146,8 +145,8 @@
                                     style="display:none;">
                                     <button @click.stop="togglePin(thread.id); threadMenuOpen = null"
                                         class="flex items-center gap-2.5 w-full px-3 py-2.5 text-xs font-semibold text-slate-200 hover:bg-white/10 transition-colors">
-                                        <i class="fa-solid fa-thumbtack text-[10px] text-slate-400 w-3"
-                                            :class="thread.is_pinned ? 'text-orange-400' : ''"></i>
+                                        <i class="fa-solid fa-thumbtack text-[10px] text-[#3894dc] w-3"
+                                            :class="thread.is_pinned ? 'text-[#3894dc]' : ''"></i>
                                         <span
                                             x-text="thread.is_pinned ? '{{ __('Unpin') }}' : '{{ __('Pin') }}'"></span>
                                     </button>
@@ -197,7 +196,7 @@
                     <template x-for="(userMsg, idx) in messages.filter(m => m.role === 'user')" :key="userMsg.id">
                         <button @click="scrollToPrompt(userMsg.id)"
                             class="w-full text-left px-3 py-1.5 rounded-xl text-xs transition-all truncate"
-                            :class="activePromptId === userMsg.id ? 'bg-white/10 text-orange-400 font-bold' : 'hover:bg-white/5 text-slate-300'"
+                            :class="activePromptId === userMsg.id ? 'bg-white/10 text-[#3894dc] font-bold' : 'hover:bg-white/5 text-slate-300'"
                             x-text="userMsg.content">
                         </button>
                     </template>
@@ -209,13 +208,13 @@
                     <template x-for="(userMsg, idx) in messages.filter(m => m.role === 'user')" :key="userMsg.id">
                         <button @click="scrollToPrompt(userMsg.id)"
                             class="w-5 h-1.5 rounded-full transition-all duration-200"
-                            :class="activePromptId === userMsg.id ? 'bg-orange-400 w-8' : 'bg-white/20 hover:bg-white/60'">
+                            :class="activePromptId === userMsg.id ? 'bg-[#2271b1] w-8' : 'bg-white/20 hover:bg-white/60'">
                         </button>
                     </template>
                 </div>
             </div>
 
-            <div class="px-5 py-3 border-b border-white/10 flex items-center justify-between gap-4">
+            <div class="px-5 py-2 border-b border-white/10 flex items-center justify-between gap-4">
                 <div class="flex items-center gap-3">
                     <button @click="historyOpen = !historyOpen"
                         class="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-all"
@@ -223,12 +222,12 @@
                         <i class="fa-solid fa-bars-staggered"></i>
                     </button>
                     <a href="{{ route('surveys.reports', $survey) }}?reportTab=quantitative"
-                        class="p-2 rounded-xl bg-white/5 border border-white/10 text-orange-400 hover:text-orange-300 hover:bg-white/10 transition-all font-bold text-[10px] flex items-center gap-1.5 uppercase tracking-wider"
+                        class="p-2 rounded-xl bg-white/5 border border-white/10 text-[#3894dc] hover:text-[#4ba3e3] hover:bg-white/10 transition-all font-bold text-[10px] flex items-center gap-1.5 tracking-tight"
                         title="{{ __('Back to Dashboard Reports') }}">
                         <i class="fa-solid fa-arrow-left text-[9px]"></i>
-                        {{ __('Stats Dashboard') }}
+                        <span class="hidden sm:inline">{{ __('Stats Dashboard') }}</span>
                     </a>
-                    <h3 class="text-base font-semibold tracking-tight truncate max-w-[200px] md:max-w-md"
+                    <h3 class="text-sm font-semibold tracking-tight truncate max-w-[200px] md:max-w-md"
                         x-text="currentThread ? currentThread.title : '{{ __('Socius') }}'"></h3>
                 </div>
 
@@ -237,8 +236,8 @@
                     <button @click="kbModalOpen = true"
                         class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 text-xs font-bold text-slate-300 hover:text-white transition-all"
                         title="{{ __('Manage persistent formatting rules and styles') }}">
-                        <i class="fa-solid fa-brain text-[10px] text-orange-300"></i>
-                        {{ __('Knowledge Base') }}
+                        <i class="fa-solid fa-brain text-[10px] text-[#3894dc]"></i>
+                        <span class="hidden sm:inline">{{ __('Knowledge Base') }}</span>
                     </button>
 
                     {{-- Export Dropdown --}}
@@ -277,18 +276,8 @@
                 </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto custom-scrollbar px-4 md:px-8 py-6 space-y-6 relative"
-                x-ref="messageList" @scroll="handleScroll()" style="overscroll-behavior-y: contain;">
-
-                {{-- Scroll to bottom floating button --}}
-                <div x-show="scrolledUp" x-transition class="absolute bottom-4 left-1/2 -translate-x-1/2 z-30"
-                    style="display: none;">
-                    <button @click="scrollToBottom()"
-                        class="w-10 h-10 rounded-full bg-orange-400 text-slate-950 flex items-center justify-center shadow-lg hover:bg-orange-500 hover:scale-105 active:scale-95 transition-all"
-                        title="{{ __('Scroll to bottom') }}">
-                        <i class="fa-solid fa-arrow-down"></i>
-                    </button>
-                </div>
+            <div class="flex-1 overflow-y-auto custom-scrollbar px-4 md:px-8 py-6 space-y-6" x-ref="messageList"
+                @scroll="handleScroll()" style="overscroll-behavior-y: contain;">
                 <template x-if="!canAnalyze">
                     <div
                         class="max-w-2xl mx-auto rounded-[2rem] border border-amber-400/20 bg-amber-400/10 p-8 text-center">
@@ -301,7 +290,7 @@
                             {{ __('Your current AI allocation has been reached. Upgrade your plan or wait for access to reset before continuing with chat analysis.') }}
                         </p>
                         <a href="{{ route('subscriptions.index') }}"
-                            class="inline-flex items-center gap-2 mt-6 px-5 py-3 rounded-2xl bg-white text-slate-900 text-[10px] font-black uppercase tracking-widest">
+                            class="inline-flex items-center gap-2 mt-6 px-5 py-3 rounded-2xl bg-white text-slate-900 text-[10px] font-bold">
                             {{ __('View Plans') }}
                             <i class="fa-solid fa-arrow-right"></i>
                         </a>
@@ -312,7 +301,7 @@
                     <div class="max-w-3xl mx-auto pt-10">
                         <div class="text-center mb-8">
                             <div
-                                class="w-20 h-20 rounded-[2rem] bg-orange-400/15 border border-orange-300/20 mx-auto flex items-center justify-center text-orange-300">
+                                class="w-20 h-20 rounded-[2rem] bg-[#2271b1]/15 border border-[#2271b1]/20 mx-auto flex items-center justify-center text-[#3894dc]">
                                 <i class="fa-solid fa-sparkles text-3xl"></i>
                             </div>
                             <h4 class="text-4xl font-semibold tracking-tight mt-6">{{ __('Socius') }}</h4>
@@ -323,7 +312,7 @@
                         <div class="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8">
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
                                 <div class="rounded-3xl bg-white/[0.04] p-5 border border-white/10">
-                                    <p class="text-[10px] font-black uppercase tracking-widest text-orange-200">
+                                    <p class="text-[10px] font-bold text-blue-300">
                                         {{ __('Quantitative') }}
                                     </p>
                                     <p class="text-sm text-slate-200 mt-3">
@@ -331,7 +320,7 @@
                                     </p>
                                 </div>
                                 <div class="rounded-3xl bg-white/[0.04] p-5 border border-white/10">
-                                    <p class="text-[10px] font-black uppercase tracking-widest text-orange-200">
+                                    <p class="text-[10px] font-bold text-blue-300">
                                         {{ __('Qualitative') }}
                                     </p>
                                     <p class="text-sm text-slate-200 mt-3">
@@ -339,7 +328,7 @@
                                     </p>
                                 </div>
                                 <div class="rounded-3xl bg-white/[0.04] p-5 border border-white/10">
-                                    <p class="text-[10px] font-black uppercase tracking-widest text-orange-200">
+                                    <p class="text-[10px] font-bold text-blue-300">
                                         {{ __('Documents') }}
                                     </p>
                                     <p class="text-sm text-slate-200 mt-3">
@@ -372,16 +361,16 @@
                     <div :id="'msg-' + message.id" class="max-w-4xl mx-auto group/msg"
                         :class="message.role === 'user' ? 'flex justify-end' : 'flex justify-start'">
                         <div class="relative w-full md:w-auto md:max-w-[80%] rounded-[2rem] px-5 py-4 border" :class="message.role === 'user'
-                                ? 'bg-orange-400 text-slate-950 border-orange-300 shadow-lg shadow-orange-500/10'
+                                ? 'bg-[#2271b1] text-white border-[#1d629b] shadow-lg shadow-blue-500/10'
                                 : 'bg-white/[0.04] text-white border-white/10'">
                             <div class="flex items-center gap-3 mb-3">
                                 <div class="w-9 h-9 rounded-2xl flex items-center justify-center text-sm"
-                                    :class="message.role === 'user' ? 'bg-white/60' : 'bg-white/10 text-orange-200'">
+                                    :class="message.role === 'user' ? 'bg-white/60' : 'bg-white/10 text-blue-300'">
                                     <i class="fa-solid"
                                         :class="message.role === 'user' ? 'fa-user' : 'fa-sparkles'"></i>
                                 </div>
                                 <div class="flex-1">
-                                    <p class="text-[10px] font-black uppercase tracking-[0.25em]"
+                                    <p class="text-[10px] font-bold text-slate-400"
                                         x-text="message.role === 'user' ? '{{ __('User') }}' : '{{ __('Socius') }}'">
                                     </p>
                                     <p class="text-[11px] opacity-70" x-text="formatRelativeTime(message.created_at)">
@@ -449,7 +438,7 @@
                                         </div>
                                     </template>
 
-                                    <button @click="copyMessage(message.content)"
+                                    <button @click="copyMessage(message.content, message.id, $event.currentTarget)"
                                         class="w-7 h-7 rounded-xl flex items-center justify-center transition-all"
                                         :class="message.role === 'user' ? 'hover:bg-black/10 text-slate-700' : 'hover:bg-white/10 text-slate-400'"
                                         title="{{ __('Copy') }}">
@@ -481,15 +470,15 @@
                                         @keydown.enter.ctrl="submitEdit(message.id)"></textarea>
                                     <div class="flex justify-end gap-2 mt-2">
                                         <button @click="cancelEditing()"
-                                            class="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg bg-black/10 text-slate-700 hover:bg-black/20 transition-all">{{ __('Cancel') }}</button>
+                                            class="text-[9px] font-bold px-3 py-1.5 rounded-lg bg-black/10 text-slate-700 hover:bg-black/20 transition-all">{{ __('Cancel') }}</button>
                                         <button @click="submitEdit(message.id)"
-                                            class="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-sm">{{ __('Save & Resend') }}</button>
+                                            class="text-[9px] font-bold px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-sm">{{ __('Save & Resend') }}</button>
                                     </div>
                                 </div>
                             </template>
 
                             <template x-if="editingMessageId !== message.id">
-                                <div class="text-sm leading-7 socius-prose"
+                                <div :id="`socius-message-body-${message.id}`" class="text-sm leading-7 socius-prose"
                                     x-html="renderMessage(message.content, message.role)"></div>
                             </template>
                         </div>
@@ -497,11 +486,30 @@
                 </template>
             </div>
 
-            <div class="px-4 py-3 border-t border-white/10 bg-[#2b2b2b]">
+            {{-- Scroll to bottom floating button --}}
+            <div x-show="scrolledUp" x-transition class="absolute bottom-28 left-1/2 -translate-x-1/2 z-30"
+                style="display: none;">
+                <button @click="scrollToBottom()"
+                    class="w-10 h-10 rounded-full bg-[#2271b1] text-white flex items-center justify-center shadow-lg hover:bg-[#135e96] hover:scale-105 active:scale-95 transition-all"
+                    title="{{ __('Scroll to bottom') }}">
+                    <i class="fa-solid fa-arrow-down"></i>
+                </button>
+            </div>
+
+            <!-- Floating Quote Button popover -->
+            <div x-show="showQuoteButton" x-transition
+                class="absolute z-50 bg-[#363636] border border-white/15 text-slate-200 text-[10px] font-bold px-3 py-1.5 rounded-xl shadow-2xl cursor-pointer hover:bg-[#2271b1] hover:text-white transition-all flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-150"
+                :style="`left: ${quoteButtonX}px; top: ${quoteButtonY}px;`" @mousedown.prevent.stop="quoteSelection()"
+                style="display: none;">
+                <i class="fa-solid fa-quote-left text-[9px]"></i>
+                {{ __('Quote') }}
+            </div>
+
+            <div class="px-4 py-2 border-t border-white/10 bg-[#2b2b2b]">
                 <input type="file" x-ref="fileInput" class="hidden" multiple
                     accept=".pdf,.csv,.txt,.docx,.jpg,.jpeg,.png,.webp" @change="handleFileSelection">
 
-                <div class="rounded-2xl border border-white/10 bg-[#363636] px-4 py-3">
+                <div class="rounded-2xl border border-white/10 bg-[#363636] px-4 py-2">
                     <template x-if="pendingFiles.length">
                         <div class="flex flex-wrap gap-2 mb-2">
                             <template x-for="(file, index) in pendingFiles" :key="file.name + file.size + index">
@@ -520,7 +528,7 @@
                         </div>
                     </template>
 
-                    <textarea id="socius-prompt-input" x-model="draft" x-ref="textarea" rows="2"
+                    <textarea id="socius-prompt-input" x-model="draft" x-ref="textarea" rows="1"
                         @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); sendMessage(); }"
                         class="w-full bg-transparent border-0 focus:ring-0 resize-none text-sm text-white placeholder:text-slate-500"
                         :placeholder="reviewModeEnabled ? '{{ __('Describe supervisor corrections or ask Socius to fix them...') }}' : '{{ __('Message Socius...') }}'"
@@ -536,7 +544,7 @@
 
                             <label
                                 class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all select-none"
-                                :class="includeSurveyContext ? 'bg-orange-400/15 border-orange-400/30 text-orange-300' : 'bg-white/[0.06] border-white/10 text-slate-400 hover:text-slate-200'">
+                                :class="includeSurveyContext ? 'bg-[#2271b1]/15 border-[#2271b1]/30 text-[#3894dc]' : 'bg-white/[0.06] border-white/10 text-slate-400 hover:text-slate-200'">
                                 <input type="checkbox" x-model="includeSurveyContext" class="hidden">
                                 <i class="fa-solid fa-database text-[10px]"></i>
                                 {{ __('Context') }}
@@ -580,12 +588,15 @@
 
                         <button type="button" @click="sendMessage()"
                             :disabled="sending || !canAnalyze || (!draft.trim() && pendingFiles.length === 0)"
-                            class="w-8 h-8 rounded-full bg-white/10 border border-white/10 text-white flex items-center justify-center hover:bg-orange-400 hover:text-slate-950 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                            class="w-8 h-8 rounded-full bg-white/10 border border-white/10 text-white flex items-center justify-center hover:bg-[#2271b1] hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                             <i class="fa-solid text-xs"
                                 :class="sending ? 'fa-circle-notch fa-spin' : 'fa-arrow-up'"></i>
                         </button>
                     </div>
                 </div>
+                <p class="text-[9px] text-slate-500 text-center mt-1">
+                    {{ __('Socius AI can make mistakes. Please verify important survey statistics and formulas.') }}
+                </p>
             </div>
         </section>
     </div>
@@ -609,8 +620,7 @@
             {{-- Modal Header --}}
             <div class="px-6 py-5 border-b border-white/10 flex items-center justify-between gap-4">
                 <div class="flex items-center gap-3">
-                    <div
-                        class="w-10 h-10 rounded-2xl bg-orange-400/10 flex items-center justify-center text-orange-300">
+                    <div class="w-10 h-10 rounded-2xl bg-[#2271b1]/10 flex items-center justify-center text-[#3894dc]">
                         <i class="fa-solid fa-brain text-lg"></i>
                     </div>
                     <div>
@@ -630,11 +640,11 @@
             <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
                 {{-- Add New Rule Form --}}
                 <div class="space-y-3">
-                    <h4 class="text-xs font-black uppercase tracking-widest text-slate-400">
+                    <h4 class="text-xs font-bold text-slate-400">
                         {{ __('Add Custom Instruction') }}
                     </h4>
                     <div
-                        class="rounded-2xl border border-white/10 bg-white/[0.03] p-3 focus-within:border-orange-400/50 transition-all">
+                        class="rounded-2xl border border-white/10 bg-white/[0.03] p-3 focus-within:border-[#2271b1]/50 transition-all">
                         <textarea x-model="newKbRuleContent" rows="3"
                             class="w-full bg-transparent border-0 focus:ring-0 resize-none text-sm text-white placeholder:text-slate-500"
                             placeholder="{{ __('e.g., Use APA style but with custom modifications like including the author initials in all in-text citations.') }}"
@@ -642,7 +652,7 @@
                             @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); addKbRule(); }"></textarea>
                         <div class="flex justify-end pt-2">
                             <button @click="addKbRule()" :disabled="savingKb || !newKbRuleContent.trim()"
-                                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-400 text-slate-950 text-[10px] font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed hover:bg-orange-300 transition-all">
+                                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#2271b1] text-white text-[10px] font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#135e96] transition-all">
                                 <i class="fa-solid fa-plus text-[10px]" :class="{ 'fa-spin': savingKb }"></i>
                                 {{ __('Add Instruction') }}
                             </button>
@@ -652,7 +662,7 @@
 
                 {{-- Rules List --}}
                 <div class="space-y-3">
-                    <h4 class="text-xs font-black uppercase tracking-widest text-slate-400">
+                    <h4 class="text-xs font-bold text-slate-400">
                         {{ __('Active Instructions') }}
                     </h4>
 
@@ -688,7 +698,7 @@
                                         {{-- Toggle --}}
                                         <button @click="toggleKbRule(rule)"
                                             class="mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
-                                            :class="rule.is_active ? 'bg-orange-400' : 'bg-white/10'">
+                                            :class="rule.is_active ? 'bg-[#2271b1]' : 'bg-white/10'">
                                             <span
                                                 class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
                                                 :class="rule.is_active ? 'translate-x-4' : 'translate-x-0'"></span>
@@ -699,7 +709,7 @@
                                             <p class="text-sm text-slate-100 break-words whitespace-pre-wrap font-medium leading-relaxed"
                                                 :class="{ 'line-through text-slate-500': !rule.is_active }"
                                                 x-text="rule.content"></p>
-                                            <p class="text-[9px] text-slate-500 mt-1 uppercase tracking-wider font-bold"
+                                            <p class="text-[9px] text-slate-500 mt-1 font-bold"
                                                 x-text="formatRelativeTime(rule.created_at)"></p>
                                         </div>
                                     </div>

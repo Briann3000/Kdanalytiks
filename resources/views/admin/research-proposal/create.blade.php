@@ -8,17 +8,15 @@
             <header class="mb-8 flex items-center justify-between">
                 <div>
                     <a href="{{ route('research-proposal.index') }}"
-                        class="inline-flex items-center text-xs font-bold text-gray-400 hover:text-indigo-600 mb-2 transition-colors uppercase tracking-widest">
+                        class="inline-flex items-center text-xs font-bold text-gray-400 hover:text-[#2271b1] mb-2 transition-colors uppercase tracking-widest">
                         <i class="fa-solid fa-arrow-left mr-2"></i> {{ __('Back to Studio') }}
                     </a>
                     <h1 class="text-3xl font-black text-gray-900 tracking-tight uppercase">{{ __('Draft New Report') }}</h1>
-                    <p class="text-gray-500 font-medium">{{ __('Define your research vision and let AI draft the formal documentation.') }}</p>
+                    <p class="text-gray-500 font-medium">
+                        {{ __('Define your research vision and let AI draft the formal documentation.') }}</p>
                 </div>
                 <div class="hidden md:block">
-                    <div
-                        class="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-100">
-                        <i class="fa-solid fa-pen-nib text-2xl"></i>
-                    </div>
+
                 </div>
             </header>
 
@@ -33,7 +31,7 @@
                             <label for="title"
                                 class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">{{ __('Report Title') }}</label>
                             <input type="text" name="title" id="title" required
-                                class="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-gray-900 font-bold placeholder-gray-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                                class="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-gray-900 font-bold placeholder-gray-300 focus:ring-2 focus:ring-[#2271b1]/20 focus:border-[#2271b1] transition-all"
                                 placeholder="{{ __('e.g. Socio-Economic Impact of Remote Work in Urban Environments') }}">
                         </div>
 
@@ -41,7 +39,7 @@
                             <label for="research_question"
                                 class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">{{ __('Primary Research Question') }}</label>
                             <textarea name="research_question" id="research_question" rows="3" required
-                                class="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                                class="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-300 focus:ring-2 focus:ring-[#2271b1]/20 focus:border-[#2271b1] transition-all"
                                 placeholder="{{ __('To what extent does...') }}"></textarea>
                         </div>
                     </div>
@@ -52,15 +50,16 @@
                             <label for="objectives"
                                 class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">{{ __('Objectives & Scope') }}</label>
                             <textarea name="objectives" id="objectives" rows="5" required
-                                class="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                                class="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-300 focus:ring-2 focus:ring-[#2271b1]/20 focus:border-[#2271b1] transition-all"
                                 placeholder="{{ __('1. Analyze...\n2. Evaluate...\n3. Propose...') }}"></textarea>
-                            <p class="mt-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">{{ __('List 3-5 clear objectives.') }}</p>
+                            <p class="mt-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                {{ __('List 3-5 clear objectives.') }}</p>
                         </div>
                         <div>
                             <label for="scope"
                                 class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">{{ __('Target Population / Context') }}</label>
                             <textarea name="scope" id="scope" rows="5"
-                                class="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                                class="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-300 focus:ring-2 focus:ring-[#2271b1]/20 focus:border-[#2271b1] transition-all"
                                 placeholder="{{ __('Define the geographic or demographic boundaries...') }}"></textarea>
                         </div>
                     </div>
@@ -79,31 +78,33 @@
                                         ],
                                         'qualitative' => [
                                             'label' => 'In-depth Qualitative',
-                                            'desc' => 'Best for understanding deep stories, feelings, and personal experiences.'
+                                            'desc' => 'Best for understanding deep stories, feelings and personal experiences.'
                                         ],
                                         'mixed' => [
                                             'label' => 'Mixed Methods',
-                                            'desc' => 'The best of both worlds—using both numbers and stories for a complete picture.'
+                                            'desc' => 'Using both numbers and stories for a complete picture.'
                                         ]
                                     ];
                                 @endphp
                                 @foreach($methodologies as $val => $data)
                                     <label
-                                        class="relative flex items-start p-5 rounded-2xl border-2 border-gray-100 cursor-pointer hover:bg-gray-50 transition-all has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/30 group">
+                                        class="relative flex items-start p-5 rounded-2xl border-2 border-gray-100 cursor-pointer hover:bg-gray-50 transition-all has-[:checked]:border-[#2271b1] has-[:checked]:bg-zinc-100 group">
                                         <input type="radio" name="methodology_type" value="{{ $val }}" required class="hidden"
                                             {{ $loop->first ? 'checked' : '' }}>
                                         <div class="flex-1 pr-4">
                                             <p
-                                                class="text-[11px] font-black text-gray-900 group-hover:text-indigo-600 transition-colors uppercase tracking-widest mb-1">
-                                                {{ __($data['label']) }}</p>
+                                                class="text-[11px] font-black text-gray-900 group-hover:text-[#2271b1] transition-colors uppercase tracking-widest mb-1">
+                                                {{ __($data['label']) }}
+                                            </p>
                                             <p
                                                 class="text-[10px] text-gray-400 font-bold leading-relaxed line-clamp-2 uppercase">
-                                                {{ __($data['desc']) }}</p>
+                                                {{ __($data['desc']) }}
+                                            </p>
                                         </div>
                                         <div
-                                            class="w-5 h-5 mt-1 rounded-full border-2 border-gray-200 flex items-center justify-center p-1 group-hover:border-indigo-300 transition-all">
+                                            class="w-5 h-5 mt-1 rounded-full border-2 border-gray-200 flex items-center justify-center p-1 group-hover:border-zinc-400 transition-all">
                                             <div
-                                                class="w-full h-full bg-indigo-500 rounded-full scale-0 transition-transform duration-200 peer-checked:scale-100">
+                                                class="w-full h-full bg-zinc-1000 rounded-full scale-0 transition-transform duration-200 peer-checked:scale-100">
                                             </div>
                                         </div>
                                     </label>
@@ -115,7 +116,7 @@
                             <label for="style"
                                 class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">{{ __('Academic Standard') }}</label>
                             <select name="style" id="style"
-                                class="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-gray-900 font-bold uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none">
+                                class="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-gray-900 font-bold uppercase tracking-widest focus:ring-2 focus:ring-[#2271b1]/20 focus:border-[#2271b1] transition-all outline-none">
                                 <option value="apa7">APA 7th Edition</option>
                                 <option value="mla9">MLA 9th Edition</option>
                                 <option value="harvard">Harvard Style</option>
@@ -125,28 +126,20 @@
                                 <option value="oscola">OSCOLA (Law)</option>
                             </select>
 
-                            <div
-                                class="mt-8 p-6 bg-indigo-600 rounded-2xl text-white shadow-xl shadow-indigo-100 relative overflow-hidden">
-                                <div class="relative z-10">
-                                    <h4 class="text-xs font-black uppercase tracking-widest mb-1">{{ __('AI Synthesis Engine') }}</h4>
-                                    <p class="text-[10px] text-indigo-100 font-bold opacity-80 uppercase leading-relaxed">
-                                        {{ __('The generator will produce Intro, Problem Statement, Methodology, and Timeline sections automatically.') }}</p>
-                                </div>
-                                <i class="fa-solid fa-sparkles absolute right-2 bottom-2 text-white/10 text-4xl"></i>
-                            </div>
+
                         </div>
                     </div>
                 </div>
 
                 <div class="flex items-center justify-between pt-4">
                     <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest max-w-xs">
-                        {{ __('By proceeding, the synthesis engine will analyze your inputs and generate a structured draft. This can take up to 60 seconds.') }}
+                        {{ __('This can take up to 60 seconds.') }}
                     </p>
                     <div class="flex items-center space-x-4">
                         <a href="{{ route('research-proposal.index') }}"
                             class="px-8 py-4 rounded-2xl text-xs font-black text-gray-500 uppercase tracking-widest hover:bg-gray-100 transition-all">{{ __('Cancel') }}</a>
                         <button type="submit" @click="loading = true"
-                            class="w-full md:w-auto px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center border-none group">
+                            class="w-full md:w-auto px-10 py-4 bg-[#2271b1] text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-zinc-200/50 hover:bg-[#135e96] transition-all flex items-center justify-center border-none group">
                             <template x-if="!loading">
                                 <div class="flex items-center justify-center w-full">
                                     <span class="mr-3">{{ __('Draft Reports') }}</span>
@@ -167,7 +160,7 @@
     </div>
 
     <style>
-        input:checked+span+div+div .bg-indigo-500 {
+        input:checked+span+div+div .bg-zinc-1000 {
             transform: scale(1);
         }
 

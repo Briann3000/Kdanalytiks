@@ -5,14 +5,14 @@
         <!-- Message Alerts -->
         @if(session('success'))
             <div class="p-4 bg-green-50 border border-green-100 rounded-2xl">
-                <p class="text-xs text-green-700 font-bold uppercase tracking-widest">
+                <p class="text-xs text-green-700 font-bold  tracking-widest">
                     <i class="fa-solid fa-circle-check mr-2"></i> {{ session('success') }}
                 </p>
             </div>
         @endif
         @if(session('error'))
             <div class="p-4 bg-red-50 border border-red-100 rounded-2xl">
-                <p class="text-xs text-red-700 font-bold uppercase tracking-widest">
+                <p class="text-xs text-red-700 font-bold  tracking-widest">
                     <i class="fa-solid fa-circle-exclamation mr-2"></i> {{ session('error') }}
                 </p>
             </div>
@@ -25,16 +25,16 @@
             <!-- Bulk Action Floating Bar -->
             <div x-show="selectedResponses.length > 0" x-cloak
                 class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 z-[12000] animate-in slide-in-from-bottom-4 duration-300 border border-gray-800">
-                <span class="text-xs font-black uppercase tracking-wider text-gray-400">
-                    <span x-text="selectedResponses.length" class="text-indigo-400 font-black"></span> {{ __('Selected') }}
+                <span class="text-xs font-black  tracking-wider text-gray-400">
+                    <span x-text="selectedResponses.length" class="text-zinc-500 font-black"></span> {{ __('Selected') }}
                 </span>
                 <div class="flex items-center gap-2">
                     <button type="submit" name="action" value="approve"
-                        class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md">
+                        class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black  tracking-widest transition-all shadow-md">
                         <i class="fa-solid fa-circle-check mr-1.5"></i>{{ __('Approve Selected') }}
                     </button>
                     <button type="submit" name="action" value="reject"
-                        class="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md"
+                        class="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-black  tracking-widest transition-all shadow-md"
                         onclick="return confirm('Permanently delete selected responses? This action is irreversible.')">
                         <i class="fa-solid fa-trash mr-1.5"></i>{{ __('Reject/Delete Selected') }}
                     </button>
@@ -46,7 +46,7 @@
                 <div
                     class="px-8 py-6 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-50/30">
                     <div>
-                        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">{{ __('Raw Dataset') }}</h3>
+                        <h3 class="text-xs font-bold text-gray-500 tracking-wider">{{ __('Raw Dataset') }}</h3>
                         <p class="text-[11px] text-gray-400 font-medium mt-0.5">
                             {{ __('Showing all responses and fraud-detection scoring logs.') }}
                         </p>
@@ -55,30 +55,30 @@
                         <!-- Quality filter dropdown -->
                         <div class="flex items-center gap-1.5">
                             <span
-                                class="text-[10px] font-black text-gray-400 uppercase tracking-wider">{{ __('Quality Filter') }}:</span>
+                                class="text-[10px] font-black text-gray-400 tracking-wider">{{ __('Quality Filter') }}:</span>
                             <select
                                 onchange="window.location.href = '{{ route('surveys.data', $survey) }}?quality=' + this.value"
-                                class="text-[10px] rounded-xl border-gray-150 px-3 py-2 font-black uppercase tracking-wider text-gray-600 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                class="text-[10px] rounded-xl border-gray-150 px-3 py-2 font-black tracking-wider text-gray-600 bg-white shadow-sm focus:border-[#2271b1] focus:ring-[#2271b1]">
                                 <option value="">{{ __('All Responses') }}</option>
-                                <option value="clean" {{ request('quality') === 'clean' ? 'selected' : '' }}>🟢
+                                <option value="clean" {{ request('quality') === 'clean' ? 'selected' : '' }}>
                                     {{ __('Clean Only') }}
                                 </option>
-                                <option value="review" {{ request('quality') === 'review' ? 'selected' : '' }}>🟡
+                                <option value="review" {{ request('quality') === 'review' ? 'selected' : '' }}>
                                     {{ __('Review Only') }}
                                 </option>
-                                <option value="flagged" {{ request('quality') === 'flagged' ? 'selected' : '' }}>🔴
+                                <option value="flagged" {{ request('quality') === 'flagged' ? 'selected' : '' }}>
                                     {{ __('Flagged Only') }}
                                 </option>
                             </select>
                         </div>
 
                         <span
-                            class="px-3 py-2 bg-indigo-50 text-indigo-700 text-[10px] font-black rounded-xl border border-indigo-100 uppercase tracking-wider">
+                            class="px-3 py-2 bg-zinc-100 text-[#135e96] text-[10px] font-black rounded-xl border border-zinc-200 tracking-wider">
                             {{ $responses->total() }} {{ __('Total') }}
                         </span>
 
                         <a href="{{ route('surveys.export', $survey) }}"
-                            class="px-4 py-2 bg-white text-gray-700 rounded-xl text-xs font-bold uppercase tracking-wider border border-gray-200 hover:border-indigo-600 hover:text-indigo-600 transition-all shadow-sm">
+                            class="px-4 py-2 bg-white text-gray-700 rounded-xl text-xs font-bold tracking-wider border border-gray-200 hover:border-[#2271b1] hover:text-[#2271b1] transition-all shadow-sm">
                             <i class="fa-solid fa-file-csv mr-2"></i> {{ __('Export CSV') }}
                         </a>
                     </div>
@@ -93,34 +93,34 @@
                                     <th scope="col" class="px-6 py-4 text-left w-10">
                                         <input type="checkbox"
                                             @change="selectedResponses = $event.target.checked ? {{ json_encode($responses->pluck('id')->toArray()) }} : []"
-                                            class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                            class="rounded border-gray-300 text-[#2271b1] focus:ring-[#2271b1]">
                                     </th>
                                     <th scope="col"
-                                        class="px-4 py-4 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                                        class="px-4 py-4 text-left text-[9px] font-black text-gray-400   tracking-widest">
                                         # {{ __('ID') }}
                                     </th>
                                     <th scope="col"
-                                        class="px-6 py-4 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                                        class="px-6 py-4 text-left text-[10px] font-black text-gray-400   tracking-widest">
                                         {{ __('Submission Date') }}
                                     </th>
                                     <th scope="col"
-                                        class="px-6 py-4 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                                        class="px-6 py-4 text-left text-[10px] font-black text-gray-400  tracking-widest">
                                         {{ __('Respondent') }}
                                     </th>
                                     <!-- Quality Score Column Header -->
                                     <th scope="col"
-                                        class="px-6 py-4 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                                        class="px-6 py-4 text-left text-[10px] font-black text-gray-400  tracking-widest">
                                         {{ __('Quality Score') }}
                                     </th>
                                     @foreach($headers as $header)
                                         <th scope="col"
-                                            class="px-6 py-4 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest max-w-[200px] truncate"
+                                            class="px-6 py-4 text-left text-[10px] font-black text-gray-400  tracking-widest max-w-[200px] truncate"
                                             title="{{ $header['label'] }}">
                                             {{ $header['label'] }}
                                         </th>
                                     @endforeach
                                     <th scope="col"
-                                        class="px-6 py-4 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                                        class="px-6 py-4 text-left text-[10px] font-black text-gray-400  tracking-widest">
                                         {{ __('Sentiment') }}
                                     </th>
                                     <th scope="col"
@@ -160,7 +160,7 @@
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <input type="checkbox" name="response_ids[]" value="{{ $response->id }}"
                                                 x-model="selectedResponses"
-                                                class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                                class="rounded border-gray-300 text-[#2271b1] focus:ring-[#2271b1]">
                                         </td>
                                         <td class="px-4 py-4 whitespace-nowrap text-[10px] font-black text-gray-900">
                                             {{ $loop->iteration + ($responses->currentPage() - 1) * $responses->perPage() }}
@@ -169,7 +169,7 @@
                                             {{ $response->created_at->format('M d, Y • H:i') }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="text-[10px] font-black text-gray-900 uppercase tracking-tight">
+                                            <span class="text-[10px] font-black text-gray-900  tracking-tight">
                                                 {{ $response->respondent ? $response->respondent->name : ($response->guest_name ?? __('Anonymous')) }}
                                             </span>
                                             @if($response->ip_address)
@@ -181,7 +181,7 @@
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="flex flex-col gap-0.5">
                                                 <span
-                                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-black uppercase border {{ $badgeClass }} cursor-help"
+                                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-black  border {{ $badgeClass }} cursor-help"
                                                     @if(!empty($flags))
                                                     title="{{ collect($flags)->pluck('message')->implode('; ') }}" @endif>
                                                     @if($isFlagged)
@@ -277,49 +277,49 @@
 
                                                 @if($isMedia)
                                                     <div x-data="{ 
-                                                                                                                                                                                                                                                                transcribing: false, 
-                                                                                                                                                                                                                                                                transcription: @js($transcriptions[$valStr] ?? null),
-                                                                                                                                                                                                                                                                async transcribe() {
-                                                                                                                                                                                                                                                                    @if(!$isPremium)
-                                                                                                                                                                                                                                                                        Swal.fire({
-                                                                                                                                                                                                                                                                            title: 'Premium Feature',
-                                                                                                                                                                                                                                                                            text: 'AI Transcription is only available for Pro and Enterprise plans.',
-                                                                                                                                                                                                                                                                            icon: 'info',
-                                                                                                                                                                                                                                                                            showCancelButton: true,
-                                                                                                                                                                                                                                                                            confirmButtonText: 'Upgrade Now',
-                                                                                                                                                                                                                                                                            confirmButtonColor: '#4f46e5'
-                                                                                                                                                                                                                                                                        }).then((result) => {
-                                                                                                                                                                                                                                                                            if (result.isConfirmed) window.location.href = '{{ route('subscriptions.index') }}';
-                                                                                                                                                                                                                                                                        });
-                                                                                                                                                                                                                                                                        return;
-                                                                                                                                                                                                                                                                    @endif
-                                                                                                                                                                                                                                                                    this.transcribing = true;
-                                                                                                                                                                                                                                                                    try {
-                                                                                                                                                                                                                                                                        const response = await fetch('{{ route('surveys.responses.transcribe', [$survey, $response]) }}', {
-                                                                                                                                                                                                                                                                            method: 'POST',
-                                                                                                                                                                                                                                                                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                                                                                                                                                                                                                                                                            body: JSON.stringify({ file_path: @js($valStr) })
-                                                                                                                                                                                                                                                                        });
-                                                                                                                                                                                                                                                                        const data = await response.json();
-                                                                                                                                                                                                                                                                        if (data.success) this.transcription = data.transcription;
-                                                                                                                                                                                                                                                                    } finally {
-                                                                                                                                                                                                                                                                        this.transcribing = false;
-                                                                                                                                                                                                                                                                    }
-                                                                                                                                                                                                                                                                }
-                                                                                                                                                                                                                                                            }"
+                                                                                                                                                                                                                                                                                    transcribing: false, 
+                                                                                                                                                                                                                                                                                    transcription: @js($transcriptions[$valStr] ?? null),
+                                                                                                                                                                                                                                                                                    async transcribe() {
+                                                                                                                                                                                                                                                                                        @if(!$isPremium)
+                                                                                                                                                                                                                                                                                            Swal.fire({
+                                                                                                                                                                                                                                                                                                title: 'Premium Feature',
+                                                                                                                                                                                                                                                                                                text: 'AI Transcription is only available for Pro and Enterprise plans.',
+                                                                                                                                                                                                                                                                                                icon: 'info',
+                                                                                                                                                                                                                                                                                                showCancelButton: true,
+                                                                                                                                                                                                                                                                                                confirmButtonText: 'Upgrade Now',
+                                                                                                                                                                                                                                                                                                confirmButtonColor: '#4f46e5'
+                                                                                                                                                                                                                                                                                            }).then((result) => {
+                                                                                                                                                                                                                                                                                                if (result.isConfirmed) window.location.href = '{{ route('subscriptions.index') }}';
+                                                                                                                                                                                                                                                                                            });
+                                                                                                                                                                                                                                                                                            return;
+                                                                                                                                                                                                                                                                                        @endif
+                                                                                                                                                                                                                                                                                        this.transcribing = true;
+                                                                                                                                                                                                                                                                                        try {
+                                                                                                                                                                                                                                                                                            const response = await fetch('{{ route('surveys.responses.transcribe', [$survey, $response]) }}', {
+                                                                                                                                                                                                                                                                                                method: 'POST',
+                                                                                                                                                                                                                                                                                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                                                                                                                                                                                                                                                                                                body: JSON.stringify({ file_path: @js($valStr) })
+                                                                                                                                                                                                                                                                                            });
+                                                                                                                                                                                                                                                                                            const data = await response.json();
+                                                                                                                                                                                                                                                                                            if (data.success) this.transcription = data.transcription;
+                                                                                                                                                                                                                                                                                        } finally {
+                                                                                                                                                                                                                                                                                            this.transcribing = false;
+                                                                                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                                                }"
                                                         class="flex flex-col gap-1.5">
                                                         <div class="flex flex-col gap-1.5 py-1">
                                                             <a href="{{ asset('storage/' . $valStr) }}" target="_blank"
-                                                                class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-bold group/media">
+                                                                class="inline-flex items-center text-[#2271b1] hover:text-[#135e96] font-bold group/media">
                                                                 <i
-                                                                    class="fa-solid fa-circle-play mr-1.5 text-indigo-400 group-hover/media:text-indigo-600 transition-colors"></i>
+                                                                    class="fa-solid fa-circle-play mr-1.5 text-zinc-500 group-hover/media:text-[#2271b1] transition-colors"></i>
                                                                 <span>{{ __('View Media') }}</span>
                                                             </a>
 
                                                             <div class="flex flex-col gap-1">
                                                                 <button type="button" @click="transcribe" :disabled="transcribing"
-                                                                    class="inline-flex items-center text-[9px] font-black uppercase tracking-wider transition-all"
-                                                                    :class="transcription ? 'text-indigo-400 hover:text-indigo-600' : 'text-emerald-600 hover:text-emerald-800'">
+                                                                    class="inline-flex items-center text-[9px] font-black  tracking-wider transition-all"
+                                                                    :class="transcription ? 'text-zinc-500 hover:text-[#2271b1]' : 'text-emerald-600 hover:text-emerald-800'">
                                                                     <template x-if="!transcription">
                                                                         <span><i
                                                                                 class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>{{ __('Transcribe') }}</span>
@@ -343,9 +343,9 @@
                                                 @elseif (str_contains($valStr, 'base64,'))
                                                     <a href="javascript:void(0)"
                                                         onclick="Swal.fire({title:'Signature', imageUrl:'{{ $valStr }}', imageAlt:'Signature', customClass: {image: 'rounded-xl border border-gray-100 shadow-lg'}})"
-                                                        class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-bold group/sig">
+                                                        class="inline-flex items-center text-[#2271b1] hover:text-[#135e96] font-bold group/sig">
                                                         <i
-                                                            class="fa-solid fa-signature mr-1.5 text-indigo-400 group-hover/sig:text-indigo-600 transition-colors"></i>
+                                                            class="fa-solid fa-signature mr-1.5 text-zinc-500 group-hover/sig:text-[#2271b1] transition-colors"></i>
                                                         <span>{{ __('View Signature') }}</span>
                                                     </a>
                                                 @elseif (preg_match('/^-?\d+\.\d+,-?\d+\.\d+$/', $valStr))
@@ -380,7 +380,7 @@
                                                 ];
                                                 $cls = $colors[$sentiment] ?? $colors['Neutral'];
                                             @endphp
-                                            <span class="px-2 py-0.5 rounded text-[8px] font-black uppercase border {{ $cls }}">
+                                            <span class="px-2 py-0.5 rounded text-[8px] font-black  border {{ $cls }}">
                                                 {{ __($sentiment) }}
                                             </span>
                                         </td>
@@ -390,20 +390,20 @@
                                             class="px-8 py-4 text-right sticky right-0 bg-white group-hover:bg-gray-50/50 z-10 border-l border-gray-50">
                                             <div class="flex items-center justify-end gap-1.5">
                                                 <a href="{{ route('surveys.responses.show', [$survey, $response]) }}"
-                                                    class="inline-flex items-center px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-[9px] font-black uppercase tracking-wider transition-all">
+                                                    class="inline-flex items-center px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-[9px] font-black  tracking-wider transition-all">
                                                     <i class="fa-solid fa-eye mr-1"></i> {{ __('View') }}
                                                 </a>
 
                                                 @if($isFlagged)
                                                     <button type="submit" name="single_override_approve"
                                                         formaction="{{ route('surveys.responses.quality-override', [$survey, $response]) }}?action=approve"
-                                                        class="inline-flex items-center px-2 py-1 bg-emerald-550 hover:bg-emerald-600 text-white rounded text-[9px] font-black uppercase tracking-wider transition-all">
+                                                        class="inline-flex items-center px-2 py-1 bg-emerald-550 hover:bg-emerald-600 text-white rounded text-[9px] font-black  tracking-wider transition-all">
                                                         <i class="fa-solid fa-circle-check"></i>
                                                     </button>
                                                     <button type="submit" name="single_override_reject"
                                                         formaction="{{ route('surveys.responses.quality-override', [$survey, $response]) }}?action=reject"
                                                         onclick="return confirm('Permanently reject and delete this flagged response?')"
-                                                        class="inline-flex items-center px-2 py-1 bg-rose-550 hover:bg-rose-600 text-white rounded text-[9px] font-black uppercase tracking-wider transition-all">
+                                                        class="inline-flex items-center px-2 py-1 bg-rose-550 hover:bg-rose-600 text-white rounded text-[9px] font-black  tracking-wider transition-all">
                                                         <i class="fa-solid fa-trash-can"></i>
                                                     </button>
                                                 @endif
@@ -426,10 +426,10 @@
                             class="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center text-gray-200 mx-auto mb-6">
                             <i class="fa-solid fa-database text-3xl"></i>
                         </div>
-                        <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">
+                        <h3 class="text-xs font-black text-gray-400  tracking-widest mb-2">
                             {{ __('No Submissions Detected') }}
                         </h3>
-                        <p class="text-[10px] text-gray-300 font-bold uppercase italic">
+                        <p class="text-[10px] text-gray-300 font-bold  italic">
                             {{ __('Data will appear here once responses matching this quality tier are submitted.') }}
                         </p>
                     </div>

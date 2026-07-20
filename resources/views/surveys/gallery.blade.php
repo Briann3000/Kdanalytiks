@@ -26,11 +26,11 @@
             <div class="flex items-center gap-3 w-full md:w-auto">
                 <div class="relative flex-grow">
                     <input type="text" x-model="search" placeholder="{{ __('Search by filename...') }}"
-                        class="w-full md:w-64 pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-[10px] font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
+                        class="w-full md:w-64 pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-[10px] font-bold focus:ring-2 focus:ring-[#2271b1] focus:border-[#2271b1] transition-all">
                     <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]"></i>
                 </div>
                 <span
-                    class="px-3 py-2 bg-white border border-gray-200 rounded-xl text-[10px] font-black text-indigo-600 shadow-sm whitespace-nowrap">
+                    class="px-3 py-2 bg-white border border-gray-200 rounded-xl text-[10px] font-black text-[#2271b1] shadow-sm whitespace-nowrap">
                     <span x-text="filteredMedia.length"></span> / {{ count($mediaFiles) }} {{ __('Assets') }}
                 </span>
             </div>
@@ -40,7 +40,7 @@
             <template x-if="filteredMedia.length > 0">
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
                     <template x-for="(file, index) in filteredMedia" :key="index">
-                        <div class="group relative bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 transition-all hover:shadow-2xl hover:border-indigo-200 hover:-translate-y-1 cursor-zoom-in"
+                        <div class="group relative bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 transition-all hover:shadow-2xl hover:border-zinc-300 hover:-translate-y-1 cursor-zoom-in"
                             @click="openLightbox(file)">
                             <!-- Media Preview -->
                             <div class="aspect-square flex items-center justify-center bg-gray-100/50 relative">
@@ -51,7 +51,7 @@
                                 <template x-if="file.type === 'video'">
                                     <div class="flex flex-col items-center">
                                         <div
-                                            class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mb-2">
+                                            class="w-12 h-12 rounded-full bg-zinc-200 flex items-center justify-center text-[#2271b1] mb-2">
                                             <i class="fa-solid fa-play text-sm"></i>
                                         </div>
                                         <span
@@ -96,13 +96,13 @@
 
                             <!-- Hover Actions -->
                             <div
-                                class="absolute inset-x-0 bottom-0 p-2 bg-indigo-900/10 backdrop-blur-sm flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                class="absolute inset-x-0 bottom-0 p-2 bg-zinc-800/10 backdrop-blur-sm flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <a :href="'/storage/' + file.path" download @click.stop
-                                    class="w-8 h-8 bg-white border border-gray-100 rounded-lg flex items-center justify-center text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                                    class="w-8 h-8 bg-white border border-gray-100 rounded-lg flex items-center justify-center text-[#2271b1] hover:bg-[#2271b1] hover:text-white transition-all shadow-sm">
                                     <i class="fa-solid fa-download text-[10px]"></i>
                                 </a>
                                 <button type="button"
-                                    class="w-8 h-8 bg-white border border-gray-100 rounded-lg flex items-center justify-center text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                                    class="w-8 h-8 bg-white border border-gray-100 rounded-lg flex items-center justify-center text-[#2271b1] hover:bg-[#2271b1] hover:text-white transition-all shadow-sm">
                                     <i class="fa-solid fa-expand text-[10px]"></i>
                                 </button>
                             </div>
@@ -122,7 +122,7 @@
                     <p class="text-[10px] text-gray-500 font-bold uppercase mt-2 tracking-wider">
                         {{ __('No media files match your current search criteria.') }}</p>
                     <button @click="search = ''"
-                        class="mt-6 px-6 py-2 bg-indigo-600 text-white text-[10px] font-black uppercase rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">{{ __('Reset Search') }}</button>
+                        class="mt-6 px-6 py-2 bg-[#2271b1] text-white text-[10px] font-black uppercase rounded-xl hover:bg-[#135e96] transition-all shadow-lg shadow-zinc-200/50">{{ __('Reset Search') }}</button>
                 </div>
             </template>
         </div>
@@ -159,7 +159,7 @@
                 </template>
                 <template x-if="activeMedia && activeMedia.type === 'audio'">
                     <div
-                        class="bg-indigo-900/50 p-12 rounded-[3rem] border border-white/10 flex flex-col items-center w-full max-w-lg">
+                        class="bg-zinc-800/50 p-12 rounded-[3rem] border border-white/10 flex flex-col items-center w-full max-w-lg">
                         <div
                             class="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center text-white mb-8 border border-white/10 animate-pulse">
                             <i class="fa-solid fa-microphone text-4xl"></i>
@@ -174,7 +174,7 @@
                 class="absolute bottom-8 left-1/2 -translate-x-1/2 bg-white/5 backdrop-blur-md px-8 py-4 rounded-2xl border border-white/10 text-center">
                 <h6 class="text-white font-black text-sm tracking-tight mb-1"
                     x-text="activeMedia ? activeMedia.path.split('/').pop() : ''"></h6>
-                <div class="text-indigo-300 font-bold uppercase tracking-[0.2em] text-[10px]">{{ __('Submitted on') }} <span
+                <div class="text-zinc-500 font-bold uppercase tracking-[0.2em] text-[10px]">{{ __('Submitted on') }} <span
                         x-text="activeMedia ? activeMedia.date : ''"></span></div>
             </div>
         </div>

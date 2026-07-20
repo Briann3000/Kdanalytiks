@@ -5,15 +5,16 @@
         <div class="flex items-center justify-between mb-8">
             <div>
                 <a href="{{ route('wallet.index') }}"
-                    class="text-sm font-bold text-indigo-600 hover:text-indigo-500 flex items-center gap-2 mb-2">
+                    class="text-sm font-bold text-[#2271b1] hover:text-zinc-2000 flex items-center gap-2 mb-2">
                     <i class="fa-solid fa-arrow-left"></i> Back to Wallet
                 </a>
                 <h2 class="text-3xl font-black text-gray-800">Transaction History</h2>
             </div>
             <div class="bg-white px-6 py-3 rounded-2xl border border-gray-100 shadow-sm">
                 <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center">Current balance</p>
-                <p class="text-xl font-black text-indigo-700">{{ number_format((float) $wallet->balance, 2) }}
-                    {{ $wallet->currency ?? 'KES' }}</p>
+                <p class="text-xl font-black text-[#135e96]">{{ number_format((float) $wallet->balance, 2) }}
+                    {{ $wallet->currency ?? 'KES' }}
+                </p>
             </div>
         </div>
 
@@ -43,11 +44,7 @@
                                 </td>
                                 <td class="px-6 py-5">
                                     <div class="flex items-center gap-3">
-                                        <div
-                                            class="w-8 h-8 rounded-lg flex items-center justify-center {{ $transaction->type === 'credit' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600' }}">
-                                            <i
-                                                class="fa-solid {{ $transaction->type === 'credit' ? 'fa-plus' : 'fa-minus' }} text-xs"></i>
-                                        </div>
+
                                         <p class="text-sm font-medium text-gray-700">{{ $transaction->description }}</p>
                                     </div>
                                 </td>

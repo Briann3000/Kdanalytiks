@@ -53,7 +53,7 @@
                 </div>
             </div>
             <div class="w3-quarter">
-                <div class="w3-card w3-padding w3-orange w3-center">
+                <div class="w3-card w3-padding w3-blue w3-center">
                     <h3>24/7</h3>
                     <p>Always Available</p>
                 </div>

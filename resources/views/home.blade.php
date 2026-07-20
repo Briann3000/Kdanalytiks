@@ -33,10 +33,10 @@
         </div>
 
         <div class="w3-quarter w3-card w3-padding w3-hover-shadow">
-            <i class="fa fa-users w3-text-orange w3-jumbo"></i>
+            <i class="fa fa-users w3-text-blue w3-jumbo"></i>
             <h3>Respondents</h3>
             <p>Register and take surveys sent to you</p>
-            <a href="{{ route('respondent.login') }}" class="w3-button w3-orange w3-round-large">Login</a>
+            <a href="{{ route('respondent.login') }}" class="w3-button w3-blue w3-round-large">Login</a>
             <a href="{{ route('respondent.register') }}"
                 class="w3-button w3-light-grey w3-round-large w3-margin-top">Register</a>
         </div>

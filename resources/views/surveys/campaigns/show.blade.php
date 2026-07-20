@@ -5,7 +5,7 @@
         <!-- Back Link -->
         <div>
             <a href="{{ route('surveys.campaigns.index', $survey) }}"
-                class="text-xs font-bold text-gray-600 hover:text-indigo-600 transition-colors">
+                class="text-xs font-bold text-gray-600 hover:text-[#2271b1] transition-colors">
                 <i class="fa-solid fa-arrow-left mr-1"></i> {{ __('Back to Campaigns') }}
             </a>
         </div>
@@ -33,11 +33,11 @@
                 class="md:col-span-2 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between">
                 <div>
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider
-                                @if($campaign->status === 'completed') bg-emerald-100 text-emerald-600 border border-emerald-200
-                                @elseif($campaign->status === 'scheduled') bg-amber-100 text-amber-600 border border-amber-200
-                                @elseif($campaign->status === 'cancelled') bg-rose-100 text-rose-600 border border-rose-200
-                                @else bg-indigo-100 text-indigo-600 border border-indigo-200
-                                @endif">
+                                    @if($campaign->status === 'completed') bg-emerald-100 text-emerald-600 border border-emerald-200
+                                    @elseif($campaign->status === 'scheduled') bg-amber-100 text-amber-600 border border-amber-200
+                                    @elseif($campaign->status === 'cancelled') bg-rose-100 text-rose-600 border border-rose-200
+                                    @else bg-zinc-200 text-[#2271b1] border border-zinc-300
+                                    @endif">
                         @if($campaign->status === 'completed')
                             {{ __('Completed') }}
                         @elseif($campaign->status === 'scheduled')
@@ -89,10 +89,10 @@
                     @php
                         $rate = $campaign->total_recipients > 0 ? round(($campaign->total_responded / $campaign->total_recipients) * 100) : 0;
                     @endphp
-                    <div class="text-3xl font-black text-indigo-600 mt-2 tracking-tight">{{ $rate }}%</div>
+                    <div class="text-3xl font-black text-[#2271b1] mt-2 tracking-tight">{{ $rate }}%</div>
                 </div>
                 <div class="w-full bg-gray-100 h-2 rounded-full overflow-hidden mt-4">
-                    <div class="bg-indigo-600 h-full rounded-full" style="width: {{ $rate }}%"></div>
+                    <div class="bg-[#2271b1] h-full rounded-full" style="width: {{ $rate }}%"></div>
                 </div>
             </div>
 
@@ -139,7 +139,7 @@
                             onsubmit="return confirm('{{ __('Are you sure you want to send manual reminder emails to all pending non-respondents right now?') }}')">
                             @csrf
                             <button type="submit"
-                                class="inline-flex items-center px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-100 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all">
+                                class="inline-flex items-center px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-[#2271b1] border border-zinc-200 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all">
                                 <i class="fa-solid fa-bell mr-2"></i> {{ __('Send Reminders') }}
                             </button>
                         </form>
@@ -199,12 +199,12 @@
                                     </td>
                                     <td class="py-4 px-6">
                                         <span class="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider
-                                                                    @if($recipient->status === 'responded') bg-emerald-100 text-emerald-600 border border-emerald-200
-                                                                    @elseif($recipient->status === 'sent') bg-blue-100 text-blue-600 border border-blue-200
-                                                                    @elseif($recipient->status === 'opened') bg-indigo-100 text-indigo-600 border border-indigo-200
-                                                                    @elseif($recipient->status === 'bounced') bg-rose-100 text-rose-600 border border-rose-200
-                                                                    @else bg-gray-100 text-gray-500 border border-gray-200
-                                                                    @endif">
+                                                                                @if($recipient->status === 'responded') bg-emerald-100 text-emerald-600 border border-emerald-200
+                                                                                @elseif($recipient->status === 'sent') bg-blue-100 text-blue-600 border border-blue-200
+                                                                                @elseif($recipient->status === 'opened') bg-zinc-200 text-[#2271b1] border border-zinc-300
+                                                                                @elseif($recipient->status === 'bounced') bg-rose-100 text-rose-600 border border-rose-200
+                                                                                @else bg-gray-100 text-gray-500 border border-gray-200
+                                                                                @endif">
                                             @if($recipient->status === 'responded')
                                                 {{ __('Responded') }}
                                             @elseif($recipient->status === 'sent')

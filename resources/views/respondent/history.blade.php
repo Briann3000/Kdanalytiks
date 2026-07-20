@@ -23,14 +23,14 @@
                     <li class="p-6 hover:bg-gray-50 transition-colors">
                         <div class="flex items-center justify-between">
                             <div class="flex-1 min-w-0">
-                                <h3 class="text-lg font-bold text-indigo-600 truncate">
+                                <h3 class="text-lg font-bold text-[#2271b1] truncate">
                                     {{ $response->survey?->title ?? 'Deleted Survey' }}
                                 </h3>
                                 <div class="mt-2 flex items-center text-sm text-gray-500">
                                     <i class="fa-solid fa-tag flex-shrink-0 mr-1.5 text-gray-400"></i>
                                     <span class="truncate mr-4">{{ $response->survey?->category ?? 'Unknown Category' }}</span>
 
-                                    <i class="fa-solid fa-calendar-check flex-shrink-0 mr-1.5 text-green-500"></i>
+
                                     <span>{{ __('Submitted on') }} {{ $response->created_at->format('M j, Y g:i A') }}</span>
                                 </div>
                             </div>
@@ -41,7 +41,7 @@
                                 </span>
                                 @if($response->survey && $response->survey->reward_per_response > 0)
                                     <span
-                                        class="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
+                                        class="text-xs font-black text-[#2271b1] bg-zinc-100 px-2 py-0.5 rounded-lg border border-zinc-200">
                                         {{ __('Earned:') }} {{ number_format((float) $response->survey->reward_per_response, 2) }}
                                         {{ $response->survey->currency ?? 'KES' }}
                                     </span>
@@ -60,7 +60,7 @@
                         </p>
                         <div class="mt-6">
                             <a href="{{ route('surveys.public') }}"
-                                class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">
+                                class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[#2271b1] hover:bg-[#135e96] transition-colors">
                                 <i class="fa-solid fa-globe mr-2"></i> {{ __('Browse Public Surveys') }}
                             </a>
                         </div>

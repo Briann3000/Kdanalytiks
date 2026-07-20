@@ -11,7 +11,7 @@
                 </p>
             </div>
             <a href="{{ route('surveys.create') }}"
-                class="px-6 py-3 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-100 transition-all flex items-center">
+                class="px-6 py-3 bg-[#2271b1] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-1000 shadow-xl shadow-zinc-200/50 transition-all flex items-center">
                 <i class="fa-solid fa-plus mr-2"></i> {{ __('Custom Project') }}
             </a>
         </div>
@@ -22,7 +22,7 @@
                 <div
                     class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:shadow-xl transition-all group hover:-translate-y-2">
                     <div
-                        class="w-16 h-16 {{ $tpl->color ?? 'bg-indigo-50 text-indigo-600' }} rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-inner transition-transform group-hover:scale-110">
+                        class="w-16 h-16 bg-zinc-100 text-zinc-600 group-hover:bg-[#2271b1] group-hover:text-white rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-inner transition-all duration-300 group-hover:scale-110">
                         <i class="fa-solid {{ $tpl->icon ?? 'fa-file-lines' }}"></i>
                     </div>
                     <h3 class="text-xl font-black text-gray-900 mb-2 tracking-tight">{{ __($tpl->title) }}</h3>
@@ -31,18 +31,18 @@
                     </p>
                     <div class="flex items-center space-x-6">
                         <a href="{{ route('library.templates.clone', $tpl) }}"
-                            class="flex items-center text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:translate-x-1 transition-transform">
+                            class="flex items-center text-xs font-black text-gray-600 hover:text-[#2271b1] tracking-widest hover:translate-x-1 transition-transform">
                             {{ __('Use Template') }} <i class="fa-solid fa-arrow-right ml-2"></i>
                         </a>
                         @if(auth()->user()->isAdmin())
                             <a href="{{ route('surveys.edit', $tpl) }}"
-                                class="flex items-center text-[10px] font-black text-gray-400 hover:text-indigo-600 uppercase tracking-widest transition-colors">
+                                class="flex items-center text-[10px] font-black text-gray-400 hover:text-[#2271b1] uppercase tracking-widest transition-colors">
                                 {{ __('Edit Template') }} <i class="fa-solid fa-pen-to-square ml-2"></i>
                             </a>
                         @else
                             <a href="{{ route('surveys.show', $tpl) }}"
-                                class="flex items-center text-[10px] font-black text-gray-400 hover:text-indigo-600 uppercase tracking-widest transition-colors">
-                                {{ __('View Template') }} <i class="fa-solid fa-eye ml-2"></i>
+                                class="flex items-center text-xs font-black text-gray-600 hover:text-[#2271b1]  transition-colors">
+                                {{ __('View Template') }} <i class="fa-solid fa-arrow-right ml-2"></i>
                             </a>
                         @endif
                     </div>
@@ -61,7 +61,7 @@
                 </p>
                 <a href="{{ route('surveys.create') }}"
                     class="inline-flex items-center px-8 py-4 bg-white text-gray-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all shadow-2xl">
-                    <i class="fa-solid fa-sparkles mr-2 text-indigo-600"></i> {{ __('Open AI Architect') }}
+                    <i class="fa-solid fa-sparkles mr-2 text-[#2271b1]"></i> {{ __('Open AI Architect') }}
                 </a>
             </div>
         </div>

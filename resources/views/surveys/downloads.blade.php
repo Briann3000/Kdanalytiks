@@ -72,20 +72,20 @@
                     <!-- XLSX (Pro) -->
                     @if($canPro)
                         <a href="{{ route('surveys.export_xlsx', $survey) }}" @click="setTimeout(() => refresh(), 3000)"
-                            class="flex items-center justify-between p-4 bg-indigo-50/30 border border-indigo-100 rounded-2xl group hover:bg-indigo-50 transition-all shadow-sm">
+                            class="flex items-center justify-between p-4 bg-zinc-100 border border-zinc-200 rounded-2xl group hover:bg-zinc-100 transition-all shadow-sm">
                             <div class="flex items-center">
                                 <div
-                                    class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-indigo-600 shadow-sm mr-4 border border-indigo-50">
+                                    class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-[#2271b1] shadow-sm mr-4 border border-zinc-100">
                                     <i class="fa-solid fa-file-excel text-xl"></i>
                                 </div>
                                 <div>
-                                    <span class="block text-xs font-black text-indigo-900 uppercase tracking-tight">{{ __('Excel (.xlsx)') }}</span>
+                                    <span class="block text-xs font-black text-zinc-900 uppercase tracking-tight">{{ __('Excel (.xlsx)') }}</span>
                                     <span
-                                        class="block text-[8px] text-indigo-600/70 font-bold uppercase tracking-wider">{{ __('Formatted Sheets') }}</span>
+                                        class="block text-[8px] text-[#2271b1]/70 font-bold uppercase tracking-wider">{{ __('Formatted Sheets') }}</span>
                                 </div>
                             </div>
                             <i
-                                class="fa-solid fa-arrow-down-long text-indigo-300 group-hover:translate-y-1 transition-transform"></i>
+                                class="fa-solid fa-arrow-down-long text-zinc-500 group-hover:translate-y-1 transition-transform"></i>
                         </a>
                     @else
                         <div
@@ -98,7 +98,7 @@
                                 <div>
                                     <span class="block text-xs font-black text-gray-400 uppercase tracking-tight">{{ __('Excel (.xlsx)') }}</span>
                                     <span
-                                        class="block text-[8px] text-indigo-400 font-black uppercase tracking-widest flex items-center gap-1">
+                                        class="block text-[8px] text-zinc-500 font-black uppercase tracking-widest flex items-center gap-1">
                                         <i class="fa-solid fa-lock text-[7px]"></i> {{ __('Upgrade to Pro') }}
                                     </span>
                                 </div>
@@ -268,12 +268,12 @@
                     </div>
                     <div class="flex items-center gap-4">
                         <span x-show="loading"
-                            class="text-[10px] font-bold text-indigo-500 animate-pulse">{{ __('Refreshing...') }}</span>
+                            class="text-[10px] font-bold text-zinc-2000 animate-pulse">{{ __('Refreshing...') }}</span>
                         <span
                             class="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-100 px-3 py-1.5 rounded-xl border border-gray-100">
                             <span x-text="exports.length"></span> {{ __('Snapshots') }}</span>
                         <button type="button" @click="refresh()"
-                            class="w-10 h-10 bg-white border border-gray-100 rounded-2xl flex items-center justify-center text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                            class="w-10 h-10 bg-white border border-gray-100 rounded-2xl flex items-center justify-center text-[#2271b1] hover:bg-[#2271b1] hover:text-white transition-all shadow-sm">
                             <i class="fa-solid fa-rotate text-sm" :class="loading ? 'fa-spin' : ''"></i>
                         </button>
                     </div>
@@ -306,7 +306,7 @@
                                                         <i class="fa-solid text-sm" :class="{
                                                                 'fa-file-csv text-emerald-500': exportItem.extension === 'CSV',
                                                                 'fa-file-pdf text-rose-500': exportItem.extension === 'PDF',
-                                                                'fa-file-excel text-indigo-500': exportItem.extension === 'XLSX',
+                                                                'fa-file-excel text-zinc-2000': exportItem.extension === 'XLSX',
                                                                 'fa-file-code text-amber-500': exportItem.extension === 'JSON',
                                                                 'fa-file-lines text-blue-500': !['CSV', 'PDF', 'XLSX', 'JSON'].includes(exportItem.extension)
                                                             }"></i>
@@ -326,7 +326,7 @@
                                             <td class="px-8 py-5 whitespace-nowrap text-right">
                                                 <div class="flex items-center justify-end gap-2">
                                                     <a :href="exportItem.download_url"
-                                                        class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                                                        class="w-8 h-8 rounded-lg bg-zinc-100 text-[#2271b1] flex items-center justify-center hover:bg-[#2271b1] hover:text-white transition-all shadow-sm">
                                                         <i class="fa-solid fa-download text-[10px]"></i>
                                                     </a>
                                                     <button @click="deleteExport(exportItem.filename)"
@@ -356,7 +356,7 @@
                 </div>
 
                 <div class="px-10 py-6 bg-gray-50/50 border-t border-gray-50 mt-auto">
-                    <div class="flex items-center gap-2 text-indigo-400">
+                    <div class="flex items-center gap-2 text-zinc-500">
                         <i class="fa-solid fa-circle-info text-xs"></i>
                         <p class="text-[9px] font-bold uppercase tracking-widest">{{ __('Exports are retained for 30 days unless manually purged') }}</p>
                     </div>

@@ -7,15 +7,13 @@
         <!-- Header -->
         <div class="h-14 border-b border-gray-100 flex items-center justify-between px-6 flex-shrink-0 bg-white">
             <div class="flex items-center space-x-3">
-                <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-sm">
-                    <i class="fa-solid fa-microscope text-sm"></i>
-                </div>
+                
                 <h1 class="text-sm font-bold text-gray-900 tracking-tight">{{ __('Research Studio: Report Generator') }}
                 </h1>
             </div>
             <div class="flex items-center space-x-4">
                 <a href="{{ route('research-proposal.history') }}"
-                    class="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors">
+                    class="text-xs font-bold text-[#2271b1] hover:text-[#135e96] transition-colors">
                     <i class="fa-solid fa-clock-rotate-left mr-1"></i> {{ __('View History') }}
                 </a>
             </div>
@@ -39,7 +37,7 @@
                                         <label
                                             class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">{{ __('Source Survey') }}</label>
                                         <select name="survey_id" required
-                                            class="w-full h-12 bg-gray-50 border-gray-100 rounded-xl px-4 text-sm font-medium text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer">
+                                            class="w-full h-12 bg-gray-50 border-gray-100 rounded-xl px-4 text-sm font-medium text-gray-800 outline-none focus:ring-2 focus:ring-[#2271b1]/20 focus:border-[#2271b1] transition-all cursor-pointer">
                                             <option value="" disabled selected>{{ __('Select active survey...') }}</option>
                                             @foreach($surveys as $survey)
                                                 <option value="{{ $survey->id }}">{{ $survey->title }}</option>
@@ -55,7 +53,7 @@
                                             <label
                                                 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">{{ __('Academic Style') }}</label>
                                             <select name="style"
-                                                class="w-full h-11 bg-gray-50 border-gray-100 rounded-xl px-4 text-sm font-medium text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500/20">
+                                                class="w-full h-11 bg-gray-50 border-gray-100 rounded-xl px-4 text-sm font-medium text-gray-800 outline-none focus:ring-2 focus:ring-[#2271b1]/20">
                                                 <option value="apa7">APA 7th</option>
                                                 <option value="mla9">MLA 9th</option>
                                                 <option value="harvard">Harvard</option>
@@ -69,7 +67,7 @@
                                             <label
                                                 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">{{ __('Export Format') }}</label>
                                             <select name="format"
-                                                class="w-full h-11 bg-gray-50 border-gray-100 rounded-xl px-4 text-sm font-medium text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500/20">
+                                                class="w-full h-11 bg-gray-50 border-gray-100 rounded-xl px-4 text-sm font-medium text-gray-800 outline-none focus:ring-2 focus:ring-[#2271b1]/20">
                                                 <option value="pdf">PDF Doc</option>
                                                 <option value="docx">Word (.docx)</option>
                                             </select>
@@ -82,11 +80,8 @@
                                         {{ __('Synthesis Parameters') }}</h4>
                                     <div class="space-y-3">
                                         <div
-                                            class="flex items-center p-4 bg-gray-50 border border-transparent rounded-xl hover:border-indigo-100 transition-all">
-                                            <div
-                                                class="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center mr-3">
-                                                <i class="fa-solid fa-microchip text-sm"></i>
-                                            </div>
+                                            class="flex items-center p-4 bg-gray-50 border border-transparent rounded-xl hover:border-zinc-200 transition-all">
+                                            
                                             <div>
                                                 <p class="text-sm font-bold text-gray-800">{{ __('Thematic Analysis') }}</p>
                                                 <p class="text-[10px] text-gray-400 font-medium">
@@ -94,11 +89,8 @@
                                             </div>
                                         </div>
                                         <div
-                                            class="flex items-center p-4 bg-gray-50 border border-transparent rounded-xl hover:border-indigo-100 transition-all">
-                                            <div
-                                                class="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center mr-3">
-                                                <i class="fa-solid fa-feather-pointed text-sm"></i>
-                                            </div>
+                                            class="flex items-center p-4 bg-gray-50 border border-transparent rounded-xl hover:border-zinc-200 transition-all">
+                                            
                                             <div>
                                                 <p class="text-sm font-bold text-gray-800">{{ __('Citations Engine') }}</p>
                                                 <p class="text-[10px] text-gray-400 font-medium">
@@ -123,7 +115,7 @@
                                     <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">
                                         {{ __('Reference Manager') }}</h3>
                                     <button type="button" @click="addReference()"
-                                        class="inline-flex items-center px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors">
+                                        class="inline-flex items-center px-3 py-1.5 bg-zinc-100 text-[#135e96] rounded-lg text-xs font-bold hover:bg-zinc-200 transition-colors">
                                         <i class="fa-solid fa-plus mr-2"></i> {{ __('Add Source') }}
                                     </button>
                                 </div>
@@ -142,21 +134,21 @@
                                                         class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{{ __('Author') }}</label>
                                                     <input type="text" :name="'references['+index+'][author]'"
                                                         x-model="ref.author" placeholder="e.g. Smith, J."
-                                                        class="w-full text-xs rounded-lg border-gray-100 focus:ring-indigo-500 focus:border-indigo-500">
+                                                        class="w-full text-xs rounded-lg border-gray-100 focus:ring-[#2271b1] focus:border-[#2271b1]">
                                                 </div>
                                                 <div>
                                                     <label
                                                         class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{{ __('Year') }}</label>
                                                     <input type="text" :name="'references['+index+'][year]'"
                                                         x-model="ref.year" placeholder="2024"
-                                                        class="w-full text-xs rounded-lg border-gray-100 focus:ring-indigo-500 focus:border-indigo-500">
+                                                        class="w-full text-xs rounded-lg border-gray-100 focus:ring-[#2271b1] focus:border-[#2271b1]">
                                                 </div>
                                                 <div class="md:col-span-2">
                                                     <label
                                                         class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{{ __('Title') }}</label>
                                                     <input type="text" :name="'references['+index+'][title]'"
                                                         x-model="ref.title" placeholder="Title of the work"
-                                                        class="w-full text-xs rounded-lg border-gray-100 focus:ring-indigo-500 focus:border-indigo-500">
+                                                        class="w-full text-xs rounded-lg border-gray-100 focus:ring-[#2271b1] focus:border-[#2271b1]">
                                                 </div>
                                             </div>
                                             <div class="mt-3">
@@ -164,7 +156,7 @@
                                                     class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{{ __('Source / Publisher / DOI') }}</label>
                                                 <input type="text" :name="'references['+index+'][source]'"
                                                     x-model="ref.source" placeholder="Journal Name, Book Publisher, etc."
-                                                    class="w-full text-xs rounded-lg border-gray-100 focus:ring-indigo-500 focus:border-indigo-500">
+                                                    class="w-full text-xs rounded-lg border-gray-100 focus:ring-[#2271b1] focus:border-[#2271b1]">
                                             </div>
                                         </div>
                                     </template>
@@ -185,7 +177,7 @@
                                         class="text-[10px] font-bold uppercase tracking-widest">{{ __('This may take a while') }}</span>
                                 </div>
                                 <button type="submit"
-                                    class="w-full sm:w-auto min-h-[48px] px-10 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-md shadow-indigo-100 hover:bg-indigo-700 hover:shadow-lg transition-all transform active:scale-95 flex items-center justify-center border-none">
+                                    class="w-full sm:w-auto min-h-[48px] px-10 bg-[#2271b1] text-white rounded-xl font-bold text-sm shadow-md shadow-zinc-200/50 hover:bg-[#135e96] hover:shadow-lg transition-all transform active:scale-95 flex items-center justify-center border-none">
                                     <span class="whitespace-nowrap">{{ __('Generate Full Report') }}</span> <i
                                         class="fa-solid fa-arrow-right ml-2 bg-transparent text-white border-0"></i>
                                 </button>
@@ -196,10 +188,10 @@
 
                 <!-- Contextual Help / Tips -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="p-6 bg-indigo-50 border border-indigo-100 rounded-2xl">
-                        <i class="fa-solid fa-lightbulb text-indigo-600 mb-3 block"></i>
-                        <h5 class="text-xs font-bold text-indigo-900 uppercase tracking-wider mb-2">{{ __('Pro Tip') }}</h5>
-                        <p class="text-xs text-indigo-700 leading-relaxed font-medium">
+                    <div class="p-6 bg-zinc-100 border border-zinc-200 rounded-2xl">
+                        <i class="fa-solid fa-lightbulb text-[#2271b1] mb-3 block"></i>
+                        <h5 class="text-xs font-bold text-zinc-900 uppercase tracking-wider mb-2">{{ __('Pro Tip') }}</h5>
+                        <p class="text-xs text-[#135e96] leading-relaxed font-medium">
                             {{ __('Ensure your survey has at least 5 qualitative responses for the best thematic results.') }}
                         </p>
                     </div>

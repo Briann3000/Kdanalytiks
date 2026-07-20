@@ -21,7 +21,7 @@
             <!-- Surveys by Category -->
             <div class="bg-white shadow rounded-lg border border-gray-100 p-6 lg:col-span-1">
                 <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center"><i
-                        class="fa-solid fa-chart-pie mr-2 text-indigo-500"></i> Surveys by Category</h3>
+                        class="fa-solid fa-chart-pie mr-2 text-zinc-2000"></i> Surveys by Category</h3>
                 <div class="relative h-64 w-full">
                     <canvas id="categoryChart"></canvas>
                 </div>
@@ -39,7 +39,7 @@
             <!-- Platform Statistics -->
             <div class="bg-white shadow rounded-lg border border-gray-100 p-6 lg:col-span-1">
                 <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center"><i
-                        class="fa-solid fa-server mr-2 text-orange-500"></i> Platform Statistics</h3>
+                        class="fa-solid fa-server mr-2 text-zinc-400"></i> Platform Statistics</h3>
                 <ul class="divide-y divide-gray-200">
                     <li class="py-4 flex justify-between items-center">
                         <span class="text-gray-600 font-medium">Total Surveys</span>

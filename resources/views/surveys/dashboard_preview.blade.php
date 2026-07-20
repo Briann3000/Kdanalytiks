@@ -18,13 +18,13 @@
                 </div>
                 <div class="flex items-center gap-3">
                     <a href="{{ route('surveys.dashboard-builder', $survey) }}"
-                        class="px-5 py-3 bg-white text-gray-700 border border-gray-200 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-gray-50 hover:text-indigo-600 transition-all flex items-center gap-2">
+                        class="px-5 py-3 bg-white text-gray-700 border border-gray-200 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-gray-50 hover:text-[#2271b1] transition-all flex items-center gap-2">
                         <i class="fa-solid fa-arrow-left"></i> {{ __('Back to Builder') }}
                     </a>
 
                     @if($survey->share_report_token)
                         <button @click="copyShareLink()"
-                            class="px-5 py-3 bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center gap-2">
+                            class="px-5 py-3 bg-[#2271b1] text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-zinc-200/50 hover:bg-[#135e96] transition-all flex items-center gap-2">
                             <i class="fa-solid fa-share-nodes"></i> {{ __('Copy Share Link') }}
                         </button>
                     @endif
@@ -36,7 +36,7 @@
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                     <div>
                         <span
-                            class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600">
+                            class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-zinc-100 text-[#2271b1]">
                             {{ __('Interactive Report') }}
                         </span>
                         <h1 class="text-2xl font-black text-gray-900 tracking-tight mt-2" x-text="survey.title"></h1>
@@ -47,7 +47,7 @@
                         <div class="text-center px-4 border-r border-gray-100">
                             <span
                                 class="block text-[9px] font-black text-gray-400 uppercase tracking-widest">{{ __('Total Responses') }}</span>
-                            <span class="text-lg font-black text-indigo-600" x-text="totalResponses"></span>
+                            <span class="text-lg font-black text-[#2271b1]" x-text="totalResponses"></span>
                         </div>
                         <div class="text-center px-4">
                             <span
@@ -78,7 +78,7 @@
                         <!-- Metric Card -->
                         <template x-if="widget.chart_type === 'metric'">
                             <div class="text-center py-8 flex flex-col items-center justify-center">
-                                <h2 class="text-5xl font-black text-indigo-600 tracking-tight"
+                                <h2 class="text-5xl font-black text-[#2271b1] tracking-tight"
                                     x-text="getMetricValue(widget.question_id)"></h2>
 
                                 <!-- Stars for Star/Rating Questions -->
@@ -133,7 +133,7 @@
                                                             <span x-text="row.percentage + '%'"></span>
                                                             <div
                                                                 class="w-16 bg-gray-100 h-1.5 rounded-full inline-block ml-2 overflow-hidden">
-                                                                <div class="bg-indigo-500 h-full"
+                                                                <div class="bg-zinc-1000 h-full"
                                                                     :style="'width: ' + row.percentage + '%'"></div>
                                                             </div>
                                                         </td>
@@ -150,7 +150,7 @@
                                         <div class="max-h-60 overflow-y-auto pr-1 flex flex-col gap-2.5 custom-scrollbar">
                                             <template x-for="(ans, idx) in getPaginatedAnswers(widget)" :key="idx">
                                                 <div
-                                                    class="text-xs font-medium text-gray-700 leading-relaxed italic border-l-4 border-indigo-500 pl-3 bg-gray-50/50 p-2.5 rounded-r-xl flex items-center justify-between gap-4">
+                                                    class="text-xs font-medium text-gray-700 leading-relaxed italic border-l-4 border-[#2271b1] pl-3 bg-gray-50/50 p-2.5 rounded-r-xl flex items-center justify-between gap-4">
                                                     <div class="flex-1">
                                                         <template
                                                             x-if="!ans.includes('base64,') && !ans.startsWith('uploads/')">
@@ -158,16 +158,16 @@
                                                         </template>
                                                         <template x-if="ans.startsWith('uploads/')">
                                                             <div class="flex items-center gap-2">
-                                                                <i class="fa-solid fa-file-arrow-down text-indigo-500"></i>
+                                                                <i class="fa-solid fa-file-arrow-down text-zinc-2000"></i>
                                                                 <a :href="'/' + ans" target="_blank"
-                                                                    class="text-indigo-600 hover:underline font-bold"
+                                                                    class="text-[#2271b1] hover:underline font-bold"
                                                                     x-text="ans.split('/').pop()"></a>
                                                             </div>
                                                         </template>
                                                     </div>
                                                     <template x-if="ans.includes('base64,')">
                                                         <button @click="showSignature(ans)"
-                                                            class="px-3 py-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
+                                                            class="px-3 py-1 bg-zinc-100 text-[#2271b1] hover:bg-zinc-200 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
                                                             <i
                                                                 class="fa-solid fa-signature mr-1"></i>{{ __('View Signature') }}
                                                         </button>
@@ -199,13 +199,13 @@
                                                     <button
                                                         @click="widget.currentPage = Math.max(1, widget.currentPage - 1)"
                                                         :disabled="widget.currentPage === 1"
-                                                        class="px-2.5 py-1 bg-gray-50 hover:bg-indigo-50 text-gray-500 hover:text-indigo-600 disabled:opacity-50 disabled:hover:bg-gray-50 disabled:hover:text-gray-500 border border-gray-100 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
+                                                        class="px-2.5 py-1 bg-gray-50 hover:bg-zinc-100 text-gray-500 hover:text-[#2271b1] disabled:opacity-50 disabled:hover:bg-gray-50 disabled:hover:text-gray-500 border border-gray-100 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
                                                         <i class="fa-solid fa-chevron-left mr-1"></i>{{ __('Prev') }}
                                                     </button>
                                                     <button
                                                         @click="widget.currentPage = Math.min(getTotalPages(widget), widget.currentPage + 1)"
                                                         :disabled="widget.currentPage >= getTotalPages(widget)"
-                                                        class="px-2.5 py-1 bg-gray-50 hover:bg-indigo-50 text-gray-500 hover:text-indigo-600 disabled:opacity-50 disabled:hover:bg-gray-50 disabled:hover:text-gray-500 border border-gray-100 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
+                                                        class="px-2.5 py-1 bg-gray-50 hover:bg-zinc-100 text-gray-500 hover:text-[#2271b1] disabled:opacity-50 disabled:hover:bg-gray-50 disabled:hover:text-gray-500 border border-gray-100 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
                                                         {{ __('Next') }}<i class="fa-solid fa-chevron-right ml-1"></i>
                                                     </button>
                                                 </div>

@@ -6,14 +6,14 @@
         <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden mb-6">
             <div class="p-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">{{ __('Invite Campaigns') }}</h3>
+                    <h3 class="text-xs font-bold text-gray-500 tracking-wider">{{ __('Invite Campaigns') }}</h3>
                     <p class="text-xs text-gray-400 font-medium mt-1">
-                        {{ __('Manage your survey invitation campaigns, schedule emails, track response rates, and send reminders.') }}
+                        {{ __('Manage your survey invitation campaigns, schedule emails, track response rates and send reminders.') }}
                     </p>
                 </div>
                 <div>
                     <a href="{{ route('surveys.campaigns.create', $survey) }}"
-                        class="inline-flex items-center px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 transition-all transform hover:-translate-y-1">
+                        class="inline-flex items-center px-6 py-3 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-xl font-bold text-xs tracking-widest shadow-lg shadow-zinc-200/50 transition-all transform hover:-translate-y-1">
                         <i class="fa-solid fa-plus mr-2"></i> {{ __('Create Campaign') }}
                     </a>
                 </div>
@@ -21,7 +21,7 @@
 
             @if(session('success'))
                 <div class="mx-8 mb-8 p-4 bg-green-50 border border-green-100 rounded-2xl">
-                    <p class="text-xs text-green-700 font-bold uppercase tracking-widest">
+                    <p class="text-xs text-green-700 font-bold  tracking-widest">
                         <i class="fa-solid fa-circle-check mr-2"></i> {{ session('success') }}
                     </p>
                 </div>
@@ -29,7 +29,7 @@
 
             @if(session('error'))
                 <div class="mx-8 mb-8 p-4 bg-red-50 border border-red-100 rounded-2xl">
-                    <p class="text-xs text-red-700 font-bold uppercase tracking-widest">
+                    <p class="text-xs text-red-700 font-bold tracking-widest">
                         <i class="fa-solid fa-circle-xmark mr-2"></i> {{ session('error') }}
                     </p>
                 </div>
@@ -88,7 +88,7 @@
                                             </span>
                                         @elseif($campaign->status === 'sending')
                                             <span
-                                                class="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-600 border border-indigo-200">
+                                                class="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-zinc-200 text-[#2271b1] border border-zinc-300">
                                                 {{ __('Sending') }}
                                             </span>
                                         @elseif($campaign->status === 'completed')
@@ -116,7 +116,7 @@
                                                 @php
                                                     $percent = $campaign->recipients_count > 0 ? ($campaign->total_responded / $campaign->recipients_count) * 100 : 0;
                                                 @endphp
-                                                <div class="bg-indigo-600 h-full rounded-full" style="width: {{ $percent }}%"></div>
+                                                <div class="bg-[#2271b1] h-full rounded-full" style="width: {{ $percent }}%"></div>
                                             </div>
                                             <span class="block text-[8px] text-gray-400 font-medium mt-1">
                                                 {{ __('Sent: :sent | Opened: :opened', ['sent' => $campaign->total_sent, 'opened' => $campaign->total_opened]) }}
@@ -126,7 +126,7 @@
                                     <td class="py-4 px-6 text-right">
                                         <div class="flex items-center justify-end space-x-2">
                                             <a href="{{ route('surveys.campaigns.show', [$survey, $campaign]) }}"
-                                                class="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 hover:text-indigo-600 hover:border-indigo-100 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors">
+                                                class="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 hover:text-[#2271b1] hover:border-zinc-200 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors">
                                                 <i class="fa-solid fa-eye mr-1"></i> {{ __('View') }}
                                             </a>
 

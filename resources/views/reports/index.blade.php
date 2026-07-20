@@ -4,7 +4,8 @@
     <div class="mb-8 flex items-center justify-between px-4 sm:px-0">
         <div>
             <h2 class="text-2xl font-black text-gray-900 tracking-tight uppercase">{{ __('Survey Reports') }}</h2>
-            <p class="mt-1 text-sm text-gray-500 font-medium">{{ __('Generate and view analytical reports for your research surveys.') }}</p>
+            <p class="mt-1 text-sm text-gray-500 font-medium">
+                {{ __('Generate and view analytical reports for your research surveys.') }}</p>
         </div>
     </div>
 
@@ -12,23 +13,25 @@
         <form action="{{ url()->current() }}" method="GET" class="flex flex-col md:flex-row gap-4 items-center">
             <div class="relative w-full md:w-96 group">
                 <i
-                    class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 group-focus-within:text-indigo-600 transition-colors"></i>
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="{{ __('Search by title...') }}"
-                    class="w-full pl-12 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all shadow-sm">
+                    class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 group-focus-within:text-[#2271b1] transition-colors"></i>
+                <input type="text" name="search" value="{{ request('search') }}"
+                    placeholder="{{ __('Search by title...') }}"
+                    class="w-full pl-12 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-[#2271b1]/20 focus:border-[#2271b1] transition-all shadow-sm">
             </div>
             <div class="relative w-full md:w-64 group">
                 <i
-                    class="fa-solid fa-filter absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 group-focus-within:text-indigo-600 transition-colors"></i>
+                    class="fa-solid fa-filter absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 group-focus-within:text-[#2271b1] transition-colors"></i>
                 <select name="category"
-                    class="w-full pl-12 pr-10 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 appearance-none transition-all shadow-sm">
+                    class="w-full pl-12 pr-10 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-[#2271b1]/20 focus:border-[#2271b1] appearance-none transition-all shadow-sm">
                     <option value="">{{ __('All Categories') }}</option>
                     @foreach(['academic', 'baseline', 'feasibility', 'market_research', 'others', 'polls'] as $cat)
-                        <option value="{{ $cat }}" {{ request('category') === $cat ? 'selected' : '' }}>{{ __(ucfirst(str_replace('_', ' ', $cat))) }}</option>
+                        <option value="{{ $cat }}" {{ request('category') === $cat ? 'selected' : '' }}>
+                            {{ __(ucfirst(str_replace('_', ' ', $cat))) }}</option>
                     @endforeach
                 </select>
             </div>
             <button type="submit"
-                class="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">
+                class="px-8 py-3 bg-[#2271b1] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-zinc-200/50 hover:bg-[#135e96] transition-all">
                 {{ __('Filter') }}
             </button>
             @if(request()->anyFilled(['search', 'category']))
@@ -48,13 +51,16 @@
                         <tr>
                             <th scope="col"
                                 class="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                {{ __('Survey Detail') }}</th>
+                                {{ __('Survey Detail') }}
+                            </th>
                             <th scope="col"
                                 class="px-6 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                {{ __('Responses') }}</th>
+                                {{ __('Responses') }}
+                            </th>
                             <th scope="col"
                                 class="px-8 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                {{ __('Action') }}</th>
+                                {{ __('Action') }}
+                            </th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-50">
@@ -70,16 +76,16 @@
                                 </td>
                                 <td class="px-6 py-6">
                                     <div class="flex items-center">
-                                        <span class="text-sm font-black text-indigo-600 mr-2">{{ $survey->responses_count }}</span>
+                                        <span class="text-sm font-black text-[#2271b1] mr-2">{{ $survey->responses_count }}</span>
                                         <div class="w-16 h-1 bg-gray-100 rounded-full overflow-hidden">
-                                            <div class="h-full bg-indigo-500"
+                                            <div class="h-full bg-zinc-1000"
                                                 style="width: {{ min(100, $survey->responses_count * 5) }}%"></div>
                                         </div>
                                     </div>
                                 </td>
                                 <td class="px-8 py-6 text-right">
                                     <a href="{{ route('surveys.report', $survey) }}"
-                                        class="inline-flex items-center px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-indigo-100">
+                                        class="inline-flex items-center px-4 py-2 bg-zinc-100 text-[#2271b1] rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#2271b1] hover:text-white transition-all shadow-sm border border-zinc-200">
                                         <i class="fa-solid fa-chart-pie mr-2"></i> {{ __('Report') }}
                                     </a>
                                 </td>
@@ -97,7 +103,8 @@
             <div class="px-4 py-12 flex flex-col items-center justify-center text-center sm:px-6">
                 <i class="fa-solid fa-chart-line text-gray-300 text-5xl mb-4"></i>
                 <p class="text-gray-500 font-medium text-lg">{{ __('No reports available') }}</p>
-                <p class="text-gray-400 text-sm mt-1">{{ __('Once you have active surveys with responses, you can generate reports here.') }}</p>
+                <p class="text-gray-400 text-sm mt-1">
+                    {{ __('Once you have active surveys with responses, you can generate reports here.') }}</p>
             </div>
         @endif
     </div>

@@ -39,7 +39,7 @@
                                 <i class="fa-solid fa-envelope text-gray-400"></i>
                             </div>
                             <input id="email" name="email" type="email" autocomplete="email" required
-                                class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md @error('email') border-red-300 text-red-900 placeholder-red-300 focus:outline-none focus:ring-red-500 focus:border-red-500 @enderror"
+                                class="focus:ring-[#2271b1] focus:border-[#2271b1] block w-full pl-10 sm:text-sm border-gray-300 rounded-md @error('email') border-red-300 text-red-900 placeholder-red-300 focus:outline-none focus:ring-red-500 focus:border-red-500 @enderror"
                                 value="{{ old('email') }}">
                         </div>
                         @error('email')
@@ -49,7 +49,7 @@
 
                     <div>
                         <button type="submit"
-                            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#2271b1] hover:bg-[#135e96] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2271b1]">
                             Send Password Reset Link
                         </button>
                     </div>
@@ -68,7 +68,7 @@
                     </div>
 
                     <div class="mt-6 text-center">
-                        <a href="{{ route('login') }}" class="font-medium text-indigo-600 hover:text-indigo-500">
+                        <a href="{{ route('login') }}" class="font-medium text-[#2271b1] hover:text-zinc-2000">
                             Login Selection
                         </a>
                     </div>

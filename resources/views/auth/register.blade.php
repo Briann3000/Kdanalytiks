@@ -10,7 +10,7 @@
 @section('content')
     <div class="min-h-[80vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
-            <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
+            <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-zinc-200 text-[#2271b1]">
                 <i class="fa-solid fa-user-plus text-xl"></i>
             </div>
             <h2 class="mt-6 text-3xl font-extrabold text-gray-900">{{ __($roleLabel . ' Registration') }}</h2>
@@ -65,7 +65,7 @@
                             <label for="name" class="block text-sm font-medium text-gray-700">{{ __('Full Name') }}</label>
                             <div class="mt-1">
                                 <input id="name" name="name" type="text" required
-                                    class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                    class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#2271b1] focus:border-[#2271b1] sm:text-sm">
                             </div>
                         </div>
 
@@ -74,7 +74,7 @@
                                 class="block text-sm font-medium text-gray-700">{{ __('Email address') }}</label>
                             <div class="mt-1">
                                 <input id="email" name="email" type="email" required
-                                    class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                    class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#2271b1] focus:border-[#2271b1] sm:text-sm">
                             </div>
                         </div>
 
@@ -83,7 +83,7 @@
                                 class="block text-sm font-medium text-gray-700">{{ __('Phone Number (Optional)') }}</label>
                             <div class="mt-1">
                                 <input id="phone_number" name="phone_number" type="text"
-                                    class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                    class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#2271b1] focus:border-[#2271b1] sm:text-sm">
                             </div>
                         </div>
 
@@ -93,7 +93,7 @@
                                     class="block text-sm font-medium text-gray-700">{{ __('Organization Name') }}</label>
                                 <div class="mt-1">
                                     <input id="organization_name" name="organization_name" type="text" required
-                                        class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                        class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#2271b1] focus:border-[#2271b1] sm:text-sm">
                                 </div>
                             </div>
                         @elseif($role == 'independent')
@@ -102,7 +102,7 @@
                                     class="block text-sm font-medium text-gray-700">{{ __('Institution (Optional)') }}</label>
                                 <div class="mt-1">
                                     <input id="institution" name="institution" type="text"
-                                        class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                        class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#2271b1] focus:border-[#2271b1] sm:text-sm">
                                 </div>
                             </div>
                             <div class="sm:col-span-6">
@@ -110,7 +110,7 @@
                                     class="block text-sm font-medium text-gray-700">{{ __('Research Area (Optional)') }}</label>
                                 <div class="mt-1">
                                     <input id="research_area" name="research_area" type="text"
-                                        class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                        class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#2271b1] focus:border-[#2271b1] sm:text-sm">
                                 </div>
                             </div>
                         @endif
@@ -120,10 +120,10 @@
                                 class="block text-sm font-medium text-gray-700">{{ __('Password') }}</label>
                             <div class="mt-1 relative rounded-md shadow-sm">
                                 <input id="password" name="password" type="password" required
-                                    class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm pr-10">
+                                    class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-[#2271b1] focus:border-[#2271b1] sm:text-sm pr-10">
                                 <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
                                     <button type="button" onclick="togglePassword('password', 'password-icon')"
-                                        class="text-gray-400 hover:text-indigo-600 focus:outline-none">
+                                        class="text-gray-400 hover:text-[#2271b1] focus:outline-none">
                                         <i id="password-icon" class="fa-solid fa-eye"></i>
                                     </button>
                                 </div>
@@ -135,11 +135,11 @@
                                 class="block text-sm font-medium text-gray-700">{{ __('Confirm Password') }}</label>
                             <div class="mt-1 relative rounded-md shadow-sm">
                                 <input id="password_confirmation" name="password_confirmation" type="password" required
-                                    class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm pr-10">
+                                    class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-[#2271b1] focus:border-[#2271b1] sm:text-sm pr-10">
                                 <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
                                     <button type="button"
                                         onclick="togglePassword('password_confirmation', 'conf-password-icon')"
-                                        class="text-gray-400 hover:text-indigo-600 focus:outline-none">
+                                        class="text-gray-400 hover:text-[#2271b1] focus:outline-none">
                                         <i id="conf-password-icon" class="fa-solid fa-eye"></i>
                                     </button>
                                 </div>
@@ -149,7 +149,7 @@
 
                     <div class="mt-6">
                         <button type="submit"
-                            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#2271b1] hover:bg-[#135e96] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2271b1] transition-colors">
                             <i class="fa-solid fa-user-plus mt-0.5 mr-2"></i> {{ __('Register Account') }}
                         </button>
                     </div>
@@ -167,7 +167,7 @@
 
                     <div class="mt-6 text-center">
                         <a href="{{ route('login.role', ['role' => $roleName, 'redirect' => request('redirect')]) }}"
-                            class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                            class="text-sm font-medium text-[#2271b1] hover:text-zinc-2000">
                             {{ __('Sign in to your :role account', ['role' => __($roleLabel)]) }}
                         </a>
                     </div>

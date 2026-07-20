@@ -88,13 +88,13 @@
                                 <label
                                     class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{{ __('Survey Title') }}</label>
                                 <input type="text" name="title" value="{{ $survey->title }}"
-                                    class="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                                    class="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 focus:ring-2 focus:ring-[#2271b1]/20 focus:border-[#2271b1] transition-all">
                             </div>
                             <div>
                                 <label
                                     class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{{ __('Description') }}</label>
                                 <textarea name="description" rows="3"
-                                    class="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-medium text-gray-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">{{ $survey->description }}</textarea>
+                                    class="w-full bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm font-medium text-gray-900 focus:ring-2 focus:ring-[#2271b1]/20 focus:border-[#2271b1] transition-all">{{ $survey->description }}</textarea>
                             </div>
 
                             <div class="p-6 rounded-2xl border border-gray-100 bg-gray-50/50">
@@ -120,7 +120,7 @@
 
                     <div class="flex justify-end mt-8">
                         <button type="submit"
-                            class="px-8 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">
+                            class="px-8 py-3 bg-[#2271b1] text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-zinc-200/50 hover:bg-[#135e96] transition-all">
                             {{ __('Update Survey Details') }}
                         </button>
                     </div>
@@ -139,9 +139,9 @@
                     </div>
                     <div class="md:col-span-2 space-y-6">
 
-                        <div class="p-6 rounded-2xl border border-indigo-100 bg-indigo-50/20">
+                        <div class="p-6 rounded-2xl border border-zinc-200 bg-zinc-100">
                             <label
-                                class="block text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-3">{{ __('Shareable Survey Link') }}</label>
+                                class="block text-[10px] font-black text-[#2271b1] uppercase tracking-widest mb-3">{{ __('Shareable Survey Link') }}</label>
                             @php
                                 $shareUrl = route('surveys.show', ['survey' => $survey, 'token' => $survey->share_token]);
                             @endphp
@@ -150,7 +150,7 @@
                                     class="flex-1 bg-white border-gray-100 rounded-xl px-4 py-3 text-[11px] font-bold text-gray-600">
                                 <button
                                     onclick="navigator.clipboard.writeText('{{ $shareUrl }}'); alert('{{ __('Link copied!') }}')"
-                                    class="p-3 bg-white border border-gray-100 text-gray-400 rounded-xl hover:text-indigo-600 transition-all">
+                                    class="p-3 bg-white border border-gray-100 text-gray-400 rounded-xl hover:text-[#2271b1] transition-all">
                                     <i class="fa-solid fa-copy"></i>
                                 </button>
                             </div>
@@ -189,7 +189,7 @@
                         <p class="text-[11px] text-gray-400 font-bold leading-relaxed">
                             {{ __('Manage specific user access and roles.') }}</p>
                         <button @click="addPanelOpen = !addPanelOpen"
-                            class="mt-4 px-4 py-2 border border-indigo-200 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 transition-all flex items-center gap-2">
+                            class="mt-4 px-4 py-2 border border-zinc-300 text-[#2271b1] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-100 transition-all flex items-center gap-2">
                             <i class="fa-solid" :class="addPanelOpen ? 'fa-minus' : 'fa-plus'"></i>
                             <span
                                 x-text="addPanelOpen ? '{{ __('Close Add Form') }}' : '{{ __('Add Collaborator') }}'"></span>
@@ -198,21 +198,21 @@
                     <div class="md:col-span-2 space-y-6">
                         <!-- Add Collaborator Panel -->
                         <div x-show="addPanelOpen" x-transition
-                            class="p-6 bg-indigo-50/30 border border-indigo-100 rounded-2xl animate-in slide-in-from-top-2">
+                            class="p-6 bg-zinc-100 border border-zinc-200 rounded-2xl animate-in slide-in-from-top-2">
                             <form action="{{ route('surveys.collaborators.add', $survey) }}" method="POST"
                                 class="space-y-6">
                                 @csrf
                                 <div>
                                     <label
-                                        class="block text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-2">{{ __('User Email') }}</label>
+                                        class="block text-[10px] font-black text-[#2271b1] uppercase tracking-widest mb-2">{{ __('User Email') }}</label>
                                     <input type="email" name="email" required
                                         placeholder="{{ __('Collaborator Email...') }}"
-                                        class="w-full bg-white border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                                        class="w-full bg-white border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-[#2271b1]/20 focus:border-[#2271b1] transition-all">
                                 </div>
 
                                 <div>
                                     <label
-                                        class="block text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-3">{{ __('Permissions') }}</label>
+                                        class="block text-[10px] font-black text-[#2271b1] uppercase tracking-widest mb-3">{{ __('Permissions') }}</label>
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
                                         @php
                                             $perms = [
@@ -229,7 +229,7 @@
                                         @foreach($perms as $perm)
                                             <label class="flex items-center space-x-3 cursor-pointer group">
                                                 <input type="checkbox" name="{{ $perm['key'] }}" value="1"
-                                                    class="w-4 h-4 rounded border-indigo-200 text-indigo-600 focus:ring-indigo-500">
+                                                    class="w-4 h-4 rounded border-zinc-300 text-[#2271b1] focus:ring-[#2271b1]">
                                                 <span
                                                     class="text-[11px] font-bold text-gray-600 group-hover:text-gray-900 transition-colors">{{ $perm['label'] }}</span>
                                             </label>
@@ -239,7 +239,7 @@
 
                                 <div class="flex justify-end pt-4">
                                     <button type="submit"
-                                        class="px-8 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100">
+                                        class="px-8 py-3 bg-[#2271b1] text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#135e96] transition-all shadow-md shadow-zinc-200/50">
                                         {{ __('Save Collaborator') }}
                                     </button>
                                 </div>
@@ -252,12 +252,12 @@
                                 class="p-5 bg-white border border-gray-100 rounded-3xl flex items-center justify-between shadow-sm">
                                 <div class="flex items-center space-x-4">
                                     <div
-                                        class="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xs font-black uppercase">
+                                        class="w-10 h-10 rounded-2xl bg-[#2271b1] text-white flex items-center justify-center text-xs font-black uppercase">
                                         {{ substr($survey->creator->name, 0, 2) }}
                                     </div>
                                     <div>
                                         <p class="text-sm font-black text-gray-900">{{ $survey->creator->name }} <span
-                                                class="ml-2 text-[9px] text-indigo-500 uppercase tracking-widest border border-indigo-100 px-2 py-0.5 rounded-full bg-indigo-50/50">{{ __('Owner') }}</span>
+                                                class="ml-2 text-[9px] text-zinc-2000 uppercase tracking-widest border border-zinc-200 px-2 py-0.5 rounded-full bg-zinc-100/50">{{ __('Owner') }}</span>
                                         </p>
                                         <p class="text-[10px] text-gray-400 font-bold lowercase tracking-wider">
                                             {{ $survey->creator->email }}
@@ -266,13 +266,13 @@
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <span
-                                        class="px-3 py-1 bg-indigo-50 text-indigo-600 text-[9px] font-black uppercase tracking-widest rounded-lg">{{ __('All Permissions') }}</span>
+                                        class="px-3 py-1 bg-zinc-100 text-[#2271b1] text-[9px] font-black uppercase tracking-widest rounded-lg">{{ __('All Permissions') }}</span>
                                 </div>
                             </div>
 
                             @foreach($survey->collaborators as $collaborator)
                                 <div
-                                    class="p-5 bg-white border border-gray-100 rounded-3xl flex items-center justify-between group shadow-sm hover:border-indigo-100 transition-all">
+                                    class="p-5 bg-white border border-gray-100 rounded-3xl flex items-center justify-between group shadow-sm hover:border-zinc-200 transition-all">
                                     <div class="flex items-center space-x-4">
                                         <div
                                             class="w-10 h-10 rounded-2xl bg-gray-100 text-gray-500 flex items-center justify-center text-xs font-black uppercase">
@@ -320,7 +320,7 @@
                         <p class="text-[11px] text-gray-400 font-bold leading-relaxed">
                             {{ __('Create isolated groups for students or researchers to collaborate on results together.') }}</p>
                         <button type="button" @click="addGroupOpen = !addGroupOpen"
-                            class="mt-4 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all">
+                            class="mt-4 px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-[#135e96] text-[10px] font-black uppercase tracking-widest rounded-xl transition-all">
                             <span x-text="addGroupOpen ? '{{ __('Close') }}' : '{{ __('Create Group') }}'"></span>
                         </button>
                     </div>
@@ -334,11 +334,11 @@
                                 <div class="flex items-center gap-3">
                                     <div class="flex-1">
                                         <input type="text" name="name" required
-                                            class="w-full px-4 py-3 bg-white border border-gray-100 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                                            class="w-full px-4 py-3 bg-white border border-gray-100 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1]"
                                             placeholder="{{ __('Group Name (e.g. Group A)...') }}">
                                     </div>
                                     <button type="submit"
-                                        class="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
+                                        class="px-5 py-3 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
                                         {{ __('Create') }}
                                     </button>
                                 </div>
@@ -358,7 +358,7 @@
                                         <div>
                                             <p class="text-xs font-black text-gray-900">{{ $group->name }}</p>
                                             <div class="flex items-center gap-2 mt-1">
-                                                <span class="text-[9px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                                <span class="text-[9px] font-black text-[#2271b1] bg-zinc-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
                                                     {{ $group->users_count ?? $group->users()->count() }} {{ __('Members') }}
                                                 </span>
                                                 <span class="text-[9px] text-gray-400 font-bold">
@@ -383,24 +383,24 @@
                                                             } else { 
                                                                 shareOpen = !shareOpen; 
                                                             }"
-                                                    class="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all">
+                                                    class="p-2 text-gray-400 hover:text-[#2271b1] hover:bg-zinc-100 rounded-xl transition-all">
                                                     <i class="fa-solid fa-share-nodes"></i>
                                                 </button>
                                                 <div x-show="shareOpen" x-transition
                                                     class="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 p-2 space-y-1"
                                                     style="display: none;">
                                                     <a href="https://wa.me/?text={{ urlencode(__('Join our survey analysis group: ') . $group->name . ' - ' . $joinUrl) }}" target="_blank"
-                                                        class="flex items-center gap-3 px-3 py-2 text-[11px] font-bold text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-colors">
+                                                        class="flex items-center gap-3 px-3 py-2 text-[11px] font-bold text-gray-600 hover:bg-zinc-100 hover:text-[#135e96] rounded-xl transition-colors">
                                                         <i class="fa-brands fa-whatsapp text-emerald-500 text-sm"></i>
                                                         {{ __('Share to WhatsApp') }}
                                                     </a>
                                                     <a href="mailto:?subject={{ urlencode(__('Survey Group Analysis Invitation')) }}&body={{ urlencode(__('Join our survey analysis group: ') . $group->name . ' - ') }}{{ urlencode($joinUrl) }}"
-                                                        class="flex items-center gap-3 px-3 py-2 text-[11px] font-bold text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-colors">
+                                                        class="flex items-center gap-3 px-3 py-2 text-[11px] font-bold text-gray-600 hover:bg-zinc-100 hover:text-[#135e96] rounded-xl transition-colors">
                                                         <i class="fa-solid fa-envelope text-gray-400 text-sm"></i>
                                                         {{ __('Share via Email') }}
                                                     </a>
                                                     <a href="https://twitter.com/intent/tweet?url={{ urlencode($joinUrl) }}&text={{ urlencode(__('Join our survey analysis group: ') . $group->name) }}" target="_blank"
-                                                        class="flex items-center gap-3 px-3 py-2 text-[11px] font-bold text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-colors">
+                                                        class="flex items-center gap-3 px-3 py-2 text-[11px] font-bold text-gray-600 hover:bg-zinc-100 hover:text-[#135e96] rounded-xl transition-colors">
                                                         <i class="fa-brands fa-twitter text-slate-900 text-sm"></i>
                                                         {{ __('Share to Twitter') }}
                                                     </a>
@@ -503,7 +503,7 @@
                                             @endif
                                             <div class="flex-1">
                                                 <input type="file" name="export_logo" accept="image/*"
-                                                    class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-all cursor-pointer">
+                                                    class="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-zinc-100 file:text-[#135e96] hover:file:bg-zinc-200 transition-all cursor-pointer">
                                                 <p class="mt-1 text-[10px] text-gray-400 font-medium">
                                                     {{ __('PNG or JPG, max 2MB. Applied to PDF header.') }}</p>
                                             </div>
@@ -514,7 +514,7 @@
                                             class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{{ __('Organization Name') }}</label>
                                         <input type="text" name="export_org_name" value="{{ $survey->export_org_name }}"
                                             placeholder="e.g. Acme Corp"
-                                            class="w-full text-sm border-gray-200 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 placeholder-gray-300">
+                                            class="w-full text-sm border-gray-200 rounded-xl focus:ring-[#2271b1] focus:border-[#2271b1] bg-gray-50 placeholder-gray-300">
                                         <p class="mt-1 text-[10px] text-gray-400 font-medium">
                                             {{ __('Text to display alongside or instead of the logo.') }}</p>
                                     </div>
@@ -628,7 +628,7 @@
 
             <div class="p-8 bg-gray-50 border-t border-gray-100 flex justify-end">
                 <button type="submit" form="details-form"
-                    class="px-8 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">
+                    class="px-8 py-3 bg-[#2271b1] text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-zinc-200/50 hover:bg-[#135e96] transition-all">
                     {{ __('Save Settings') }}
                 </button>
             </div>

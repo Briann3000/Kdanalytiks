@@ -88,21 +88,21 @@
         this.feedback = '';
     }
 }"
-    class="bg-gradient-to-br from-white to-indigo-50/30 rounded-3xl p-6 border border-indigo-100 shadow-sm mt-6 min-h-[100px] flex flex-col justify-center">
+    class="bg-gradient-to-br from-white to-zinc-100/30 rounded-3xl p-6 border border-zinc-200 shadow-sm mt-6 min-h-[100px] flex flex-col justify-center">
     <div class="flex items-start gap-4">
         <div class="flex-shrink-0">
             <div
-                class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                class="w-10 h-10 rounded-xl bg-[#2271b1] flex items-center justify-center text-white shadow-lg shadow-zinc-200/50">
                 <i class="fa-solid fa-chart-pie text-sm"></i>
             </div>
         </div>
         <div class="flex-1 w-full overflow-hidden">
             <div class="flex items-center justify-between mb-3">
-                <h5 class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">
+                <h5 class="text-[10px] font-black text-[#2271b1] uppercase tracking-widest">
                     {{ __('AI Trend Interpretation') }}
                 </h5>
                 <span x-show="messages.length > 0"
-                    class="text-[9px] font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full uppercase"
+                    class="text-[9px] font-black bg-zinc-200 text-[#135e96] px-2 py-0.5 rounded-full uppercase"
                     style="display: none;">
                     {{ __('Interactive Chat') }}
                 </span>
@@ -124,7 +124,7 @@
                     <div class="flex flex-col mb-1" :class="msg.role === 'user' ? 'items-end' : 'items-start'">
                         <div class="max-w-[85%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed font-medium shadow-sm"
                             :class="msg.role === 'user' 
-                                     ? 'bg-indigo-600 text-white rounded-br-none' 
+                                     ? 'bg-[#2271b1] text-white rounded-br-none' 
                                      : 'bg-gray-100/80 text-gray-800 rounded-bl-none border border-gray-200/50'">
                             <p class="whitespace-pre-wrap" x-text="msg.content"></p>
                         </div>
@@ -140,18 +140,18 @@
             </div>
 
             <!-- Polish / Refinement Input Bar inside Chat -->
-            <div x-show="messages.length > 0 && !loading" class="mt-5 pt-4 border-t border-indigo-100/50"
+            <div x-show="messages.length > 0 && !loading" class="mt-5 pt-4 border-t border-zinc-200/50"
                 style="display: none;">
                 <div class="flex flex-col md:flex-row gap-3 items-end">
                     <div class="flex-1 w-full">
                         <label
-                            class="block text-[9px] font-black text-indigo-600 uppercase tracking-widest mb-1.5">{{ __('Refine this analysis (e.g. "Focus more on X", "Keep it simple")') }}</label>
+                            class="block text-[9px] font-black text-[#2271b1] uppercase tracking-widest mb-1.5">{{ __('Refine this analysis (e.g. "Focus more on X", "Keep it simple")') }}</label>
                         <input x-model="feedback" type="text" placeholder="{{ __('Type instructions to refine...') }}"
                             @keydown.enter="polish()"
-                            class="w-full bg-gray-50 border border-indigo-100 text-xs font-semibold rounded-xl px-3 py-2.5 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all">
+                            class="w-full bg-gray-50 border border-zinc-200 text-xs font-semibold rounded-xl px-3 py-2.5 focus:ring-1 focus:ring-[#2271b1] focus:outline-none transition-all">
                     </div>
                     <button @click="polish()" :disabled="aiPolishing || !feedback.trim()"
-                        class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-1.5 self-stretch justify-center whitespace-nowrap">
+                        class="px-5 py-2.5 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-1.5 self-stretch justify-center whitespace-nowrap">
                         <i class="fa-solid fa-paper-plane" :class="{'fa-spin': aiPolishing}"></i>
                         <span x-text="aiPolishing ? '{{ __('Polishing...') }}' : '{{ __('Polish') }}'"></span>
                     </button>
@@ -159,16 +159,16 @@
             </div>
 
             <!-- Actions Menu -->
-            <div class="mt-4 pt-4 border-t border-indigo-100/50 flex justify-between items-center">
+            <div class="mt-4 pt-4 border-t border-zinc-200/50 flex justify-between items-center">
                 <div class="flex items-center">
                     <button x-show="messages.length > 0" @click="copyFinalOutput()"
-                        class="flex items-center gap-1 text-[9px] font-black text-gray-400 uppercase tracking-widest hover:text-indigo-600 transition-colors mr-4"
+                        class="flex items-center gap-1 text-[9px] font-black text-gray-400 uppercase tracking-widest hover:text-[#2271b1] transition-colors mr-4"
                         style="display: none;">
                         <i class="fa-solid fa-copy"></i>
                         {{ __('Copy Output') }}
                     </button>
                     <button x-show="messages.length > 0" @click="downloadFinalOutput()"
-                        class="flex items-center gap-1 text-[9px] font-black text-gray-400 uppercase tracking-widest hover:text-indigo-600 transition-colors"
+                        class="flex items-center gap-1 text-[9px] font-black text-gray-400 uppercase tracking-widest hover:text-[#2271b1] transition-colors"
                         style="display: none;">
                         <i class="fa-solid fa-download"></i>
                         {{ __('Export TXT') }}
@@ -177,7 +177,7 @@
                 <div>
                     @if(auth()->user() && auth()->user()->canUseAiAnalysis())
                         <button @click="generate()" x-show="messages.length === 0 && !loading"
-                            class="flex items-center gap-2 text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors">
+                            class="flex items-center gap-2 text-[9px] font-black text-[#2271b1] uppercase tracking-widest hover:text-[#135e96] transition-colors">
                             <i class="fa-solid fa-chart-line"></i>
                             {{ __('Deep Trend Analysis') }}
                         </button>
@@ -188,7 +188,7 @@
                         </button>
                     @else
                         <button @click="window.location.href='{{ route('subscriptions.index') }}'"
-                            class="flex items-center gap-2 text-[9px] font-black text-gray-400 uppercase tracking-widest hover:text-indigo-500 transition-colors">
+                            class="flex items-center gap-2 text-[9px] font-black text-gray-400 uppercase tracking-widest hover:text-zinc-2000 transition-colors">
                             <i class="fa-solid fa-lock text-[8px]"></i>
                             {{ __('Deep Analysis (Premium)') }}
                         </button>

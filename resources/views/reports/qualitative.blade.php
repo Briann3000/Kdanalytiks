@@ -14,7 +14,7 @@
                     @php 
                         $userRoleVal = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
                     @endphp
-                    <li><a href="{{ route($userRoleVal . '.reports.index') }}" class="hover:text-indigo-600">{{ __('Reports') }}</a></li>
+                    <li><a href="{{ route($userRoleVal . '.reports.index') }}" class="hover:text-[#2271b1]">{{ __('Reports') }}</a></li>
                     <li><i class="fa-solid fa-chevron-right text-[10px]"></i></li>
                     <li class="font-medium text-gray-900">{{ $survey->title }}</li>
                 </ol>
@@ -24,7 +24,7 @@
         </div>
         <div class="flex space-x-3">
              <a href="{{ route('surveys.report', $survey) }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-bold text-gray-700 bg-white hover:bg-gray-50 transition-colors">
-                <i class="fa-solid fa-chart-line mr-2 text-indigo-600"></i> {{ __('Standard Report') }}
+                <i class="fa-solid fa-chart-line mr-2 text-[#2271b1]"></i> {{ __('Standard Report') }}
             </a>
         </div>
     </div>
@@ -38,7 +38,7 @@
                     <select 
                         id="question-select" 
                         x-model="selectedQuestion"
-                        class="block w-full rounded-lg border-gray-300 text-gray-700 focus:border-indigo-500 focus:ring-indigo-500 shadow-sm"
+                        class="block w-full rounded-lg border-gray-300 text-gray-700 focus:border-[#2271b1] focus:ring-[#2271b1] shadow-sm"
                     >
                         @forelse($questions as $question)
                             <option value="{{ $question['id'] }}">{{ $question['text'] }}</option>
@@ -49,7 +49,7 @@
                     
                     <button 
                         @click="$dispatch('trigger-analysis', { id: selectedQuestion })" 
-                        class="inline-flex items-center justify-center px-6 py-2 border border-transparent text-sm font-bold rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors whitespace-nowrap"
+                        class="inline-flex items-center justify-center px-6 py-2 border border-transparent text-sm font-bold rounded-lg shadow-sm text-white bg-[#2271b1] hover:bg-[#135e96] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2271b1] transition-colors whitespace-nowrap"
                     >
                         <i class="fa-solid fa-wand-sparkles mr-2"></i>
                         {{ __('Generate Report') }}

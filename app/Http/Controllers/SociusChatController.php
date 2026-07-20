@@ -311,22 +311,17 @@ class SociusChatController extends Controller
 
         $user = $request->user();
         if (!$user->isAdmin()) {
-            // Survey owner/creator can see any thread of the survey
+            // Survey owner/creator can see their own personal chats OR any group chat
             if ((int) $survey->created_by === (int) $user->id) {
+                if ($thread->survey_group_id) {
+                    return;
+                }
+                abort_unless((int) $thread->user_id === (int) $user->id, 404);
                 return;
             }
 
-            // If the thread is tagged with a group, the student must be a member of that group
-            if ($thread->survey_group_id) {
-                $isMember = \DB::table('survey_group_users')
-                    ->where('survey_group_id', $thread->survey_group_id)
-                    ->where('user_id', $user->id)
-                    ->exists();
-                abort_unless($isMember, 404);
-            } else {
-                // Otherwise, the thread must belong to them directly
-                abort_unless((int) $thread->user_id === (int) $user->id, 404);
-            }
+            // Normal users / students can only see their own chats
+            abort_unless((int) $thread->user_id === (int) $user->id, 404);
         }
     }
 
@@ -340,23 +335,26 @@ class SociusChatController extends Controller
         $query = $survey->aiThreads()->getQuery();
         $user = $request->user();
 
-        // If the user is the survey creator or an admin
-        if ($user->isAdmin() || (int) $survey->created_by === (int) $user->id) {
+        if ($user->isAdmin()) {
             if ($request->has('group_id') && $request->group_id !== 'personal' && $request->group_id !== '') {
                 $query->where('survey_group_id', $request->group_id);
             } else {
-                // Default to threads with no group (the owner's personal threads)
                 $query->whereNull('survey_group_id');
             }
-        } else {
-            // For students/normal users, find their group for this survey
-            $group = $user->surveyGroups()->where('survey_id', $survey->id)->first();
-            if ($group) {
-                $query->where('survey_group_id', $group->id);
+        } elseif ((int) $survey->created_by === (int) $user->id) {
+            // Survey owners can see any chat associated with a group, but only their own personal chats
+            if ($request->has('group_id') && $request->group_id !== 'personal' && $request->group_id !== '') {
+                $query->where('survey_group_id', $request->group_id);
             } else {
-                // If they are not in a group but are direct collaborators (via SurveyPermission),
-                // they can see their own personal threads.
                 $query->whereNull('survey_group_id')->where('user_id', $user->id);
+            }
+        } else {
+            // Normal users / students can only see their own chats (personal or group-bound)
+            $query->where('user_id', $user->id);
+            if ($request->has('group_id') && $request->group_id !== 'personal' && $request->group_id !== '') {
+                $query->where('survey_group_id', $request->group_id);
+            } else {
+                $query->whereNull('survey_group_id');
             }
         }
 
@@ -654,17 +652,129 @@ class SociusChatController extends Controller
 
     private function exportToPdf(SurveyAiThread $thread, $messages, bool $isSingleMessage = false)
     {
+        // Pre-process each message: parse markdown, render charts/mermaid as images
+        $processedMessages = $messages->map(function ($message) {
+            return [
+                'role' => $message->role,
+                'created_at' => $message->created_at,
+                'html' => $message->role === 'assistant'
+                    ? $this->renderSociusMarkdownHtml($message->content)
+                    : '<p>' . nl2br(e($message->content)) . '</p>',
+            ];
+        });
+
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('exports.socius-thread', [
             'thread' => $thread,
-            'messages' => $messages,
+            'processedMessages' => $processedMessages,
             'isSingleMessage' => $isSingleMessage,
-        ]);
+        ])->setPaper('a4', 'portrait');
 
         $filename = $isSingleMessage
             ? 'socius-report-' . $messages->first()->id . '.pdf'
             : Str::slug($thread->title ?: 'socius-chat') . '.pdf';
 
         return $pdf->download($filename);
+    }
+
+    /**
+     * Convert raw markdown message content into export-ready HTML.
+     * - chartjs blocks ? QuickChart.io PNG image tags
+     * - mermaid blocks ? mermaid.ink PNG image tags
+     * - pollinations blocks ? rendered image tags when available
+     * - remaining text ? parsed through league/commonmark (GFM tables, headings, etc.)
+     */
+    private function renderSociusMarkdownHtml(string $content): string
+    {
+        $content = preg_replace_callback(
+            '/```chartjs\s*([\s\S]*?)```/i',
+            function ($matches) {
+                $json = trim($matches[1]);
+                try {
+                    json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+                    $url = 'https://quickchart.io/chart?c=' . urlencode($json) . '&width=600&height=350&backgroundColor=white';
+                    $imageData = @file_get_contents($url);
+                    if ($imageData) {
+                        $base64 = base64_encode($imageData);
+                        return '<div class="chart-img"><img src="data:image/png;base64,' . $base64 . '" style="max-width:100%;height:auto;display:block;margin:12px auto;border-radius:8px;" /></div>';
+                    }
+                } catch (\Throwable $e) {
+                    // fallback below
+                }
+                return '<p><em>[Chart could not be rendered]</em></p>';
+            },
+            $content
+        );
+
+        $content = preg_replace_callback(
+            '/```mermaid\s*([\s\S]*?)```/i',
+            function ($matches) {
+                $definition = trim($matches[1]);
+                try {
+                    $encoded = base64_encode($definition);
+                    $url = 'https://mermaid.ink/img/' . $encoded . '?bgColor=white';
+                    $imageData = @file_get_contents($url);
+                    if ($imageData) {
+                        $base64 = base64_encode($imageData);
+                        return '<div class="mermaid-img"><img src="data:image/png;base64,' . $base64 . '" style="max-width:100%;height:auto;display:block;margin:12px auto;" /></div>';
+                    }
+                } catch (\Throwable $e) {
+                    // fallback below
+                }
+                return '<p><em>[Diagram could not be rendered]</em></p>';
+            },
+            $content
+        );
+
+        $content = preg_replace_callback(
+            '/```pollinations\s*([\s\S]*?)```/i',
+            function ($matches) {
+                $prompt = trim($matches[1]);
+                if ($prompt === '') {
+                    return '<p><em>[Image prompt was empty]</em></p>';
+                }
+
+                try {
+                    $url = 'https://image.pollinations.ai/prompt/' . urlencode($prompt) . '?nologo=true&seed=' . rand(1, 999999);
+                    $imageData = @file_get_contents($url);
+                    if ($imageData) {
+                        $base64 = base64_encode($imageData);
+                        return '<div class="chart-img"><img src="data:image/png;base64,' . $base64 . '" style="max-width:100%;height:auto;display:block;margin:12px auto;border-radius:8px;" /></div>';
+                    }
+                } catch (\Throwable $e) {
+                    // fallback below
+                }
+
+                return '<p><em>[Image could not be rendered]</em></p>';
+            },
+            $content
+        );
+
+        $converter = new \League\CommonMark\GithubFlavoredMarkdownConverter([
+            'html_input' => 'allow',
+            'allow_unsafe_links' => false,
+        ]);
+
+        return $converter->convert($content)->getContent();
+    }
+
+    private function preprocessForExport(string $content): string
+    {
+        return $this->renderSociusMarkdownHtml($content);
+    }
+
+    private function cleanHtmlForDocx(string $html): string
+    {
+        // Remove 4-byte UTF-8 characters (emojis, etc.) that corrupt MS Word XML output
+        $html = preg_replace('/[\x{10000}-\x{10FFFF}]/u', '', $html);
+
+        // Strip thead, tbody tags which are not supported by the HTML parser of PhpWord and cause it to fail
+        $html = preg_replace('/<thead[^>]*>|<\/thead>|<tbody[^>]*>|<\/tbody>/i', '', $html);
+
+        // Convert th tags to td with simple styling so PhpWord renders them as cells successfully
+        $html = preg_replace('/<th([^>]*)>/i', '<td$1 style="font-weight: bold; background-color: #f1f5f9;">', $html);
+        $html = str_ireplace('</th>', '</td>', $html);
+
+        return $html;
     }
 
     private function exportToDocx(SurveyAiThread $thread, $messages, bool $isSingleMessage = false)
@@ -678,10 +788,16 @@ class SociusChatController extends Controller
             $section->addText('Date: ' . now()->toDayDateTimeString());
             $section->addTextBreak(2);
 
-            $content = $message->content;
-            $lines = explode("\n", $content);
-            foreach ($lines as $line) {
-                $section->addText($line);
+            if ($message->role === 'assistant') {
+                $html = $this->cleanHtmlForDocx($this->renderSociusMarkdownHtml($message->content));
+                try {
+                    \PhpOffice\PhpWord\Shared\Html::addHtml($section, $html, false, true);
+                } catch (\Throwable $e) {
+                    Log::warning('Socius DOCX HTML render failed for single message.', ['message' => $e->getMessage()]);
+                    $section->addText(strip_tags($message->content));
+                }
+            } else {
+                $section->addText($message->content);
             }
         } else {
             $section->addTitle($thread->title ?: 'Socius Chat Export', 1);
@@ -689,14 +805,22 @@ class SociusChatController extends Controller
             $section->addTextBreak(2);
 
             foreach ($messages as $message) {
-                $role = strtoupper($message->role);
+                $role = ucfirst($message->role);
                 $section->addText($role . ' (' . $message->created_at->format('Y-m-d H:i') . ')', ['bold' => true]);
 
-                $content = $message->content;
-                $lines = explode("\n", $content);
-                foreach ($lines as $line) {
-                    $section->addText($line);
+                $html = $message->role === 'assistant'
+                    ? $this->renderSociusMarkdownHtml($message->content)
+                    : '<p>' . nl2br(e($message->content)) . '</p>';
+
+                $html = $this->cleanHtmlForDocx($html);
+
+                try {
+                    \PhpOffice\PhpWord\Shared\Html::addHtml($section, $html, false, true);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Socius DOCX HTML render failed.', ['message' => $e->getMessage()]);
+                    $section->addText(strip_tags($message->content));
                 }
+
                 $section->addTextBreak(1);
             }
         }
@@ -709,6 +833,9 @@ class SociusChatController extends Controller
             ? 'socius-report-' . $messages->first()->id . '.docx'
             : Str::slug($thread->title ?: 'socius-chat') . '.docx';
 
+        if (ob_get_length()) {
+            ob_end_clean();
+        }
         return response()->download($tempFile, $filename)->deleteFileAfterSend(true);
     }
 
@@ -729,6 +856,10 @@ class SociusChatController extends Controller
         $filename = $isSingleMessage
             ? 'socius-report-' . $messages->first()->id . '.xlsx'
             : Str::slug($thread->title ?: 'socius-chat') . '.xlsx';
+
+        if (ob_get_length()) {
+            ob_end_clean();
+        }
 
         return \Maatwebsite\Excel\Facades\Excel::download(
             new class ($data) implements \Maatwebsite\Excel\Concerns\FromCollection {

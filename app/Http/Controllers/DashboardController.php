@@ -10,6 +10,9 @@ class DashboardController extends Controller
     public function index()
     {
         $user = auth()->user();
+        if ($user) {
+            \App\Models\Survey::cleanupEmptyDrafts($user->id);
+        }
 
         // Safely extract role whether it's cast to Enum or string
         $role = $user->role instanceof \BackedEnum ? $user->role->value : $user->role;

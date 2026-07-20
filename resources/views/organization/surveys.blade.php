@@ -38,7 +38,7 @@
                     <a href="{{ route('organization.questions', $survey) }}"
                         class="w3-button w3-small w3-green">{{ __('Questions') }}</a>
                     <a href="{{ route('organization.responses', $survey) }}"
-                        class="w3-button w3-small w3-orange">{{ __('Responses') }}</a>
+                        class="w3-button w3-small w3-blue">{{ __('Responses') }}</a>
                     <form method="post" action="{{ route('organization.delete-survey', $survey) }}" style="display:inline;">
                         @csrf
                         @method('DELETE')

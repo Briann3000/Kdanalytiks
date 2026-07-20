@@ -12,7 +12,7 @@
             </div>
             <div class="flex items-center space-x-3">
                 <a href="{{ route('admin.users.create') }}"
-                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-indigo-100">
+                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[#2271b1] hover:bg-[#135e96] transition-colors shadow-zinc-200/50">
                     <i class="fa-solid fa-plus mr-2"></i> {{ __('Create New User') }}
                 </a>
                 <span
@@ -33,7 +33,7 @@
                             <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
                         </div>
                         <input type="text" name="search" id="search" value="{{ request('search') }}"
-                            class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
+                            class="focus:ring-[#2271b1] focus:border-[#2271b1] block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
                             placeholder="{{ __('Name or email...') }}">
                     </div>
                 </div>
@@ -41,7 +41,7 @@
                 <div class="sm:col-span-1">
                     <label for="role" class="block text-sm font-medium text-gray-700">{{ __('Role') }}</label>
                     <select name="role" id="role"
-                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-[#2271b1] focus:border-[#2271b1] sm:text-sm rounded-md">
                         <option value="all">{{ __('All Roles') }}</option>
                         @foreach(['admin', 'independent', 'organization', 'respondent'] as $r)
                             <option value="{{ $r }}" {{ request('role') == $r ? 'selected' : '' }}>{{ __(ucfirst($r)) }}</option>
@@ -52,7 +52,7 @@
                 <div class="sm:col-span-1">
                     <label for="status" class="block text-sm font-medium text-gray-700">{{ __('Status') }}</label>
                     <select name="status" id="status"
-                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-[#2271b1] focus:border-[#2271b1] sm:text-sm rounded-md">
                         <option value="active" {{ (!request()->filled('status') || request('status') == 'active') ? 'selected' : '' }}>{{ __('Active Only') }}</option>
                         <option value="suspended" {{ request('status') == 'suspended' ? 'selected' : '' }}>{{ __('Suspended') }}</option>
                         <option value="all" {{ request('status') == 'all' ? 'selected' : '' }}>{{ __('All (Incl. Suspended)') }}</option>
@@ -61,7 +61,7 @@
 
                 <div class="sm:col-span-1 flex items-end">
                     <button type="submit"
-                        class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[#2271b1] hover:bg-[#135e96] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2271b1]">
                         {{ __('Filter') }}
                     </button>
                 </div>
@@ -108,8 +108,8 @@
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
                                     <div
-                                        class="h-10 w-10 flex-shrink-0 bg-indigo-50 rounded-full flex items-center justify-center">
-                                        <i class="fa-solid fa-user text-indigo-400"></i>
+                                        class="h-10 w-10 flex-shrink-0 bg-zinc-100 rounded-full flex items-center justify-center">
+                                        <i class="fa-solid fa-user text-zinc-500"></i>
                                     </div>
                                     <div class="ml-4">
                                         <div class="text-sm font-bold text-gray-900">{{ $user->name }}</div>

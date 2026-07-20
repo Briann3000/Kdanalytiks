@@ -6,8 +6,8 @@
             <div class="bg-white shadow-sm rounded-2xl overflow-hidden border border-gray-100">
                 <div class="px-8 py-10">
                     <div class="flex items-center space-x-3 mb-8">
-                        <div class="p-3 bg-indigo-50 rounded-xl">
-                            <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="p-3 bg-zinc-100 rounded-xl">
+                            <svg class="w-6 h-6 text-[#2271b1]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
                                 </path>
@@ -16,7 +16,7 @@
                         <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Terms and Conditions</h1>
                     </div>
 
-                    <div class="prose prose-indigo prose-lg max-w-none text-gray-600 space-y-6">
+                    <div class="prose prose-zinc prose-lg max-w-none text-gray-600 space-y-6">
                         <p class="text-lg leading-relaxed">
                             <strong>Last updated: {{ date('F d, Y') }}</strong>
                         </p>
@@ -129,7 +129,7 @@
                             <h2 class="text-lg font-bold text-gray-900 mb-2">Contact Us</h2>
                             <p>In order to resolve a complaint regarding the Site or to receive further information
                                 regarding use of the Site, please contact us at:</p>
-                            <p class="mt-2 text-indigo-600 font-medium">infokdanalytiks@gmail.com</p>
+                            <p class="mt-2 text-[#2271b1] font-medium">infokdanalytiks@gmail.com</p>
                         </div>
                     </div>
                 </div>
@@ -137,7 +137,7 @@
 
             <div class="mt-8 text-center">
                 <a href="{{ route('home') }}"
-                    class="text-indigo-600 hover:text-indigo-500 font-medium transition duration-150">
+                    class="text-[#2271b1] hover:text-zinc-2000 font-medium transition duration-150">
                     &larr; Back to Home
                 </a>
             </div>

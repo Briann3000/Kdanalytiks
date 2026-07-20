@@ -16,7 +16,7 @@
                             $backRoute = $role === 'admin' ? route('admin.surveys.index', ['status' => 'active']) : route('surveys.index', ['status' => 'active']);
                         @endphp
                         <a href="{{ $backRoute }}"
-                            class="text-xs font-bold text-gray-600 hover:text-indigo-600 transition-colors">
+                            class="text-xs font-bold text-gray-600 hover:text-[#2271b1] transition-colors">
                             <i class="fa-solid fa-chevron-left mr-1"></i> {{ __('My Surveys') }}
                         </a>
                         <span class="text-gray-300">•</span>
@@ -44,7 +44,7 @@
                         <form action="{{ route('surveys.publish', $survey) }}" method="POST">
                             @csrf
                             <button type="submit"
-                                class="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">
+                                class="px-6 py-3 bg-[#2271b1] text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-zinc-200/50 hover:bg-[#135e96] transition-all">
                                 <i class="fa-solid fa-paper-plane mr-2"></i> {{ __('Deploy Survey') }}
                             </button>
                         </form>
@@ -60,16 +60,16 @@
             <div class="border-b border-gray-200 mb-8">
                 <nav class="flex flex-wrap gap-x-6 gap-y-2 -mb-px">
                     <a href="{{ route('surveys.summary', $survey) }}"
-                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.summary') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
+                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.summary') ? 'border-[#2271b1] text-[#135e96]' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                         <i class="fa-solid fa-chart-pie mr-2"></i> {{ __('Summary') }}
                     </a>
                     <a href="{{ route('surveys.data', $survey) }}"
-                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.data') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
+                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.data') ? 'border-[#2271b1] text-[#135e96]' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                         <i class="fa-solid fa-database mr-2"></i> {{ __('Data') }}
                     </a>
                     <div class="relative flex" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
                         <a href="{{ route('surveys.reports', $survey) }}"
-                            class="pb-4 px-1 border-b-2 font-bold text-sm transition-all flex items-center gap-1.5 {{ (request()->routeIs('surveys.reports') && request('reportTab') !== 'analyse') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
+                            class="pb-4 px-1 border-b-2 font-bold text-sm transition-all flex items-center gap-1.5 {{ (request()->routeIs('surveys.reports') && request('reportTab') !== 'analyse') ? 'border-[#2271b1] text-[#135e96]' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                             <i class="fa-solid fa-file-contract"></i> <span>{{ __('Reports') }}</span>
                             <i class="fa-solid fa-chevron-down text-[8px] transition-transform duration-200"
                                 :class="open ? 'rotate-180' : ''"></i>
@@ -89,13 +89,13 @@
                             </div>
                             <div class="p-1.5 space-y-0.5">
                                 <a href="{{ route('surveys.reports', $survey) }}?reportTab=quantitative"
-                                    class="flex items-center gap-3 px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-colors">
-                                    <i class="fa-solid fa-chart-column text-indigo-500 w-4 text-center"></i>
+                                    class="flex items-center gap-3 px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-zinc-100 hover:text-[#135e96] rounded-xl transition-colors">
+                                    <i class="fa-solid fa-chart-column text-zinc-2000 w-4 text-center"></i>
                                     {{ __('Quantitative Report') }}
                                 </a>
                                 <a href="{{ route('surveys.reports', $survey) }}?reportTab=qualitative"
-                                    class="flex items-center gap-3 px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-colors">
-                                    <i class="fa-solid fa-comments text-indigo-500 w-4 text-center"></i>
+                                    class="flex items-center gap-3 px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-zinc-100 hover:text-[#135e96] rounded-xl transition-colors">
+                                    <i class="fa-solid fa-comments text-zinc-2000 w-4 text-center"></i>
                                     {{ __('Qualitative Report') }}
                                 </a>
                             </div>
@@ -107,39 +107,39 @@
                             </div>
                             <div class="p-1.5 space-y-0.5">
                                 <a href="{{ route('surveys.reports', $survey) }}?reportTab=inferential"
-                                    class="flex items-center gap-3 px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-colors">
-                                    <i class="fa-solid fa-calculator text-indigo-500 w-4 text-center"></i>
+                                    class="flex items-center gap-3 px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-zinc-100 hover:text-[#135e96] rounded-xl transition-colors">
+                                    <i class="fa-solid fa-calculator text-zinc-2000 w-4 text-center"></i>
                                     {{ __('Analyse') }}
                                 </a>
                             </div>
                         </div>
                     </div>
                     <a href="{{ route('surveys.reports', $survey) }}?reportTab=analyse"
-                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ (request()->routeIs('surveys.reports') && request('reportTab') === 'analyse') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
-                        <i class="fa-solid fa-sparkles mr-2 text-indigo-500"></i> {{ __('Socius Analysis') }}
+                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ (request()->routeIs('surveys.reports') && request('reportTab') === 'analyse') ? 'border-[#2271b1] text-[#135e96]' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
+                        <i class="fa-solid fa-sparkles mr-2 text-zinc-2000"></i> {{ __('Socius Analysis') }}
                     </a>
                     <a href="{{ route('surveys.gallery', $survey) }}"
-                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.gallery') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
+                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.gallery') ? 'border-[#2271b1] text-[#135e96]' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                         <i class="fa-solid fa-images mr-2"></i> {{ __('Gallery') }}
                     </a>
                     <a href="{{ route('surveys.downloads', $survey) }}"
-                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.downloads') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
+                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.downloads') ? 'border-[#2271b1] text-[#135e96]' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                         <i class="fa-solid fa-download mr-2"></i> {{ __('Downloads') }}
                     </a>
                     <a href="{{ route('surveys.versions', $survey) }}"
-                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.versions*') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
+                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.versions*') ? 'border-[#2271b1] text-[#135e96]' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                         <i class="fa-solid fa-clock-rotate-left mr-2"></i> {{ __('Version History') }}
                     </a>
                     <a href="{{ route('surveys.campaigns.index', $survey) }}"
-                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.campaigns*') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
+                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.campaigns*') ? 'border-[#2271b1] text-[#135e96]' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                         <i class="fa-solid fa-paper-plane mr-2"></i> {{ __('Campaigns') }}
                     </a>
                     <a href="{{ route('surveys.dashboard-builder', $survey) }}"
-                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.dashboard-builder') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
+                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.dashboard-builder') ? 'border-[#2271b1] text-[#135e96]' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                         <i class="fa-solid fa-table-cells-large mr-2"></i> {{ __('Dashboard Builder') }}
                     </a>
                     <a href="{{ route('surveys.settings', $survey) }}"
-                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.settings') ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
+                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.settings') ? 'border-[#2271b1] text-[#135e96]' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                         <i class="fa-solid fa-gears mr-2"></i> {{ __('Settings') }}
                     </a>
                 </nav>

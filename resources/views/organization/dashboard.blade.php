@@ -39,6 +39,7 @@
     <div class="w3-margin-top">
         <a href="{{ route('organization.create-survey') }}" class="w3-button w3-blue">{{ __('Create New Survey') }}</a>
         <a href="{{ route('organization.surveys') }}" class="w3-button w3-green">{{ __('Manage Surveys') }}</a>
-        <a href="{{ route('account.settings') }}" class="w3-button w3-indigo">{{ __('Account Settings') }}</a>
+        <a href="{{ route('account.settings') }}"
+            class="w3-button bg-[#2271b1] text-white hover:bg-[#135e96]">{{ __('Account Settings') }}</a>
     </div>
 @endsection

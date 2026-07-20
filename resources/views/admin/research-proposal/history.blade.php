@@ -7,14 +7,12 @@
         <!-- Header -->
         <div class="h-14 border-b border-gray-100 flex items-center justify-between px-6 flex-shrink-0 bg-white">
             <div class="flex items-center space-x-3">
-                <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-sm">
-                    <i class="fa-solid fa-clock-rotate-left text-sm"></i>
-                </div>
+                
                 <h1 class="text-sm font-bold text-gray-900 tracking-tight">{{ __('Reports History') }}</h1>
             </div>
             <div class="flex items-center space-x-4">
                 <a href="{{ route('research-proposal.index') }}"
-                    class="text-xs font-bold text-gray-500 hover:text-indigo-600 transition-colors">
+                    class="text-xs font-bold text-gray-500 hover:text-[#2271b1] transition-colors">
                     <i class="fa-solid fa-arrow-left mr-1"></i> {{ __('Back to Generator') }}
                 </a>
             </div>
@@ -27,10 +25,10 @@
                     <!-- Generated Reports Section -->
                     <div class="space-y-4">
                         <div class="flex items-center justify-between px-1">
-                            <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest">
+                            <h2 class="text-sm font-black text-gray-400 tracking-widest">
                                 {{ __('Synthesis Reports') }}</h2>
                             <span
-                                class="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">{{ count($reports) }}
+                                class="text-[10px] font-bold bg-zinc-200 text-[#135e96] px-2 py-0.5 rounded-full">{{ count($reports) }}
                                 {{ __('Items') }}</span>
                         </div>
 
@@ -47,7 +45,7 @@
                                     <p class="text-xs text-gray-500 font-medium">
                                         {{ __('Generate your first report from the Studio.') }}</p>
                                     <a href="{{ route('research-proposal.index') }}"
-                                        class="mt-4 inline-flex items-center text-xs font-bold text-indigo-600 hover:underline">
+                                        class="mt-4 inline-flex items-center text-xs font-bold text-[#2271b1] hover:underline">
                                         {{ __('Go to Generator') }} <i class="fa-solid fa-arrow-right ml-1"></i>
                                     </a>
                                 </div>
@@ -58,10 +56,10 @@
                     <!-- Research Proposals Section -->
                     <div class="space-y-4">
                         <div class="flex items-center justify-between px-1">
-                            <h2 class="text-xs font-black text-gray-400 uppercase tracking-widest">{{ __('Draft Reports') }}
+                            <h2 class="text-sm font-black text-gray-400 tracking-widest">{{ __('Draft Reports') }}
                             </h2>
                             <span
-                                class="text-[10px] font-bold bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">{{ count($proposals) }}
+                                class="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{{ count($proposals) }}
                                 {{ __('Items') }}</span>
                         </div>
 
@@ -69,30 +67,29 @@
                             @forelse($proposals as $prop)
                                 <div class="relative group">
                                     <a href="{{ route('research-proposal.show', $prop->id) }}"
-                                        class="block p-5 bg-white border border-gray-100 rounded-2xl hover:border-indigo-200 hover:shadow-md transition-all shadow-sm">
+                                        class="block p-5 bg-white border border-gray-100 rounded-2xl hover:border-zinc-300 hover:shadow-md transition-all shadow-sm">
                                         <div class="flex items-center justify-between mb-3">
                                             <div class="flex items-center space-x-2">
                                                 <div
-                                                    class="w-1.5 h-1.5 rounded-full {{ $prop->status === 'generated' ? 'bg-emerald-500' : 'bg-orange-400' }}">
+                                                    class="w-1.5 h-1.5 rounded-full {{ $prop->status === 'generated' ? 'bg-emerald-500' : 'bg-zinc-400' }}">
                                                 </div>
                                                 <span
                                                     class="text-[10px] font-bold text-gray-400 uppercase tracking-tight">{{ $prop->created_at->format('M d, Y') }}</span>
                                             </div>
-                                            <span
-                                                class="text-[10px] font-black {{ $prop->status === 'generated' ? 'text-emerald-600' : 'text-orange-500' }} uppercase tracking-widest bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">{{ __($prop->status) }}</span>
+                                            
                                         </div>
                                         <h4
-                                            class="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-1 mb-3 pr-8">
+                                            class="text-sm font-bold text-gray-900 group-hover:text-[#2271b1] transition-colors line-clamp-1 mb-3 pr-8">
                                             {{ $prop->title }}</h4>
                                         <div class="flex items-center space-x-3">
                                             <div
                                                 class="flex items-center text-[10px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">
-                                                <i class="fa-solid fa-bookmark mr-1.5 text-indigo-400"></i>
+                                                <i class="fa-solid  mr-1.5 text-zinc-500"></i>
                                                 {{ __(strtoupper($prop->style)) }}
                                             </div>
                                             <div
                                                 class="flex items-center text-[10px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">
-                                                <i class="fa-solid fa-flask mr-1.5 text-violet-400"></i>
+                                                <i class="fa-solid  mr-1.5 text-blue-400"></i>
                                                 {{ __(ucfirst($prop->methodology_type)) }}
                                             </div>
                                         </div>
@@ -121,7 +118,7 @@
                                     <p class="text-xs text-gray-500 font-medium">
                                         {{ __('Start a new proposal with the guided intake.') }}</p>
                                     <a href="{{ route('research-proposal.create') }}"
-                                        class="mt-4 inline-flex items-center text-xs font-bold text-indigo-600 hover:underline">
+                                        class="mt-4 inline-flex items-center text-xs font-bold text-[#2271b1] hover:underline">
                                         {{ __('Draft New Proposal') }} <i class="fa-solid fa-arrow-right ml-1"></i>
                                     </a>
                                 </div>

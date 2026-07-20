@@ -109,4 +109,22 @@ class Survey extends Model
     {
         return $this->hasOne(SurveyDashboardConfig::class);
     }
+
+    public static function cleanupEmptyDrafts($userId = null)
+    {
+        $query = self::where('title', 'Untitled Survey')
+            ->where('status', \App\Enums\SurveyStatus::Draft)
+            ->where(function ($q) {
+                $q->whereNull('json_schema')
+                    ->orWhere('json_schema', '[]')
+                    ->orWhere('json_schema', '')
+                    ->orWhere('json_schema', 'null');
+            });
+
+        if ($userId) {
+            $query->where('created_by', $userId);
+        }
+
+        $query->where('created_at', '<', now()->subMinutes(5))->delete();
+    }
 }

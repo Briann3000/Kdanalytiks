@@ -2,13 +2,13 @@
 
 @section('content')
     <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
-        <div class="px-6 py-6 sm:px-8 flex justify-between items-center bg-indigo-50 border-l-8 border-indigo-600">
+        <div class="px-6 py-6 sm:px-8 flex justify-between items-center bg-zinc-50 ">
             <div>
                 <h3 class="text-2xl leading-none font-black text-gray-900 mb-1">
                     {{ __('Welcome back') }}, {{ $displayName }}
                 </h3>
-                <p class="text-sm text-gray-600 font-bold uppercase tracking-widest">
-                    {{ __(strtoupper($role) . ' DASHBOARD') }}
+                <p class="text-sm text-gray-600 font-bold tracking-widest">
+                    {{ __(ucfirst($role) . ' Dashboard') }}
                 </p>
             </div>
             @if(in_array($role, ['organization', 'independent']) && isset($subscriptionTier))
@@ -17,19 +17,18 @@
                     $tierName = $subscriptionTier->name ?? 'Free';
                     $tierConfig = match (true) {
                         str_contains(strtolower($tierSlug), 'enterprise') => [
-                            'bg' => 'bg-amber-50',
-                            'text' => 'text-amber-700',
-                            'border' => 'border-amber-300',
-                            'dot' => 'bg-amber-500',
-                            'icon' => 'fa-crown',
+                            'bg' => 'bg-blue-50',
+                            'text' => 'text-blue-700',
+                            'border' => 'border-blue-300',
+                            
                             'label' => 'Enterprise',
                         ],
                         str_contains(strtolower($tierSlug), 'pro') => [
-                            'bg' => 'bg-indigo-50',
-                            'text' => 'text-indigo-700',
-                            'border' => 'border-indigo-300',
-                            'dot' => 'bg-indigo-500',
-                            'icon' => 'fa-bolt',
+                            'bg' => 'bg-zinc-100',
+                            'text' => 'text-zinc-800',
+                            'border' => 'border-zinc-300',
+                            'dot' => 'bg-zinc-600',
+                            
                             'label' => 'Pro',
                         ],
                         default => [
@@ -37,19 +36,19 @@
                             'text' => 'text-gray-500',
                             'border' => 'border-gray-300',
                             'dot' => 'bg-gray-400',
-                            'icon' => 'fa-circle-check',
+                            
                             'label' => 'Free',
                         ],
                     };
                 @endphp
                 <div class="flex flex-col items-end gap-1">
                     <span
-                        class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest border shadow-sm {{ $tierConfig['bg'] }} {{ $tierConfig['text'] }} {{ $tierConfig['border'] }}">
-                        <i class="fa-solid {{ $tierConfig['icon'] }} text-[11px]"></i>
+                        class="inline-flex items-center gap-2 px-4 py-2 text-xs font-black  tracking-widest  {{ $tierConfig['bg'] }} {{ $tierConfig['text'] }} {{ $tierConfig['border'] }}">
+                        
                         {{ __($tierName . ' Plan') }}
                     </span>
                     <a href="{{ route('subscriptions.index') }}"
-                        class="text-[10px] font-bold text-indigo-500 hover:text-indigo-700 tracking-wide transition-colors">
+                        class="text-[10px] font-bold text-blue-500 hover:text-[#135e96] tracking-wide transition-colors">
                         @if($tierSlug === 'free') {{ __('Upgrade Plan') }} &rsaquo; @else {{ __('Manage Subscription') }}
                         &rsaquo; @endif
                     </a>
@@ -64,45 +63,45 @@
             <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">{{ __('Quick Actions') }}</h3>
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-5">
                 <a href="{{ route('surveys.create') }}"
-                    class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-indigo-500 hover:ring-1 hover:ring-indigo-500 transition-all">
+                    class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-blue-400 hover:ring-1 hover:ring-blue-400 transition-all">
                     <div
-                        class="w-12 h-12 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors mb-3">
+                        class="w-12 h-12 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-600 group-hover:bg-blue-800 group-hover:text-blue-200  transition-colors mb-3">
                         <i class="fa-solid fa-plus text-xl"></i>
                     </div>
                     <span class="text-sm font-medium text-gray-900">{{ __('Create Survey') }}</span>
                 </a>
 
                 <a href="{{ route('surveys.index', ['status' => 'active']) }}"
-                    class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-blue-500 hover:ring-1 hover:ring-blue-500 transition-all">
+                    class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-blue-400 hover:ring-1 hover:ring-blue-400 transition-all">
                     <div
-                        class="w-12 h-12 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors mb-3">
+                        class="w-12 h-12 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-600 group-hover:bg-blue-800 group-hover:text-blue-200  transition-colors mb-3">
                         <i class="fa-solid fa-list-check text-xl"></i>
                     </div>
                     <span class="text-sm font-medium text-gray-900">{{ __('Manage Surveys') }}</span>
                 </a>
 
                 <a href="{{ route($role . '.responses.index') }}"
-                    class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-green-500 hover:ring-1 hover:ring-green-500 transition-all">
+                    class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-blue-400 hover:ring-1 hover:ring-blue-400 transition-all">
                     <div
-                        class="w-12 h-12 flex items-center justify-center rounded-full bg-green-100 text-green-600 group-hover:bg-green-600 group-hover:text-white transition-colors mb-3">
+                        class="w-12 h-12 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-600 group-hover:bg-blue-800 group-hover:text-blue-200  transition-colors mb-3">
                         <i class="fa-solid fa-reply-all text-xl"></i>
                     </div>
                     <span class="text-sm font-medium text-gray-900">{{ __('View Responses') }}</span>
                 </a>
 
                 <a href="{{ route('research-proposal.index') }}"
-                    class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-purple-500 hover:ring-1 hover:ring-purple-500 transition-all">
+                    class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-blue-400 hover:ring-1 hover:ring-blue-400 transition-all">
                     <div
-                        class="w-12 h-12 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors mb-3">
+                        class="w-12 h-12 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-600 group-hover:bg-blue-800 group-hover:text-blue-200  transition-colors mb-3">
                         <i class="fa-solid fa-chart-bar text-xl"></i>
                     </div>
                     <span class="text-sm font-medium text-gray-900">{{ __('Generate Report') }}</span>
                 </a>
 
                 <a href="{{ route('surveys.public') }}"
-                    class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-orange-500 hover:ring-1 hover:ring-orange-500 transition-all">
+                    class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-blue-400 hover:ring-1 hover:ring-blue-400 transition-all">
                     <div
-                        class="w-12 h-12 flex items-center justify-center rounded-full bg-orange-100 text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-colors mb-3">
+                        class="w-12 h-12 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-600 group-hover:bg-blue-800 group-hover:text-blue-200  transition-colors mb-3">
                         <i class="fa-solid fa-globe text-xl"></i>
                     </div>
                     <span class="text-sm font-medium text-gray-900">{{ __('Take Surveys') }}</span>
@@ -117,18 +116,18 @@
             <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">{{ __('Quick Actions') }}</h3>
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <a href="{{ route('surveys.public') }}"
-                    class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-indigo-500 hover:ring-1 hover:ring-indigo-500 transition-all">
+                    class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-zinc-400 hover:ring-1 hover:ring-zinc-400 transition-all">
                     <div
-                        class="w-12 h-12 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors mb-3">
+                        class="w-12 h-12 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-600 group-hover:bg-zinc-800 group-hover:text-white transition-colors mb-3">
                         <i class="fa-solid fa-magnifying-glass text-xl"></i>
                     </div>
                     <span class="text-sm font-medium text-gray-900">{{ __('Take Surveys') }}</span>
                 </a>
 
                 <a href="{{ route('respondent.history') }}"
-                    class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-blue-500 hover:ring-1 hover:ring-blue-500 transition-all">
+                    class="group relative flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-zinc-400 hover:ring-1 hover:ring-zinc-400 transition-all">
                     <div
-                        class="w-12 h-12 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors mb-3">
+                        class="w-12 h-12 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-600 group-hover:bg-zinc-800 group-hover:text-white transition-colors mb-3">
                         <i class="fa-solid fa-clock-rotate-left text-xl"></i>
                     </div>
                     <span class="text-sm font-medium text-gray-900">{{ __('My Responses') }}</span>
@@ -142,12 +141,10 @@
     <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <!-- Total Surveys Widget -->
         <div
-            class="bg-white overflow-hidden shadow rounded-lg border-t-4 border-indigo-400 transform hover:scale-[1.02] transition-all">
+            class="bg-white overflow-hidden border border-gray-100 shadow-sm rounded-lg transform hover:scale-[1.02] transition-all">
             <div class="p-5">
                 <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <i class="fa-solid fa-globe text-3xl text-indigo-400"></i>
-                    </div>
+                    
                     <div class="ml-5 w-0 flex-1">
                         <dl>
                             <dt class="text-sm font-medium text-gray-500 truncate">
@@ -165,10 +162,10 @@
             <div class="bg-gray-50 px-5 py-3 text-xs">
                 @if(in_array($role, ['organization', 'independent']))
                     <a href="{{ route('surveys.index', ['status' => 'active']) }}"
-                        class="font-bold text-indigo-600 hover:text-indigo-500">
+                        class="font-bold text-zinc-600 hover:text-[#2271b1]">
                         {{ __('Manage active surveys') }} <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i></a>
                 @else
-                    <a href="{{ route('surveys.public') }}" class="font-bold text-indigo-600 hover:text-indigo-500">
+                    <a href="{{ route('surveys.public') }}" class="font-bold text-zinc-600 hover:text-[#2271b1]">
                         {{ __('Browse all') }}
                         <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i></a>
                 @endif
@@ -177,12 +174,10 @@
 
         <!-- Total Responses Widget -->
         <div
-            class="bg-white overflow-hidden shadow rounded-lg border-t-4 border-green-400 transform hover:scale-[1.02] transition-all">
+            class="bg-white overflow-hidden border border-gray-100 shadow-sm rounded-lg transform hover:scale-[1.02] transition-all">
             <div class="p-5">
                 <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <i class="fa-solid fa-check-double text-3xl text-green-400"></i>
-                    </div>
+                    
                     <div class="ml-5 w-0 flex-1">
                         <dl>
                             <dt class="text-sm font-medium text-gray-500 truncate">
@@ -199,10 +194,10 @@
             </div>
             <div class="bg-gray-50 px-5 py-3 text-xs">
                 @if(in_array($role, ['organization', 'independent']))
-                    <a href="{{ route($role . '.responses.index') }}" class="font-bold text-green-600 hover:text-green-500">
+                    <a href="{{ route($role . '.responses.index') }}" class="font-bold text-zinc-600 hover:text-[#2271b1]">
                         {{ __('View responses') }} <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i></a>
                 @else
-                    <a href="{{ route('respondent.history') }}" class="font-bold text-green-600 hover:text-green-500">
+                    <a href="{{ route('respondent.history') }}" class="font-bold text-zinc-600 hover:text-[#2271b1]">
                         {{ __('View history') }}
                         <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i></a>
                 @endif
@@ -212,12 +207,10 @@
         @if($role !== 'respondent')
             <!-- Draft Surveys Widget -->
             <div
-                class="bg-white overflow-hidden shadow rounded-lg border-t-4 border-yellow-400 transform hover:scale-[1.02] transition-all">
+                class="bg-white overflow-hidden border border-gray-100 shadow-sm rounded-lg transform hover:scale-[1.02] transition-all">
                 <div class="p-5">
                     <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <i class="fa-regular fa-file-lines text-3xl text-yellow-500"></i>
-                        </div>
+                        
                         <div class="ml-5 w-0 flex-1">
                             <dl>
                                 <dt class="text-sm font-medium text-gray-500 truncate">
@@ -234,7 +227,7 @@
                 </div>
                 <div class="bg-gray-50 px-5 py-3 text-xs">
                     <a href="{{ route('surveys.index', ['status' => 'draft']) }}"
-                        class="font-bold text-yellow-600 hover:text-yellow-500">
+                        class="font-bold text-zinc-600 hover:text-[#2271b1]">
                         {{ __('Manage drafts') }} <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
                     </a>
                 </div>
@@ -243,20 +236,27 @@
 
         <!-- Generated Reports Widget -->
         <div
-            class="bg-white overflow-hidden shadow rounded-lg border-t-4 border-purple-400 transform hover:scale-[1.02] transition-all text-center">
+            class="bg-white overflow-hidden border border-gray-100 shadow-sm rounded-lg transform hover:scale-[1.02] transition-all">
             <div class="p-5">
-                <dl>
-                    <dt class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                        {{ __('Reports Generated') }}</dt>
-                    <dd>
-                        <div class="text-3xl font-black text-gray-900">{{ $reportsGenerated ?? 0 }}</div>
-                    </dd>
-                </dl>
+                <div class="flex items-center">
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">
+                                {{ __('Reports Generated') }}
+                            </dt>
+                            <dd>
+                                <div class="text-2xl font-bold text-gray-900">
+                                    {{ $reportsGenerated ?? 0 }}
+                                </div>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
             </div>
             <div class="bg-gray-50 px-5 py-3 text-xs">
                 <a href="{{ route('research-proposal.history') }}"
-                    class="font-bold text-purple-600 hover:text-purple-500 uppercase tracking-tighter">
-                    {{ __('Reports Gallery') }} <i class="fa-solid fa-chevron-right ml-1"></i>
+                    class="font-bold text-zinc-600 hover:text-[#2271b1]">
+                    {{ __('Reports gallery') }} <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
                 </a>
             </div>
         </div>
@@ -269,7 +269,7 @@
             <div class="bg-white shadow rounded-lg border border-gray-100 overflow-hidden">
                 <div class="px-6 py-6 border-b border-gray-100 flex items-center justify-between">
                     <h3 class="text-lg leading-6 font-medium text-gray-900">
-                        <i class="fa-solid fa-clock-rotate-left mr-2 text-indigo-500"></i> {{ __('Recent Platform Activity') }}
+                        <i class="fa-solid  mr-2 text-zinc-2000"></i> {{ __('Recent Activity') }}
                     </h3>
                 </div>
                 <div class="p-8">
@@ -277,14 +277,11 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             @foreach($recentActivity as $activity)
                                 <div
-                                    class="flex flex-col p-6 hover:bg-white rounded-2xl transition-all border border-gray-50 hover:border-indigo-200 hover:shadow-xl group bg-gray-50/50">
+                                    class="flex flex-col p-6 hover:bg-white rounded-2xl transition-all border border-gray-50 hover:border-[#2271b1] hover:shadow-xl group bg-gray-50/50">
                                     <div class="flex items-center justify-between mb-4">
-                                        <div
-                                            class="p-3 bg-indigo-100 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                                            <i class="fa-solid fa-file-signature text-lg"></i>
-                                        </div>
+                                        
                                         <span
-                                            class="text-[9px] font-black text-indigo-400 uppercase tracking-widest bg-white px-2 py-1 rounded-md border border-indigo-50 shadow-sm">{{ __($activity->status->value ?? $activity->status) }}</span>
+                                            class="text-[9px] font-black text-zinc-500 uppercase tracking-widest bg-white px-2 py-1 rounded-md border border-zinc-100 shadow-sm">{{ __($activity->status->value ?? $activity->status) }}</span>
                                     </div>
                                     <div class="flex-1 min-w-0 mb-6">
                                         <p class="text-base font-medium text-gray-900 mb-1 leading-tight">{{ $activity->title }}</p>
@@ -293,10 +290,9 @@
                                         </p>
                                     </div>
                                     <div class="pt-4 border-t border-gray-100 flex justify-between items-center">
-                                        <span class="text-[10px] text-gray-300 font-bold uppercase">{{ __('Activity Log') }}
-                                            #{{ $activity->id }}</span>
+                                        
                                         <a href="{{ route('surveys.summary', $activity) }}"
-                                            class="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase flex items-center">
+                                            class="text-[12px] font-black text-[#2271b1] hover:text-[#135e96]  flex items-center">
                                             {{ __('Manage') }} <i class="fa-solid fa-chevron-right ml-1 text-[8px]"></i>
                                         </a>
                                     </div>
@@ -321,7 +317,7 @@
                     <p class="text-xs text-gray-500">{{ __('Recently published surveys open for your participation') }}</p>
                 </div>
                 <a href="{{ route('surveys.public') }}"
-                    class="inline-flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg hover:bg-indigo-600 hover:text-white transition-all">
+                    class="inline-flex items-center px-4 py-2 bg-zinc-100 text-[#135e96] text-xs font-bold rounded-lg hover:bg-[#2271b1] hover:text-white transition-all">
                     {{ __('Explore Surveys') }} <i class="fa-solid fa-arrow-right ml-2 text-[10px]"></i>
                 </a>
             </div>
@@ -348,10 +344,10 @@
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-50">
                             @foreach($recentPublicSurveys as $survey)
-                                <tr class="hover:bg-indigo-50/20 transition-colors group">
+                                <tr class="hover:bg-zinc-100 transition-colors group">
                                     <td class="px-6 py-5">
                                         <div class="flex flex-col">
-                                            <div class="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                                            <div class="text-sm font-bold text-gray-900 group-hover:text-[#2271b1] transition-colors">
                                                 {{ $survey->title }}
                                             </div>
                                             <div class="text-[11px] font-medium text-gray-400">{{ __('Created') }}
@@ -361,7 +357,7 @@
                                     </td>
                                     <td class="px-6 py-5 whitespace-nowrap">
                                         <span
-                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100/50 uppercase tracking-tight">
+                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-[#135e96] border border-zinc-200/50 uppercase tracking-tight">
                                             {{ __($survey->category->value ?? $survey->category) }}
                                         </span>
                                     </td>
@@ -373,7 +369,7 @@
                                     </td>
                                     <td class="px-6 py-5 whitespace-nowrap text-right text-sm font-medium">
                                         <a href="{{ route('surveys.show', $survey) }}"
-                                            class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-gray-900 transition-all shadow-lg shadow-indigo-100">
+                                            class="inline-flex items-center px-4 py-2 bg-[#2271b1] text-white rounded-lg text-xs font-bold hover:bg-gray-900 transition-all shadow-lg shadow-zinc-200/50">
                                             {{ __('Take Survey') }}
                                         </a>
                                     </td>

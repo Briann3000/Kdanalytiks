@@ -14,6 +14,7 @@ class AdminController extends Controller
 {
     public function dashboard()
     {
+        Survey::cleanupEmptyDrafts();
         $stats = [
             'totalUsers' => User::count(),
             'totalResponses' => Response::count(),
@@ -140,6 +141,7 @@ class AdminController extends Controller
 
     public function surveys(Request $request)
     {
+        Survey::cleanupEmptyDrafts();
         $query = Survey::where('is_template', false)->with(['organization', 'independent'])->withCount('responses');
 
         if ($request->filled('status')) {

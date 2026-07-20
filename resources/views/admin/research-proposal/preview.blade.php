@@ -67,13 +67,13 @@
          :class="sidebarOpen ? 'w-60' : 'w-12'">
 
         <div class="flex-shrink-0 p-4 border-b border-gray-100 bg-gray-50/30 flex items-center" :class="sidebarOpen ? '' : 'justify-center px-0'">
-            <i class="fa-solid fa-folder-open text-indigo-500" :class="sidebarOpen ? 'mr-3' : ''"></i>
+            <i class="fa-solid fa-folder-open text-zinc-2000" :class="sidebarOpen ? 'mr-3' : ''"></i>
             <h3 x-show="sidebarOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                 class="text-[10px] font- uppercase tracking-widest truncate flex-1">
                 {{ __('Report Structure') }}
             </h3>
             <button @click="sidebarOpen = !sidebarOpen"
-                class="w-6 h-6 flex items-center justify-center rounded-lg bg-white border border-gray-100 text-gray-400 hover:text-indigo-600 hover:border-indigo-100 transition-all"
+                class="w-6 h-6 flex items-center justify-center rounded-lg bg-white border border-gray-100 text-gray-400 hover:text-[#2271b1] hover:border-zinc-200 transition-all"
                 :class="sidebarOpen ? 'ml-2' : 'absolute -right-3 top-7 z-50 shadow-md'">
                 <i class="fa-solid fa-chevron-left text-[10px] transition-transform duration-300" :class="sidebarOpen ? '' : 'rotate-180'"></i>
             </button>
@@ -89,9 +89,9 @@
                 @if($isChapter)
                     <div class="mt-3 mb-1">
                         <a href="#section-{{ $loop->iteration }}" data-nav-target="section-{{ $loop->iteration }}"
-                            class="nav-link nav-chapter flex items-center rounded-xl text-[10px] font-black text-indigo-700 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 transition-all group"
+                            class="nav-link nav-chapter flex items-center rounded-xl text-[10px] font-black text-[#135e96] bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 transition-all group"
                             :class="sidebarOpen ? 'px-4 py-2.5' : 'p-2 justify-center'">
-                            <span class="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded bg-indigo-600 text-white text-[8px]"
+                            <span class="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded bg-[#2271b1] text-white text-[8px]"
                                 :class="sidebarOpen ? 'mr-2' : ''">
                                 <i class="fa-solid fa-bookmark text-[7px]"></i>
                             </span>
@@ -110,10 +110,10 @@
                     </a>
                 @else
                     <a href="#section-{{ $loop->iteration }}" data-nav-target="section-{{ $loop->iteration }}"
-                        class="nav-link nav-section flex items-center rounded-xl text-xs font-bold text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 transition-all border border-transparent hover:border-indigo-100 group"
+                        class="nav-link nav-section flex items-center rounded-xl text-xs font-bold text-gray-600 hover:bg-zinc-100 hover:text-[#135e96] transition-all border border-transparent hover:border-zinc-200 group"
                         :class="sidebarOpen ? 'px-4 py-2.5' : 'p-2 justify-center'">
                         <span
-                            class="nav-icon w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-lg bg-gray-50 text-[9px] group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors"
+                            class="nav-icon w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-lg bg-gray-50 text-[9px] group-hover:bg-zinc-200 group-hover:text-[#2271b1] transition-colors"
                             :class="sidebarOpen ? 'mr-2' : ''">
                             {{ $loop->iteration }}
                         </span>
@@ -157,7 +157,7 @@
 
                     <span class="text-[9px] font-black text-gray-400 uppercase">Style:</span>
                     <select name="style" onchange="this.form.submit(); this.disabled=true;"
-                        class="bg-indigo-50 text-indigo-600 text-[8px] font-black rounded border border-indigo-100 uppercase py-0.5 px-2 focus:ring-1 focus:ring-indigo-300 cursor-pointer hover:bg-indigo-100 transition-all outline-none">
+                        class="bg-zinc-100 text-[#2271b1] text-[8px] font-black rounded border border-zinc-200 uppercase py-0.5 px-2 focus:ring-1 focus:ring-[#2271b1]/30 cursor-pointer hover:bg-zinc-200 transition-all outline-none">
                         <option value="apa7" {{ ($reportData['metadata']['style'] ?? '') === 'apa7' ? 'selected' : '' }}>APA
                         </option>
                         <option value="mla9" {{ ($reportData['metadata']['style'] ?? '') === 'mla9' ? 'selected' : '' }}>MLA
@@ -185,8 +185,8 @@
                     <input type="hidden" name="format" :value="format">
 
                     @if($isTruncated)
-                        <div class="flex items-center px-3 py-1.5 bg-indigo-50 rounded-lg border border-indigo-100 mr-2">
-                            <span class="text-[8px] font-black text-indigo-600 uppercase tracking-wider">{{ $remainingExports }} Free {{ \Illuminate\Support\Str::plural('Export', $remainingExports) }} Left</span>
+                        <div class="flex items-center px-3 py-1.5 bg-zinc-100 rounded-lg border border-zinc-200 mr-2">
+                            <span class="text-[8px] font-black text-[#2271b1] uppercase tracking-wider">{{ $remainingExports }} Free {{ \Illuminate\Support\Str::plural('Export', $remainingExports) }} Left</span>
                         </div>
                     @endif
 
@@ -206,7 +206,7 @@
                     </div>
 
                     <button type="submit"
-                        class="px-4 py-1.5 bg-indigo-600 text-white rounded-xl font-black text-[8px] uppercase tracking-wider shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center group">
+                        class="px-4 py-1.5 bg-[#2271b1] text-white rounded-xl font-black text-[8px] uppercase tracking-wider shadow-lg shadow-zinc-200/50 hover:bg-[#135e96] transition-all flex items-center group">
                         <i class="fa-solid fa-download mr-2 text-[10px]"></i>
                         <span x-text="format.toUpperCase()"></span>
                     </button>
@@ -238,15 +238,15 @@
                     <div
                         class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border border-gray-100 max-w-lg mb-12 transform scale-110">
                         <div
-                            class="w-20 h-20 bg-indigo-600 rounded-2xl flex items-center justify-center text-white mx-auto mb-8 shadow-2xl shadow-indigo-200">
+                            class="w-20 h-20 bg-[#2271b1] rounded-2xl flex items-center justify-center text-white mx-auto mb-8 shadow-2xl shadow-zinc-300/40">
                             <i class="fa-solid fa-lock text-3xl"></i>
                         </div>
                         <h5 class="text-3xl font-black text-gray-900 mb-4 tracking-tighter">Academic Suite Locked</h5>
                         <p class="text-gray-500 text-lg mb-10 leading-relaxed font-medium">Upgrade to <span
-                                class="text-indigo-600 font-bold">{{ $targetTier }}</span> to reveal full academic syntheses,
+                                class="text-[#2271b1] font-bold">{{ $targetTier }}</span> to reveal full academic syntheses,
                             exportable drafts, and deep-dive methodology mappings.</p>
                         <a href="{{ route('subscriptions.index') }}"
-                            class="inline-flex items-center justify-center w-full px-10 py-5 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 hover:scale-[1.02] active:scale-[0.98]">
+                            class="inline-flex items-center justify-center w-full px-10 py-5 bg-[#2271b1] text-white font-black rounded-2xl hover:bg-[#135e96] transition-all shadow-xl shadow-zinc-200/50 hover:scale-[1.02] active:scale-[0.98]">
                             Unlock Complete Full Preview
                             <i class="fa-solid fa-arrow-right ml-3 text-sm"></i>
                         </a>
@@ -273,7 +273,7 @@
                         <section id="section-{{ $loop->iteration }}"
                             class="scroll-mt-32 py-24 text-center border-t-2 border-b-2 border-gray-100 my-16 relative">
                             <h2 class="text-2xl font-black text-gray-900 uppercase tracking-widest">{{ __($cleanContentTitle) }}</h2>
-                            <div class="w-20 h-1 bg-indigo-600 mx-auto mt-4 rounded-full"></div>
+                            <div class="w-20 h-1 bg-[#2271b1] mx-auto mt-4 rounded-full"></div>
                         </section>
                     @elseif($isTitlePage)
                         {{-- Title Page with raw HTML --}}
@@ -288,7 +288,7 @@
                                     {{ __($cleanContentTitle) }}</h2>
                             @else
                                 <h3
-                                    class="text-lg font-black text-gray-900 mb-6 border-l-4 border-indigo-600 pl-5 tracking-tight leading-snug">
+                                    class="text-lg font-black text-gray-900 mb-6 border-l-4 border-[#2271b1] pl-5 tracking-tight leading-snug">
                                     {{ __($cleanContentTitle) }}</h3>
                             @endif
                             <div
@@ -308,7 +308,7 @@
                                     {{ __($cleanContentTitle) }}</h3>
                             @else
                                 <h3
-                                    class="text-lg font-black text-gray-900 mb-6 border-l-4 border-indigo-600 pl-5 tracking-tight leading-snug">
+                                    class="text-lg font-black text-gray-900 mb-6 border-l-4 border-[#2271b1] pl-5 tracking-tight leading-snug">
                                     {{ __($cleanContentTitle) }}</h3>
                             @endif
                             <div
@@ -318,7 +318,7 @@
                                     // Handle bold (markdown style)
                                     $rendered = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $rendered);
                                     // Handle bold italics (often used for subheadings in AI output)
-                                    $rendered = preg_replace('/\*\*\*(.+?)\*\*\*/', '<h4 class="text-indigo-700">$1</h4>', $rendered);
+                                    $rendered = preg_replace('/\*\*\*(.+?)\*\*\*/', '<h4 class="text-[#135e96]">$1</h4>', $rendered);
                                     // Handle headings (markdown style)
                                     $rendered = preg_replace('/^### (.+)$/m', '<h4>$1</h4>', $rendered);
                                     $rendered = preg_replace('/^## (.+)$/m', '<h3>$1</h3>', $rendered);
