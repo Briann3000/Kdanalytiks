@@ -13,7 +13,7 @@ class GroqStreamingClient
     ) {
     }
 
-    public function streamChatCompletion(array $messages, callable $onDelta, ?string $model = null): array
+    public function streamChatCompletion(array $messages, callable $onDelta, ?string $model = null, ?float $temperature = null): array
     {
         $apiKey = config('services.groq.api_key');
         $model = $model ?? config('services.groq.model', 'llama-3.1-8b-instant');
@@ -37,7 +37,7 @@ class GroqStreamingClient
             'json' => [
                 'model' => $model,
                 'messages' => $messages,
-                'temperature' => 0.3,
+                'temperature' => $temperature ?? 0.3,
                 'max_tokens' => 4096,
                 'stream' => true,
                 'stream_options' => ['include_usage' => true],

@@ -1,6 +1,26 @@
 @extends('layouts.app')
 
+@section('title', 'Collect & Analyze Data, Compile & Report Findings')
+@section('meta_description', 'KDAnalytiks helps you collect and analyze data, and compile and report findings automatically with AI-powered survey analysis and research tools.')
+
 @section('content')
+    <!-- Structured Data JSON-LD Schema for Google -->
+    <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          "name": "KDAnalytiks",
+          "url": "{{ url('/') }}",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "All",
+          "description": "KDAnalytiks helps you collect and analyze data, and compile and report findings automatically with AI-powered survey analysis and research tools.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          }
+        }
+        </script>
     <div class="relative bg-white overflow-hidden">
         <div class="max-w-7xl mx-auto">
             <div class="relative z-10 pb-8 bg-white sm:pb-16 md:pb-20 lg:max-w-2xl lg:w-full lg:pb-28 xl:pb-32">

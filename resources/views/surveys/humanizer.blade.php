@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
-@section('title', __('AI Content Humanizer'))
+@section('title', __('AI Content Humanizer | Humanize & Improve Writing Flow'))
+@section('meta_description', 'Humanize AI-generated text to collect and analyze data naturally, bypass AI detectors and refine sentence rhythm and vocabulary.')
 
 @section('content')
     <div x-data="{
@@ -136,7 +137,7 @@
                 <div>
                     <h3 class="text-base font-black tracking-tight text-white">{{ __('AI Content Humanizer') }}</h3>
                     <p class="text-[10px] text-slate-400 font-medium mt-0.5">
-                        {{ __('Emulate human rhythm and vocabulary to bypass advanced AI detection') }}
+                        {{ __('Emulate human rhythm and vocabulary') }}
                     </p>
                 </div>
             </div>

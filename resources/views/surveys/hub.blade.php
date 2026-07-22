@@ -3,6 +3,7 @@
 @section('title')
     {{ $survey->title }} - Survey Hub
 @endsection
+@section('meta_robots', 'noindex, nofollow')
 
 @section('content')
     <div class="container-fluid {{ request('reportTab') === 'analyse' ? 'p-0 overflow-hidden' : 'px-4 py-6' }}">

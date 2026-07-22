@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SociusChatController;
 use App\Http\Controllers\SurveyController;
+use App\Http\Controllers\SurveyImportController;
+use App\Http\Controllers\SurveyExportPackageController;
 use App\Http\Controllers\InsightController;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -25,6 +27,8 @@ Route::get('/admin', function () {
 Route::get('/', function () {
     return view('welcome'); // Landing Page (Always accessible)
 })->name('home');
+
+Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
 
 Route::get('/lang/{locale}', [\App\Http\Controllers\LocaleController::class, 'switch'])
     ->name('locale.switch');
@@ -174,6 +178,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/surveys/export-schema-docx', [SurveyController::class, 'exportSchemaDocx'])->name('surveys.export-schema-docx');
     Route::post('/surveys/import-docx', [SurveyController::class, 'importDocx'])->name('surveys.import-docx');
 
+    // Data Import Routes — open to all authenticated users
+    Route::get('/surveys/import', [SurveyImportController::class, 'showImportPage'])->name('surveys.import');
+    Route::post('/surveys/import/preview', [SurveyImportController::class, 'previewImport'])->name('surveys.import.preview');
+    Route::post('/surveys/import/confirm', [SurveyImportController::class, 'confirmImport'])->name('surveys.import.confirm');
+    Route::post('/surveys/import-package', [SurveyImportController::class, 'importPackage'])->name('surveys.import.package');
+
     // Legacy Project Redirects
     Route::redirect('/projects/active', '/surveys?status=active', 301);
     Route::redirect('/projects/archived', '/surveys?status=archived', 301);
@@ -202,6 +212,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/toggle-shared-report', [SurveyController::class, 'toggleSharedReport'])->name('reports.toggle-shared');
         Route::get('/crosstab', [SurveyController::class, 'crosstab'])->name('reports.crosstab');
         Route::get('/inferential-analysis', [SurveyController::class, 'inferentialAnalysis'])->name('reports.inferential');
+
+        // Data Portability Export Routes
+        Route::get('/export-package', [SurveyExportPackageController::class, 'exportPackage'])->name('export_package');
+        Route::get('/export-spss-sav', [SurveyExportPackageController::class, 'exportSpssPackage'])->name('export_spss_sav');
+        Route::get('/export-pdf-summary', [SurveyExportPackageController::class, 'exportPdfSummary'])->name('export_pdf_summary');
 
         // Versioning routes
         Route::get('/versions', [\App\Http\Controllers\SurveyVersionController::class, 'index'])->name('versions');
@@ -237,6 +252,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/threads/{thread}/pin-toggle', [SociusChatController::class, 'togglePin'])->name('threads.pin_toggle');
         Route::get('/threads/{thread}/export', [SociusChatController::class, 'export'])->name('threads.export');
         Route::delete('/threads/{thread}', [SociusChatController::class, 'destroy'])->name('threads.destroy');
+        Route::post('/humanize', [SociusChatController::class, 'humanize'])->name('humanize');
     });
 
     Route::get('/socius/knowledge-base', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'index'])->name('socius.knowledge-base.index');
@@ -257,6 +273,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/research-proposal/store', [\App\Http\Controllers\ResearchProposalController::class, 'storeProposal'])->name('research-proposal.store');
     Route::get('/research-proposal/export-proposal/{id}', [\App\Http\Controllers\ResearchProposalController::class, 'exportProposal'])->name('research-proposal.export-proposal');
     Route::post('/research-proposal/generate', [\App\Http\Controllers\ResearchProposalController::class, 'generate'])->name('research-proposal.generate');
+
+    // Standalone Humanizer Routes
+    Route::get('/humanizer', [\App\Http\Controllers\HumanizerController::class, 'index'])->name('humanizer.index');
+    Route::post('/humanizer/process', [\App\Http\Controllers\HumanizerController::class, 'process'])->name('humanizer.process');
+    Route::post('/humanizer/upload', [\App\Http\Controllers\HumanizerController::class, 'upload'])->name('humanizer.upload');
+    Route::post('/humanizer/download', [\App\Http\Controllers\HumanizerController::class, 'downloadDocx'])->name('humanizer.download');
     Route::get('/research-proposal/preview/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'preview'])->name('research-proposal.preview');
     Route::post('/research-proposal/translate/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'translate'])->name('research-proposal.translate');
     Route::post('/research-proposal/export/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'export'])->name('research-proposal.export');

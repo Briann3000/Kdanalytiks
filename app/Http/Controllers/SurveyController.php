@@ -466,6 +466,14 @@ class SurveyController extends Controller
             ? 'Survey published successfully and is now LIVE!'
             : 'Survey saved as draft.';
 
+        if ($survey->status === \App\Enums\SurveyStatus::Active && $survey->type === \App\Enums\SurveyType::Public && !$survey->is_template) {
+            try {
+                app(\App\Services\IndexNowService::class)->submitUrls([route('surveys.show', $survey->id)]);
+            } catch (\Throwable $e) {
+                // Silent catch to ensure survey publishing is never blocked by IndexNow network timeouts
+            }
+        }
+
         return redirect()->route('surveys.summary', $survey)->with('success', $message);
     }
 

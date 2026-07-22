@@ -12,7 +12,32 @@
     <meta name="theme-color" content="#4f46e5">
     <link rel="manifest" href="{{ asset('manifest.json') }}?v=4">
 
-    <title>{{ config('app.name', 'KDAnalytiks') }}</title>
+    <!-- SEO & Indexing Directives -->
+    <title>@yield('title', 'KDAnalytiks | Collect & Analyze Data, Compile & Report Findings')</title>
+    <meta name="description"
+        content="@yield('meta_description', 'KDAnalytiks helps you collect and analyze data, and compile and report findings automatically with AI-powered survey analysis and research tools.')">
+    <meta name="keywords"
+        content="@yield('meta_keywords', 'collect and analyze data, compile and report findings, survey tool, AI survey analysis, APA report generator, survey builder, data analytics, AI humanizer')">
+    <meta name="robots" content="@yield('meta_robots', 'index, follow')">
+    <link rel="canonical" href="{{ url()->current() }}">
+
+    <!-- Open Graph / WhatsApp / Facebook Social Media Meta Tags -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="KDAnalytiks">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:title"
+        content="@yield('title', 'KDAnalytiks | Collect & Analyze Data, Compile & Report Findings')">
+    <meta property="og:description"
+        content="@yield('meta_description', 'KDAnalytiks helps you collect and analyze data, and compile and report findings automatically with AI-powered survey analysis and research tools.')">
+    <meta property="og:image" content="{{ asset('images/logo.png') }}">
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title"
+        content="@yield('title', 'KDAnalytiks | Collect & Analyze Data, Compile & Report Findings')">
+    <meta name="twitter:description"
+        content="@yield('meta_description', 'KDAnalytiks helps you collect and analyze data, and compile and report findings automatically with AI-powered survey analysis and research tools.')">
+    <meta name="twitter:image" content="{{ asset('images/logo.png') }}">
 
     <!-- Tailwind CSS (via Vite) -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
