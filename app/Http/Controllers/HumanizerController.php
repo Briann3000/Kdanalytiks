@@ -29,12 +29,14 @@ class HumanizerController extends Controller
             'text' => 'required|string',
             'mode' => 'nullable|string|in:standard,academic,creative',
             'intensity' => 'nullable|string|in:low,medium,high',
+            'custom_instructions' => 'nullable|string|max:1000',
             'analyze_only' => 'nullable|boolean'
         ]);
 
         $text = $request->input('text');
         $mode = $request->input('mode', 'standard');
         $intensity = $request->input('intensity', 'medium');
+        $customInstructions = $request->input('custom_instructions');
         $analyzeOnly = (bool) $request->input('analyze_only', false);
 
         try {
@@ -44,7 +46,7 @@ class HumanizerController extends Controller
                 return response()->json(['analysis' => $analysis]);
             }
 
-            $humanizedText = $this->aiHumanizerService->humanizeText($text, $mode, $intensity);
+            $humanizedText = $this->aiHumanizerService->humanizeText($text, $mode, $intensity, $customInstructions);
             $newAnalysis = $this->aiHumanizerService->analyzeText($humanizedText);
 
             return response()->json([

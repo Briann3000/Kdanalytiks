@@ -11,6 +11,7 @@
                 isAnalyzing: false,
                 humanizerMode: 'standard',
                 humanizerIntensity: 'medium',
+                customInstructions: '',
                 originalAnalysis: null,
                 humanizedAnalysis: null,
 
@@ -52,7 +53,8 @@
                             body: JSON.stringify({
                                 text: this.humanizerOriginal,
                                 mode: this.humanizerMode,
-                                intensity: this.humanizerIntensity
+                                intensity: this.humanizerIntensity,
+                                custom_instructions: this.customInstructions
                             })
                         });
                         const data = await response.json();
@@ -66,12 +68,12 @@
                             return;
                         }
                         this.humanizerResult = data.humanized_text;
-                        this.originalAnalysis = data.original_analysis;
                         this.humanizedAnalysis = data.humanized_analysis;
                     } catch (e) {
+                        console.error(e);
                         Swal.fire({
-                            title: 'Connection Error',
-                            text: e.message,
+                            title: 'Error',
+                            text: 'Failed to humanize text. Please try again.',
                             icon: 'error',
                             customClass: { popup: 'rounded-3xl' }
                         });
@@ -86,58 +88,61 @@
 
                     const formData = new FormData();
                     formData.append('file', file);
-                    formData.append('_token', '{{ csrf_token() }}');
 
-                    this.isAnalyzing = true;
+                    Swal.fire({
+                        title: 'Extracting Text...',
+                        text: 'Please wait while we extract text from your document.',
+                        allowOutsideClick: false,
+                        didOpen: () => Swal.showLoading()
+                    });
+
                     try {
                         const response = await fetch('{{ route('humanizer.upload') }}', {
                             method: 'POST',
                             headers: {
-                                'Accept': 'application/json'
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
                             },
                             body: formData
                         });
                         const data = await response.json();
-                        if (!response.ok) {
-                            const errorText = data.message || 'Validation or upload error';
-                            const details = data.errors ? Object.values(data.errors).flat().join('\n') : '';
+                        Swal.close();
+
+                        if (!response.ok || data.error) {
+                            const errorMsg = data.message || (data.errors ? Object.values(data.errors).flat().join('\n') : 'Extraction failed');
                             Swal.fire({
-                                title: 'Upload Failed',
-                                text: details || errorText,
+                                title: 'Extraction Error',
+                                text: errorMsg,
                                 icon: 'error',
                                 customClass: { popup: 'rounded-3xl' }
                             });
                             return;
                         }
+
                         this.humanizerOriginal = data.text || '';
-                        this.$nextTick(() => {
+                        if (this.humanizerOriginal.trim()) {
                             this.analyzeHumanizerText();
-                        });
+                        }
                     } catch (e) {
+                        Swal.close();
+                        console.error(e);
                         Swal.fire({
-                            title: 'Upload Error',
-                            text: e.message,
-                            icon: 'error',
-                            customClass: { popup: 'rounded-3xl' }
+                            title: 'Upload Failed',
+                            text: 'Could not extract text from document.',
+                            icon: 'error'
                         });
-                    } finally {
-                        this.isAnalyzing = false;
-                        event.target.value = '';
                     }
                 }
             }"
         class="min-h-screen bg-[#1d2327] text-slate-100 rounded-3xl border border-white/5 shadow-2xl flex flex-col font-sans">
         <!-- Header -->
-        <div class="px-8 py-5 border-b border-white/5 bg-[#1d2327] flex items-center justify-between">
+        <div class="px-8 py-5 border-b border-white/5 bg-black/30 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <div
-                    class="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-[#2271b1] flex items-center justify-center shadow-lg shadow-[#2271b1]/20">
-                    <i class="fa-solid fa-wand-magic-sparkles text-sm text-white"></i>
-                </div>
+                
                 <div>
                     <h3 class="text-base font-black tracking-tight text-white">{{ __('AI Content Humanizer') }}</h3>
                     <p class="text-[10px] text-slate-400 font-medium mt-0.5">
-                        {{ __('Emulate human rhythm and vocabulary') }}
+                        {{ __('Emulate natural human rhythm, style and vocabulary') }}
                     </p>
                 </div>
             </div>
@@ -170,7 +175,7 @@
                                 <i class="fa-solid fa-cloud-arrow-up mr-1"></i> {{ __('Upload Doc') }}
                             </button>
                             <button
-                                @click="humanizerOriginal = ''; originalAnalysis = null; humanizedAnalysis = null; humanizerResult = '';"
+                                @click="humanizerOriginal = ''; originalAnalysis = null; humanizedAnalysis = null; humanizerResult = ''; customInstructions = '';"
                                 class="text-[10px] text-slate-400 hover:text-white font-bold transition-colors">
                                 {{ __('Clear') }}
                             </button>
@@ -181,41 +186,57 @@
                         placeholder="{{ __('Paste your AI-generated text here, or click "Upload Doc" to extract text from a file...') }}"
                         class="w-full h-80 bg-black/30 border border-white/5 rounded-xl p-4 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#2271b1]/30 focus:ring-1 focus:ring-[#2271b1]/10 transition-all custom-scrollbar resize-none"></textarea>
 
-                    <div class="flex flex-wrap items-center justify-between gap-4">
-                        <div class="flex items-center gap-4">
-                            <!-- Mode Selector -->
-                            <div class="flex flex-col gap-1">
-                                <span
-                                    class="text-[9px] font-black tracking-wider text-slate-400">{{ __('Tone Mode') }}</span>
-                                <select x-model="humanizerMode"
-                                    class="bg-[#1d2327] border border-white/5 text-slate-300 rounded-lg px-2.5 py-1.5 text-[11px] font-bold focus:outline-none focus:border-[#2271b1]/30">
-                                    <option value="standard">{{ __('Standard human flow') }}</option>
-                                    <option value="academic">{{ __('Academic / Researcher') }}</option>
-                                    <option value="creative">{{ __('Creative / Expressive') }}</option>
-                                </select>
-                            </div>
+                    <div class="flex flex-col gap-4">
+                        <div class="flex flex-wrap items-center justify-between gap-4">
+                            <div class="flex items-center gap-4">
+                                <!-- Mode Selector -->
+                                <div class="flex flex-col gap-1">
+                                    <span
+                                        class="text-[9px] font-black tracking-wider text-slate-400">{{ __('Tone Mode') }}</span>
+                                    <select x-model="humanizerMode"
+                                        class="bg-[#1d2327] border border-white/5 text-slate-300 rounded-lg px-2.5 py-1.5 text-[11px] font-bold focus:outline-none focus:border-[#2271b1]/30">
+                                        <option value="standard">{{ __('Standard human flow') }}</option>
+                                        <option value="academic">{{ __('Academic / Researcher') }}</option>
+                                        <option value="creative">{{ __('Creative / Expressive') }}</option>
+                                    </select>
+                                </div>
 
-                            <!-- Intensity Selector -->
-                            <div class="flex flex-col gap-1">
-                                <span
-                                    class="text-[9px] font-black tracking-wider text-slate-400">{{ __('Humanize Strength') }}</span>
-                                <div class="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
-                                    @foreach(['low', 'medium', 'high'] as $level)
-                                        <button @click="humanizerIntensity = '{{ $level }}'"
-                                            :class="humanizerIntensity === '{{ $level }}' ? 'bg-[#2271b1] text-white' : 'text-slate-400 hover:text-slate-200'"
-                                            class="px-2.5 py-1 rounded-md text-[10px] font-bold transition-all">
-                                            {{ __(ucfirst($level)) }}
-                                        </button>
-                                    @endforeach
+                                <!-- Intensity Selector -->
+                                <div class="flex flex-col gap-1">
+                                    <span
+                                        class="text-[9px] font-black tracking-wider text-slate-400">{{ __('Humanize Strength') }}</span>
+                                    <div class="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
+                                        @foreach(['low', 'medium', 'high'] as $level)
+                                            <button @click="humanizerIntensity = '{{ $level }}'"
+                                                :class="humanizerIntensity === '{{ $level }}' ? 'bg-[#2271b1] text-white' : 'text-slate-400 hover:text-slate-200'"
+                                                class="px-2.5 py-1 rounded-md text-[10px] font-bold transition-all">
+                                                {{ __(ucfirst($level)) }}
+                                            </button>
+                                        @endforeach
+                                    </div>
                                 </div>
                             </div>
+
+                            <button @click="humanizeAction()" :disabled="isHumanizing || !humanizerOriginal.trim()"
+                                class="inline-flex items-center gap-2 px-6 py-3 bg-[#2271b1] hover:bg-blue-600 disabled:opacity-30 text-white rounded-xl text-xs font-black tracking-widest transition-all shadow-lg shadow-[#2271b1]/10">
+                                <i class="fa-solid fa-circle-nodes" :class="isHumanizing ? 'animate-spin' : ''"></i>
+                                <span x-text="isHumanizing ? '{{ __('Rewriting...') }}' : (customInstructions.trim() ? '{{ __('Update with Personal Voice') }}' : '{{ __('Humanize Text') }}')"></span>
+                            </button>
                         </div>
 
-                        <button @click="humanizeAction()" :disabled="isHumanizing || !humanizerOriginal.trim()"
-                            class="inline-flex items-center gap-2 px-6 py-3 bg-[#2271b1] hover:bg-blue-600 disabled:opacity-30 text-white rounded-xl text-xs font-black tracking-widest transition-all shadow-lg shadow-[#2271b1]/10">
-                            <i class="fa-solid fa-circle-nodes" :class="isHumanizing ? 'animate-spin' : ''"></i>
-                            <span x-text="isHumanizing ? '{{ __('Rewriting...') }}' : '{{ __('Humanize Text') }}'"></span>
-                        </button>
+                        <!-- Personal Voice & Custom Style Notes -->
+                        <div class="flex flex-col gap-1.5 border-t border-white/5 pt-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-black tracking-wider text-slate-300 flex items-center gap-1.5">
+                                    
+                                    {{ __('Personal Voice & Custom Style Notes') }}
+                                </span>
+                                <span class="text-[9px] text-slate-500 italic">{{ __('Optional') }}</span>
+                            </div>
+                            <textarea x-model="customInstructions"
+                                placeholder="{{ __('Add your personal writing style, preferred phrases, or specific tone notes (e.g., "Use a conversational undergraduate voice", "Start paragraph 2 with a personal reflection")...') }}"
+                                class="w-full h-16 bg-black/30 border border-white/5 rounded-lg p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#2271b1]/30 transition-all custom-scrollbar resize-none"></textarea>
+                        </div>
                     </div>
                 </div>
 

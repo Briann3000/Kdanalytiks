@@ -140,7 +140,7 @@ class AiHumanizerService
     /**
      * Send text to the LLM to humanize it using dynamic settings, including paragraph chunking and multi-pass loops.
      */
-    public function humanizeText(string $text, string $mode = 'standard', string $intensity = 'medium'): string
+    public function humanizeText(string $text, string $mode = 'standard', string $intensity = 'medium', ?string $customInstructions = null): string
     {
         // Step 1: Chunk paragraphs keeping each chunk around 4000 chars to avoid token limit drops
         $paragraphs = preg_split('/\n\s*\n/', $text);
@@ -166,11 +166,11 @@ class AiHumanizerService
 
         $humanizedChunks = [];
         foreach ($chunks as $chunk) {
-            $hChunk = $this->processParagraphChunk($chunk, $mode, $intensity);
+            $hChunk = $this->processParagraphChunk($chunk, $mode, $intensity, $customInstructions);
             // Selective per-chunk refinement (only if AI Risk > 25%) to optimize token costs and eliminate full-document truncation
             $cScan = $this->analyzeText($hChunk);
             if ($cScan['aiProbability'] > 25) {
-                $hChunk = $this->runRefinementPass($hChunk);
+                $hChunk = $this->runRefinementPass($hChunk, $customInstructions);
             }
             $humanizedChunks[] = $hChunk;
         }
@@ -181,7 +181,7 @@ class AiHumanizerService
     /**
      * Process a chunk of paragraphs preserving exact structure.
      */
-    private function processParagraphChunk(string $chunk, string $mode, string $intensity): string
+    private function processParagraphChunk(string $chunk, string $mode, string $intensity, ?string $customInstructions = null): string
     {
         $systemPrompt = "You are an expert editor specializing in humanizing text and refining writing style. Your goal is to rewrite the input text paragraph-by-paragraph to emulate natural, dynamic, and engaging human writing profiles.
 
@@ -211,7 +211,6 @@ CORE HUMANIZATION RULES:
 7. GRAMMAR FLOW MICRO-VARIATIONS:
 - Write with a academic-lite voice, allowing for sentence-ending prepositions and colloquial contractions.
 
-
 8. STATISTICAL REDIRECT:
 - Convert dry statistical list sequences into conversational summaries (e.g., changing '20% agree, 20% neutral' to 'roughly a fifth agreed, while another fifth stayed neutral').
 
@@ -219,8 +218,14 @@ CORE HUMANIZATION RULES:
 - You MUST rewrite the input text paragraph-by-paragraph.
 - Preserve the exact number of paragraphs in the input. Do not merge, summarize, shorten, or omit paragraphs.
 - Maintain the exact original facts, data points, and core meaning. Do not summarize or omit key analytical information.
-Never combine comma and 'and' if finalizing a list. (eg., 'apples, oranges, and bananas' is incorrect; use 'apples, oranges and bananas').
-Return ONLY the final humanized text. Do not include any greeting, explanation, preamble, or trailing text.";
+Never combine comma and 'and' if finalizing a list. (eg., 'apples, oranges, and bananas' is incorrect; use 'apples, oranges and bananas').";
+
+        if (!empty($customInstructions)) {
+            $systemPrompt .= "\n\n10. USER'S PERSONAL VOICE & STYLISTIC INSTRUCTIONS:\n";
+            $systemPrompt .= "- You MUST strictly apply these personal writing preferences and custom instructions: \"{$customInstructions}\"";
+        }
+
+        $systemPrompt .= "\nReturn ONLY the final humanized text. Do not include any greeting, explanation, preamble, or trailing text.";
 
         $messages = [
             ['role' => 'system', 'content' => $systemPrompt],
@@ -240,16 +245,20 @@ Return ONLY the final humanized text. Do not include any greeting, explanation, 
     /**
      * Secondary refinement pass over the full text.
      */
-    private function runRefinementPass(string $text): string
+    private function runRefinementPass(string $text, ?string $customInstructions = null): string
     {
         $systemPrompt = "You are an expert copywriter. Your task is to perform an aggressive, secondary humanization pass over a draft that still carries some mechanical AI patterns. 
 You must break up the sentence structures even more dramatically:
 - Split any remaining long sentences into two or three short sentences.
 - If academic tone selected don't use casual tone.
 - Replace any remaining corporate, academic, or complex words (like plethora, myriad, paramount, underscore, stark, realm, fostering) with simple, direct vocabulary.
-- Ensure the result has high sentence length variation (burstiness) but not too much.
+- Ensure the result has high sentence length variation (burstiness) but not too much.";
 
-Return ONLY the refined humanized text, without any preambles or notes.";
+        if (!empty($customInstructions)) {
+            $systemPrompt .= "\n- Strictly incorporate the user's personal style instructions: \"{$customInstructions}\"";
+        }
+
+        $systemPrompt .= "\n\nReturn ONLY the refined humanized text, without any preambles or notes.";
 
         $messages = [
             ['role' => 'system', 'content' => $systemPrompt],

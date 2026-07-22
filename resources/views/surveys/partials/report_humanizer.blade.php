@@ -49,7 +49,7 @@
                             <i class="fa-solid fa-cloud-arrow-up mr-1"></i> {{ __('Upload Doc') }}
                         </button>
                         <button
-                            @click="humanizerOriginal = ''; originalAnalysis = null; humanizedAnalysis = null; humanizerResult = '';"
+                            @click="humanizerOriginal = ''; originalAnalysis = null; humanizedAnalysis = null; humanizerResult = ''; customInstructions = '';"
                             class="text-[10px] text-slate-400 hover:text-white font-bold transition-colors">
                             {{ __('Clear') }}
                         </button>
@@ -60,41 +60,57 @@
                     placeholder="{{ __('Paste your AI-generated text here, or click "Humanize" on a chat message inside Socius...') }}"
                     class="w-full h-80 bg-black/30 border border-white/5 rounded-xl p-4 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#2271b1]/30 focus:ring-1 focus:ring-[#2271b1]/10 transition-all custom-scrollbar resize-none"></textarea>
 
-                <div class="flex flex-wrap items-center justify-between gap-4">
-                    <div class="flex items-center gap-4">
-                        <!-- Mode Selector -->
-                        <div class="flex flex-col gap-1">
-                            <span
-                                class="text-[9px] font-black tracking-wider text-slate-400">{{ __('Tone Mode') }}</span>
-                            <select x-model="humanizerMode"
-                                class="bg-[#2a2a2a] border border-white/5 text-slate-300 rounded-lg px-2.5 py-1.5 text-[11px] font-bold focus:outline-none focus:border-[#2271b1]/30">
-                                <option value="standard">{{ __('Standard human flow') }}</option>
-                                <option value="academic">{{ __('Academic / Researcher') }}</option>
-                                <option value="creative">{{ __('Creative / Expressive') }}</option>
-                            </select>
-                        </div>
+                <div class="flex flex-col gap-4">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex items-center gap-4">
+                            <!-- Mode Selector -->
+                            <div class="flex flex-col gap-1">
+                                <span
+                                    class="text-[9px] font-black tracking-wider text-slate-400">{{ __('Tone Mode') }}</span>
+                                <select x-model="humanizerMode"
+                                    class="bg-[#2a2a2a] border border-white/5 text-slate-300 rounded-lg px-2.5 py-1.5 text-[11px] font-bold focus:outline-none focus:border-[#2271b1]/30">
+                                    <option value="standard">{{ __('Standard human flow') }}</option>
+                                    <option value="academic">{{ __('Academic / Researcher') }}</option>
+                                    <option value="creative">{{ __('Creative / Expressive') }}</option>
+                                </select>
+                            </div>
 
-                        <!-- Intensity Selector -->
-                        <div class="flex flex-col gap-1">
-                            <span
-                                class="text-[9px] font-black tracking-wider text-slate-400">{{ __('Humanize Strength') }}</span>
-                            <div class="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
-                                @foreach(['low', 'medium', 'high'] as $level)
-                                    <button @click="humanizerIntensity = '{{ $level }}'"
-                                        :class="humanizerIntensity === '{{ $level }}' ? 'bg-[#2271b1] text-white' : 'text-slate-400 hover:text-slate-200'"
-                                        class="px-2.5 py-1 rounded-md text-[10px] font-bold transition-all">
-                                        {{ __(ucfirst($level)) }}
-                                    </button>
-                                @endforeach
+                            <!-- Intensity Selector -->
+                            <div class="flex flex-col gap-1">
+                                <span
+                                    class="text-[9px] font-black tracking-wider text-slate-400">{{ __('Humanize Strength') }}</span>
+                                <div class="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
+                                    @foreach(['low', 'medium', 'high'] as $level)
+                                        <button @click="humanizerIntensity = '{{ $level }}'"
+                                            :class="humanizerIntensity === '{{ $level }}' ? 'bg-[#2271b1] text-white' : 'text-slate-400 hover:text-slate-200'"
+                                            class="px-2.5 py-1 rounded-md text-[10px] font-bold transition-all">
+                                            {{ __(ucfirst($level)) }}
+                                        </button>
+                                    @endforeach
+                                </div>
                             </div>
                         </div>
+
+                        <button @click="humanizeAction()" :disabled="isHumanizing || !humanizerOriginal.trim()"
+                            class="inline-flex items-center gap-2 px-6 py-3 bg-[#2271b1] hover:bg-blue-600 disabled:opacity-30 text-white rounded-xl text-xs font-black tracking-widest transition-all shadow-lg shadow-blue-500/10">
+                            <i class="fa-solid fa-circle-nodes" :class="isHumanizing ? 'animate-spin' : ''"></i>
+                            <span x-text="isHumanizing ? '{{ __('Rewriting...') }}' : (customInstructions.trim() ? '{{ __('Update with Personal Voice') }}' : '{{ __('Humanize Text') }}')"></span>
+                        </button>
                     </div>
 
-                    <button @click="humanizeAction()" :disabled="isHumanizing || !humanizerOriginal.trim()"
-                        class="inline-flex items-center gap-2 px-6 py-3 bg-[#2271b1] hover:bg-blue-600 disabled:opacity-30 text-white rounded-xl text-xs font-black tracking-widest transition-all shadow-lg shadow-blue-500/10">
-                        <i class="fa-solid fa-circle-nodes" :class="isHumanizing ? 'animate-spin' : ''"></i>
-                        <span x-text="isHumanizing ? '{{ __('Rewriting...') }}' : '{{ __('Humanize Text') }}'"></span>
-                    </button>
+                    <!-- Personal Voice & Custom Style Notes -->
+                    <div class="flex flex-col gap-1.5 border-t border-white/5 pt-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-black tracking-wider text-slate-300 flex items-center gap-1.5">
+                                
+                                {{ __('Personal Voice & Custom Style Notes') }}
+                            </span>
+                            <span class="text-[9px] text-slate-500 italic">{{ __('Optional') }}</span>
+                        </div>
+                        <textarea x-model="customInstructions"
+                            placeholder="{{ __('Add your personal writing style, preferred phrases, or specific tone notes (e.g., "Use a conversational undergraduate voice", "Start paragraph 2 with a personal reflection")...') }}"
+                            class="w-full h-16 bg-black/30 border border-white/5 rounded-lg p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#2271b1]/30 transition-all custom-scrollbar resize-none"></textarea>
+                    </div>
                 </div>
             </div>
 

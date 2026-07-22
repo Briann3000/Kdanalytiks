@@ -30,6 +30,7 @@
             isAnalyzing: false,
             humanizerMode: 'standard',
             humanizerIntensity: 'medium',
+            customInstructions: '',
             originalAnalysis: null,
             humanizedAnalysis: null,
             init() {
@@ -66,6 +67,7 @@
             goToHumanizer(text) {
                 this.humanizerOriginal = text;
                 this.humanizerResult = '';
+                this.customInstructions = '';
                 this.originalAnalysis = null;
                 this.humanizedAnalysis = null;
                 this.switchReportTab('humanizer');
@@ -109,13 +111,15 @@
                     const response = await fetch('{{ route('humanizer.upload') }}', {
                         method: 'POST',
                         headers: {
-                            'Accept': 'application/json'
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
                         },
                         body: formData
                     });
                     const data = await response.json();
-                    if (data.error) {
-                        alert('Extraction error: ' + data.message);
+                    if (!response.ok || data.error) {
+                        const errorMsg = data.message || (data.errors ? Object.values(data.errors).flat().join('\n') : 'Extraction failed');
+                        alert('Extraction error: ' + errorMsg);
                         return;
                     }
                     this.humanizerOriginal = data.text || '';
@@ -143,7 +147,8 @@
                         body: JSON.stringify({
                             text: this.humanizerOriginal,
                             mode: this.humanizerMode,
-                            intensity: this.humanizerIntensity
+                            intensity: this.humanizerIntensity,
+                            custom_instructions: this.customInstructions
                         })
                     });
                     const data = await response.json();
