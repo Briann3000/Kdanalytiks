@@ -118,6 +118,10 @@
                         class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ (request()->routeIs('surveys.reports') && request('reportTab') === 'analyse') ? 'border-[#2271b1] text-[#135e96]' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                         <i class="fa-solid fa-sparkles mr-2 text-zinc-2000"></i> {{ __('Socius Analysis') }}
                     </a>
+                    <a href="{{ route('surveys.reports', $survey) }}?reportTab=humanizer"
+                        class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ (request()->routeIs('surveys.reports') && request('reportTab') === 'humanizer') ? 'border-[#2271b1] text-[#135e96]' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> {{ __('AI Humanizer') }}
+                    </a>
                     <a href="{{ route('surveys.gallery', $survey) }}"
                         class="pb-4 px-1 border-b-2 font-bold text-sm transition-all {{ request()->routeIs('surveys.gallery') ? 'border-[#2271b1] text-[#135e96]' : 'border-transparent text-gray-600 hover:text-gray-600 hover:border-gray-300' }}">
                         <i class="fa-solid fa-images mr-2"></i> {{ __('Gallery') }}

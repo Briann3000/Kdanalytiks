@@ -169,6 +169,87 @@ class InsightController extends Controller
         return $this->analyze($request, $survey, $questionId);
     }
 
+    protected function getQuestionStatsAndLabel(\App\Models\Survey $survey, string $questionId): array
+    {
+        $responses = $survey->responses;
+        $totalResponses = $responses->count();
+        $frequencyCount = [];
+        $questionLabel = $questionId;
+
+        $isVirtualLikert = str_contains($questionId, '___');
+        $matchName = $isVirtualLikert ? explode('___', $questionId)[0] : $questionId;
+        $rowKey = $isVirtualLikert ? explode('___', $questionId)[1] : null;
+
+        if (!empty($survey->json_schema)) {
+            $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
+            if (is_array($schema)) {
+                foreach ($schema as $field) {
+                    if (isset($field['name']) && $field['name'] === $matchName) {
+                        $baseLabel = $field['label'] ?? $field['name'];
+                        if ($isVirtualLikert && isset($field['rows']) && is_array($field['rows'])) {
+                            $rowDef = collect($field['rows'])->firstWhere('value', $rowKey);
+                            $rowLabel = $rowDef['label'] ?? $rowKey;
+                            $questionLabel = "{$baseLabel} - {$rowLabel}";
+                        } else {
+                            $questionLabel = $baseLabel;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (is_numeric($questionId)) {
+            $question = \App\Models\Question::find($questionId);
+            if ($question) {
+                $questionLabel = $question->text;
+                $answers = $question->answers;
+                foreach ($responses as $response) {
+                    $answer = $answers->where('response_id', $response->id)->first();
+                    if ($answer && $answer->value !== null && $answer->value !== '') {
+                        $frequencyCount[$answer->value] = ($frequencyCount[$answer->value] ?? 0) + 1;
+                    }
+                }
+            }
+        } else {
+            foreach ($responses as $response) {
+                foreach ($response->answers as $ans) {
+                    if ($ans->value !== null && $ans->value !== '') {
+                        $data = is_string($ans->value) ? json_decode($ans->value, true) : $ans->value;
+                        if (is_array($data)) {
+                            foreach ($data as $entry) {
+                                if (isset($entry['name']) && $entry['name'] === $matchName && isset($entry['userData'])) {
+                                    $val = $entry['userData'];
+                                    if ($isVirtualLikert && is_array($val) && isset($val[$rowKey])) {
+                                        $val = $val[$rowKey];
+                                    }
+                                    if ($val !== null && $val !== '') {
+                                        $valStr = is_array($val) ? implode(', ', $val) : $val;
+                                        $frequencyCount[$valStr] = ($frequencyCount[$valStr] ?? 0) + 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        $stats = [];
+        foreach ($frequencyCount as $val => $count) {
+            $stats[] = [
+                'value' => $val,
+                'count' => $count,
+                'percentage' => $totalResponses > 0 ? round(($count / $totalResponses) * 100, 1) : 0
+            ];
+        }
+
+        return [
+            'label' => $questionLabel,
+            'stats' => $stats
+        ];
+    }
+
     public function generateQuantitativeInsight(Request $request, $questionId)
     {
         $surveyId = $request->query('survey_id');
@@ -180,53 +261,16 @@ class InsightController extends Controller
         }
 
         $cacheKey = "quantitative_analysis_{$survey->id}_{$questionId}";
+        if ($request->has('refresh')) {
+            Cache::forget($cacheKey);
+        }
 
         $insight = Cache::remember($cacheKey, 86400, function () use ($survey, $questionId) {
-            $responses = $survey->responses;
-            $stats = [];
-            $totalResponses = $responses->count();
-            $frequencyCount = [];
-
-            if (is_numeric($questionId)) {
-                $question = \App\Models\Question::findOrFail($questionId);
-                $answers = $question->answers;
-                foreach ($responses as $response) {
-                    $answer = $answers->where('response_id', $response->id)->first();
-                    if ($answer && $answer->value !== null && $answer->value !== '') {
-                        $frequencyCount[$answer->value] = ($frequencyCount[$answer->value] ?? 0) + 1;
-                    }
-                }
-            } else {
-                foreach ($responses as $response) {
-                    $jsonAnswer = $response->answers->first();
-                    if ($jsonAnswer) {
-                        $data = is_string($jsonAnswer->value) ? json_decode($jsonAnswer->value, true) : $jsonAnswer->value;
-                        if (is_array($data)) {
-                            foreach ($data as $entry) {
-                                if (isset($entry['name']) && $entry['name'] === $questionId && isset($entry['userData'])) {
-                                    $val = $entry['userData'];
-                                    if ($val !== null && $val !== '') {
-                                        $valStr = is_array($val) ? implode(', ', $val) : $val;
-                                        $frequencyCount[$valStr] = ($frequencyCount[$valStr] ?? 0) + 1;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            foreach ($frequencyCount as $val => $count) {
-                $stats[] = [
-                    'value' => $val,
-                    'count' => $count,
-                    'percentage' => $totalResponses > 0 ? round(($count / $totalResponses) * 100, 1) : 0
-                ];
-            }
-
-            if (empty($stats))
+            $data = $this->getQuestionStatsAndLabel($survey, $questionId);
+            if (empty($data['stats'])) {
                 return "Insufficient data for trend interpretation.";
-            return $this->analysisService->analyzeQuantitativeData($stats);
+            }
+            return $this->analysisService->analyzeQuantitativeData($data['stats'], $data['label']);
         });
 
         return response()->json(['insight' => $insight]);
@@ -406,7 +450,17 @@ class InsightController extends Controller
             return response()->json(['success' => false, 'message' => 'Conversation history and refinement instructions are required.'], 400);
         }
 
-        $prompt = "You are an expert research analyst. We are interpreting quantitative trends for a survey titled '{$survey->title}'.\n";
+        $data = $this->getQuestionStatsAndLabel($survey, $questionId);
+        $questionLabel = $data['label'];
+        $statsText = "";
+        foreach ($data['stats'] as $stat) {
+            $statsText .= "Choice: {$stat['value']} | Count: {$stat['count']} | Percentage: {$stat['percentage']}%\n";
+        }
+
+        $prompt = "You are an expert research analyst and statistician.\n";
+        $prompt .= "We are analyzing a specific survey question from '{$survey->title}'.\n\n";
+        $prompt .= "TARGET QUESTION: {$questionLabel}\n";
+        $prompt .= "STATISTICAL FREQUENCY DATA FOR THIS QUESTION:\n{$statsText}\n\n";
         $prompt .= "Here is the conversation history with the researcher:\n\n";
 
         foreach ($messages as $msg) {
@@ -418,13 +472,13 @@ class InsightController extends Controller
         $prompt .= "\"\"\"\n{$feedback}\n\"\"\"\n\n";
         $targetLang = $this->getTargetLanguage();
         $prompt .= "Instructions:\n";
-        $prompt .= "1. Refine the analysis accordingly, incorporating the feedback.\n";
-        $prompt .= "2. Maintain statistical correctness.\n";
-        $prompt .= "3. Keep the response concise, professional, and directly updated without meta-commentary (do not say 'Here is the refined output').\n";
-        $prompt .= "4. You MUST write the entire response and strategic interpretation in the {$targetLang} language. Do not output it in English if the target language is different.";
+        $prompt .= "1. Refine the interpretation for THIS TARGET QUESTION ONLY, incorporating the researcher's instruction.\n";
+        $prompt .= "2. Base ALL findings strictly on the provided target question statistical frequency data above.\n";
+        $prompt .= "3. Do not invent external statistics, percentages, or non-existent industries.\n";
+        $prompt .= "4. Keep the response concise, strategic, and professional in {$targetLang}. Do not include meta-commentary.";
 
         try {
-            $insight = $this->aiService->callAi($prompt, "You are an expert research analyst and statistician. Provide refined, strategic insights based on user feedback.");
+            $insight = $this->aiService->callAi($prompt, "You are an expert research analyst and statistician. Base all findings strictly on the target question data provided.");
             return response()->json(['success' => true, 'insight' => $insight]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'AI Refinement Failed: ' . $e->getMessage()], 500);

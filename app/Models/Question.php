@@ -20,13 +20,10 @@ class Question extends Model
         'position',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'options' => 'array',
-            'required' => 'boolean',
-        ];
-    }
+    protected $casts = [
+        'options' => 'array',
+        'required' => 'boolean',
+    ];
 
     public function survey(): BelongsTo
     {

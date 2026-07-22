@@ -19,13 +19,10 @@ class Payment extends Model
         'transaction_id',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'method' => \App\Enums\PaymentMethod::class,
-            'amount' => 'decimal:2',
-        ];
-    }
+    protected $casts = [
+        'method' => \App\Enums\PaymentMethod::class,
+        'amount' => 'decimal:2',
+    ];
 
     public function organization(): BelongsTo
     {

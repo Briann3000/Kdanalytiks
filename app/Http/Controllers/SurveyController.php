@@ -1088,17 +1088,21 @@ class SurveyController extends Controller
 
                 $chartUrl = null;
                 if ($isChartable && !empty($frequencyCount)) {
+                    $qName = $field['label'] ?? $field['name'] ?? '';
+                    $shortTheme = self::formatShortCategoryTheme($qName);
                     $chartConfigs[] = [
                         'canvas_id' => $canvasId,
                         'labels' => array_keys($frequencyCount),
                         'data' => array_values($frequencyCount),
-                        'question_name' => $field['label'] ?? $field['name'] ?? ''
+                        'question_name' => $qName,
+                        'short_theme' => $shortTheme
                     ];
                     $chartConfigs[] = [
                         'canvas_id' => 'qual-' . $canvasId,
                         'labels' => array_keys($frequencyCount),
                         'data' => array_values($frequencyCount),
-                        'question_name' => $field['label'] ?? $field['name'] ?? ''
+                        'question_name' => $qName,
+                        'short_theme' => $shortTheme
                     ];
 
                     $qcConfig = [
@@ -1191,17 +1195,21 @@ class SurveyController extends Controller
 
                 $chartUrl = null;
                 if ($isChartable && !empty($frequencyCount)) {
+                    $qName = $field['label'] ?? $field['name'] ?? '';
+                    $shortTheme = self::formatShortCategoryTheme($qName);
                     $chartConfigs[] = [
                         'canvas_id' => $canvasId,
                         'labels' => array_keys($frequencyCount),
                         'data' => array_values($frequencyCount),
-                        'question_name' => $field['label'] ?? $field['name'] ?? ''
+                        'question_name' => $qName,
+                        'short_theme' => $shortTheme
                     ];
                     $chartConfigs[] = [
                         'canvas_id' => 'qual-' . $canvasId,
                         'labels' => array_keys($frequencyCount),
                         'data' => array_values($frequencyCount),
-                        'question_name' => $field['label'] ?? $field['name'] ?? ''
+                        'question_name' => $qName,
+                        'short_theme' => $shortTheme
                     ];
 
                     $qcConfig = [
@@ -4206,6 +4214,128 @@ class SurveyController extends Controller
         }
 
         return redirect()->route('surveys.reports', $survey)->with('success', "You have joined the analysis group '{$group->name}' for this survey.");
+    }
+
+    public static function formatShortCategoryTheme(?string $rawText): string
+    {
+        if (empty($rawText)) {
+            return 'Choices';
+        }
+
+        $str = trim($rawText);
+        $originalText = $str;
+
+        // Clean leading indices e.g. "1. ", "#1 ", "Q1: "
+        $str = preg_replace('/^(#|\bQ)?\d+[\.\:\)\s]+/i', '', $str);
+
+        // 1. Likert / Matrix separation e.g. "Indicate whether... - AMIS has improved..."
+        $separators = [' - ', ' -- ', ' — ', ' – ', ' : '];
+        foreach ($separators as $sep) {
+            if (str_contains($str, $sep)) {
+                $parts = explode($sep, $str);
+                $firstPartLower = strtolower($parts[0]);
+                if (
+                    str_contains($firstPartLower, 'disagree') ||
+                    str_contains($firstPartLower, 'agree') ||
+                    str_contains($firstPartLower, 'rate') ||
+                    str_contains($firstPartLower, 'indicate') ||
+                    str_contains($firstPartLower, 'scale')
+                ) {
+                    $str = trim(implode($sep, array_slice($parts, 1)));
+                    break;
+                }
+            }
+        }
+
+        // 2. Specific Question Form Transformations:
+
+        // A) "How likely are you to [verb phrase]" -> "Likelihood to [verb phrase]"
+        if (preg_match('/^how\s+likely\s+(are\s+you|is\s+it)\s+to\s+(.*)/i', $str, $m)) {
+            $verb = rtrim(trim($m[2]), '?:.');
+            $str = "Likelihood to {$verb}";
+        }
+        // B) "How many [noun] have you / do you / did you [verb] at/in/on [place]?"
+        // e.g. "How many years have you spent at this university?" -> "Years Spent at University"
+        elseif (preg_match('/^how\s+many\s+([a-z0-9\s]+?)\s+(have\s+you|do\s+you|did\s+you|are\s+you)\s+(spent|worked|studied|lived|been)\s+(at|in|on|with|for)\s+(this|the|a|an)?\s*(.*)/i', $str, $m)) {
+            $noun = ucfirst(trim($m[1]));
+            $prep = strtolower(trim($m[4]));
+            $place = rtrim(trim($m[6]), '?:.');
+            $place = preg_replace('/^(this|the|a|an)\s+/i', '', $place);
+            $str = "{$noun} Spent {$prep} {$place}";
+        }
+        // C) "How many [noun] do/have/did you [verb]..."
+        elseif (preg_match('/^how\s+many\s+([a-z0-9\s]+?)\s+(have\s+you|do\s+you|did\s+you|are\s+there|were\s+there)\s*(.*)/i', $str, $m)) {
+            $noun = ucfirst(trim($m[1]));
+            $rest = rtrim(trim($m[3]), '?:.');
+            $rest = preg_replace('/^(been|had|done|got|taken)\s+/i', '', $rest);
+            $str = !empty($rest) ? "{$noun} {$rest}" : $noun;
+        }
+        // D) "What type/kind/category/level of [noun] are you / do you / is ..."
+        // e.g. "What type of university are you currently working in or attending?" -> "Type of University"
+        elseif (preg_match('/^what\s+(type|kind|category|level|sort|form|class|sector|mode)\s+of\s+([a-z0-9\s]+?)\s+(are\s+you|do\s+you|have\s+you|is\s+|were\s+|did\s+).*/i', $str, $m)) {
+            $typeWord = ucfirst(trim($m[1]));
+            $mainNoun = trim($m[2]);
+            $str = "{$typeWord} of {$mainNoun}";
+        }
+        // E) "What is your [noun]?" / "What are your [noun]?"
+        elseif (preg_match('/^what\s+(is|are)\s+(your|the)\s+([a-z0-9\s]+?)[\?\:\.]*$/i', $str, $m)) {
+            $str = trim($m[3]);
+        }
+        // F) "How satisfied are you with [noun]?" -> "Satisfaction with [noun]"
+        elseif (preg_match('/^how\s+satisfied\s+are\s+you\s+(with|about)\s+(the|your)?\s*(.*)/i', $str, $m)) {
+            $item = rtrim(trim($m[3]), '?:.');
+            $str = "Satisfaction with {$item}";
+        }
+        // G) General prompt prefix stripping:
+        else {
+            $prefixes = [
+                '/^please\s+indicate\s+(whether\s+you\s+)?(strongly\s+disagree[^\-\:]*[\-\:])?\s*(your\s+|the\s+)?/i',
+                '/^please\s+(specify|select|state|provide|rate|choose|enter)\s+(your\s+|the\s+)?/i',
+                '/^indicate\s+(whether\s+you\s+)?(strongly\s+disagree[^\-\:]*[\-\:])?\s*(your\s+|the\s+)?/i',
+                '/^(specify|select|state|provide|rate|choose|enter)\s+(your\s+|the\s+)?/i',
+                '/^what\s+is\s+(your\s+|the\s+)?/i',
+                '/^what\s+are\s+(your\s+|the\s+)?/i',
+                '/^which\s+of\s+the\s+following\s+(best\s+describes\s+)?(your\s+|the\s+)?/i',
+                '/^which\s+(category|option|one)\s+(best\s+describes\s+)?(your\s+|the\s+)?/i',
+                '/^how\s+would\s+you\s+rate\s+(your\s+|the\s+)?/i',
+                '/^how\s+satisfied\s+are\s+you\s+with\s+(your\s+|the\s+)?/i',
+                '/^how\s+(often|long)\s+do\s+you\s+/i',
+                '/^to\s+what\s+extent\s+(do\s+you\s+agree|do\s+you\s+feel)?\s*(that\s+)?(the\s+|your\s+)?/i',
+                '/^do\s+you\s+agree\s+(or\s+disagree\s+)?(that\s+)?(the\s+|your\s+)?/i',
+                '/^kindly\s+(indicate|state|specify|select)\s+(your\s+|the\s+)?/i'
+            ];
+
+            foreach ($prefixes as $pattern) {
+                if (preg_match($pattern, $str)) {
+                    $str = trim(preg_replace($pattern, '', $str));
+                    break;
+                }
+            }
+        }
+
+        // Clean punctuation & trailing filler words
+        $str = rtrim($str, "?:.");
+        $str = preg_replace('/^(your|the|a|an)\s+/i', '', $str);
+
+        if (empty($str)) {
+            return $originalText;
+        }
+
+        // Title Case words
+        $words = preg_split('/\s+/', $str);
+        $formattedWords = [];
+        foreach ($words as $idx => $word) {
+            if (empty($word))
+                continue;
+            $lower = strtolower($word);
+            if ($idx > 0 && in_array($lower, ['of', 'in', 'at', 'on', 'for', 'to', 'with', 'and', 'or', 'a', 'an', 'the'], true)) {
+                $formattedWords[] = $lower;
+            } else {
+                $formattedWords[] = ucfirst($word);
+            }
+        }
+
+        return ucfirst(implode(' ', $formattedWords));
     }
 }
 

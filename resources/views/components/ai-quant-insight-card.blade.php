@@ -1,111 +1,17 @@
 @props(['questionId', 'surveyId', 'stats'])
 
-<div x-data="{
-    loading: false,
-    error: null,
-    qId: '{{ $questionId }}',
-    sId: '{{ $surveyId }}',
-    feedback: '',
-    aiPolishing: false,
-    messages: [], // stores conversation thread: { role: 'assistant'|'user', content: string }
-    async generate() {
-        this.loading = true;
-        this.error = null;
-        try {
-            const response = await fetch(`/ai/insights/quantitative/${this.qId}?survey_id=${this.sId}`);
-            if (response.status === 429) throw new Error(@js(__('Rate Limit Exceeded. Please wait.')));
-            if (!response.ok) throw new Error(@js(__('Failed to fetch analysis.')));
-            const data = await response.json();
-            this.messages = [{ role: 'assistant', content: data.insight }];
-        } catch (err) {
-            this.error = err.message;
-        } finally {
-            this.loading = false;
-        }
-    },
-    async polish() {
-        if (!this.feedback.trim()) return;
-        const userMsg = this.feedback.trim();
-        this.messages.push({ role: 'user', content: userMsg });
-        this.feedback = '';
-        this.aiPolishing = true;
-        this.error = null;
-        try {
-            const response = await fetch(`/ai/insights/quantitative/${this.qId}/refine`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name=&quot;csrf-token&quot;]').getAttribute('content')
-                },
-                body: JSON.stringify({
-                    survey_id: this.sId,
-                    messages: this.messages,
-                    feedback: userMsg
-                })
-            });
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.message || @js(__('Failed to refine analysis.')));
-            }
-            const data = await response.json();
-            if (data.success) {
-                this.messages.push({ role: 'assistant', content: data.insight });
-            } else {
-                throw new Error(data.message || @js(__('Failed to refine analysis.')));
-            }
-        } catch (err) {
-            this.error = err.message;
-            // Remove the user message if it failed so they can try again
-            this.messages.pop();
-            this.feedback = userMsg;
-        } finally {
-            this.aiPolishing = false;
-        }
-    },
-    copyFinalOutput() {
-        const lastMsg = [...this.messages].reverse().find(m => m.role === 'assistant');
-        if (!lastMsg) return;
-        navigator.clipboard.writeText(lastMsg.content).then(() => {
-            alert(@js(__('Copied interpretation to clipboard!')));
-        });
-    },
-    downloadFinalOutput() {
-        const lastMsg = [...this.messages].reverse().find(m => m.role === 'assistant');
-        if (!lastMsg) return;
-        const blob = new Blob([lastMsg.content], { type: 'text/plain;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `quantitative_trend_insight_${this.qId}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    },
-    reset() {
-        this.messages = [];
-        this.error = null;
-        this.feedback = '';
-    }
-}"
+<div x-data="quantInsightCard('{{ $questionId }}', '{{ $surveyId }}')"
     class="bg-gradient-to-br from-white to-zinc-100/30 rounded-3xl p-6 border border-zinc-200 shadow-sm mt-6 min-h-[100px] flex flex-col justify-center">
     <div class="flex items-start gap-4">
         <div class="flex-shrink-0">
-            <div
-                class="w-10 h-10 rounded-xl bg-[#2271b1] flex items-center justify-center text-white shadow-lg shadow-zinc-200/50">
-                <i class="fa-solid fa-chart-pie text-sm"></i>
-            </div>
+
         </div>
         <div class="flex-1 w-full overflow-hidden">
             <div class="flex items-center justify-between mb-3">
                 <h5 class="text-[10px] font-black text-[#2271b1] uppercase tracking-widest">
-                    {{ __('AI Trend Interpretation') }}
+                    {{ __('Trend Interpretation') }}
                 </h5>
-                <span x-show="messages.length > 0"
-                    class="text-[9px] font-black bg-zinc-200 text-[#135e96] px-2 py-0.5 rounded-full uppercase"
-                    style="display: none;">
-                    {{ __('Interactive Chat') }}
-                </span>
+
             </div>
 
             <!-- Loader -->
@@ -198,3 +104,99 @@
         </div>
     </div>
 </div>
+
+<script>
+    if (typeof window.quantInsightCard === 'undefined') {
+        window.quantInsightCard = function (qId, sId) {
+            return {
+                loading: false,
+                error: null,
+                qId: qId,
+                sId: sId,
+                feedback: '',
+                aiPolishing: false,
+                messages: [],
+                async generate(forceRefresh = false) {
+                    this.loading = true;
+                    this.error = null;
+                    try {
+                        const url = `/ai/insights/quantitative/${this.qId}?survey_id=${this.sId}` + (forceRefresh ? '&refresh=1' : '');
+                        const response = await fetch(url);
+                        if (response.status === 429) throw new Error(@js(__('Rate Limit Exceeded. Please wait.')));
+                        if (!response.ok) throw new Error(@js(__('Failed to fetch analysis.')));
+                        const data = await response.json();
+                        this.messages = [{ role: 'assistant', content: data.insight }];
+                    } catch (err) {
+                        this.error = err.message;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                async polish() {
+                    if (!this.feedback.trim()) return;
+                    const userMsg = this.feedback.trim();
+                    this.messages.push({ role: 'user', content: userMsg });
+                    this.feedback = '';
+                    this.aiPolishing = true;
+                    this.error = null;
+                    try {
+                        const response = await fetch(`/ai/insights/quantitative/${this.qId}/refine`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector("meta[name='csrf-token']").getAttribute('content')
+                            },
+                            body: JSON.stringify({
+                                survey_id: this.sId,
+                                messages: this.messages,
+                                feedback: userMsg
+                            })
+                        });
+                        if (!response.ok) {
+                            const errData = await response.json();
+                            throw new Error(errData.message || @js(__('Failed to refine analysis.')));
+                        }
+                        const data = await response.json();
+                        if (data.success) {
+                            this.messages.push({ role: 'assistant', content: data.insight });
+                        } else {
+                            throw new Error(data.message || @js(__('Failed to refine analysis.')));
+                        }
+                    } catch (err) {
+                        this.error = err.message;
+                        this.messages.pop();
+                        this.feedback = userMsg;
+                    } finally {
+                        this.aiPolishing = false;
+                    }
+                },
+                copyFinalOutput() {
+                    const lastMsg = [...this.messages].reverse().find(function (m) { return m.role === 'assistant'; });
+                    if (!lastMsg) return;
+                    navigator.clipboard.writeText(lastMsg.content).then(() => {
+                        alert(@js(__('Copied interpretation to clipboard!')));
+                    });
+                },
+                downloadFinalOutput() {
+                    const lastMsg = [...this.messages].reverse().find(function (m) { return m.role === 'assistant'; });
+                    if (!lastMsg) return;
+                    const blob = new Blob([lastMsg.content], { type: 'text/plain;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `quantitative_trend_insight_${this.qId}.txt`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                },
+                reset() {
+                    this.messages = [];
+                    this.error = null;
+                    this.feedback = '';
+                    this.generate(true);
+                }
+            };
+        };
+    }
+</script>

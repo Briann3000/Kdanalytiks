@@ -168,9 +168,12 @@ RULES:
     /**
      * Analyze quantitative statistical data.
      */
-    public function analyzeQuantitativeData(array $stats): string
+    public function analyzeQuantitativeData(array $stats, ?string $questionText = null): string
     {
         $statsText = "";
+        if ($questionText) {
+            $statsText .= "QUESTION: {$questionText}\n";
+        }
         foreach ($stats as $stat) {
             if (isset($stat['is_missing']) && $stat['is_missing'])
                 continue;
@@ -179,10 +182,12 @@ RULES:
 
         $targetLang = $this->getTargetLanguage();
         $systemPrompt = "You are a senior statistical analyst. 
-Analyze the provided frequency data and provide a concise (2-3 sentences) strategic interpretation. 
-Focus on identifying clear majorities, split opinions, or notable trends. 
-Avoid simply restating the numbers; explain what the distribution suggests about respondent behavior or sentiment.
-You MUST write the entire response and strategic interpretation in the {$targetLang} language. Do not output it in English if the target language is different.";
+STRICT DATA-GROUNDING RULE (CRITICAL):
+- Base your analysis STRICTLY AND EXCLUSIVELY on the provided question and frequency data payload.
+- You MUST NOT invent, hallucinate, or assume any external statistics, percentages, or non-existent industries (e.g. '72% adoption', 'finance', 'healthcare') not in the payload.
+- Provide a concise (2-3 sentences) strategic interpretation of the majorities, distribution, or consensus.
+- Avoid simply restating numbers verbatim; explain what the distribution suggests about respondent sentiment for this question.
+You MUST write the entire response in the {$targetLang} language.";
 
         try {
             $response = Http::withToken($this->apiKey)

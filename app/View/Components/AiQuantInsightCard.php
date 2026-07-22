@@ -29,8 +29,7 @@ class AiQuantInsightCard extends Component
     {
         try {
             $aiService = new \App\Services\QualitativeAnalysisService();
-            // We'll add a new method to the service for quantitative interpretation
-            $this->insight = $aiService->analyzeQuantitativeData($this->stats);
+            $this->insight = $aiService->analyzeQuantitativeData($this->stats, $this->questionId);
         } catch (\Exception $e) {
             $this->error = $e->getMessage();
         }

@@ -29,7 +29,7 @@ class DocumentExtractionService
             throw new RuntimeException('This document does not contain readable text content.');
         }
 
-        return Str::limit($normalized, 50000, '...');
+        return Str::limit($normalized, 100000, '...');
     }
 
     private function extractPdfText(string $path): string
@@ -89,7 +89,7 @@ class DocumentExtractionService
             $this->extractPhpWordElements($section->getElements(), $chunks);
         }
 
-        return implode("\n", $chunks);
+        return implode("\n\n", $chunks);
     }
 
     private function extractPhpWordElements(iterable $elements, array &$chunks): void
@@ -115,11 +115,11 @@ class DocumentExtractionService
 
     private function normalizeText(string $text): string
     {
-        $lines = preg_split('/\R/u', $text) ?: [];
+        $paragraphs = preg_split('/(\r?\n){2,}/u', $text) ?: [];
 
-        return collect($lines)
-            ->map(fn($line) => preg_replace('/\s+/u', ' ', trim($line)) ?? '')
-            ->filter(fn($line) => $line !== '')
-            ->implode("\n");
+        return collect($paragraphs)
+            ->map(fn($p) => preg_replace('/\s+/u', ' ', trim($p)) ?? '')
+            ->filter(fn($p) => $p !== '')
+            ->implode("\n\n");
     }
 }

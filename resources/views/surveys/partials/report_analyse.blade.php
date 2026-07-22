@@ -388,6 +388,14 @@
                                             <i class="fa-regular fa-pen-to-square text-xs"></i>
                                         </button>
                                     </template>
+                                    <template x-if="message.role === 'assistant'">
+                                        <button @click="goToHumanizer(message.content)"
+                                            class="w-7 h-7 rounded-xl flex items-center justify-center transition-all hover:bg-white/10 text-slate-400"
+                                            title="{{ __('Humanize') }}">
+                                            <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                                        </button>
+                                    </template>
+
                                     <template x-if="message.role === 'assistant' && index === messages.length - 1">
                                         <button @click="regenerateResponse(message.id)"
                                             class="w-7 h-7 rounded-xl flex items-center justify-center transition-all hover:bg-white/10 text-slate-400"

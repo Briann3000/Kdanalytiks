@@ -30,6 +30,7 @@ class SociusChatController extends Controller
         private readonly SociusPromptBuilder $sociusPromptBuilder,
         private readonly \App\Services\WebSearchService $webSearchService,
         private readonly \App\Services\MemoryExtractionService $memoryExtractionService,
+        private readonly \App\Services\AiHumanizerService $aiHumanizerService,
     ) {
     }
 
@@ -980,6 +981,48 @@ class SociusChatController extends Controller
 
         } catch (\Throwable $e) {
             return response()->json(['error' => 'System Error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function humanize(Survey $survey, Request $request): JsonResponse
+    {
+        @set_time_limit(300);
+        try {
+            $this->authorizeSurvey($survey);
+            $this->ensureAiEligible($request);
+
+            $request->validate([
+                'text' => 'required|string',
+                'mode' => 'nullable|string|in:standard,academic,creative',
+                'intensity' => 'nullable|string|in:low,medium,high',
+                'analyze_only' => 'nullable|boolean'
+            ]);
+
+            $text = $request->input('text');
+            $mode = $request->input('mode', 'standard');
+            $intensity = $request->input('intensity', 'medium');
+            $analyzeOnly = (bool) $request->input('analyze_only', false);
+
+            $analysis = $this->aiHumanizerService->analyzeText($text);
+
+            if ($analyzeOnly) {
+                return response()->json(['analysis' => $analysis]);
+            }
+
+            $humanizedText = $this->aiHumanizerService->humanizeText($text, $mode, $intensity);
+            $newAnalysis = $this->aiHumanizerService->analyzeText($humanizedText);
+
+            return response()->json([
+                'original_analysis' => $analysis,
+                'humanized_text' => $humanizedText,
+                'humanized_analysis' => $newAnalysis
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Humanizer Action Error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'error' => 'Humanizer service error',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 }

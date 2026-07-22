@@ -17,13 +17,21 @@
         }
     </style>
     @php
-        $allowedReportTabs = ['quantitative', 'qualitative', 'inferential', 'crosstab', 'analyse'];
+        $allowedReportTabs = ['quantitative', 'qualitative', 'inferential', 'crosstab', 'analyse', 'humanizer'];
         $requestedReportTab = request('reportTab', 'quantitative');
         $initialReportTab = in_array($requestedReportTab, $allowedReportTabs, true) ? $requestedReportTab : 'quantitative';
     @endphp
 
-    <div :class="reportTab === 'analyse' ? '' : 'space-y-12'" x-data="{
+    <div :class="(reportTab === 'analyse' || reportTab === 'humanizer') ? '' : 'space-y-12'" x-data="{
             reportTab: @js($initialReportTab) === 'crosstab' ? 'inferential' : @js($initialReportTab),
+            humanizerOriginal: '',
+            humanizerResult: '',
+            isHumanizing: false,
+            isAnalyzing: false,
+            humanizerMode: 'standard',
+            humanizerIntensity: 'medium',
+            originalAnalysis: null,
+            humanizedAnalysis: null,
             init() {
                 this.$watch('reportTab', (tab) => {
                     if (tab === 'analyse') {
@@ -54,6 +62,99 @@
                     url.searchParams.delete('thread');
                 }
                 window.history.replaceState({}, '', url);
+            },
+            goToHumanizer(text) {
+                this.humanizerOriginal = text;
+                this.humanizerResult = '';
+                this.originalAnalysis = null;
+                this.humanizedAnalysis = null;
+                this.switchReportTab('humanizer');
+                this.$nextTick(() => {
+                    this.analyzeHumanizerText();
+                });
+            },
+            async analyzeHumanizerText() {
+                if (!this.humanizerOriginal.trim()) return;
+                this.isAnalyzing = true;
+                try {
+                    const response = await fetch(`{{ route('surveys.analyse.humanize', $survey->id) }}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                        },
+                        body: JSON.stringify({
+                            text: this.humanizerOriginal,
+                            analyze_only: true
+                        })
+                    });
+                    const data = await response.json();
+                    this.originalAnalysis = data.analysis;
+                } catch (e) {
+                    console.error(e);
+                } finally {
+                    this.isAnalyzing = false;
+                }
+            },
+            async uploadFile(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('_token', '{{ csrf_token() }}');
+
+                this.isAnalyzing = true;
+                try {
+                    const response = await fetch('{{ route('humanizer.upload') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json'
+                        },
+                        body: formData
+                    });
+                    const data = await response.json();
+                    if (data.error) {
+                        alert('Extraction error: ' + data.message);
+                        return;
+                    }
+                    this.humanizerOriginal = data.text || '';
+                    this.$nextTick(() => {
+                        this.analyzeHumanizerText();
+                    });
+                } catch (e) {
+                    alert('Upload error: ' + e.message);
+                } finally {
+                    this.isAnalyzing = false;
+                    event.target.value = '';
+                }
+            },
+            async humanizeAction() {
+                if (!this.humanizerOriginal.trim()) return;
+                this.isHumanizing = true;
+                this.humanizerResult = '';
+                try {
+                    const response = await fetch(`{{ route('surveys.analyse.humanize', $survey->id) }}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                        },
+                        body: JSON.stringify({
+                            text: this.humanizerOriginal,
+                            mode: this.humanizerMode,
+                            intensity: this.humanizerIntensity
+                        })
+                    });
+                    const data = await response.json();
+                    this.humanizerResult = data.humanized_text;
+                    this.originalAnalysis = data.original_analysis;
+                    this.humanizedAnalysis = data.humanized_analysis;
+                } catch (e) {
+                    alert('Humanizer error: ' + e.message);
+                } finally {
+                    this.isHumanizing = false;
+                }
             }
         }">
         <!-- Sub Navigation -->
@@ -245,7 +346,7 @@
                                 <div class="max-h-[300px] overflow-y-auto custom-scrollbar">
                                     <table class="w-full text-left" id="table-{{ $item['canvasId'] }}">
                                         <thead class="sticky top-0 bg-white z-10 border-b border-gray-100 shadow-sm">
-                                            <tr class="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                                            <tr class="text-[12px] font-black text-gray-500 tracking-widest">
                                                 <th class="py-4 px-6">{{ __('Value') }}</th>
                                                 <th class="py-4 px-6 text-right">{{ __('Frequency') }}</th>
                                                 <th class="py-4 px-6 text-right">{{ __('Percentage') }}</th>
@@ -262,13 +363,13 @@
                                                 $totalPerc += (float)$stat['percentage'];
                                             @endphp
                                             <tr class="hover:bg-gray-50/30 transition-colors">
-                                                <td class="py-4 px-6 text-[11px] font-black text-gray-700 tracking-tight">
+                                                <td class="py-4 px-6 text-[13px] font-black text-gray-700 tracking-tight">
                                                     {{ $stat['value'] }}</td>
-                                                <td class="py-4 px-6 text-right text-[11px] font-black text-gray-900">{{ number_format($stat['count']) }}
+                                                <td class="py-4 px-6 text-right text-[12px] font-black text-gray-900">{{ number_format($stat['count']) }}
                                                 </td>
                                                 <td class="py-4 px-6 text-right">
                                                     <span
-                                                        class="text-[11px] font-black text-indigo-600">{{ $stat['percentage'] }}%</span>
+                                                        class="text-[12px] font-black text-indigo-600">{{ $stat['percentage'] }}%</span>
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -457,6 +558,9 @@
         @if(!isset($isSharedView) || !$isSharedView)
             <div x-show="reportTab === 'analyse'">
                 @include('surveys.partials.report_analyse')
+            </div>
+            <div x-show="reportTab === 'humanizer'" style="display: none;">
+                @include('surveys.partials.report_humanizer')
             </div>
         @endif
 
@@ -1663,6 +1767,113 @@
                 });
             };
 
+            function formatShortCategoryTheme(rawText) {
+                if (!rawText || typeof rawText !== 'string') return 'Choices';
+                let str = rawText.trim();
+                if (!str) return 'Choices';
+
+                const originalText = str;
+
+                // Clean leading indices e.g. "1. ", "#1 ", "Q1: "
+                str = str.replace(/^(#|\bQ)?\d+[\.\:\)\s]+/i, '').trim();
+
+                // 1. Likert / Matrix separation e.g. "Indicate whether... - AMIS has improved..."
+                const separators = [' - ', ' -- ', ' — ', ' – ', ' : '];
+                for (const sep of separators) {
+                    if (str.includes(sep)) {
+                        const parts = str.split(sep);
+                        const firstPartLower = parts[0].toLowerCase();
+                        if (firstPartLower.includes('disagree') || firstPartLower.includes('agree') || firstPartLower.includes('rate') || firstPartLower.includes('indicate') || firstPartLower.includes('scale')) {
+                            str = parts.slice(1).join(sep).trim();
+                            break;
+                        }
+                    }
+                }
+
+                // 2. Specific Question Form Transformations:
+
+                // A) "How likely are you to [verb phrase]" -> "Likelihood to [verb phrase]"
+                if (/^how\s+likely\s+(are\s+you|is\s+it)\s+to\s+(.*)/i.test(str)) {
+                    const verb = str.replace(/^how\s+likely\s+(are\s+you|is\s+it)\s+to\s+/i, '').replace(/[\?\:\.]+$|\s+$/g, '').trim();
+                    str = `Likelihood to ${verb}`;
+                }
+                // B) "How many [noun] have you / do you / did you [verb] at/in/on [place]?"
+                // e.g. "How many years have you spent at this university?" -> "Years Spent at University"
+                else if (/^how\s+many\s+([a-z0-9\s]+?)\s+(have\s+you|do\s+you|did\s+you|are\s+you)\s+(spent|worked|studied|lived|been)\s+(at|in|on|with|for)\s+(this|the|a|an)?\s*(.*)/i.test(str)) {
+                    str = str.replace(/^how\s+many\s+([a-z0-9\s]+?)\s+(have\s+you|do\s+you|did\s+you|are\s+you)\s+(spent|worked|studied|lived|been)\s+(at|in|on|with|for)\s+(this|the|a|an)?\s*(.*)/i, '$1 Spent $4 $6').trim();
+                }
+                // C) "How many [noun] do/have/did you [verb]..."
+                else if (/^how\s+many\s+([a-z0-9\s]+?)\s+(have\s+you|do\s+you|did\s+you|are\s+there|were\s+there)\s*(.*)/i.test(str)) {
+                    const match = str.match(/^how\s+many\s+([a-z0-9\s]+?)\s+(have\s+you|do\s+you|did\s+you|are\s+there|were\s+there)\s*(.*)/i);
+                    const noun = match[1].trim();
+                    let rest = match[3].trim().replace(/[\?\:\.]+$|\s+$/g, '');
+                    rest = rest.replace(/^(been|had|done|got|taken)\s+/i, '');
+                    str = rest ? `${noun} ${rest}` : noun;
+                }
+                // D) "What type/kind/category/level of [noun] are you / do you / is ..."
+                // e.g. "What type of university are you currently working in or attending?" -> "Type of University"
+                else if (/^what\s+(type|kind|category|level|sort|form|class|sector|mode)\s+of\s+([a-z0-9\s]+?)\s+(are\s+you|do\s+you|have\s+you|is\s+|were\s+|did\s+).*/i.test(str)) {
+                    const match = str.match(/^what\s+(type|kind|category|level|sort|form|class|sector|mode)\s+of\s+([a-z0-9\s]+?)\s+(are\s+you|do\s+you|have\s+you|is\s+|were\s+|did\s+).*/i);
+                    const typeWord = match[1].trim();
+                    const mainNoun = match[2].trim();
+                    str = `${typeWord} of ${mainNoun}`;
+                }
+                // E) "What is your [noun]?" / "What are your [noun]?"
+                else if (/^what\s+(is|are)\s+(your|the)\s+([a-z0-9\s]+?)[\?\:\.]*$/i.test(str)) {
+                    str = str.replace(/^what\s+(is|are)\s+(your|the)\s+/i, '');
+                }
+                // F) "How satisfied are you with [noun]?" -> "Satisfaction with [noun]"
+                else if (/^how\s+satisfied\s+are\s+you\s+(with|about)\s+(the|your)?\s*(.*)/i.test(str)) {
+                    const item = str.replace(/^how\s+satisfied\s+are\s+you\s+(with|about)\s+(the|your)?\s*/i, '').replace(/[\?\:\.]+$|\s+$/g, '').trim();
+                    str = `Satisfaction with ${item}`;
+                }
+                // G) General prompt prefix stripping:
+                else {
+                    const prefixes = [
+                        /^please\s+indicate\s+(whether\s+you\s+)?(strongly\s+disagree[^\-\:]*[\-\:])?\s*(your\s+|the\s+)?/i,
+                        /^please\s+(specify|select|state|provide|rate|choose|enter)\s+(your\s+|the\s+)?/i,
+                        /^indicate\s+(whether\s+you\s+)?(strongly\s+disagree[^\-\:]*[\-\:])?\s*(your\s+|the\s+)?/i,
+                        /^(specify|select|state|provide|rate|choose|enter)\s+(your\s+|the\s+)?/i,
+                        /^what\s+is\s+(your\s+|the\s+)?/i,
+                        /^what\s+are\s+(your\s+|the\s+)?/i,
+                        /^which\s+of\s+the\s+following\s+(best\s+describes\s+)?(your\s+|the\s+)?/i,
+                        /^which\s+(category|option|one)\s+(best\s+describes\s+)?(your\s+|the\s+)?/i,
+                        /^how\s+would\s+you\s+rate\s+(your\s+|the\s+)?/i,
+                        /^how\s+satisfied\s+are\s+you\s+with\s+(your\s+|the\s+)?/i,
+                        /^how\s+(often|long)\s+do\s+you\s+/i,
+                        /^to\s+what\s+extent\s+(do\s+you\s+agree|do\s+you\s+feel)?\s*(that\s+)?(the\s+|your\s+)?/i,
+                        /^do\s+you\s+agree\s+(or\s+disagree\s+)?(that\s+)?(the\s+|your\s+)?/i,
+                        /^kindly\s+(indicate|state|specify|select)\s+(your\s+|the\s+)?/i
+                    ];
+
+                    for (const ptn of prefixes) {
+                        if (ptn.test(str)) {
+                            str = str.replace(ptn, '').trim();
+                            break;
+                        }
+                    }
+                }
+
+                // Clean punctuation & trailing filler words
+                str = str.replace(/[\?\:\.]+$|\s+$/g, '').trim();
+                str = str.replace(/^(your|the|a|an)\s+/i, '').trim();
+
+                if (!str) return originalText;
+
+                // Capitalize Title Case
+                const words = str.split(/\s+/);
+                const formatted = words.map((w, idx) => {
+                    if (!w) return '';
+                    const lower = w.toLowerCase();
+                    if (idx > 0 && ['of', 'in', 'at', 'on', 'for', 'to', 'with', 'and', 'or', 'a', 'an', 'the'].includes(lower)) {
+                        return lower;
+                    }
+                    return w.charAt(0).toUpperCase() + w.slice(1);
+                }).join(' ');
+
+                return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+            }
+
             function createChart(canvasId, config, type = 'bar', colorTheme = 'indigo') {
                 const canvasElement = document.getElementById(canvasId);
                 if (!canvasElement) return;
@@ -1739,6 +1950,7 @@
                             backgroundColor: isCategorical ? colors : (fill ? `${primaryColor}44` : primaryColor),
                             borderColor: isCategorical ? (type === 'bar' || type === 'horizontal' ? colors : '#fff') : primaryColor,
                             borderWidth: (type === 'line' || type === 'radar' || type === 'area') ? 3 : 1,
+                            maxBarThickness: 45,
                             fill: fill,
                             borderRadius: (chartType === 'bar') ? 6 : 0,
                             tension: 0.4,
@@ -1787,31 +1999,32 @@
 
                 if (chartType === 'bar' || chartType === 'line') {
                     const isHorizontal = indexAxis === 'y';
+
                     const valueAxisConfig = {
                         beginAtZero: true,
                         grace: '12%', // Add top padding to keep values from clipping
                         grid: { color: '#f8fafc', drawBorder: false },
                         ticks: { 
-                            font: { weight: '600', size: 10, color: '#64748b' },
+                            font: { weight: '500', size: 12, color: '#64748b' },
                             callback: function(value) {
                                 return value + '%';
                             }
                         },
                         title: {
                             display: true,
-                            text: 'Percentage of Responses (%)',
+                            text: 'Percentage(%)',
                             color: '#64748b',
-                            font: { weight: '600', size: 10 }
+                            font: { weight: '600', size: 12 }
                         }
                     };
                     const labelAxisConfig = {
                         grid: { display: false },
-                        ticks: { font: { weight: '600', size: 10, color: '#64748b' } },
+                        ticks: { font: { weight: '500', size: 12, color: '#64748b' } },
                         title: {
                             display: true,
-                            text: config.question_name || 'Choices',
+                            text: config.short_theme || formatShortCategoryTheme(config.question_name) || 'Choices',
                             color: '#64748b',
-                            font: { weight: '600', size: 10 }
+                            font: { weight: '600', size: 12 }
                         }
                     };
 
@@ -3479,7 +3692,7 @@
                                                 ticks: { font: { weight: '600', size: 10, color: '#94a3b8' } },
                                                 title: {
                                                     display: true,
-                                                    text: (config.options?.scales?.[isHorizontal ? 'y' : 'x']?.title?.text) || (config.options.plugins?.title?.text) || 'Categories',
+                                                    text: formatShortCategoryTheme(config.short_theme || (config.options?.scales?.[isHorizontal ? 'y' : 'x']?.title?.text) || (config.options.plugins?.title?.text) || config.question_name) || 'Categories',
                                                     color: '#94a3b8',
                                                     font: { weight: '600', size: 10 }
                                                 }

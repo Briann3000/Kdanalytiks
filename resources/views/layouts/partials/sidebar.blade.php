@@ -228,6 +228,10 @@
                                                 class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Blank') }}</a>
                                             <a href="{{ route('library.templates') }}"
                                                 class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Template') }}</a>
+                                            <a href="{{ route('surveys.import') }}"
+                                                class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">
+                                                <i
+                                                    class="fa-solid fa-file-import mr-1 opacity-70"></i>{{ __('Import Data') }}</a>
                                         </div>
                                     </div>
                                 </div>
@@ -308,6 +312,10 @@
                                             class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Blank') }}</a>
                                         <a href="{{ route('library.templates') }}"
                                             class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Template') }}</a>
+                                        <a href="{{ route('surveys.import') }}"
+                                            class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">
+                                            <i
+                                                class="fa-solid fa-file-import mr-1 opacity-70"></i>{{ __('Import Data') }}</a>
                                     </div>
                                 </div>
                             </template>
@@ -410,9 +418,13 @@
                                                     </div>
                                                     <div class="space-y-1">
                                                         <a href="{{ route('surveys.create') }}"
-                                                            class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors uppercase">{{ __('Blank') }}</a>
+                                                            class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Blank') }}</a>
                                                         <a href="{{ route('library.templates') }}"
-                                                            class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors uppercase">{{ __('Template') }}</a>
+                                                            class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Template') }}</a>
+                                                        <a href="{{ route('surveys.import') }}"
+                                                            class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">
+                                                            <i
+                                                                class="fa-solid fa-file-import mr-1 opacity-70"></i>{{ __('Import Data') }}</a>
                                                     </div>
                                                 </div>
                                             </div>
@@ -424,16 +436,16 @@
                             <div x-show="expandedItem === 'org_projects'" x-collapse class="sidebar-submenu"
                                 x-data="{ hubSubExpanded: {{ request()->filled('category') ? 'true' : 'false' }} }">
                                 <a href="{{ route('surveys.index', ['status' => 'active']) }}"
-                                    class="block py-1 text-xs font-bold uppercase tracking-wide {{ (request()->routeIs('surveys.index') && request('status') === 'active' && !request()->filled('category')) ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Active Surveys') }}</a>
+                                    class="block py-1 text-xs font-bold tracking-wide {{ (request()->routeIs('surveys.index') && request('status') === 'active' && !request()->filled('category')) ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Active Surveys') }}</a>
 
                                 <a href="{{ route('surveys.index', ['status' => 'draft']) }}"
-                                    class="block py-1 text-xs font-bold uppercase tracking-wide {{ (request()->routeIs('surveys.index') && request('status') === 'draft') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }} mt-1">{{ __('Drafts') }}</a>
+                                    class="block py-1 text-xs font-bold tracking-wide {{ (request()->routeIs('surveys.index') && request('status') === 'draft') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }} mt-1">{{ __('Drafts') }}</a>
 
                                 <!-- Categories Nested in Manage -->
                                 <div class="mb-1 mt-1">
                                     <div @click="hubSubExpanded = !hubSubExpanded"
                                         class="flex items-center justify-between py-1.5 text-xs font-bold {{ request()->filled('category') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }} cursor-pointer transition-colors">
-                                        <div class="flex items-center uppercase">
+                                        <div class="flex items-center">
                                             <i class="fa-solid fa-layer-group mr-2 opacity-50"></i>
                                             {{ __('By Category') }}
                                         </div>
@@ -443,7 +455,7 @@
                                         class="pl-4 space-y-1 my-1 border-l-2 border-[#2c3338] ml-1">
                                         @foreach($categories as $key => $cat)
                                             <a href="{{ route('surveys.index', ['status' => 'active', 'category' => $key]) }}"
-                                                class="block py-1 text-[10px] font-bold uppercase tracking-wider {{ request('category') === $key && request('status') === 'active' ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }} transition-colors">
+                                                class="block py-1 text-[10px] font-bold  tracking-wider {{ request('category') === $key && request('status') === 'active' ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }} transition-colors">
                                                 {{ __($cat['label']) }}
                                             </a>
                                         @endforeach
@@ -453,7 +465,7 @@
                                 <div class="sidebar-item relative mt-1" @mouseenter="setFlyout($el, 'org_create')"
                                     @mouseleave="clearFlyout()">
                                     <a href="{{ route('surveys.create') }}"
-                                        class="block py-1 text-xs font-bold uppercase tracking-wide {{ request()->routeIs('surveys.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Create Survey') }}</a>
+                                        class="block py-1 text-xs font-bold  tracking-wide {{ request()->routeIs('surveys.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Create Survey') }}</a>
                                     <template x-teleport="body">
                                         <div class="flyout-menu shadow-2xl border border-[#2c3338] p-3 min-w-[140px]"
                                             x-show="hoverItem === 'org_create'"
@@ -464,9 +476,12 @@
                                             </div>
                                             <div class="space-y-1">
                                                 <a href="{{ route('surveys.create') }}"
-                                                    class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors uppercase">{{ __('Blank') }}</a>
+                                                    class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Blank') }}</a>
                                                 <a href="{{ route('library.templates') }}"
-                                                    class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors uppercase">{{ __('Template') }}</a>
+                                                    class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Template') }}</a>
+                                                <a href="{{ route('surveys.import') }}"
+                                                    class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">
+                                                    <i class="fa-solid fa-file-import mr-1 opacity-70"></i>{{ __('Import Data') }}</a>
                                             </div>
                                         </div>
                                     </template>
@@ -510,6 +525,16 @@
 
                 @endif
             @endif
+
+    <!-- AI Humanizer Link -->
+    <div class="sidebar-item relative" @mouseenter="hoverItem = 'humanizer'" @mouseleave="hoverItem = null">
+        <a href="{{ route('humanizer.index') }}"
+            class="flex items-center px-3 py-2 text-sm font-bold tracking-wider {{ request()->routeIs('humanizer.index') ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors">
+            <i
+                class="fa-solid fa-wand-magic-sparkles mr-3 {{ request()->routeIs('humanizer.index') ? 'text-[#f0f0f1]' : 'text-zinc-200 group-hover:text-[#f0f0f1]' }}"></i>
+            {{ __('AI Humanizer') }}
+        </a>
+    </div>
 
     <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'studio')" @mouseleave="clearFlyout()">
         <div @click="expandedItem = (expandedItem === 'studio' ? null : 'studio')"
@@ -633,8 +658,8 @@
                 <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'quick_create')" @mouseleave="clearFlyout()">
                     @if(in_array($role, ['organization', 'independent', 'admin']))
                         <a href="{{ route('surveys.create') }}"
-                            class="block w-full py-2.5 px-4 bg-[#2271b1] hover:bg-[#101417] hover:text-[#72aee6] text-[#f0f0f1] text-xs font-bold tracking-wider rounded-lg text-center shadow-md transition-all">
-                            <i class="fa-solid fa-plus-circle mr-2"></i> {{ __('Create Survey') }}
+                            class="flex items-center justify-center w-full py-2.5 px-3 bg-[#2271b1] hover:bg-[#101417] hover:text-[#72aee6] text-[#f0f0f1] text-[11px] font-bold tracking-wider rounded-lg text-center shadow-md transition-all whitespace-nowrap">
+                            <i class="fa-solid fa-plus-circle mr-1.5 shrink-0"></i> <span>{{ __('Create Survey') }}</span>
                         </a>
                     @endif
                     <template x-teleport="body">
@@ -651,6 +676,9 @@
                                     class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Blank') }}</a>
                                 <a href="{{ route('library.templates') }}"
                                     class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Template') }}</a>
+                                <a href="{{ route('surveys.import') }}"
+                                    class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">
+                                    <i class="fa-solid fa-file-import mr-1 opacity-70"></i>{{ __('Import Data') }}</a>
                             </div>
                         </div>
                     </template>
