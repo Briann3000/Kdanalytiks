@@ -19,14 +19,20 @@ class SurveyController extends Controller
     public function index(Request $request)
     {
         \App\Models\Survey::cleanupEmptyDrafts(auth()->id());
-        $statusParam = $request->get('status', 'active');
+        $statusParam = $request->get('status', 'all');
         $status = match ($statusParam) {
+            'active' => \App\Enums\SurveyStatus::Active,
             'draft' => \App\Enums\SurveyStatus::Draft,
             'archived' => \App\Enums\SurveyStatus::Archived,
-            default => \App\Enums\SurveyStatus::Active,
+            default => 'all',
         };
 
         return $this->filteredIndex($status, 'surveys.index');
+    }
+
+    public function allSurveysIndex(Request $request)
+    {
+        return $this->index($request);
     }
 
     public function hub()
@@ -95,7 +101,13 @@ class SurveyController extends Controller
         $user = auth()->user();
         $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
 
-        $query = \App\Models\Survey::where('is_template', false)->where('status', $status)->withCount('responses');
+        $query = \App\Models\Survey::where('is_template', false)->withCount('responses');
+
+        if ($status === 'all') {
+            $query->whereIn('status', [\App\Enums\SurveyStatus::Active, \App\Enums\SurveyStatus::Draft]);
+        } else {
+            $query->where('status', $status);
+        }
 
         if (request()->filled('category')) {
             $query->where('category', request('category'));
@@ -105,11 +117,14 @@ class SurveyController extends Controller
             $query->where('title', 'like', '%' . request('search') . '%');
         }
 
-        if ($role === 'organization') {
-            $query->where('organization_id', $user->organization?->id);
-        } elseif ($role === 'independent') {
-            $query->where('independent_id', $user->independent?->id);
-        }
+        $query->where(function ($q) use ($user, $role) {
+            $q->where('created_by', $user->id);
+            if ($role === 'organization' && $user->organization?->id) {
+                $q->orWhere('organization_id', $user->organization->id);
+            } elseif ($role === 'independent' && $user->independent?->id) {
+                $q->orWhere('independent_id', $user->independent->id);
+            }
+        });
 
         $surveys = $query->orderBy('created_at', 'desc')->paginate(10);
         return view($viewName, compact('surveys', 'role', 'status'));
@@ -974,6 +989,7 @@ class SurveyController extends Controller
     }
     public function getAnalyticalData(\App\Models\Survey $survey, $responses, $includeAi = false, $forceGenerate = false)
     {
+        @set_time_limit(180);
         $isJson = !empty($survey->json_schema) && $survey->json_schema !== '[]';
         $totalResponses = $responses->count();
         $analysis = [];
@@ -1010,6 +1026,24 @@ class SurveyController extends Controller
                 }
             }
 
+            // Pre-parse response answers ONCE for O(N) performance boost instead of O(M*N*K)
+            $parsedResponseMap = [];
+            foreach ($responses as $response) {
+                $jsonAnswer = $response->answers->first();
+                if ($jsonAnswer && !empty($jsonAnswer->value)) {
+                    $data = is_string($jsonAnswer->value) ? json_decode($jsonAnswer->value, true) : $jsonAnswer->value;
+                    if (is_array($data)) {
+                        $fieldMap = [];
+                        foreach ($data as $entry) {
+                            if (isset($entry['name']) && isset($entry['userData'])) {
+                                $fieldMap[$entry['name']] = $entry['userData'];
+                            }
+                        }
+                        $parsedResponseMap[$response->id] = $fieldMap;
+                    }
+                }
+            }
+
             foreach ($expandedSchema as $field) {
                 $fieldId = $field['name'];
                 $label = $field['label'] ?? $fieldId;
@@ -1020,48 +1054,43 @@ class SurveyController extends Controller
                 $answeredCount = 0;
 
                 foreach ($responses as $response) {
-                    $jsonAnswer = $response->answers->first();
                     $found = false;
-                    if ($jsonAnswer) {
-                        $data = is_string($jsonAnswer->value) ? json_decode($jsonAnswer->value, true) : $jsonAnswer->value;
-                        if (is_array($data)) {
-                            foreach ($data as $entry) {
-                                $matchName = isset($field['is_virtual_likert']) ? $field['parent_likert_name'] : $fieldId;
-                                if (isset($entry['name']) && $entry['name'] === $matchName && isset($entry['userData'])) {
-                                    $val = $entry['userData'];
+                    $fieldMap = $parsedResponseMap[$response->id] ?? null;
+                    $matchName = isset($field['is_virtual_likert']) ? $field['parent_likert_name'] : $fieldId;
 
-                                    if (isset($field['is_virtual_likert'])) {
-                                        $matrixAnswers = is_string($val) ? json_decode($val, true) : $val;
-                                        if (is_array($matrixAnswers)) {
-                                            if (isset($matrixAnswers[0])) {
-                                                if (is_string($matrixAnswers[0])) {
-                                                    $decoded = json_decode($matrixAnswers[0], true);
-                                                    if (is_array($decoded)) {
-                                                        $matrixAnswers = $decoded;
-                                                    }
-                                                } elseif (is_array($matrixAnswers[0])) {
-                                                    $matrixAnswers = $matrixAnswers[0];
-                                                }
-                                            }
-                                            $rowKey = $field['likert_row_value'];
-                                            $val = $matrixAnswers[$rowKey] ?? null;
-                                        } else {
-                                            $val = null;
+                    if ($fieldMap && array_key_exists($matchName, $fieldMap)) {
+                        $val = $fieldMap[$matchName];
+
+                        if (isset($field['is_virtual_likert'])) {
+                            $matrixAnswers = is_string($val) ? json_decode($val, true) : $val;
+                            if (is_array($matrixAnswers)) {
+                                if (isset($matrixAnswers[0])) {
+                                    if (is_string($matrixAnswers[0])) {
+                                        $decoded = json_decode($matrixAnswers[0], true);
+                                        if (is_array($decoded)) {
+                                            $matrixAnswers = $decoded;
                                         }
-                                    }
-
-                                    // Format complex structures like repeating containers or select groups
-                                    $val = self::formatResponseValue($val, $field);
-
-                                    if ($val !== null && $val !== '') {
-                                        $answeredCount++;
-                                        $answersList[] = is_array($val) ? implode(', ', $val) : $val;
-                                        $found = true;
+                                    } elseif (is_array($matrixAnswers[0])) {
+                                        $matrixAnswers = $matrixAnswers[0];
                                     }
                                 }
+                                $rowKey = $field['likert_row_value'];
+                                $val = $matrixAnswers[$rowKey] ?? null;
+                            } else {
+                                $val = null;
                             }
                         }
+
+                        // Format complex structures like repeating containers or select groups
+                        $val = self::formatResponseValue($val, $field);
+
+                        if ($val !== null && $val !== '') {
+                            $answeredCount++;
+                            $answersList[] = is_array($val) ? implode(', ', $val) : $val;
+                            $found = true;
+                        }
                     }
+
                     if (!$found) {
                         $answersList[] = null;
                     }

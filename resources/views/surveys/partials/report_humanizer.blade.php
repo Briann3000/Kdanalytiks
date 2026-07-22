@@ -10,7 +10,7 @@
             <div>
                 <h3 class="text-base font-black tracking-tight text-white">{{ __('AI Content Humanizer') }}</h3>
                 <p class="text-[10px] text-slate-400 font-medium mt-0.5">
-                    {{ __('Emulate human rhythm and vocabulary to bypass advanced AI detection') }}
+                    {{ __('Emulate natural human rhythm, style, and vocabulary') }}
                 </p>
             </div>
         </div>
@@ -33,7 +33,7 @@
                         <span
                             class="text-xs font-black tracking-wider text-[#2271b1]">{{ __('Original AI Output') }}</span>
                         <span x-show="humanizerOriginal.trim()" class="text-[10px] text-slate-400 font-mono"
-                            x-text="`${(humanizerOriginal.trim().match(/\s+/g) || []).length + 1} words | ${humanizerOriginal.length} chars (Max ~15,000 words)`"></span>
+                            x-text="`${(humanizerOriginal.trim().match(/\s+/g) || []).length + 1} {{ __('words') }} | ${humanizerOriginal.length} {{ __('chars') }} ({{ __('Max ~15,000 words') }})`"></span>
                     </div>
                     <div class="flex items-center gap-3">
                         <button x-show="humanizerOriginal.trim()"
@@ -77,7 +77,7 @@
                         <!-- Intensity Selector -->
                         <div class="flex flex-col gap-1">
                             <span
-                                class="text-[9px] font-black tracking-wider text-slate-400">{{ __('Bypass Strength') }}</span>
+                                class="text-[9px] font-black tracking-wider text-slate-400">{{ __('Humanize Strength') }}</span>
                             <div class="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
                                 @foreach(['low', 'medium', 'high'] as $level)
                                     <button @click="humanizerIntensity = '{{ $level }}'"
@@ -117,7 +117,7 @@
                                     <span
                                         class="text-[9px] font-black tracking-wider text-slate-400">{{ __('Human Authenticity Rating') }}</span>
                                     <i class="fa-solid fa-circle-info text-slate-500 hover:text-slate-300 text-[10px] cursor-pointer"
-                                        title="{{ __('Estimated chance of passing AI detectors like Turnitin & GPTZero') }}"></i>
+                                        title="{{ __('Estimated score of natural human writing flow and authenticity') }}"></i>
                                 </div>
                                 <div class="flex items-baseline gap-1">
                                     <span class="text-lg font-black"

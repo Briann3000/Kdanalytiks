@@ -343,7 +343,7 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div class="max-h-[300px] overflow-y-auto custom-scrollbar">
+                                <div class="overflow-x-auto custom-scrollbar">
                                     <table class="w-full text-left" id="table-{{ $item['canvasId'] }}">
                                         <thead class="sticky top-0 bg-white z-10 border-b border-gray-100 shadow-sm">
                                             <tr class="text-[12px] font-black text-gray-500 tracking-widest">

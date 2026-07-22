@@ -1,7 +1,14 @@
 @extends('layouts.app')
 
+@php
+    $statusVal = is_object($status) ? $status->value : (string)$status;
+@endphp
+
 @section('title')
-    @if($status->value === 'active') {{ __('Active Surveys') }} @elseif($status->value === 'archived') {{ __('Archived Surveys') }} @else {{ __('Survey Drafts') }} @endif
+    @if($statusVal === 'active') {{ __('Active Surveys') }} 
+    @elseif($statusVal === 'archived') {{ __('Archived Surveys') }} 
+    @elseif($statusVal === 'draft') {{ __('Survey Drafts') }}
+    @else {{ __('All Surveys') }} @endif
 @endsection
 
 @section('content')
@@ -81,24 +88,72 @@
         }
     }
 }">
-    <div class="flex items-center justify-between mb-8 px-4 sm:px-0">
+    {{-- Top Filter Tabs & Action Bar --}}
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 px-4 sm:px-0">
         <div>
-            <h2 class="text-2xl font-black text-gray-900 tracking-tight ">
-                @if($status->value === 'active') {{ __('Active Surveys') }} @elseif($status->value === 'archived') {{ __('Archived Surveys') }} @else {{ __('Survey Drafts') }} @endif
+            <h2 class="text-2xl font-black text-gray-900 tracking-tight">
+                @if($statusVal === 'active') {{ __('Active Surveys') }} 
+                @elseif($statusVal === 'archived') {{ __('Archived Surveys') }} 
+                @elseif($statusVal === 'draft') {{ __('Survey Drafts') }}
+                @else {{ __('All Surveys') }} @endif
             </h2>
             <p class="mt-1 text-sm text-gray-500 font-medium">
-                @if($status->value === 'active') {{ __('View and manage your active surveys.') }}
-                @elseif($status->value === 'archived') {{ __('Access historical data and reports from completed surveys.') }}
-                @else {{ __('Manage your survey before they are deployed to surveys.') }} @endif
+                @if($statusVal === 'active') {{ __('View and manage your active surveys.') }}
+                @elseif($statusVal === 'archived') {{ __('Access historical data and reports from completed surveys.') }}
+                @elseif($statusVal === 'draft') {{ __('Manage your survey drafts before they are deployed.') }}
+                @else {{ __('Manage all active and draft surveys in your repository.') }} @endif
             </p>
         </div>
-        @if($status->value !== 'archived')
-        <div>
-            <a href="{{ route('surveys.create') }}" class="inline-flex items-center px-6 py-3 bg-[#2271b1] text-white rounded-xl font-black text-[10px] tracking-widest shadow-lg shadow-zinc-200/50 hover:bg-[#135e96] transition-all">
-                <i class="fa-solid fa-plus mr-2"></i> {{ __('New Survey') }}
-            </a>
+
+        <div class="flex items-center gap-3">
+            {{-- Status Tabs --}}
+            <div class="inline-flex bg-gray-100 p-1 rounded-2xl">
+                <a href="{{ route('surveys.index', ['status' => 'all']) }}" 
+                   class="px-4 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all {{ $statusVal === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900' }}">
+                    {{ __('All') }}
+                </a>
+                <a href="{{ route('surveys.index', ['status' => 'active']) }}" 
+                   class="px-4 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all {{ $statusVal === 'active' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900' }}">
+                    {{ __('Active') }}
+                </a>
+                <a href="{{ route('surveys.index', ['status' => 'draft']) }}" 
+                   class="px-4 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all {{ $statusVal === 'draft' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900' }}">
+                    {{ __('Drafts') }}
+                </a>
+                <a href="{{ route('surveys.index', ['status' => 'archived']) }}" 
+                   class="px-4 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all {{ $statusVal === 'archived' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900' }}">
+                    {{ __('Archived') }}
+                </a>
+            </div>
+
+            {{-- Create Dropdown --}}
+            @if($statusVal !== 'archived')
+            <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                <button @click="open = !open" 
+                        class="inline-flex items-center gap-2 px-6 py-3 bg-[#2271b1] text-white rounded-xl font-black text-[10px] tracking-widest shadow-lg shadow-zinc-200/50 hover:bg-[#135e96] transition-all">
+                    <i class="fa-solid fa-plus"></i> {{ __('Create Survey') }}
+                    <i class="fa-solid fa-chevron-down text-[8px] ml-1"></i>
+                </button>
+                <div x-show="open" 
+                     x-transition 
+                     class="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 z-50" 
+                     style="display: none;">
+                    <a href="{{ route('surveys.create') }}" 
+                       class="block px-4 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 rounded-xl transition-colors">
+                        {{ __('Blank Survey') }}
+                    </a>
+                    <a href="{{ route('library.templates') }}" 
+                       class="block px-4 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 rounded-xl transition-colors">
+                        {{ __('From Template') }}
+                    </a>
+                    <a href="{{ route('surveys.import') }}" 
+                       class="block px-4 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 rounded-xl transition-colors">
+                        {{ __('Import') }}
+                    </a>
+                </div>
+            </div>
+            @endif
         </div>
-        @endif
     </div>
 
     <!-- Bulk Action Bar -->

@@ -27,6 +27,7 @@ class Survey extends Model
         'public_access',
         'share_token',
         'share_report_token',
+        'import_source',
         'reward_per_response',
         'reward_budget',
         'current_reward_spent',

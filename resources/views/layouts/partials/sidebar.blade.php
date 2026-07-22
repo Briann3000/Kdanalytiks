@@ -402,16 +402,43 @@
                                             <div class="text-[10px] font-black text-[#a7aaad] uppercase tracking-widest mb-2 px-3">
                                                 {{ __('Manage') }}
                                             </div>
-                                            <a href="{{ route('surveys.index', ['status' => 'active']) }}"
-                                                class="block px-3 py-1.5 text-xs font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-lg">{{ __('Active Surveys') }}</a>
-                                            <a href="{{ route('surveys.index', ['status' => 'draft']) }}"
-                                                class="block px-3 py-1.5 text-xs font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-lg">{{ __('Drafts') }}</a>
-                                            <div class="relative" x-data="{ open: false }" @mouseenter="open = true"
-                                                @mouseleave="open = false">
+                                            <div class="relative" x-data="{ nAll: false, nAllTop: 0, nAllLeft: 0 }"
+                                                @mouseenter="const r = $el.getBoundingClientRect(); nAllTop = r.top; nAllLeft = r.right - 5; nAll = true"
+                                                @mouseleave="nAll = false">
+                                                <a href="{{ route('surveys.index', ['status' => 'all']) }}"
+                                                    class="flex items-center justify-between px-3 py-1.5 text-xs font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-lg">
+                                                    <span>{{ __('All Surveys') }}</span>
+                                                    <i class="fa-solid fa-chevron-right text-[8px] text-zinc-400 ml-2"></i>
+                                                </a>
+                                                <!-- Nested Flyout for All Surveys -->
+                                                <div class="flyout-menu shadow-2xl border border-[#2c3338] p-3 min-w-[140px]"
+                                                    style="border-radius: 0.75rem; display: none;" x-show="nAll"
+                                                    :style="{ top: nAllTop + 'px', left: nAllLeft + 'px' }">
+                                                    <div
+                                                        class="text-[9px] font-black text-[#a7aaad] uppercase tracking-widest mb-3 px-2">
+                                                        {{ __('Status') }}
+                                                    </div>
+                                                    <div class="space-y-1">
+                                                        <a href="{{ route('surveys.index', ['status' => 'active']) }}"
+                                                            class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Active') }}</a>
+                                                        <a href="{{ route('surveys.index', ['status' => 'draft']) }}"
+                                                            class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Draft') }}</a>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="relative" x-data="{ nCreate: false, nCreateTop: 0, nCreateLeft: 0 }"
+                                                @mouseenter="const r = $el.getBoundingClientRect(); nCreateTop = r.top; nCreateLeft = r.right - 5; nCreate = true"
+                                                @mouseleave="nCreate = false">
                                                 <a href="{{ route('surveys.create') }}"
-                                                    class="block px-3 py-1.5 text-xs font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-lg">{{ __('Create Survey') }}</a>
-                                                <div class="absolute left-full top-0 ml-1 flyout-menu shadow-2xl border border-[#2c3338] p-3 min-w-[140px]"
-                                                    style="border-radius: 0.75rem; display: none; z-index: 100000;" x-show="open">
+                                                    class="flex items-center justify-between px-3 py-1.5 text-xs font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-lg">
+                                                    <span>{{ __('Create Survey') }}</span>
+                                                    <i class="fa-solid fa-chevron-right text-[8px] text-zinc-400 ml-2"></i>
+                                                </a>
+                                                <!-- Nested Flyout for Create Survey -->
+                                                <div class="flyout-menu shadow-2xl border border-[#2c3338] p-3 min-w-[140px]"
+                                                    style="border-radius: 0.75rem; display: none;" x-show="nCreate"
+                                                    :style="{ top: nCreateTop + 'px', left: nCreateLeft + 'px' }">
                                                     <div
                                                         class="text-[9px] font-black text-[#a7aaad] uppercase tracking-widest mb-3 px-2">
                                                         {{ __('Method') }}
@@ -422,9 +449,7 @@
                                                         <a href="{{ route('library.templates') }}"
                                                             class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Template') }}</a>
                                                         <a href="{{ route('surveys.import') }}"
-                                                            class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">
-                                                            <i
-                                                                class="fa-solid fa-file-import mr-1 opacity-70"></i>{{ __('Import Data') }}</a>
+                                                            class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Import') }}</a>
                                                     </div>
                                                 </div>
                                             </div>
@@ -433,58 +458,29 @@
                             </div>
                             </template>
 
-                            <div x-show="expandedItem === 'org_projects'" x-collapse class="sidebar-submenu"
-                                x-data="{ hubSubExpanded: {{ request()->filled('category') ? 'true' : 'false' }} }">
-                                <a href="{{ route('surveys.index', ['status' => 'active']) }}"
-                                    class="block py-1 text-xs font-bold tracking-wide {{ (request()->routeIs('surveys.index') && request('status') === 'active' && !request()->filled('category')) ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Active Surveys') }}</a>
-
-                                <a href="{{ route('surveys.index', ['status' => 'draft']) }}"
-                                    class="block py-1 text-xs font-bold tracking-wide {{ (request()->routeIs('surveys.index') && request('status') === 'draft') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }} mt-1">{{ __('Drafts') }}</a>
-
-                                <!-- Categories Nested in Manage -->
-                                <div class="mb-1 mt-1">
-                                    <div @click="hubSubExpanded = !hubSubExpanded"
-                                        class="flex items-center justify-between py-1.5 text-xs font-bold {{ request()->filled('category') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }} cursor-pointer transition-colors">
-                                        <div class="flex items-center">
-                                            <i class="fa-solid fa-layer-group mr-2 opacity-50"></i>
-                                            {{ __('By Category') }}
-                                        </div>
-                                    </div>
-
-                                    <div x-show="hubSubExpanded" x-collapse
-                                        class="pl-4 space-y-1 my-1 border-l-2 border-[#2c3338] ml-1">
-                                        @foreach($categories as $key => $cat)
-                                            <a href="{{ route('surveys.index', ['status' => 'active', 'category' => $key]) }}"
-                                                class="block py-1 text-[10px] font-bold  tracking-wider {{ request('category') === $key && request('status') === 'active' ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }} transition-colors">
-                                                {{ __($cat['label']) }}
-                                            </a>
-                                        @endforeach
+                            <div x-show="expandedItem === 'org_projects'" x-collapse class="sidebar-submenu">
+                                <div class="mb-1">
+                                    <a href="{{ route('surveys.index', ['status' => 'all']) }}"
+                                        class="block py-1 text-xs font-bold tracking-wide {{ (request()->routeIs('surveys.index') && (request('status') === 'all' || !request()->filled('status')) && !request()->filled('category')) ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('All Surveys') }}</a>
+                                    <div class="pl-4 space-y-1 my-1 border-l-2 border-[#2c3338] ml-1">
+                                        <a href="{{ route('surveys.index', ['status' => 'active']) }}"
+                                            class="block py-1 text-[10px] font-bold tracking-wider {{ (request()->routeIs('surveys.index') && request('status') === 'active') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Active') }}</a>
+                                        <a href="{{ route('surveys.index', ['status' => 'draft']) }}"
+                                            class="block py-1 text-[10px] font-bold tracking-wider {{ (request()->routeIs('surveys.index') && request('status') === 'draft') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Draft') }}</a>
                                     </div>
                                 </div>
 
-                                <div class="sidebar-item relative mt-1" @mouseenter="setFlyout($el, 'org_create')"
-                                    @mouseleave="clearFlyout()">
+                                <div class="mb-1 mt-1">
                                     <a href="{{ route('surveys.create') }}"
-                                        class="block py-1 text-xs font-bold  tracking-wide {{ request()->routeIs('surveys.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Create Survey') }}</a>
-                                    <template x-teleport="body">
-                                        <div class="flyout-menu shadow-2xl border border-[#2c3338] p-3 min-w-[140px]"
-                                            x-show="hoverItem === 'org_create'"
-                                            :style="{ top: (parseInt(flyoutTop) > 400 ? (parseInt(flyoutTop) - 80) : parseInt(flyoutTop)) + 'px', left: flyoutLeft + 'px' }"
-                                            style="display: none;" @mouseenter="hoverItem = 'org_create'" @mouseleave="clearFlyout()">
-                                            <div class="text-[9px] font-black text-[#a7aaad] uppercase tracking-widest mb-3 px-2">
-                                                {{ __('Method') }}
-                                            </div>
-                                            <div class="space-y-1">
-                                                <a href="{{ route('surveys.create') }}"
-                                                    class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Blank') }}</a>
-                                                <a href="{{ route('library.templates') }}"
-                                                    class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Template') }}</a>
-                                                <a href="{{ route('surveys.import') }}"
-                                                    class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">
-                                                    <i class="fa-solid fa-file-import mr-1 opacity-70"></i>{{ __('Import Data') }}</a>
-                                            </div>
-                                        </div>
-                                    </template>
+                                        class="block py-1 text-xs font-bold tracking-wide {{ request()->routeIs('surveys.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Create Survey') }}</a>
+                                    <div class="pl-4 space-y-1 my-1 border-l-2 border-[#2c3338] ml-1">
+                                        <a href="{{ route('surveys.create') }}"
+                                            class="block py-1 text-[10px] font-bold tracking-wider text-[#f0f0f1] hover:text-[#72aee6] transition-colors">{{ __('Blank') }}</a>
+                                        <a href="{{ route('library.templates') }}"
+                                            class="block py-1 text-[10px] font-bold tracking-wider text-[#f0f0f1] hover:text-[#72aee6] transition-colors">{{ __('Template') }}</a>
+                                        <a href="{{ route('surveys.import') }}"
+                                            class="block py-1 text-[10px] font-bold tracking-wider text-[#f0f0f1] hover:text-[#72aee6] transition-colors">{{ __('Import') }}</a>
+                                    </div>
                                 </div>
                             </div>
                     </div>
@@ -677,8 +673,7 @@
                                 <a href="{{ route('library.templates') }}"
                                     class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Template') }}</a>
                                 <a href="{{ route('surveys.import') }}"
-                                    class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">
-                                    <i class="fa-solid fa-file-import mr-1 opacity-70"></i>{{ __('Import Data') }}</a>
+                                    class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Import') }}</a>
                             </div>
                         </div>
                     </template>

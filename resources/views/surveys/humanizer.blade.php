@@ -1,131 +1,131 @@
 @extends('layouts.app')
 
-@section('title', __('AI Content Humanizer | Humanize & Improve Writing Flow'))
-@section('meta_description', 'Humanize AI-generated text to collect and analyze data naturally, bypass AI detectors and refine sentence rhythm and vocabulary.')
+@section('title', __('AI Content Humanizer | Refine Writing Flow & Style'))
+@section('meta_description', 'Humanize AI-generated text to enhance natural writing flow, sentence rhythm, and vocabulary variety.')
 
 @section('content')
     <div x-data="{
-            humanizerOriginal: '',
-            humanizerResult: '',
-            isHumanizing: false,
-            isAnalyzing: false,
-            humanizerMode: 'standard',
-            humanizerIntensity: 'medium',
-            originalAnalysis: null,
-            humanizedAnalysis: null,
+                humanizerOriginal: '',
+                humanizerResult: '',
+                isHumanizing: false,
+                isAnalyzing: false,
+                humanizerMode: 'standard',
+                humanizerIntensity: 'medium',
+                originalAnalysis: null,
+                humanizedAnalysis: null,
 
-            async analyzeHumanizerText() {
-                if (!this.humanizerOriginal.trim()) return;
-                this.isAnalyzing = true;
-                try {
-                    const response = await fetch('{{ route('humanizer.process') }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-                        },
-                        body: JSON.stringify({
-                            text: this.humanizerOriginal,
-                            analyze_only: true
-                        })
-                    });
-                    const data = await response.json();
-                    this.originalAnalysis = data.analysis;
-                } catch (e) {
-                    console.error(e);
-                } finally {
-                    this.isAnalyzing = false;
-                }
-            },
+                async analyzeHumanizerText() {
+                    if (!this.humanizerOriginal.trim()) return;
+                    this.isAnalyzing = true;
+                    try {
+                        const response = await fetch('{{ route('humanizer.process') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                            },
+                            body: JSON.stringify({
+                                text: this.humanizerOriginal,
+                                analyze_only: true
+                            })
+                        });
+                        const data = await response.json();
+                        this.originalAnalysis = data.analysis;
+                    } catch (e) {
+                        console.error(e);
+                    } finally {
+                        this.isAnalyzing = false;
+                    }
+                },
 
-            async humanizeAction() {
-                if (!this.humanizerOriginal.trim()) return;
-                this.isHumanizing = true;
-                this.humanizerResult = '';
-                try {
-                    const response = await fetch('{{ route('humanizer.process') }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-                        },
-                        body: JSON.stringify({
-                            text: this.humanizerOriginal,
-                            mode: this.humanizerMode,
-                            intensity: this.humanizerIntensity
-                        })
-                    });
-                    const data = await response.json();
-                    if (data.error) {
+                async humanizeAction() {
+                    if (!this.humanizerOriginal.trim()) return;
+                    this.isHumanizing = true;
+                    this.humanizerResult = '';
+                    try {
+                        const response = await fetch('{{ route('humanizer.process') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                            },
+                            body: JSON.stringify({
+                                text: this.humanizerOriginal,
+                                mode: this.humanizerMode,
+                                intensity: this.humanizerIntensity
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.error) {
+                            Swal.fire({
+                                title: 'Humanizer Error',
+                                text: data.message,
+                                icon: 'error',
+                                customClass: { popup: 'rounded-3xl' }
+                            });
+                            return;
+                        }
+                        this.humanizerResult = data.humanized_text;
+                        this.originalAnalysis = data.original_analysis;
+                        this.humanizedAnalysis = data.humanized_analysis;
+                    } catch (e) {
                         Swal.fire({
-                            title: 'Humanizer Error',
-                            text: data.message,
+                            title: 'Connection Error',
+                            text: e.message,
                             icon: 'error',
                             customClass: { popup: 'rounded-3xl' }
                         });
-                        return;
+                    } finally {
+                        this.isHumanizing = false;
                     }
-                    this.humanizerResult = data.humanized_text;
-                    this.originalAnalysis = data.original_analysis;
-                    this.humanizedAnalysis = data.humanized_analysis;
-                } catch (e) {
-                    Swal.fire({
-                        title: 'Connection Error',
-                        text: e.message,
-                        icon: 'error',
-                        customClass: { popup: 'rounded-3xl' }
-                    });
-                } finally {
-                    this.isHumanizing = false;
-                }
-            },
+                },
 
-            async uploadFile(event) {
-                const file = event.target.files[0];
-                if (!file) return;
+                async uploadFile(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
 
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('_token', '{{ csrf_token() }}');
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('_token', '{{ csrf_token() }}');
 
-                this.isAnalyzing = true;
-                try {
-                    const response = await fetch('{{ route('humanizer.upload') }}', {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json'
-                        },
-                        body: formData
-                    });
-                    const data = await response.json();
-                    if (!response.ok) {
-                        const errorText = data.message || 'Validation or upload error';
-                        const details = data.errors ? Object.values(data.errors).flat().join('\n') : '';
+                    this.isAnalyzing = true;
+                    try {
+                        const response = await fetch('{{ route('humanizer.upload') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json'
+                            },
+                            body: formData
+                        });
+                        const data = await response.json();
+                        if (!response.ok) {
+                            const errorText = data.message || 'Validation or upload error';
+                            const details = data.errors ? Object.values(data.errors).flat().join('\n') : '';
+                            Swal.fire({
+                                title: 'Upload Failed',
+                                text: details || errorText,
+                                icon: 'error',
+                                customClass: { popup: 'rounded-3xl' }
+                            });
+                            return;
+                        }
+                        this.humanizerOriginal = data.text || '';
+                        this.$nextTick(() => {
+                            this.analyzeHumanizerText();
+                        });
+                    } catch (e) {
                         Swal.fire({
-                            title: 'Upload Failed',
-                            text: details || errorText,
+                            title: 'Upload Error',
+                            text: e.message,
                             icon: 'error',
                             customClass: { popup: 'rounded-3xl' }
                         });
-                        return;
+                    } finally {
+                        this.isAnalyzing = false;
+                        event.target.value = '';
                     }
-                    this.humanizerOriginal = data.text || '';
-                    this.$nextTick(() => {
-                        this.analyzeHumanizerText();
-                    });
-                } catch (e) {
-                    Swal.fire({
-                        title: 'Upload Error',
-                        text: e.message,
-                        icon: 'error',
-                        customClass: { popup: 'rounded-3xl' }
-                    });
-                } finally {
-                    this.isAnalyzing = false;
-                    event.target.value = '';
                 }
-            }
-        }"
+            }"
         class="min-h-screen bg-[#1d2327] text-slate-100 rounded-3xl border border-white/5 shadow-2xl flex flex-col font-sans">
         <!-- Header -->
         <div class="px-8 py-5 border-b border-white/5 bg-[#1d2327] flex items-center justify-between">
@@ -154,7 +154,7 @@
                             <span
                                 class="text-xs font-black tracking-wider text-[#2271b1]">{{ __('Original AI Output') }}</span>
                             <span x-show="humanizerOriginal.trim()" class="text-[10px] text-slate-400 font-mono"
-                                x-text="`${(humanizerOriginal.trim().match(/\s+/g) || []).length + 1} words | ${humanizerOriginal.length} chars (Max ~15,000 words)`"></span>
+                                x-text="`${(humanizerOriginal.trim().match(/\s+/g) || []).length + 1} {{ __('words') }} | ${humanizerOriginal.length} {{ __('chars') }} ({{ __('Max ~15,000 words') }})`"></span>
                         </div>
                         <div class="flex items-center gap-3">
                             <button x-show="humanizerOriginal.trim()"
@@ -198,7 +198,7 @@
                             <!-- Intensity Selector -->
                             <div class="flex flex-col gap-1">
                                 <span
-                                    class="text-[9px] font-black tracking-wider text-slate-400">{{ __('Bypass Strength') }}</span>
+                                    class="text-[9px] font-black tracking-wider text-slate-400">{{ __('Humanize Strength') }}</span>
                                 <div class="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
                                     @foreach(['low', 'medium', 'high'] as $level)
                                         <button @click="humanizerIntensity = '{{ $level }}'"
@@ -238,7 +238,7 @@
                                         <span
                                             class="text-[9px] font-black tracking-wider text-slate-400">{{ __('Human Authenticity Rating') }}</span>
                                         <i class="fa-solid fa-circle-info text-slate-500 hover:text-slate-300 text-[10px] cursor-pointer"
-                                            title="{{ __('Estimated chance of passing AI detectors like Turnitin & GPTZero') }}"></i>
+                                            title="{{ __('Estimated score of natural human writing flow and authenticity') }}"></i>
                                     </div>
                                     <div class="flex items-baseline gap-1">
                                         <span class="text-lg font-black"

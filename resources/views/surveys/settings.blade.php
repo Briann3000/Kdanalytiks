@@ -533,6 +533,66 @@
 
                 <hr class="border-gray-50">
 
+                <!-- Data Portability -->
+                <section class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div>
+                        <h4 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-1">{{ __('Data Portability') }}</h4>
+                        <p class="text-[10px] text-gray-400 font-bold leading-relaxed">
+                            {{ __('Export or import questions and collected data package.') }}
+                        </p>
+                    </div>
+                    <div class="md:col-span-2 space-y-4">
+                        <div class="p-6 bg-gray-50 border border-gray-100 rounded-3xl space-y-6">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                <div>
+                                    <p class="text-xs font-bold text-gray-900 uppercase tracking-wider mb-1">
+                                        {{ __('Export Survey Package') }}
+                                    </p>
+                                    <p class="text-xs text-gray-500 font-medium">
+                                        {{ __('Download questions and response data as a portable bundle.') }}
+                                    </p>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <a href="{{ route('surveys.export_package', $survey) }}"
+                                       class="inline-flex items-center gap-1.5 px-4 py-2 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">
+                                        <i class="fa-solid fa-file-archive"></i>
+                                        {{ __('Package') }}
+                                    </a>
+                                    <a href="{{ route('surveys.export_spss_sav', $survey) }}"
+                                       class="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">
+                                        <i class="fa-solid fa-table"></i>
+                                        {{ __('SPSS .SAV') }}
+                                    </a>
+                                    <a href="{{ route('surveys.export_pdf_summary', $survey) }}"
+                                       class="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">
+                                        <i class="fa-solid fa-file-pdf"></i>
+                                        {{ __('PDF Summary') }}
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="border-t border-gray-100 pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                <div>
+                                    <p class="text-xs font-bold text-gray-900 uppercase tracking-wider mb-1">
+                                        {{ __('Import Additional Data') }}
+                                    </p>
+                                    <p class="text-xs text-gray-500 font-medium">
+                                        {{ __('Append external data to this survey.') }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <a href="{{ route('surveys.import', ['append_to' => $survey->id]) }}"
+                                       class="inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">
+                                        <i class="fa-solid fa-plus-circle"></i>
+                                        {{ __('Import More') }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <hr class="border-gray-50">
+
                 <!-- Danger Zone -->
                 <section class="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div>

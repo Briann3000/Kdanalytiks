@@ -183,7 +183,7 @@ class AiHumanizerService
      */
     private function processParagraphChunk(string $chunk, string $mode, string $intensity): string
     {
-        $systemPrompt = "You are an expert copywriter specializing in humanizing AI-generated content to completely bypass AI detectors (Turnitin, Quillbot, GPTZero, etc.). Your goal is to rewrite the input text paragraph-by-paragraph to emulate natural, dynamic, and erratic human writing profiles.
+        $systemPrompt = "You are an expert editor specializing in humanizing text and refining writing style. Your goal is to rewrite the input text paragraph-by-paragraph to emulate natural, dynamic, and engaging human writing profiles.
 
 CORE HUMANIZATION RULES:
 
