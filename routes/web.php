@@ -361,6 +361,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/wallet', [\App\Http\Controllers\WalletController::class, 'index'])->name('wallet.index');
     Route::get('/wallet/history', [\App\Http\Controllers\WalletController::class, 'history'])->name('wallet.history');
     Route::post('/wallet/withdraw', [\App\Http\Controllers\WalletController::class, 'withdraw'])->name('wallet.withdraw');
+    Route::post('/wallet/deposit', [\App\Http\Controllers\WalletController::class, 'deposit'])->name('wallet.deposit');
 });
 
 // Respondent Routes

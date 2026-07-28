@@ -148,7 +148,7 @@ class IntasendGateway implements PaymentGatewayInterface
                 'amount' => $amount,
                 'currency' => $currency,
                 'reference' => $approveResponse->tracking_id ?? $response->tracking_id ?? $response['tracking_id'] ?? $apiRef,
-                'message' => 'Payout initiated and approved successfully via IntaSend.'
+                'message' => 'Withdrawal processed successfully.'
             ];
 
         } catch (\Exception $e) {
@@ -220,5 +220,88 @@ class IntasendGateway implements PaymentGatewayInterface
         }
 
         return false;
+    }
+
+    /**
+     * Initiate a wallet deposit via IntaSend Checkout.
+     */
+    public function initiateDeposit(User $user, float $amount, string $currency): array
+    {
+        try {
+            $checkout = new Checkout();
+            $checkout->init($this->getCredentials());
+
+            $reference = "DEP-USR-{$user->id}-" . strtoupper(\Illuminate\Support\Str::random(6));
+
+            $customer = new Customer();
+            $customer->email = $user->email ?? 'infokdanalytiks@gmail.com';
+            $customer->first_name = explode(' ', $user->name ?? 'Researcher')[0];
+            $customer->last_name = explode(' ', $user->name ?? 'User')[1] ?? 'Admin';
+            $customer->country = 'KE';
+
+            $response = $checkout->create(
+                $amount,
+                $currency,
+                $customer,
+                config('app.url'),
+                route('wallet.index'),
+                $reference,
+                'Wallet Deposit',
+                null
+            );
+
+            if (isset($response->url)) {
+                return [
+                    'status' => 'success',
+                    'checkout_url' => $response->url,
+                    'reference' => $reference,
+                    'invoice_id' => $response->id ?? null,
+                ];
+            }
+
+            throw new \Exception('Failed to generate IntaSend checkout URL');
+
+        } catch (\Exception $e) {
+            Log::error('IntaSend Deposit Error: ' . $e->getMessage());
+            return [
+                'status' => 'error',
+                'message' => 'Could not initiate payment: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Check payment status from IntaSend.
+     */
+    public function checkPaymentStatus(string $trackingId): array
+    {
+        try {
+            $domain = $this->testMode ? 'sandbox.intasend.com' : 'payment.intasend.com';
+            $response = \Illuminate\Support\Facades\Http::withToken($this->secretKey)
+                ->get("https://{$domain}/api/v1/payment/status/{$trackingId}/");
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $invoice = $data['invoice'] ?? [];
+                $state = $invoice['state'] ?? 'FAILED';
+                $apiRef = $invoice['api_ref'] ?? null;
+                $amount = $invoice['net_amount'] ?? $invoice['amount'] ?? 0;
+
+                return [
+                    'status' => 'success',
+                    'state' => $state,
+                    'api_ref' => $apiRef,
+                    'amount' => $amount
+                ];
+            }
+
+            throw new \Exception('Failed to fetch status from IntaSend: ' . $response->body());
+        } catch (\Exception $e) {
+            Log::error('IntaSend Status Check Error: ' . $e->getMessage());
+            return [
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ];
+        }
     }
 }

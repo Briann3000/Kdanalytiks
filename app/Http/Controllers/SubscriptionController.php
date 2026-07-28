@@ -101,9 +101,13 @@ class SubscriptionController extends Controller
         $amount = $payload['value'] ?? $payload['amount'] ?? 0;
         $method = $payload['provider'] ?? 'IntaSend';
 
-        // Check if it's a Withdrawal (WD-) or Subscription (SUB-)
+        // Check if it's a Withdrawal (WD-), Subscription (SUB-), or Deposit (DEP-)
         if ($reference && str_starts_with($reference, 'WD-')) {
             return $this->handleWithdrawalWebhook($reference, $status, $payload);
+        }
+
+        if ($reference && str_starts_with($reference, 'DEP-')) {
+            return $this->handleDepositWebhook($reference, $status, $payload);
         }
 
         $type = null; // 'ORG', 'IND', or 'RES'
@@ -269,6 +273,62 @@ class SubscriptionController extends Controller
         }
 
         return response()->json(['status' => 'success', 'message' => 'Withdrawal status updated']);
+    }
+
+    /**
+     * Handle webhook for wallet deposits.
+     */
+    protected function handleDepositWebhook(string $reference, string $status, array $payload)
+    {
+        $isComplete = in_array(strtoupper($status), ['COMPLETE', 'COMPLETED']);
+
+        $transaction = \App\Models\Transaction::where('reference', $reference)->first();
+        if (!$transaction) {
+            $invoiceId = $payload['invoice_id'] ?? $payload['tracking_id'] ?? null;
+            if ($invoiceId) {
+                $transaction = \App\Models\Transaction::where('reference', $invoiceId)->first();
+            }
+        }
+
+        if (!$transaction) {
+            \Log::warning('Deposit Webhook: Transaction not found.', ['reference' => $reference, 'payload' => $payload]);
+            return response()->json(['message' => 'Transaction not found'], 404);
+        }
+
+        if ($transaction->status === 'completed') {
+            return response()->json(['message' => 'Transaction already completed']);
+        }
+
+        try {
+            \Illuminate\Support\Facades\DB::beginTransaction();
+
+            if ($isComplete) {
+                $transaction->update([
+                    'status' => 'completed',
+                    'external_reference' => $payload['tracking_id'] ?? $payload['invoice_id'] ?? null,
+                    'description' => $transaction->description . ' (Confirmed via Webhook)'
+                ]);
+
+                // Increment wallet balance
+                $wallet = $transaction->wallet;
+                if ($wallet) {
+                    $wallet->increment('balance', $transaction->amount);
+                    \Log::info("Deposit Webhook: Credited {$transaction->amount} to wallet {$wallet->id}");
+                }
+            } else {
+                $transaction->update([
+                    'status' => 'failed',
+                    'description' => 'Deposit failed: ' . ($payload['status_description'] ?? $status ?? 'declined')
+                ]);
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+            return response()->json(['status' => 'success', 'message' => 'Deposit status updated']);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Log::error('Deposit Webhook Processing Error: ' . $e->getMessage(), ['payload' => $payload]);
+            return response()->json(['message' => 'Error processing webhook: ' . $e->getMessage()], 500);
+        }
     }
 
     private function resolveEntity()

@@ -2218,8 +2218,9 @@
                         chart.data.datasets.forEach((dataset, i) => {
                             const meta = chart.getDatasetMeta(i);
                             meta.data.forEach((element, index) => {
-                                const pctVal = dataset.data[index];
-                                const text = `${pctVal}%`;
+                                const rawVal = dataset.data[index];
+                                const numVal = (typeof rawVal === 'number') ? rawVal : parseFloat(String(rawVal || 0).replace('%', ''));
+                                const text = `${isNaN(numVal) ? 0 : (numVal % 1 === 0 ? numVal.toFixed(0) : numVal.toFixed(1))}%`;
 
                                 ctx.fillStyle = '#475569';
                                 ctx.font = 'bold 9px Inter, sans-serif';
@@ -4115,8 +4116,9 @@
                                                         chart.data.datasets.forEach((dt, i) => {
                                                             const meta = chart.getDatasetMeta(i);
                                                             meta.data.forEach((element, index) => {
-                                                                const pctVal = dt.data[index] || 0;
-                                                                const text = `${pctVal}%`;
+                                                                const rawVal = dt.data[index];
+                                                                const numVal = (typeof rawVal === 'number') ? rawVal : parseFloat(String(rawVal || 0).replace('%', ''));
+                                                                const text = `${isNaN(numVal) ? 0 : (numVal % 1 === 0 ? numVal.toFixed(0) : numVal.toFixed(1))}%`;
 
                                                                 ctx.fillStyle = (chart.options.scales?.x?.ticks?.color === '#333333' || chart.options.scales?.y?.ticks?.color === '#333333') ? '#333333' : '#e2e8f0';
                                                                 ctx.font = 'bold 9px Inter, sans-serif';

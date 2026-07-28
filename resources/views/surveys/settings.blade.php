@@ -176,6 +176,46 @@
                                 </a>
                             </div>
                         </div>
+
+                        <!-- On-Screen QR Code Preview & Download Card -->
+                        <div class="p-6 rounded-2xl border border-zinc-200 bg-white shadow-sm flex flex-col sm:flex-row items-center gap-6">
+                            @php
+                                $qrApiUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' . urlencode($shareUrl);
+                            @endphp
+                            <div class="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex-shrink-0">
+                                <img src="{{ $qrApiUrl }}" alt="Survey QR Code" class="w-36 h-36 rounded-xl object-contain">
+                            </div>
+                            <div class="space-y-2 text-center sm:text-left flex-1">
+                                <h5 class="text-xs font-black text-gray-900 uppercase tracking-wider">{{ __('Direct Scan QR Code') }}</h5>
+                                <p class="text-[11px] text-gray-500 font-medium leading-relaxed">
+                                    {{ __('Scan this code directly using any smartphone camera to open the survey, or download the image for print posters and flyers.') }}
+                                </p>
+                                <a href="{{ $qrApiUrl }}" download="survey_qrcode_{{ $survey->id }}.png" target="_blank"
+                                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#2271b1] text-white rounded-xl font-bold text-xs hover:bg-[#135e96] transition-all shadow-sm">
+                                    <i class="fa-solid fa-download"></i>
+                                    <span>{{ __('Download QR Code') }}</span>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Website Embed Code Card -->
+                        <div class="p-6 rounded-2xl border border-zinc-200 bg-zinc-100">
+                            <label class="block text-[10px] font-black text-[#2271b1] uppercase tracking-widest mb-2">{{ __('Website Embed Code (iframe)') }}</label>
+                            <p class="text-[11px] text-gray-500 font-medium mb-3">
+                                {{ __('Copy this HTML snippet to embed the live questionnaire directly inside your website or blog.') }}
+                            </p>
+                            @php
+                                $embedSnippet = '<iframe src="' . $shareUrl . '" width="100%" height="700px" frameborder="0" style="border:0; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);"></iframe>';
+                            @endphp
+                            <div class="flex items-center gap-2">
+                                <textarea readonly rows="2" class="flex-1 bg-white border-gray-200 rounded-xl px-3 py-2 text-[11px] font-mono text-gray-700 focus:outline-none">{{ $embedSnippet }}</textarea>
+                                <button onclick="navigator.clipboard.writeText('{{ addslashes($embedSnippet) }}'); alert('{{ __('Embed code copied to clipboard!') }}')"
+                                    class="px-4 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold text-xs hover:text-[#2271b1] transition-all flex items-center gap-1.5 flex-shrink-0">
+                                    <i class="fa-solid fa-code"></i>
+                                    <span>{{ __('Copy Snippet') }}</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </section>
 

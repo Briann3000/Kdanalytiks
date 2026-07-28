@@ -447,10 +447,23 @@ class SurveyController extends Controller
         $survey->category = $validated['category'];
         $survey->type = \App\Enums\SurveyType::tryFrom($validated['type']) ?? \App\Enums\SurveyType::Public;
         $survey->public_access = ($survey->type === \App\Enums\SurveyType::Public) ? 'submit' : 'none';
-        $survey->json_schema = $validated['json_schema'];
-        $survey->is_paid = $request->boolean('is_paid');
+        $isPaid = $request->boolean('is_paid');
+        $rewardBudget = (float) $request->input('reward_budget', 0);
+
+        if ($isPaid && $rewardBudget > 0) {
+            $wallet = $user->wallet ?: \App\Models\Wallet::firstOrCreate(['user_id' => $user->id], ['balance' => 0]);
+            if ($wallet->balance < $rewardBudget) {
+                $errorMsg = 'Insufficient wallet balance. You have KES ' . number_format($wallet->balance, 2) . ' but need KES ' . number_format($rewardBudget, 2) . ' to allocate for this paid survey. Please top up your wallet.';
+                if ($request->expectsJson() || $request->isXmlHttpRequest()) {
+                    return response()->json(['success' => false, 'message' => $errorMsg], 422);
+                }
+                return back()->with('error', $errorMsg);
+            }
+        }
+
+        $survey->is_paid = $isPaid;
         $survey->reward_per_response = $request->input('reward_per_response', 0);
-        $survey->reward_budget = $request->input('reward_budget', 0);
+        $survey->reward_budget = $rewardBudget;
 
         if ($request->filled('status')) {
             $survey->status = \App\Enums\SurveyStatus::tryFrom($request->status) ?? $survey->status;
@@ -1232,18 +1245,14 @@ class SurveyController extends Controller
                     try {
                         if ($isAnalyzable) {
                             // Qualitative Analysis - FREE (Standard)
-                            if ($forceGenerate) {
-                                $aiInsight = \Illuminate\Support\Facades\Cache::remember("qualitative_analysis_{$survey->id}_{$fieldId}", 86400, function () use ($answersList, $label) {
-                                    return (new \App\Services\QualitativeAnalysisService())->analyzeResponses($answersList, $label);
-                                });
-                            }
+                            $aiInsight = \Illuminate\Support\Facades\Cache::remember("qualitative_analysis_{$survey->id}_{$fieldId}", 86400, function () use ($answersList, $label) {
+                                return (new \App\Services\QualitativeAnalysisService())->analyzeResponses($answersList, $label);
+                            });
                         } elseif ($isChartable && $canAnalyze) {
                             // Quantitative AI Trend Interpretation - PREMIUM
-                            if ($forceGenerate) {
-                                $aiInsight = \Illuminate\Support\Facades\Cache::remember("quantitative_analysis_{$survey->id}_{$fieldId}", 86400, function () use ($stats) {
-                                    return (new \App\Services\QualitativeAnalysisService())->analyzeQuantitativeData($stats);
-                                });
-                            }
+                            $aiInsight = \Illuminate\Support\Facades\Cache::remember("quantitative_analysis_{$survey->id}_{$fieldId}", 86400, function () use ($stats, $label) {
+                                return (new \App\Services\QualitativeAnalysisService())->analyzeQuantitativeData($stats, $label);
+                            });
                         }
                     } catch (\Exception $e) {
                         \Illuminate\Support\Facades\Log::error("AI Insight Generation Failed: " . $e->getMessage());
@@ -1345,18 +1354,14 @@ class SurveyController extends Controller
                     try {
                         if ($isAnalyzable) {
                             // Qualitative Analysis - FREE (Standard)
-                            if ($forceGenerate) {
-                                $aiInsight = \Illuminate\Support\Facades\Cache::remember("qualitative_analysis_{$survey->id}_{$question->id}", 86400, function () use ($answersList, $question) {
-                                    return (new \App\Services\QualitativeAnalysisService())->analyzeResponses($answersList, $question->text);
-                                });
-                            }
+                            $aiInsight = \Illuminate\Support\Facades\Cache::remember("qualitative_analysis_{$survey->id}_{$question->id}", 86400, function () use ($answersList, $question) {
+                                return (new \App\Services\QualitativeAnalysisService())->analyzeResponses($answersList, $question->text);
+                            });
                         } elseif ($isChartable && $canAnalyze) {
                             // Quantitative AI Trend Interpretation - PREMIUM
-                            if ($forceGenerate) {
-                                $aiInsight = \Illuminate\Support\Facades\Cache::remember("quantitative_analysis_{$survey->id}_{$question->id}", 86400, function () use ($stats) {
-                                    return (new \App\Services\QualitativeAnalysisService())->analyzeQuantitativeData($stats);
-                                });
-                            }
+                            $aiInsight = \Illuminate\Support\Facades\Cache::remember("quantitative_analysis_{$survey->id}_{$question->id}", 86400, function () use ($stats, $question) {
+                                return (new \App\Services\QualitativeAnalysisService())->analyzeQuantitativeData($stats, $question->text);
+                            });
                         }
                     } catch (\Exception $e) {
                         \Illuminate\Support\Facades\Log::error("AI Insight Generation Failed: " . $e->getMessage());
@@ -1559,7 +1564,10 @@ class SurveyController extends Controller
                             ]
                         ]
                     ];
-                    $item['chartUrl'] = 'https://quickchart.io/chart?c=' . urlencode(json_encode($qcConfig)) . '&w=600&h=300&bkg=white&version=3';
+                    $qcJson = json_encode($qcConfig);
+                    $qcJson = str_replace('"function(v){return v + \"%\";}"', 'function(v){return v + "%";}', $qcJson);
+                    $qcJson = str_replace('"function(value){return value + \"%\";}"', 'function(value){return value + "%";}', $qcJson);
+                    $item['chartUrl'] = 'https://quickchart.io/chart?c=' . urlencode($qcJson) . '&w=600&h=300&bkg=white&version=3';
                 }
             }
 
@@ -1805,7 +1813,10 @@ class SurveyController extends Controller
                             ]
                         ]
                     ];
-                    $item['chartUrl'] = 'https://quickchart.io/chart?c=' . urlencode(json_encode($qcConfig)) . '&w=600&h=300&bkg=white&version=3';
+                    $qcJson = json_encode($qcConfig);
+                    $qcJson = str_replace('"function(v){return v + \"%\";}"', 'function(v){return v + "%";}', $qcJson);
+                    $qcJson = str_replace('"function(value){return value + \"%\";}"', 'function(value){return value + "%";}', $qcJson);
+                    $item['chartUrl'] = 'https://quickchart.io/chart?c=' . urlencode($qcJson) . '&w=600&h=300&bkg=white&version=3';
                 }
             }
         }

@@ -22,4 +22,14 @@ interface PaymentGatewayInterface
      * Validate an incoming webhook from the payment provider.
      */
     public function validateWebhook(string $content, array $headers): bool;
+
+    /**
+     * Initiate a wallet deposit checkout.
+     */
+    public function initiateDeposit(User $user, float $amount, string $currency): array;
+
+    /**
+     * Check payment status from the payment provider.
+     */
+    public function checkPaymentStatus(string $trackingId): array;
 }

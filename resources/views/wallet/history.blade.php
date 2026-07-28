@@ -11,7 +11,7 @@
                 <h2 class="text-3xl font-black text-gray-800">Transaction History</h2>
             </div>
             <div class="bg-white px-6 py-3 rounded-2xl border border-gray-100 shadow-sm">
-                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center">Current balance</p>
+                <p class="text-[10px] text-gray-400 font-bold tracking-widest text-center">Current balance</p>
                 <p class="text-xl font-black text-[#135e96]">{{ number_format((float) $wallet->balance, 2) }}
                     {{ $wallet->currency ?? 'KES' }}
                 </p>
@@ -23,14 +23,13 @@
                 <table class="w-full text-left">
                     <thead>
                         <tr class="bg-gray-50 border-b border-gray-100">
-                            <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date &
+                            <th class="px-6 py-4 text-[10px] font-black text-gray-400 tracking-widest">Date &
                                 Reference</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Description
+                            <th class="px-6 py-4 text-[10px] font-black text-gray-400 tracking-widest">Description
                             </th>
-                            <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">
+                            <th class="px-6 py-4 text-[10px] font-black text-gray-400 tracking-widest text-right">
                                 Amount</th>
-                            <th
-                                class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">
+                            <th class="px-6 py-4 text-[10px] font-black text-gray-400 tracking-widest text-center">
                                 Status</th>
                         </tr>
                     </thead>
@@ -40,12 +39,21 @@
                                 <td class="px-6 py-5">
                                     <p class="text-sm font-bold text-gray-800">{{ $transaction->created_at->format('M d, Y') }}
                                     </p>
-                                    <p class="text-[10px] text-gray-400 font-medium uppercase">{{ $transaction->reference }}</p>
+                                    <p class="text-[10px] text-gray-400 font-medium">{{ $transaction->reference }}</p>
                                 </td>
                                 <td class="px-6 py-5">
                                     <div class="flex items-center gap-3">
-
-                                        <p class="text-sm font-medium text-gray-700">{{ $transaction->description }}</p>
+                                        <p class="text-sm font-medium text-gray-700">
+                                            @php
+                                                $cleanDesc = $transaction->description;
+                                                $cleanDesc = str_ireplace('Wallet top-up deposit via IntaSend M-PESA/Card', 'Wallet deposit', $cleanDesc);
+                                                $cleanDesc = str_ireplace('Payout initiated and approved successfully via IntaSend', 'processed successfully', $cleanDesc);
+                                                $cleanDesc = str_ireplace('via IntaSend M-PESA/Card', '', $cleanDesc);
+                                                $cleanDesc = str_ireplace('via IntaSend', '', $cleanDesc);
+                                                $cleanDesc = trim(rtrim($cleanDesc, '.'));
+                                            @endphp
+                                            {{ $cleanDesc }}
+                                        </p>
                                     </div>
                                 </td>
                                 <td class="px-6 py-5 text-right">
@@ -57,7 +65,7 @@
                                 </td>
                                 <td class="px-6 py-5 text-center">
                                     <span
-                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest {{ $transaction->status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }}">
+                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-widest {{ $transaction->status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }}">
                                         {{ $transaction->status }}
                                     </span>
                                 </td>
@@ -67,8 +75,7 @@
                                 <td colspan="4" class="px-6 py-12 text-center">
                                     <div class="flex flex-col items-center">
                                         <i class="fa-solid fa-folder-open text-gray-200 text-4xl mb-4"></i>
-                                        <p class="text-gray-400 font-bold uppercase tracking-widest text-xs">No records found
-                                        </p>
+                                        <p class="text-gray-400 font-bold tracking-widest text-xs">No records found</p>
                                     </div>
                                 </td>
                             </tr>

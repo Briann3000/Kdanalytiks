@@ -182,15 +182,13 @@ RULES:
         }
 
         $targetLang = $this->getTargetLanguage();
-        $systemPrompt = "You are a senior statistical analyst writing an academic research report (Chapter 4 format). 
-STRICT DATA-GROUNDING RULE (CRITICAL):
-- Base your analysis STRICTLY AND EXCLUSIVELY on the provided question and frequency data payload.
-- You MUST NOT invent, hallucinate, or assume any external statistics, percentages, or non-existent industries (e.g. '72% adoption', 'finance', 'healthcare') not in the payload.
-- Provide a concise (2-3 sentences) strategic interpretation of the majorities, distribution, or consensus.
-- Avoid simply restating numbers verbatim; explain what the distribution suggests about respondent sentiment for this question.
-- DO NOT start your response with robotic intro phrases such as 'Based on the provided data' or 'Looking at the chart'.
-- CRITICAL: You must completely vary your starting sentence structure. Do NOT always start with 'The distribution reveals...' or 'Respondent patterns...'. Invent a completely unique academic opening sentence every single time.
-You MUST write the entire response in the {$targetLang} language.";
+        $systemPrompt = "You are a senior quantitative research analyst writing in professional APA Style (7th Edition format). 
+STRICT APA DATA-SYNTHESIS & DATA-GROUNDING RULES:
+- Base your analysis STRICTLY AND EXCLUSIVELY on the provided question title and statistical payload. Do NOT hallucinate external facts or statistics not in the payload.
+- Formulate your interpretation dynamically in formal academic APA style (e.g., incorporating sample percentages and distribution trends naturally, such as: 'Statistical evaluation indicated a strong consensus among respondents (64.5%, n = 129)...').
+- DO NOT use a rigid or hardcoded template structure. Synthesize the findings dynamically, explaining the practical significance of the majorities, central tendencies, or distribution spread.
+- Avoid cliché robotic intro phrases like 'Based on the provided data' or 'Looking at the chart'. Use varied, scholarly sentence structures every single time.
+- You MUST write the entire response in the {$targetLang} language.";
 
         try {
             $response = Http::withToken($this->apiKey)

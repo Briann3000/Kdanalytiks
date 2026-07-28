@@ -1,25 +1,26 @@
-# Subscription & Wallets
+# Billing & Subscriptions
 
-We offer flexible subscription plans for researchers, corporate profiles, and respondents.
+Manage your subscription tier, survey response limits, AI token allocations, and wallet balances.
 
-## Subscription Tiers
+---
 
-1. **Free**:
-   - Up to 5 surveys.
-   - Basic question types.
-   - 2 AI/Socius analysis queries.
-2. **Pro**:
-   - Unlimited surveys.
-   - Unlimited AI/Socius analysis queries.
-   - Advanced statistics (Crosstabs, Inferential testing).
-   - Branding options (remove powered-by marks, add export logos).
-3. **Enterprise**:
-   - Multi-user corporate seats.
-   - Tailored AI constraints and dedicated resource limits.
+## 1. Subscription Tiers
 
-## Wallet & Rewards
+KDAnalytiks offers flexible plans tailored to individual researchers, university departments, and enterprises:
 
-Respondents can build cash balances by completing surveys marked as "Paid" by the creator:
+| Feature                  | Free Tier | Pro Plan         | Enterprise Plan                   |
+| :----------------------- | :-------- | :--------------- | :-------------------------------- |
+| **Surveys**              | Unlimited | Unlimited        | Unlimited                         |
+| **Responses per Survey** | Up to 100 | Up to 5,000      | Unlimited                         |
+| **Question Types**       | Standard  | All 12+ Types    | All 12+ Types                     |
+| **Socius AI Analysis**   | Basic     | Advanced Q&A     | Advanced Q&A + RAG Knowledge Base |
+| **Exports**              | CSV, PDF  | CSV, Excel, Word | CSV, Excel, Word, SPSS (.sav), R  |
+| **Analysis Groups**      | 1 Group   | Up to 10 Groups  | Unlimited Groups                  |
 
-- **Survey Funding**: Survey creators set a budget and a "Reward per response" in the survey settings.
-- **Cash-outs**: Respondents accrue earnings in their local **Wallet** and can request transfers to Mobile Money (MPesa) or cards once they meet minimum withdrawal thresholds.
+---
+
+## 2. Wallet Funding & Invoices
+
+- **Funding Wallet**: Add funds to your balance to cover paid survey respondent incentives or premium exports.
+- **Invoices & Receipts**: Download PDF VAT invoices for institutional expense claims under **Account Settings** -> **Billing History**.
+- **Upgrading/Downgrading**: Upgrade your subscription tier at any time; unused plan balances are prorated automatically.

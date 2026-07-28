@@ -10,10 +10,58 @@ class WalletController extends Controller
     /**
      * Display the respondent's wallet and balance.
      */
-    public function index()
+    public function index(Request $request, \App\Interfaces\PaymentGatewayInterface $gateway)
     {
         $user = auth()->user();
         $wallet = $user->wallet ?: \App\Models\Wallet::firstOrCreate(['user_id' => $user->id], ['balance' => 0]);
+
+        $trackingId = $request->input('tracking_id');
+        if ($trackingId) {
+            $result = $gateway->checkPaymentStatus($trackingId);
+            if ($result['status'] === 'success') {
+                $state = strtoupper($result['state']);
+                $isComplete = ($state === 'COMPLETE' || $state === 'COMPLETED');
+                $apiRef = $result['api_ref'] ?? null;
+
+                $transaction = null;
+                if ($apiRef) {
+                    $transaction = \App\Models\Transaction::where('reference', $apiRef)->first();
+                }
+                if (!$transaction) {
+                    $transaction = \App\Models\Transaction::where('reference', $trackingId)->first();
+                }
+
+                if ($transaction && $transaction->status !== 'completed') {
+                    try {
+                        \Illuminate\Support\Facades\DB::beginTransaction();
+
+                        if ($isComplete) {
+                            $transaction->update([
+                                'status' => 'completed',
+                                'external_reference' => $trackingId,
+                                'description' => $transaction->description . ' (Confirmed on return)'
+                            ]);
+
+                            $wallet->increment('balance', $transaction->amount);
+                            session()->flash('success', 'Wallet successfully topped up with KES ' . number_format($transaction->amount, 2));
+                        } else {
+                            $transaction->update([
+                                'status' => 'failed',
+                                'description' => 'Deposit failed: ' . $state
+                            ]);
+                            session()->flash('error', 'Payment status: ' . $state);
+                        }
+
+                        \Illuminate\Support\Facades\DB::commit();
+                        $wallet = $wallet->fresh();
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\DB::rollBack();
+                        \Log::error('Wallet status check error: ' . $e->getMessage());
+                    }
+                }
+            }
+        }
+
         $transactions = $wallet->transactions()->latest()->take(10)->get();
 
         return view('wallet.index', compact('wallet', 'transactions'));
@@ -32,11 +80,47 @@ class WalletController extends Controller
     }
 
     /**
+     * Process a wallet deposit / top-up request.
+     */
+    public function deposit(Request $request, \App\Interfaces\PaymentGatewayInterface $gateway)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:10',
+            'phone_number' => 'nullable|string|min:10|max:15',
+        ]);
+
+        $user = auth()->user();
+        $wallet = $user->wallet ?: \App\Models\Wallet::firstOrCreate(['user_id' => $user->id], ['balance' => 0]);
+
+        try {
+            $result = $gateway->initiateDeposit($user, (float) $request->amount, $wallet->currency ?? 'KES');
+
+            if ($result['status'] === 'success' && isset($result['checkout_url'])) {
+                // Create a pending transaction record
+                \App\Models\Transaction::create([
+                    'wallet_id' => $wallet->id,
+                    'amount' => $request->amount,
+                    'type' => 'credit',
+                    'status' => 'pending',
+                    'reference' => $result['reference'],
+                    'description' => 'Wallet deposit'
+                ]);
+
+                return redirect($result['checkout_url']);
+            }
+
+            throw new \Exception($result['message'] ?? 'Unable to generate checkout URL.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Deposit failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Process a withdrawal request.
      */
     public function withdraw(Request $request, \App\Services\Payments\PaymentManager $paymentManager)
     {
-        $minAmount = (config('app.env') === 'local' || config('app.env') === 'testing' || config('app.debug')) ? 5 : 50;
+        $minAmount = 50;
         $request->validate([
             'amount' => "required|numeric|min:$minAmount",
             'phone_number' => 'required|string|min:10|max:15',

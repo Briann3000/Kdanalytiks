@@ -628,7 +628,7 @@
         @php
             // Show sidebar for all authenticated pages except specific full-width ones (like taking a survey)
             // Also explicitly hide on landing, login, register, and email verification notice/verify pages
-            $excludedRoutes = ['login', 'register', 'login.role', 'password.request', 'password.reset', 'surveys.show', 'surveys.submit', 'verification.notice', 'verification.verify', 'admin.login', 'organization.login', 'independent.login', 'respondent.login', 'admin.register', 'organization.register', 'independent.register', 'respondent.register', 'docs', 'docs.show', 'help'];
+            $excludedRoutes = ['login', 'register', 'login.role', 'password.request', 'password.reset', 'surveys.show', 'surveys.submit', 'verification.notice', 'verification.verify', 'admin.login', 'organization.login', 'independent.login', 'respondent.login', 'admin.register', 'organization.register', 'independent.register', 'respondent.register', 'help'];
             $isWorkspace = auth()->check() && auth()->user()->hasVerifiedEmail() && !request()->routeIs($excludedRoutes);
         @endphp
 
@@ -656,8 +656,8 @@
                 @yield('sub_sidebar')
 
                 <main class="content-pane custom-scrollbar pb-24 md:pb-0 flex-1"
-                    style="{{ request('reportTab') === 'analyse' ? 'overflow: hidden !important; padding: 0 !important;' : '' }}">
-                    <div class="{{ request('reportTab') === 'analyse' ? 'h-full flex flex-col' : 'flex-grow' }}">
+                    style="{{ (request()->routeIs('docs*') || request('reportTab') === 'analyse') ? 'overflow: hidden !important; padding: 0 !important;' : '' }}">
+                    <div class="{{ (request()->routeIs('docs*') || request('reportTab') === 'analyse') ? 'h-full flex flex-col' : 'flex-grow' }}">
                         <!-- Global Session Alerts -->
                         @if(session('success') || session('error'))
                             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">

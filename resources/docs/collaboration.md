@@ -1,24 +1,37 @@
 # Collaboration & Analysis Groups
 
-KDAnalytiks supports multi-user collaboration to facilitate team research and classroom learning.
+Work seamlessly with co-researchers, team members, or student groups using KDAnalytiks collaboration and group isolation tools.
 
-## Collaborators (SurveyPermissions)
+---
 
-You can invite other registered users to collaborate on your surveys:
+## 1. Direct Collaborators & Role Permissions
 
-1. Navigate to the survey's **Settings** tab.
-2. Under **Collaborators**, type their email address.
-3. Check the granular permissions you want to grant:
-   - `view_form` (preview the builder)
-   - `edit_form` (modify questions)
-   - `view_submissions` (access the responses and reports)
-   - `manage_project` (full administrative rights)
-4. Click **Save Collaborator**.
+Grant access to colleagues or research assistants without sharing account credentials:
 
-## Analysis Groups (Tours & Teams)
+### How to Add Collaborators
 
-Ideal for educational environments or nested research teams where group isolation is needed:
+1. Go to **Survey Settings** -> **Collaborators**.
+2. Enter the collaborator's registered email address.
+3. Select their permission level:
+   - **View Submissions**: Access live data and reports (read-only).
+   - **Edit Form**: Modify questions and builder settings.
+   - **Full Co-Owner**: Manage deployment, collaborators and exports.
 
-- **Creation**: The survey owner can create distinct **Analysis Groups** (e.g. Group A, Group B) in the settings.
-- **Invite Links**: Generating a group creates a secure invitation link. Share this link with specific users.
-- **Isolation**: Once students join, they access the Reports page. When using **Socius AI**, their conversations and threads are completely isolated per group. Group A cannot read Group B's threads, while they both analyze the same master survey charts.
+---
+
+## 2. Analysis Groups
+
+**Analysis Groups** allow survey creators (such as lecturers, team leads, or principal investigators) to divide researchers or students into distinct, isolated groups.
+
+### Key Benefits of Analysis Groups
+
+- **Shared Response Data**: All groups view the same overall survey responses and analytical report metrics.
+- **Isolated AI Conversations**: Socius AI Chat threads created by one group are strictly private to that group. Members of Group A cannot view or access the AI chats or discussions of Group B.
+- **Group Share Links**: Generate unique join links for each group to easily onboard students or team members.
+
+### Setting Up Analysis Groups
+
+1. Open **Survey Settings** -> **Analysis Groups**.
+2. Click **+ Create Group** and enter a group name (e.g. _Lab Group 1_, _Market Segment B_).
+3. Copy the unique **Group Invite Link** or share it directly via WhatsApp/Email.
+4. Students or team members who join via the link will be automatically assigned to that group when viewing reports and using Socius AI.

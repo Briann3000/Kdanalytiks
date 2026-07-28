@@ -9,14 +9,27 @@ class DocsController extends Controller
 {
     /**
      * Define the order and list of articles for sidebar navigation.
+     * Pinned: 'getting-started' is first, followed by alphabetical order by title.
      */
     protected array $articles = [
-        'getting-started' => 'Getting Started',
-        'survey-builder' => 'Survey Builder',
-        'collaboration' => 'Collaboration & Groups',
-        'analytics' => 'Data & Analytics',
+        'getting-started' => 'Getting Started & Overview',
+        'publications' => 'Academic Publications',
+        'ai-architect-and-templates' => 'AI Architect & Template Library',
+        'humanizer' => 'AI Research Humanizer',
+        'analytics' => 'Analytics & Custom Dashboards',
+        'billing' => 'Billing & Subscriptions',
+        'customization-branding' => 'Branding & Themes',
+        'collaboration' => 'Collaboration & Analysis Groups',
+        'export-options' => 'Data Export Packages (Excel, Word, SPSS)',
+        'deployment-distribution' => 'Deployment & Invite Campaigns',
+        'survey-import-export' => 'Importing & Version Control',
+        'logic-and-branching' => 'Logic & Skip Rules',
+        'paid-surveys-rewards' => 'Paid Surveys & Wallet Incentives',
+        'research-proposals' => 'Research Proposal Builder',
         'socius-ai' => 'Socius AI Assistant',
-        'billing' => 'Billing & Rewards',
+        
+        'survey-builder' => 'Survey Builder & Question Types',
+        'survey-code-and-preview' => 'Survey Code & Live Preview',
     ];
 
     public function index()

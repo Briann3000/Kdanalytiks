@@ -1,24 +1,24 @@
-# Data & Analytics
+# Analytics & Custom Dashboards
 
-Access real-time reports, spreadsheet exports, and statistical tools to turn raw data into insights.
+Transform raw survey data into actionable visual insights with real-time reporting dashboards and customizable analytics widgets.
 
-## Real-Time Reports
+---
 
-The **Reports Dashboard** compiles incoming responses into graphs (bar charts, pie charts, lines) automatically. You can toggle public access to share this report dashboard dynamically.
+## 1. Real-Time Report Features
 
-## Cross-Tabulation (Crosstabs)
+The **Reports Dashboard** automatically processes incoming submissions and generates real-time charts and metric summaries:
 
-Examine relationships between two questionnaire variables. By setting a Row variable and a Column variable, the system generates a contingency table with cell counts and percentages.
+- **Interactive Charts**: Bar graphs, pie charts, distribution curves, and rating averages.
+- **Filtering Controls**: Filter report metrics by date range, specific demographic responses, or completion status.
+- **Response Summary Cards**: Monitor total responses, completion rates, average completion time, and drop-off rates.
 
-## Inferential Statistics
+---
 
-Conduct hypothesis testing directly on your response data. Access the **Inferential Analysis** panel to perform chi-square tests, correlation tests, and analysis of variance (ANOVA) to determine statistical significance.
+## 2. Custom Dashboard Builder
 
-## Exporting Formats
+Customize your reporting view to focus on the key performance indicators (KPIs) that matter most to your research:
 
-You can export results for offline presentations or external analysis:
-
-- **PDF Report**: High-fidelity document featuring all generated charts.
-- **Word (DOCX)**: Editable report document.
-- **Excel (XLSX)**: Response rows and columns spreadsheet (Requires Pro or Enterprise tier).
-- **JSON**: Structured API-style data dump.
+1. Click **Custom Dashboard Builder** on the reports page.
+2. Drag and rearrange visual chart widgets.
+3. Toggle between chart types (e.g. convert a bar chart to a donut chart).
+4. Save customized analytical views for recurring reports.
