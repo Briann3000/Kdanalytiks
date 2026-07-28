@@ -1,3 +1,12 @@
+<style>
+    /* Hide floating KDA agent button on Socius tab so it doesn't overlap the enter/send button */
+    #kda-btn,
+    #kda-box,
+    #chatbot-widget,
+    .kda-agent-fab {
+        display: none !important;
+    }
+</style>
 <div x-data="sociusManager({
         canAnalyze: @js($canAnalyze),
         initialThreadId: @js((int) request('thread')),
@@ -236,7 +245,6 @@
                     <button @click="kbModalOpen = true"
                         class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 text-xs font-bold text-slate-300 hover:text-white transition-all"
                         title="{{ __('Manage persistent formatting rules and styles') }}">
-                        <i class="fa-solid fa-brain text-[10px] text-[#3894dc]"></i>
                         <span class="hidden sm:inline">{{ __('Knowledge Base') }}</span>
                     </button>
 
@@ -300,43 +308,13 @@
                 <template x-if="canAnalyze && !currentThreadId && threads.length === 0 && !loadingThreads">
                     <div class="max-w-3xl mx-auto pt-10">
                         <div class="text-center mb-8">
-                            <div
-                                class="w-20 h-20 rounded-[2rem] bg-[#2271b1]/15 border border-[#2271b1]/20 mx-auto flex items-center justify-center text-[#3894dc]">
-                                <i class="fa-solid fa-sparkles text-3xl"></i>
-                            </div>
+
                             <h4 class="text-4xl font-semibold tracking-tight mt-6">{{ __('Socius') }}</h4>
                             <p class="text-slate-300 mt-4 max-w-2xl mx-auto">
-                                {{ __('Analyze data. I am Socius, your guide') }}
+                                {{ __('I am Socius, your guide. Analyze your data and develop your literature') }}
                             </p>
                         </div>
-                        <div class="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-                                <div class="rounded-3xl bg-white/[0.04] p-5 border border-white/10">
-                                    <p class="text-[10px] font-bold text-blue-300">
-                                        {{ __('Quantitative') }}
-                                    </p>
-                                    <p class="text-sm text-slate-200 mt-3">
-                                        {{ __('Interpret trends, frequencies and cross-tab patterns directly from the live report.') }}
-                                    </p>
-                                </div>
-                                <div class="rounded-3xl bg-white/[0.04] p-5 border border-white/10">
-                                    <p class="text-[10px] font-bold text-blue-300">
-                                        {{ __('Qualitative') }}
-                                    </p>
-                                    <p class="text-sm text-slate-200 mt-3">
-                                        {{ __('Synthesize open-ended responses into themes, insights, and APA-ready narrative.') }}
-                                    </p>
-                                </div>
-                                <div class="rounded-3xl bg-white/[0.04] p-5 border border-white/10">
-                                    <p class="text-[10px] font-bold text-blue-300">
-                                        {{ __('Documents') }}
-                                    </p>
-                                    <p class="text-sm text-slate-200 mt-3">
-                                        {{ __('Attach PDFs, CSVs, TXT files, or DOCX notes to combine external evidence with survey data.') }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+
                     </div>
                 </template>
 
@@ -539,7 +517,7 @@
                     <textarea id="socius-prompt-input" x-model="draft" x-ref="textarea" rows="1"
                         @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); sendMessage(); }"
                         class="w-full bg-transparent border-0 focus:ring-0 resize-none text-sm text-white placeholder:text-slate-500"
-                        :placeholder="reviewModeEnabled ? '{{ __('Describe supervisor corrections or ask Socius to fix them...') }}' : '{{ __('Message Socius...') }}'"
+                        :placeholder="reviewModeEnabled ? '{{ __('Describe supervisor corrections or ask Socius to fix them...') }}' : '{{ __('Ask Socius...') }}'"
                         :disabled="sending || !canAnalyze"></textarea>
 
                     <div class="flex items-center justify-between gap-3 pt-2">

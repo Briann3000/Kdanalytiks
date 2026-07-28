@@ -716,8 +716,8 @@
 
 <!-- Mobile Toggle Button (Fixed Bottom Left) -->
 <div class="fixed bottom-6 left-6 z-[60] md:hidden">
-    <button @click="mobileMenuOpen = !mobileMenuOpen"
+    <button @click="desktopSidebarOpen = !desktopSidebarOpen; mobileMenuOpen = !mobileMenuOpen"
         class="bg-zinc-750 text-[#f0f0f1] p-3 rounded-full shadow-lg hover:bg-zinc-850 transition-all transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-zinc-600">
-        <i class="fa-solid" :class="mobileMenuOpen ? 'fa-xmark' : 'fa-bars'"></i>
+        <i class="fa-solid" :class="desktopSidebarOpen ? 'fa-xmark' : 'fa-bars'"></i>
     </button>
 </div>

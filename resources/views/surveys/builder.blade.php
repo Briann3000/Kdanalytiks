@@ -94,7 +94,6 @@
         .kobo-status-badge {
             font-size: 11px;
             font-weight: 700;
-            text-transform: uppercase;
             color: #64748b;
             margin-bottom: 8px;
             display: block;
@@ -277,7 +276,6 @@
             font-size: 0.7rem !important;
             font-weight: 900 !important;
             color: #94a3b8 !important;
-            text-transform: uppercase !important;
             margin-bottom: 1rem !important;
         }
 
@@ -371,8 +369,7 @@
             /* rose-600 */
             font-size: 0.875rem !important;
             font-weight: 900 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.1em !important;
+            letter-spacing: 0.05em !important;
             display: flex !important;
             align-items: center !important;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
@@ -399,7 +396,6 @@
             /* indigo-600 */
             font-size: 0.75rem !important;
             font-weight: 900 !important;
-            text-transform: uppercase !important;
             letter-spacing: 0.05em !important;
             display: flex !important;
             align-items: center !important;
@@ -565,7 +561,6 @@
             font-size: 0.7rem;
             font-weight: 800;
             color: #6b7280;
-            text-transform: uppercase;
             background: #f9fafb;
         }
 
@@ -630,7 +625,7 @@
                     <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center animate-pulse">
                         <i class="fa-solid fa-crown text-amber-200"></i>
                     </div>
-                    <p class="text-[10px] font-black uppercase tracking-widest">
+                    <p class="text-[10px] font-black tracking-widest">
                         {{ __('Upgrade Required: Your tier allows a maximum of') }}
                         {{ auth()->user()->organization->subscriptionTier->max_surveys ?? 10 }} {{ __('surveys.') }}
                     </p>
@@ -642,66 +637,131 @@
             </div>
         @endif
 
-        <div class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm px-4 sm:px-6 py-3 mb-6 -mx-4 sm:-mx-8 lg:-mx-12"
-            style="position: sticky; top: -1px; z-index: 50;">
-            <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div class="flex flex-wrap items-center gap-2">
-                    <button type="button" id="builderDetailsBtn" @click="showDetails = !showDetails"
-                        class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center"
-                        :class="showDetails ? 'bg-[#2271b1] text-white shadow-lg' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
-                        {{ __('Details') }}
-                    </button>
-                    <div class="h-6 w-px bg-gray-200 mx-2"></div>
-                    <button type="button" id="builderVisualBtn" @click="activeMode = 'visual'; showDetails = false"
-                        class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center"
-                        :class="activeMode === 'visual' ? 'bg-[#2271b1] text-white shadow-lg shadow-zinc-200/50' : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'">
-                        {{ __('Visual') }}
-                    </button>
-                    <button type="button" id="builderCodeBtn"
-                        @click="activeMode = 'json'; showDetails = false; $nextTick(() => document.getElementById('jsonInput').focus())"
-                        class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center"
-                        :class="activeMode === 'json' ? 'bg-slate-900 text-white shadow-lg' : 'bg-gray-200 text-gray-500 hover:bg-gray-300 border border-transparent shadow-inner'">
-                        {{ __('Code') }}
-                    </button>
-                    <button type="button" id="builderAiArchitectBtn"
-                        @click="showLibrary = false; showAiModal = true; $nextTick(() => document.getElementById('aiPrompt').focus())"
-                        class="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black border border-transparent transition-all flex items-center shadow-lg shadow-slate-200 group">
-                        <i class="fa-solid fa-sparkles mr-2 text-cyan-400 group-hover:animate-pulse"></i>
-                        {{ __('AI Architect') }}
-                    </button>
-                    <button type="button" id="builderPreviewBtn" onclick="openFullScreenPreview()"
-                        class="px-4 py-2 bg-amber-50 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-100 border border-transparent transition-all flex items-center">
-                        <i class="fa-solid fa-eye mr-2"></i> {{ __('Preview') }}
-                    </button>
-                    <div class="h-6 w-px bg-gray-200 mx-2"></div>
-                    <button type="button" id="builderLibraryBtn" @click.stop="showLibrary = !showLibrary"
-                        class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center mr-2"
-                        :class="showLibrary ? 'bg-green-600 text-white shadow-lg shadow-green-100' : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-100'">
-                        {{ __('Library') }}
-                    </button>
-                    <button type="button" id="builderImportBtn" @click.stop="showImportModal = true"
-                        class="px-4 py-2 bg-zinc-100 text-[#135e96] hover:bg-zinc-200 border border-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center mr-2">
-                        {{ __('Import') }}
-                    </button>
-                    <button type="button" id="builderExportBtn" @click="exportSurvey()"
-                        class="px-4 py-2 bg-zinc-100 text-[#135e96] hover:bg-zinc-200 border border-zinc-200 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center">
-                        {{ __('Export') }}
-                    </button>
-                    <button type="button" @click="groupSelected()" x-show="selectedQuestions.length > 0" x-cloak
-                        class="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 border border-transparent transition-all flex items-center animate-in fade-in zoom-in duration-300">
-                        {{ __('Group') }} (<span
-                            x-text="selectedQuestions.length"></span>)
-                    </button>
+        <div class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm px-3 sm:px-6 py-2.5 sm:py-3 mb-6 -mx-4 sm:-mx-8 lg:-mx-12"
+            style="position: sticky; top: -1px; z-index: 50;" x-data="{ openMoreMenu: false }">
+            <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
+                <!-- Main Nav Group -->
+                <div class="flex items-center gap-1.5 sm:gap-2">
+                    <!-- Primary Nav Bar (Desktop: Show All, Mobile: Show Details, Visual, Preview) -->
+                    <div class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
+                        <button type="button" id="builderDetailsBtn" @click="showDetails = !showDetails"
+                            class="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center shrink-0"
+                            :class="showDetails ? 'bg-[#2271b1] text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
+                            {{ __('Details') }}
+                        </button>
+
+                        <button type="button" id="builderVisualBtn" @click="activeMode = 'visual'; showDetails = false"
+                            class="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center shrink-0"
+                            :class="activeMode === 'visual' ? 'bg-[#2271b1] text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'">
+                            {{ __('Visual') }}
+                        </button>
+
+                        <button type="button" id="builderPreviewBtn" onclick="openFullScreenPreview()"
+                            class="px-2.0 sm:px-3.5 py-1.5 sm:py-2 bg-amber-50 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-100 border border-amber-200/60 transition-all flex items-center shrink-0">
+                            <span>{{ __('Preview') }}</span>
+                        </button>
+
+                        <!-- Desktop Only Extra Tabs -->
+                        <div class="hidden sm:flex items-center gap-1.5 sm:gap-2">
+                            <button type="button" id="builderAiArchitectBtn"
+                                @click="showLibrary = false; showAiModal = true; $nextTick(() => document.getElementById('aiPrompt').focus())"
+                                class="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all flex items-center shrink-0 shadow-sm group">
+                                <i class="fa-solid fa-sparkles mr-1.5 text-cyan-400 group-hover:animate-pulse text-xs"></i>
+                                <span>{{ __('AI Architect') }}</span>
+                            </button>
+
+                            <button type="button" id="builderCodeBtn"
+                                @click="activeMode = 'json'; showDetails = false; $nextTick(() => document.getElementById('jsonInput').focus())"
+                                class="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center shrink-0"
+                                :class="activeMode === 'json' ? 'bg-slate-900 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
+                                {{ __('Code') }}
+                            </button>
+
+                            <button type="button" id="builderLibraryBtn" @click.stop="showLibrary = !showLibrary"
+                                class="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center shrink-0"
+                                :class="showLibrary ? 'bg-green-600 text-white shadow-md' : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200/60'">
+                                {{ __('Library') }}
+                            </button>
+
+                            <button type="button" id="builderImportBtn" @click.stop="showImportModal = true"
+                                class="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-zinc-100 text-[#135e96] hover:bg-zinc-200 border border-zinc-200 rounded-xl text-xs font-bold transition-all flex items-center shrink-0">
+                                {{ __('Import') }}
+                            </button>
+
+                            <button type="button" id="builderExportBtn" @click="exportSurvey()"
+                                class="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-zinc-100 text-[#135e96] hover:bg-zinc-200 border border-zinc-200 rounded-xl text-xs font-bold transition-all flex items-center shrink-0">
+                                {{ __('Export') }}
+                            </button>
+
+                            <button type="button" @click="groupSelected()" x-show="selectedQuestions.length > 0" x-cloak
+                                class="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-100 border border-rose-200/60 transition-all flex items-center shrink-0">
+                                {{ __('Group') }} (<span x-text="selectedQuestions.length"></span>)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Mobile More Dropdown (Visible on mobile screens < 640px) -->
+                    <div class="relative sm:hidden shrink-0" @click.outside="openMoreMenu = false">
+                        <button type="button" @click="openMoreMenu = !openMoreMenu"
+                            class="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1 border border-gray-200 shadow-sm"
+                            title="{{ __('More Options') }}">
+                            <span>{{ __('More') }}</span>
+                            <i class="fa-solid fa-chevron-down text-[10px] transition-transform"
+                                :class="openMoreMenu ? 'rotate-180' : ''"></i>
+                        </button>
+
+                        <div x-show="openMoreMenu" x-cloak x-transition
+                            class="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl shadow-2xl border border-gray-200 p-2 z-[100] flex flex-col gap-1"
+                            style="display: none;">
+                            <button type="button"
+                                @click="showLibrary = false; showAiModal = true; openMoreMenu = false; $nextTick(() => document.getElementById('aiPrompt').focus())"
+                                class="w-full text-left px-3 py-2 text-xs font-bold text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center justify-between">
+                                <span><i class="fa-solid fa-sparkles mr-2 text-cyan-600"></i>{{ __('AI Architect') }}</span>
+                            </button>
+
+                            <button type="button"
+                                @click="activeMode = 'json'; showDetails = false; openMoreMenu = false; $nextTick(() => document.getElementById('jsonInput').focus())"
+                                class="w-full text-left px-3 py-2 text-xs font-bold rounded-xl transition-colors flex items-center justify-between"
+                                :class="activeMode === 'json' ? 'bg-slate-900 text-white' : 'text-gray-700 hover:bg-gray-100'">
+                                <span><i class="fa-solid fa-code mr-2 text-slate-400"></i>{{ __('Code') }}</span>
+                            </button>
+
+                            <button type="button" @click="showLibrary = !showLibrary; openMoreMenu = false"
+                                class="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-gray-100 rounded-xl transition-colors flex items-center justify-between">
+                                <span><i class="fa-solid fa-bookmark mr-2 text-green-600"></i>{{ __('Library') }}</span>
+                            </button>
+
+                            <button type="button" @click="showImportModal = true; openMoreMenu = false"
+                                class="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-gray-100 rounded-xl transition-colors flex items-center justify-between">
+                                <span><i class="fa-solid fa-file-import mr-2 text-[#135e96]"></i>{{ __('Import') }}</span>
+                            </button>
+
+                            <button type="button" @click="exportSurvey(); openMoreMenu = false"
+                                class="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-gray-100 rounded-xl transition-colors flex items-center justify-between">
+                                <span><i class="fa-solid fa-file-export mr-2 text-[#135e96]"></i>{{ __('Export') }}</span>
+                            </button>
+
+                            <button type="button" @click="groupSelected(); openMoreMenu = false"
+                                x-show="selectedQuestions.length > 0"
+                                class="w-full text-left px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors flex items-center justify-between">
+                                <span><i class="fa-solid fa-object-group mr-2"></i>{{ __('Group Selected') }} (<span
+                                        x-text="selectedQuestions.length"></span>)</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="flex items-center gap-3">
+                <!-- Action Buttons: Exit & Save -->
+                <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
                     <button type="button" @click="confirmExit()"
-                        class="px-4 py-2.5 bg-white text-gray-500 hover:text-rose-600 hover:bg-rose-50 border border-gray-200 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center">
-                        {{ __('Exit') }}
+                        class="px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white text-gray-700 hover:text-rose-600 hover:bg-rose-50 border border-gray-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5">
+                        <i class="fa-solid fa-xmark text-xs"></i>
+                        <span>{{ __('Exit') }}</span>
                     </button>
                     <button type="submit" form="surveyForm" id="headerSaveBtn"
-                        class="px-8 py-2.5 bg-[#2271b1] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#135e96] shadow-xl shadow-zinc-200/50 transition-all hover:-translate-y-0.5 active:scale-95 flex items-center group">
-                        {{ __('Save') }}
+                        class="px-3 sm:px-5 py-1.5 sm:py-2 bg-[#2271b1] text-white rounded-xl text-xs font-bold hover:bg-[#135e96] shadow-md transition-all flex items-center gap-1.5 group">
+                        <i class="fa-solid fa-floppy-disk text-xs"></i>
+                        <span>{{ __('Save') }}</span>
                     </button>
                 </div>
             </div>
@@ -720,15 +780,13 @@
                             value="{{ isset($survey) ? $survey->json_schema : '[]' }}">
 
                         <div class="space-y-1">
-                            <label
-                                class="block text-[9px] font-black text-gray-500 uppercase tracking-widest">{{ __('Survey Title') }}</label>
+                            <label class="block text-xs font-semibold text-gray-700">{{ __('Survey Title') }}</label>
                             <input type="text" name="title" id="title" required x-model="surveyTitle"
                                 class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-gray-900 text-sm focus:ring-2 focus:ring-[#2271b1] focus:border-[#2271b1] transition-all shadow-sm">
                         </div>
 
                         <div class="space-y-1">
-                            <label
-                                class="block text-[9px] font-black text-gray-500 uppercase tracking-widest">{{ __('Category') }}</label>
+                            <label class="block text-xs font-semibold text-gray-700">{{ __('Category') }}</label>
                             <select name="category" id="category" required x-model="surveyCategory"
                                 class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-gray-900 text-sm focus:ring-2 focus:ring-[#2271b1] focus:border-[#2271b1] transition-all appearance-none shadow-sm">
                                 <option value="">{{ __('Select Category') }}</option>
@@ -742,8 +800,7 @@
                         </div>
 
                         <div class="space-y-1">
-                            <label
-                                class="block text-[9px] font-black text-gray-500 uppercase tracking-widest">{{ __('Type') }}</label>
+                            <label class="block text-xs font-semibold text-gray-700">{{ __('Type') }}</label>
                             <select name="type" id="type" required x-model="surveyType"
                                 class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-gray-900 text-sm focus:ring-2 focus:ring-[#2271b1] focus:border-[#2271b1] transition-all appearance-none shadow-sm">
                                 <option value="public">{{ __('Public') }}</option>
@@ -752,8 +809,7 @@
                         </div>
 
                         <div class="col-span-1 md:col-span-2 lg:col-span-4 space-y-1">
-                            <label
-                                class="block text-[9px] font-black text-gray-500 uppercase tracking-widest">{{ __('Survey Description') }}</label>
+                            <label class="block text-xs font-semibold text-gray-700">{{ __('Survey Description') }}</label>
                             <textarea name="description" id="description" rows="1" x-model="surveyDescription"
                                 class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-gray-900 text-sm focus:ring-2 focus:ring-[#2271b1] focus:border-[#2271b1] transition-all shadow-sm"
                                 placeholder="{{ __('Describe the purpose of this survey...') }}">{{ $survey->description ?? '' }}</textarea>
@@ -769,9 +825,9 @@
                                     </div>
                                     <div>
                                         <span
-                                            class="text-[10px] font-black text-gray-900 uppercase tracking-widest block">{{ __('Offer Rewards (Paid Survey)') }}</span>
+                                            class="text-xs font-bold text-gray-900 block">{{ __('Offer Rewards (Paid Survey)') }}</span>
                                         <span
-                                            class="text-[9px] text-gray-600 font-medium leading-tight">{{ __('Pay respondents a specific amount from your organization\'s wallet.') }}</span>
+                                            class="text-xs text-gray-600 font-medium leading-tight">{{ __('Pay respondents a specific amount from your organization\'s wallet.') }}</span>
                                     </div>
                                 </label>
 
@@ -779,7 +835,7 @@
                                     class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-green-200/50">
                                     <div class="space-y-1">
                                         <label
-                                            class="block text-[9px] font-black text-gray-600 uppercase tracking-widest">{{ __('Reward per Response (KES)') }}</label>
+                                            class="block text-xs font-semibold text-gray-700">{{ __('Reward per Response (KES)') }}</label>
                                         <div class="relative">
                                             <div
                                                 class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -793,7 +849,7 @@
                                     </div>
                                     <div class="space-y-1">
                                         <label
-                                            class="block text-[9px] font-black text-gray-600 uppercase tracking-widest">{{ __('Total Budget Limit (KES)') }}</label>
+                                            class="block text-xs font-semibold text-gray-700">{{ __('Total Budget Limit (KES)') }}</label>
                                         <div class="relative">
                                             <div
                                                 class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -810,7 +866,7 @@
 
                         <div class="flex items-end space-x-2">
                             <button type="button" @click="updateSurveyDetails()"
-                                class="flex-1 flex justify-center items-center py-2 px-4 border border-transparent rounded-xl shadow-lg text-[10px] font-black uppercase tracking-widest text-white bg-[#2271b1] hover:bg-zinc-1000 focus:outline-none transition-all active:scale-95">
+                                class="flex-1 flex justify-center items-center py-2 px-4 border border-transparent rounded-xl shadow-md text-xs font-bold text-white bg-[#2271b1] hover:bg-[#135e96] focus:outline-none transition-all active:scale-95">
                                 <i class="fa-solid fa-save mr-2"></i> {{ isset($survey) ? __('Update') : __('Save') }}
                             </button>
                             <button type="button" @click="showDetails = false"
@@ -835,10 +891,7 @@
 
                         <div class="px-8 py-6 border-b border-gray-50 flex justify-between items-center bg-white">
                             <div class="flex items-center">
-                                <div
-                                    class="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center text-[#2271b1] mr-4">
-                                    <i class="fa-solid fa-layer-group text-lg"></i>
-                                </div>
+
                                 <div>
                                     <h5 class="text-sm font-black text-gray-900 uppercase tracking-widest leading-none">
                                         {{ __('Question Area') }}
@@ -851,7 +904,7 @@
                                                 <i class="fa-solid fa-plus text-[10px]"></i>
                                             </div>
                                             <span
-                                                class="text-[10px] font-black uppercase tracking-widest">{{ __('start creating your survey') }}</span>
+                                                class="text-sm font-black  tracking-widest">{{ __('Start creating your survey') }}</span>
                                         </button>
                                     </div>
                                     <p x-show="questions.length > 0"
@@ -866,181 +919,224 @@
                             </button>
                         </div>
 
-                        <div class="p-8 space-y-6 min-h-[500px] bg-slate-50/20" id="questions-list"
-                            x-init="
-                                                                                                                                                                new Sortable($el, {
-                                                                                                                                                                    handle: '.drag-handle',
-                                                                                                                                                                    animation: 150,
-                                                                                                                                                                    ghostClass: 'sortable-ghost',
-                                                                                                                                                                    delay: 150, // Delay to allow scrolling on mobile
-                                                                                                                                                                    delayOnTouchOnly: true, // Only apply delay on touch
-                                                                                                                                                                    onEnd: (evt) => {
-                                                                                                                                                                        const newQs = [...questions];
-                                                                                                                                                                        const [movedItem] = newQs.splice(evt.oldIndex, 1);
-                                                                                                                                                                        newQs.splice(evt.newIndex, 0, movedItem);
-                                                                                                                                                                        questions = newQs;
-                                                                                                                                                                        syncToJson();
-                                                                                                                                                                    }
-                                                                                                                                                                })
-                                                                                                                                                            ">
+                        <div class="p-4 sm:p-8 space-y-4 sm:space-y-6 min-h-[500px] bg-slate-50/20 w-full overflow-x-hidden"
+                            id="questions-list" x-init="
+                                                                    new Sortable($el, {
+                                                                        handle: '.drag-handle',
+                                                                        animation: 150,
+                                                                        ghostClass: 'sortable-ghost',
+                                                                        delay: 150,
+                                                                        delayOnTouchOnly: true,
+                                                                        onEnd: (evt) => {
+                                                                            const newQs = [...questions];
+                                                                            const [movedItem] = newQs.splice(evt.oldIndex, 1);
+                                                                            newQs.splice(evt.newIndex, 0, movedItem);
+                                                                            questions = newQs;
+                                                                            syncToJson();
+                                                                        }
+                                                                    })
+                                                                ">
                             <template x-for="(q, index) in questions" :key="q.id || index">
-                                <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 relative group hover:border-zinc-300 hover:shadow-zinc-200/50 transition-all ml-16"
+                                <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6 mb-4 relative hover:border-zinc-300 hover:shadow-md transition-all"
                                     :class="[
-                                                                                                                                                                            q.type === 'group' ? 'border-l-4 border-l-rose-400' : '',
-                                                                                                                                                                            selectedQuestions.includes(index) ? 'ring-2 ring-[#2271b1] bg-zinc-100/50' : ''
-                                                                                                                                                                         ]">
+                                                        q.type === 'group' ? 'border-l-4 border-l-rose-400' : '',
+                                                        selectedQuestions.includes(index) ? 'ring-2 ring-[#2271b1] bg-zinc-50/50' : ''
+                                                    ]">
 
-                                    <!-- Sidebar: Selection, Number, Drag -->
-                                    <div class="absolute -left-14 top-4 h-full flex flex-col items-center space-y-4 z-20">
-                                        <!-- Checkbox -->
-                                        <input type="checkbox" :checked="selectedQuestions.includes(index)"
-                                            @change="toggleSelection(index)"
-                                            class="w-5 h-5 rounded border-gray-300 text-[#2271b1] focus:ring-[#2271b1] cursor-pointer shadow-sm transition-transform hover:scale-110">
+                                    <!-- Unified Question Card Top Header Bar -->
+                                    <div class="flex items-center justify-between pb-3 mb-4 border-b border-gray-100 gap-3">
+                                        <!-- Left Side: Checkbox, Question Number Badge & Type Label -->
+                                        <div class="flex items-center gap-2.5">
+                                            <input type="checkbox" :checked="selectedQuestions.includes(index)"
+                                                @change="toggleSelection(index)"
+                                                class="w-4 h-4 rounded border-gray-300 text-[#2271b1] focus:ring-[#2271b1] cursor-pointer shadow-sm">
 
-                                        <!-- Question Number -->
-                                        <div class="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center font-black text-xs shadow-lg border-2 border-white"
-                                            x-text="index + 1"></div>
-
-                                        <!-- Drag Handle (Bigger for touch) -->
-                                        <div
-                                            class="drag-handle text-gray-300 hover:text-[#2271b1] transition-colors p-3 cursor-grab active:cursor-grabbing">
-                                            <i class="fa-solid fa-grip-vertical text-2xl"></i>
-                                        </div>
-                                    </div>
-
-                                    <div class="flex items-start justify-between mb-4">
-                                        <div class="flex-1 mr-6">
-                                            <div class="mb-4">
-                                                <input type="text" x-model="q.label" @input="syncToJson()"
-                                                    placeholder="{{ __('Enter your question here...') }}"
-                                                    class="w-full text-lg font-bold text-gray-900 placeholder-gray-200 border-2 border-gray-100 rounded-2xl px-6 py-4 focus:ring-4 focus:ring-[#2271b1]/10 focus:border-[#2271b1] bg-white transition-all shadow-sm">
-                                            </div>
-                                            <div class="flex items-center space-x-3">
-                                                <div
-                                                    class="flex items-center px-4 py-2 bg-gray-50 rounded-xl border border-gray-200 focus-within:border-[#2271b1] focus-within:ring-2 focus-within:ring-[#2271b1]/20 transition-all">
-                                                    <span
-                                                        class="text-[9px] font-black text-gray-400 uppercase tracking-widest mr-2">{{ __('Data Type:') }}</span>
-                                                    <select x-model="q.type"
-                                                        @change="if(q.type === 'header' && !q.subtype) q.subtype = 'h3'; syncToJson()"
-                                                        class="bg-transparent border-none p-0 text-[10px] font-black uppercase tracking-widest text-[#135e96] focus:ring-0 cursor-pointer">
-                                                        <option value="" disabled selected>{{ __('Choose data type') }}
-                                                        </option>
-                                                        <option value="text">{{ __('Text') }}</option>
-                                                        <option value="textarea">{{ __('Long Text (Text Area)') }}</option>
-                                                        <option value="select_one">{{ __('Select One') }}</option>
-                                                        <option value="select_many">{{ __('Select Many') }}</option>
-                                                        <option value="rating">{{ __('Rating') }}</option>
-                                                        <option value="range">{{ __('Range') }}</option>
-                                                        <option value="ranking">{{ __('Ranking') }}</option>
-                                                        <option value="photo">{{ __('Photo') }}</option>
-                                                        <option value="note">{{ __('Note (Read-Only)') }}</option>
-                                                        <option value="time">{{ __('Time') }}</option>
-                                                        <option value="decimal">{{ __('Decimal') }}</option>
-                                                        <option value="date">{{ __('Date') }}</option>
-                                                        <option value="number">{{ __('Number') }}</option>
-                                                        <option value="audio">{{ __('Audio') }}</option>
-                                                        <option value="video">{{ __('Video') }}</option>
-                                                        <option value="file">{{ __('File Upload') }}</option>
-                                                        <option value="header">{{ __('Section Header') }}</option>
-                                                        <option value="group">{{ __('Question Group') }}</option>
-                                                        <option disabled>──────────</option>
-                                                        <option value="datetime">{{ __('Date & Time') }}</option>
-                                                        <option value="acknowledge">{{ __('Acknowledge') }}</option>
-                                                        <option value="hidden">{{ __('Hidden Field') }}</option>
-                                                        <option value="calculate">{{ __('Calculate') }}</option>
-                                                        <option value="likert_matrix">{{ __('Likert Matrix') }}</option>
-                                                        <option value="repeat">{{ __('Repeat Group') }}</option>
-                                                        <option disabled>──────────</option>
-                                                        <option value="location">{{ __('GPS Location') }}</option>
-                                                        <option value="qrcode">{{ __('QR / Barcode') }}</option>
-                                                        <option value="signature">{{ __('Signature') }}</option>
-                                                    </select>
+                                            <template x-if="getQuestionNumber(index) !== null">
+                                                <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-extrabold text-xs shadow"
+                                                    x-text="getQuestionNumber(index)"></div>
+                                            </template>
+                                            <template x-if="getQuestionNumber(index) === null">
+                                                <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-extrabold text-xs shadow"
+                                                    title="{{ __('Section Header / Group') }}">
+                                                    <i class="fa-solid fa-layer-group text-[10px]"></i>
                                                 </div>
-                                                <template x-if="q.required">
-                                                    <span
-                                                        class="text-[9px] font-black text-red-500 bg-red-50 px-2 py-0.5 rounded uppercase tracking-widest">{{ __('Required') }}</span>
-                                                </template>
-                                            </div>
+                                            </template>
+
+                                            <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                                {{ __('Question') }} <span x-text="getQuestionNumber(index) || ''"></span>
+                                            </span>
                                         </div>
 
-                                        <div class="flex items-center space-x-2" x-data="{ confirmingDelete: false }">
-                                            <button type="button" @click="duplicateQuestion(index)"
-                                                class="px-3 h-9 rounded-xl text-gray-500 hover:bg-zinc-100 hover:text-[#2271b1] transition-all flex items-center justify-center border border-gray-100 space-x-2"
-                                                title="{{ __('Duplicate') }}">
-                                                <i class="fa-solid fa-copy text-sm"></i>
-                                                <span
-                                                    class="text-[9px] font-black uppercase tracking-tight">{{ __('Clone') }}</span>
-                                            </button>
-                                            <button type="button" @click.stop="saveToLibrary(index)"
-                                                class="px-3 h-9 rounded-xl text-gray-500 hover:bg-green-50 hover:text-green-600 transition-all flex items-center justify-center border border-gray-100 space-x-2"
-                                                title="{{ __('Save to Library') }}">
-                                                <i class="fa-solid fa-bookmark text-sm"></i>
-                                                <span
-                                                    class="text-[9px] font-black uppercase tracking-tight">{{ __('Save') }}</span>
-                                            </button>
+                                        <!-- Right Side: Drag Handle & 3-Dot Options Dropdown -->
+                                        <div class="flex items-center gap-2">
+                                            <!-- Drag Handle -->
+                                            <div class="drag-handle text-gray-400 hover:text-[#2271b1] p-1.5 cursor-grab active:cursor-grabbing"
+                                                title="{{ __('Drag to reorder') }}">
+                                                <i class="fa-solid fa-grip-vertical text-base sm:text-lg"></i>
+                                            </div>
 
-                                            <div class="flex items-center bg-red-50 rounded-xl border border-red-100 p-0.5 overflow-hidden transition-all duration-300"
-                                                :class="confirmingDelete === index ? 'max-w-40 px-2' : 'px-2 h-9'">
-                                                <button type="button" x-show="confirmingDelete !== index"
-                                                    @click="confirmingDelete = index"
-                                                    class="w-full h-full text-red-400 hover:text-red-600 transition-all flex items-center justify-center space-x-2">
-                                                    <i class="fa-solid fa-trash-can text-sm"></i>
-                                                    <span
-                                                        class="text-[9px] font-black uppercase tracking-tight">{{ __('Delete') }}</span>
+                                            <!-- 3-Dot Options Dropdown -->
+                                            <div class="relative shrink-0"
+                                                x-data="{ openMenu: false, confirmingDelete: false }"
+                                                @click.outside="openMenu = false; confirmingDelete = false">
+                                                <button type="button" @click="openMenu = !openMenu"
+                                                    class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center transition-all shadow-sm border border-gray-200/80"
+                                                    title="{{ __('Question Options') }}">
+                                                    <i class="fa-solid fa-ellipsis-vertical text-xs sm:text-sm"></i>
                                                 </button>
-                                                <div x-show="confirmingDelete === index"
-                                                    class="flex items-center space-x-2 animate-in slide-in-from-right-2"
-                                                    style="display:none">
-                                                    <span
-                                                        class="text-[9px] font-black text-red-600 uppercase tracking-tighter">SURE?</span>
+
+                                                <div x-show="openMenu" x-cloak x-transition
+                                                    class="absolute right-0 top-full mt-1.5 w-48 bg-white border border-gray-200 rounded-2xl shadow-2xl z-[100] p-1.5 space-y-0.5"
+                                                    style="display:none;">
                                                     <button type="button"
-                                                        @click="removeQuestion(index); confirmingDelete = null"
-                                                        class="px-2 py-1 bg-red-600 text-white rounded text-[9px] font-black uppercase">YES</button>
-                                                    <button type="button" @click="confirmingDelete = null"
-                                                        class="px-2 py-1 bg-white text-gray-500 rounded text-[9px] font-black uppercase border border-gray-200">NO</button>
+                                                        @click="insertQuestionAt(index + 1); openMenu = false;"
+                                                        class="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-zinc-100 hover:text-[#2271b1] rounded-xl transition-colors">
+                                                        <i class="fa-solid fa-plus text-[#2271b1] w-4 text-center"></i>
+                                                        <span>{{ __('Insert Item') }}</span>
+                                                    </button>
+
+                                                    <button type="button"
+                                                        @click="duplicateQuestion(index); openMenu = false;"
+                                                        class="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-zinc-100 hover:text-[#2271b1] rounded-xl transition-colors">
+                                                        <i class="fa-solid fa-copy text-indigo-500 w-4 text-center"></i>
+                                                        <span>{{ __('Clone Question') }}</span>
+                                                    </button>
+
+                                                    <button type="button" @click="moveQuestionUp(index); openMenu = false;"
+                                                        :disabled="index === 0"
+                                                        class="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-zinc-100 hover:text-[#2271b1] rounded-xl transition-colors disabled:opacity-30">
+                                                        <i class="fa-solid fa-arrow-up text-blue-500 w-4 text-center"></i>
+                                                        <span>{{ __('Move Up') }}</span>
+                                                    </button>
+
+                                                    <button type="button"
+                                                        @click="moveQuestionDown(index); openMenu = false;"
+                                                        :disabled="index === questions.length - 1"
+                                                        class="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-zinc-100 hover:text-[#2271b1] rounded-xl transition-colors disabled:opacity-30">
+                                                        <i class="fa-solid fa-arrow-down text-blue-500 w-4 text-center"></i>
+                                                        <span>{{ __('Move Down') }}</span>
+                                                    </button>
+
+                                                    <button type="button" @click="saveToLibrary(index); openMenu = false;"
+                                                        class="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-zinc-100 hover:text-green-600 rounded-xl transition-colors">
+                                                        <i class="fa-solid fa-bookmark text-green-500 w-4 text-center"></i>
+                                                        <span>{{ __('Save to Library') }}</span>
+                                                    </button>
+
+                                                    <div class="my-1 border-t border-gray-100"></div>
+
+                                                    <button type="button" x-show="!confirmingDelete"
+                                                        @click="confirmingDelete = true"
+                                                        class="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors">
+                                                        <i class="fa-solid fa-trash-can w-4 text-center"></i>
+                                                        <span>{{ __('Delete Question') }}</span>
+                                                    </button>
+
+                                                    <div x-show="confirmingDelete"
+                                                        class="p-2 bg-red-50 rounded-xl space-y-1.5 text-center"
+                                                        style="display:none">
+                                                        <p class="text-[10px] font-bold text-red-600">Delete question?</p>
+                                                        <div class="flex items-center justify-center gap-2">
+                                                            <button type="button"
+                                                                @click="removeQuestion(index); openMenu = false; confirmingDelete = false"
+                                                                class="px-3 py-1 bg-red-600 text-white text-[10px] font-bold rounded-lg">Yes</button>
+                                                            <button type="button" @click="confirmingDelete = false"
+                                                                class="px-3 py-1 bg-white text-gray-600 text-[10px] font-bold rounded-lg border border-gray-200">No</button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div class="ml-6 border-t border-gray-50 pt-6">
+                                    <!-- Question Input & Data Type Section (Unobstructed & Clean) -->
+                                    <div class="space-y-3 mb-4">
+                                        <div>
+                                            <input type="text" x-model="q.label" @input="syncToJson()"
+                                                placeholder="{{ __('Enter your question here...') }}"
+                                                class="w-full text-base sm:text-lg font-bold text-gray-900 placeholder-gray-300 border border-gray-200 rounded-xl px-4 py-3 sm:px-5 sm:py-3.5 focus:ring-2 focus:ring-[#2271b1]/20 focus:border-[#2271b1] bg-white transition-all shadow-sm">
+                                        </div>
+
+                                        <div class="flex items-center">
+                                            <div
+                                                class="flex items-center px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-50 rounded-xl border border-gray-200 focus-within:border-[#2271b1] transition-all">
+                                                <span
+                                                    class="text-xs font-semibold text-gray-500 mr-2">{{ __('Data Type:') }}</span>
+                                                <select x-model="q.type"
+                                                    @change="if(q.type === 'header' && !q.subtype) q.subtype = 'h3'; syncToJson()"
+                                                    class="bg-transparent border-none p-0 text-xs font-bold text-[#135e96] focus:ring-0 cursor-pointer">
+                                                    <option value="" disabled selected>{{ __('Choose data type') }}</option>
+                                                    <option value="acknowledge">{{ __('Acknowledge') }}</option>
+                                                    <option value="audio">{{ __('Audio') }}</option>
+                                                    <option value="calculate">{{ __('Calculate ') }}</option>
+                                                    <option value="date">{{ __('Date') }}</option>
+                                                    <option value="datetime">{{ __('Date & Time') }}</option>
+                                                    <option value="decimal">{{ __('Decimal') }}</option>
+                                                    <option value="file">{{ __('File Upload') }}</option>
+                                                    <option value="location">{{ __('GPS Location') }}</option>
+                                                    <option value="header">{{ __('Header') }}</option>
+                                                    <option value="hidden">{{ __('Hidden Field') }}</option>
+                                                    <option value="likert_matrix">{{ __('Likert Matrix') }}</option>
+                                                    <option value="textarea">{{ __('Long Text ') }}</option>
+                                                    <option value="note">{{ __('Note') }}</option>
+                                                    <option value="number">{{ __('Number') }}</option>
+                                                    <option value="photo">{{ __('Photo') }}</option>
+                                                    <option value="qrcode">{{ __('QR / Barcode') }}</option>
+                                                    <option value="group">{{ __('Question Group') }}</option>
+                                                    <option value="range">{{ __('Range') }}</option>
+                                                    <option value="ranking">{{ __('Ranking') }}</option>
+                                                    <option value="rating">{{ __('Rating') }}</option>
+                                                    <option value="repeat">{{ __('Repeat Group') }}</option>
+                                                    <option value="select_many">{{ __('Select Many') }}
+                                                    </option>
+                                                    <option value="select_one">{{ __('Select One ') }}
+                                                    </option>
+                                                    <option value="signature">{{ __('Signature') }}</option>
+                                                    <option value="text">{{ __('Text') }}</option>
+                                                    <option value="time">{{ __('Time') }}</option>
+                                                    <option value="video">{{ __('Video') }}</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="border-t border-gray-100 pt-4 sm:pt-6">
                                         <div x-show="['select_one', 'select_many', 'select'].includes(q.type)">
-                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                                                 <template x-for="(opt, oIndex) in q.values" :key="oIndex">
                                                     <div
-                                                        class="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl border border-gray-100 group/opt">
+                                                        class="flex items-center space-x-3 p-2.5 sm:p-3 bg-gray-50 rounded-xl border border-gray-100 group/opt">
                                                         <div class="w-1.5 h-1.5 rounded-full"
                                                             :class="q.type === 'select_one' ? 'bg-zinc-500' : 'bg-green-400'">
                                                         </div>
                                                         <input type="text" x-model="opt.label" @input="syncToJson()"
-                                                            class="flex-1 text-xs font-bold text-gray-600 border-none p-0 focus:ring-0 bg-transparent">
+                                                            :placeholder="'{{ __('Option') }} ' + (oIndex + 1)"
+                                                            class="flex-1 text-xs font-semibold text-gray-700 border-none p-0 focus:ring-0 bg-transparent">
                                                         <button type="button"
                                                             @click="q.values.splice(oIndex, 1); syncToJson()"
                                                             x-show="q.values.length > 1"
-                                                            class="text-gray-300 hover:text-red-500 opacity-0 group-hover/opt:opacity-100 transition-all">
+                                                            class="text-gray-400 hover:text-red-500 opacity-100 sm:opacity-0 group-hover/opt:opacity-100 transition-all p-1">
                                                             <i class="fa-solid fa-times text-xs"></i>
                                                         </button>
                                                     </div>
                                                 </template>
                                                 <button type="button"
-                                                    @click="q.values.push({label: 'New Option', value: 'option-' + Date.now(), next: ''}); syncToJson()"
-                                                    class="flex items-center justify-center p-3 border-2 border-dashed border-gray-100 rounded-xl text-[10px] font-black text-zinc-2000 uppercase tracking-widest hover:border-zinc-300 hover:bg-zinc-100 transition-all">
-                                                    <i class="fa-solid fa-plus mr-2"></i> {{ __('Add Choice') }}
+                                                    @click="q.values.push({label: '', value: 'option-' + Date.now(), next: ''}); syncToJson()"
+                                                    class="flex items-center justify-center p-2.5 sm:p-3 border-2 border-dashed border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:border-gray-300 hover:bg-gray-100 transition-all">
+                                                    <i class="fa-solid fa-plus mr-2"></i> {{ __('Add Value') }}
                                                 </button>
                                             </div>
                                         </div>
 
                                         <div x-show="q.type === 'header'" class="flex items-center space-x-4">
                                             <div class="flex-1 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                                                <p
-                                                    class="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-3">
+                                                <p class="text-xs font-bold text-gray-600 mb-3">
                                                     {{ __('Header Configuration') }}
                                                 </p>
                                                 <div class="flex space-x-2">
                                                     <template x-for="level in ['h1', 'h2', 'h3']">
                                                         <button type="button" @click="q.subtype = level; syncToJson()"
-                                                            class="px-4 py-2 rounded-lg text-[10px] font-bold uppercase transition-all"
-                                                            :class="q.subtype === level ? 'bg-[#2271b1] text-white' : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'"
+                                                            class="px-4 py-2 rounded-lg text-xs font-bold transition-all"
+                                                            :class="q.subtype === level ? 'bg-[#2271b1] text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'"
                                                             x-text="level === 'h1' ? 'Large' : (level === 'h2' ? 'Medium' : 'Small')">
                                                         </button>
                                                     </template>
@@ -1050,11 +1146,10 @@
 
                                         <div x-show="q.type === 'group'" class="flex items-center space-x-4">
                                             <div class="flex-1 p-4 bg-rose-50/30 rounded-2xl border border-rose-100">
-                                                <p
-                                                    class="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-2">
+                                                <p class="text-xs font-bold text-rose-600 mb-2">
                                                     {{ __('Group Settings') }}
                                                 </p>
-                                                <p class="text-[10px] text-gray-500 font-medium">
+                                                <p class="text-xs text-gray-600 font-medium">
                                                     {{ __('This logic group will visually enclose questions until the next group or section header. Useful for repetitive loops or thematic clusters.') }}
                                                 </p>
                                             </div>
@@ -1063,13 +1158,13 @@
                                         <!-- Hidden Field Config -->
                                         <div x-show="q.type === 'hidden'"
                                             class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                            <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">
+                                            <p class="text-xs font-bold text-slate-600 mb-3">
                                                 {{ __('Hidden Field Settings') }}
                                             </p>
                                             <input type="text" x-model="q.default_value" @input="syncToJson()"
                                                 placeholder="{{ __('Default value...') }}"
                                                 class="w-full text-xs font-bold text-gray-700 border border-gray-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-[#2271b1] bg-white">
-                                            <p class="text-[8px] text-gray-400 mt-1">
+                                            <p class="text-[10px] text-gray-400 mt-1">
                                                 {{ __('This value is stored but not shown to the respondent.') }}
                                             </p>
                                         </div>
@@ -1077,13 +1172,13 @@
                                         <!-- Calculate Config -->
                                         <div x-show="q.type === 'calculate'"
                                             class="p-4 bg-amber-50/50 rounded-2xl border border-amber-100">
-                                            <p class="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-3">
+                                            <p class="text-xs font-bold text-amber-700 mb-3">
                                                 {{ __('Formula') }}
                                             </p>
                                             <input type="text" x-model="q.formula" @input="syncToJson()"
                                                 placeholder="e.g. ${field-123} + ${field-456}"
                                                 class="w-full text-xs font-mono font-bold text-gray-700 border border-gray-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-amber-500 bg-white">
-                                            <p class="text-[8px] text-gray-400 mt-1">
+                                            <p class="text-[10px] text-gray-400 mt-1">
                                                 {{ __('Use ${field_name} to reference other fields. Supports +, -, *, / operators.') }}
                                             </p>
                                         </div>
@@ -1091,11 +1186,11 @@
                                         <!-- Media Config (Audio/Video) -->
                                         <div x-show="q.type === 'audio' || q.type === 'video'"
                                             class="p-4 bg-rose-50/30 rounded-2xl border border-rose-100 mt-4">
-                                            <p class="text-[9px] font-black text-rose-600 uppercase tracking-widest mb-3">
+                                            <p class="text-xs font-bold text-rose-600 mb-3">
                                                 {{ __('Media Settings') }}
                                             </p>
                                             <label
-                                                class="text-[8px] font-black text-gray-400 uppercase block mb-1">{{ __('Max Duration (Seconds)') }}</label>
+                                                class="text-xs font-semibold text-gray-500 block mb-1">{{ __('Max Duration (Seconds)') }}</label>
                                             <input type="number" min="1" x-model.number="q.max_duration"
                                                 @input="syncToJson()"
                                                 class="w-full text-xs font-bold border border-gray-200 rounded-lg px-3 py-1.5 bg-white">
@@ -1104,26 +1199,26 @@
                                         <!-- Repeat Group Config -->
                                         <div x-show="q.type === 'repeat'"
                                             class="p-4 bg-violet-50/30 rounded-2xl border border-violet-100">
-                                            <p class="text-[9px] font-black text-violet-600 uppercase tracking-widest mb-3">
+                                            <p class="text-xs font-bold text-violet-600 mb-3">
                                                 {{ __('Repeat Settings') }}
                                             </p>
                                             <div class="grid grid-cols-2 gap-3">
                                                 <div>
                                                     <label
-                                                        class="text-[8px] font-black text-gray-400 uppercase">{{ __('Min Entries') }}</label>
+                                                        class="text-xs font-semibold text-gray-500">{{ __('Min Entries') }}</label>
                                                     <input type="number" min="1" x-model.number="q.min_repeat"
                                                         @input="syncToJson()"
                                                         class="w-full text-xs font-bold border border-gray-200 rounded-lg px-3 py-1.5 bg-white">
                                                 </div>
                                                 <div>
                                                     <label
-                                                        class="text-[8px] font-black text-gray-400 uppercase">{{ __('Max Entries') }}</label>
+                                                        class="text-xs font-semibold text-gray-500">{{ __('Max Entries') }}</label>
                                                     <input type="number" min="1" x-model.number="q.max_repeat"
                                                         @input="syncToJson()"
                                                         class="w-full text-xs font-bold border border-gray-200 rounded-lg px-3 py-1.5 bg-white">
                                                 </div>
                                             </div>
-                                            <p class="text-[8px] text-gray-400 mt-2">
+                                            <p class="text-[10px] text-gray-400 mt-2">
                                                 {{ __('Questions following this marker until the next section will be repeated.') }}
                                             </p>
                                         </div>
@@ -1132,8 +1227,7 @@
                                         <div x-show="q.type === 'likert_matrix'">
                                             <div class="p-4 bg-zinc-100 rounded-2xl border border-zinc-200 space-y-4">
                                                 <div>
-                                                    <p
-                                                        class="text-[9px] font-black text-[#2271b1] uppercase tracking-widest mb-2">
+                                                    <p class="text-xs font-bold text-[#2271b1] mb-2">
                                                         {{ __('Row Items (Sub-Questions)') }}
                                                     </p>
                                                     <template x-for="(row, rIdx) in (q.rows || [])" :key="rIdx">
@@ -1149,12 +1243,11 @@
                                                     </template>
                                                     <button type="button"
                                                         @click="if(!q.rows) q.rows = []; q.rows.push({label: 'Item ' + (q.rows.length+1), value: 'item-' + Date.now()}); syncToJson()"
-                                                        class="text-[9px] font-black text-zinc-2000 uppercase hover:text-[#135e96]"><i
+                                                        class="text-xs font-bold text-gray-600 hover:text-[#135e96] flex items-center"><i
                                                             class="fa-solid fa-plus mr-1"></i>{{ __('Add Row') }}</button>
                                                 </div>
                                                 <div>
-                                                    <p
-                                                        class="text-[9px] font-black text-[#2271b1] uppercase tracking-widest mb-2">
+                                                    <p class="text-xs font-bold text-[#2271b1] mb-2">
                                                         {{ __('Scale Columns') }}
                                                     </p>
                                                     <template x-for="(col, cIdx) in (q.columns || [])" :key="cIdx">
@@ -1170,79 +1263,120 @@
                                                     </template>
                                                     <button type="button"
                                                         @click="if(!q.columns) q.columns = []; q.columns.push({label: 'Scale ' + (q.columns.length+1), value: 'scale-' + Date.now()}); syncToJson()"
-                                                        class="text-[9px] font-black text-zinc-2000 uppercase hover:text-[#135e96]"><i
+                                                        class="text-xs font-bold text-gray-600 hover:text-[#135e96] flex items-center"><i
                                                             class="fa-solid fa-plus mr-1"></i>{{ __('Add Column') }}</button>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div class="mt-6 flex items-center justify-between border-t border-gray-50 pt-4">
-                                            <label class="flex items-center space-x-3 cursor-pointer group/toggle">
-                                                <input type="checkbox" x-model="q.required" @change="syncToJson()"
-                                                    class="w-5 h-5 rounded border-gray-300 text-[#2271b1] focus:ring-[#2271b1] transition-all cursor-pointer">
-                                                <span
-                                                    class="text-[10px] font-black text-gray-500 uppercase tracking-widest group-hover:text-gray-600">{{ __('Mandatory Field') }}</span>
-                                            </label>
+                                        <!-- Clean "Rules ▾" Expandable Accordion Section -->
+                                        <div
+                                            class="mt-4 sm:mt-5 pt-3.5 border-t border-gray-100 flex items-center justify-between">
+                                            <button type="button" @click="q.showRules = !q.showRules"
+                                                class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border"
+                                                :class="q.showRules || q.required || (q.visible_if && q.visible_if.field) || q.constraint ? 'bg-indigo-50 text-[#2271b1] border-indigo-200 shadow-sm' : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border-gray-200'">
+                                                <i class="fa-solid fa-sliders text-xs"></i>
+                                                <span>{{ __('Rules') }}</span>
+                                                <i class="fa-solid fa-chevron-down text-[10px] transition-transform"
+                                                    :class="q.showRules ? 'rotate-180' : ''"></i>
+                                                <template x-if="q.required">
+                                                    <span
+                                                        class="px-1.5 py-0.5 bg-red-100 text-red-600 rounded text-[9px] font-black uppercase">{{ __('Required') }}</span>
+                                                </template>
+                                            </button>
+                                        </div>
 
-                                            <div class="space-y-2 mb-4 border-t border-gray-100 pt-4 mt-4">
-                                                <button type="button" @click.prevent.stop="openDisplayLogic(index)"
-                                                    class="text-[10px] font-black uppercase flex items-center transition-colors group/btn"
-                                                    :class="q.visible_if && q.visible_if.field ? 'text-[#2271b1]' : 'text-gray-400 hover:text-[#2271b1]'">
-                                                    <i
-                                                        class="fa-solid fa-eye mr-2 group-hover/btn:scale-110 transition-transform"></i>
-                                                    {{ __('Display Logic') }}
-                                                </button>
+                                        <!-- Expanded Rules Panel -->
+                                        <div x-show="q.showRules" x-collapse x-cloak
+                                            class="mt-3 p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-4 shadow-inner">
 
-                                                <button type="button" @click.prevent.stop="openSkipLogic(index)"
-                                                    class="text-[10px] font-black uppercase text-zinc-2000 flex items-center hover:text-[#135e96] transition-colors group/btn">
-                                                    <i
-                                                        class="fa-solid fa-code-branch mr-2 group-hover/btn:scale-110 transition-transform"></i>
-                                                    {{ __('Skip Logic') }}
-                                                </button>
+                                            <!-- Mandatory Toggle & Logic Badges -->
+                                            <div
+                                                class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200/60">
+                                                <label class="flex items-center space-x-2.5 cursor-pointer group/toggle">
+                                                    <input type="checkbox" x-model="q.required" @change="syncToJson()"
+                                                        class="w-4 h-4 rounded border-gray-300 text-[#2271b1] focus:ring-[#2271b1] cursor-pointer">
+                                                    <span
+                                                        class="text-xs font-bold text-gray-800 group-hover:text-black">{{ __('Mandatory Field (Required)') }}</span>
+                                                </label>
 
-                                                <!-- Input Constraints -->
-                                                <div x-show="!['header', 'group', 'note', 'hidden', 'acknowledge'].includes(q.type)"
-                                                    class="mt-2">
-                                                    <button type="button" @click="q.showConstraint = !q.showConstraint"
-                                                        class="text-[10px] font-black uppercase flex items-center transition-colors group/btn"
-                                                        :class="q.constraint ? 'text-amber-600' : 'text-gray-400 hover:text-amber-600'">
-                                                        <i
-                                                            class="fa-solid fa-shield-halved mr-2 group-hover/btn:scale-110 transition-transform"></i>
-                                                        {{ __('Constraints') }}
+                                                <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                                                    <button type="button" @click.prevent.stop="openDisplayLogic(index)"
+                                                        class="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center transition-all border"
+                                                        :class="q.visible_if && q.visible_if.field ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-gray-700 hover:bg-gray-100 border-gray-200'">
+                                                        <i class="fa-solid fa-eye mr-1.5 text-xs"></i>
+                                                        {{ __('Display Logic') }}
                                                     </button>
-                                                    <div x-show="q.showConstraint" x-collapse x-cloak
-                                                        class="mt-3 p-3 bg-amber-50/50 rounded-xl border border-amber-100 space-y-2">
-                                                        <input type="text" x-model="q.constraint" @input="syncToJson()"
-                                                            placeholder="{{ __('e.g. . < 100  or  . > 0') }}"
-                                                            class="w-full text-xs font-mono font-bold border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-amber-500">
-                                                        <input type="text" x-model="q.constraint_message"
-                                                            @input="syncToJson()"
-                                                            placeholder="{{ __('Error message if invalid...') }}"
-                                                            class="w-full text-xs font-bold border border-gray-200 rounded-lg px-3 py-1.5 bg-white">
-                                                        <p class="text-[8px] text-gray-400">
-                                                            {{ __('Use . for current value. Supports: < > <= >= == != and field refs like ${field_name}') }}
-                                                        </p>
+
+                                                    <button type="button" @click.prevent.stop="openSkipLogic(index)"
+                                                        class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-gray-700 hover:bg-gray-100 border border-gray-200 transition-all flex items-center">
+                                                        <i class="fa-solid fa-code-branch mr-1.5 text-xs text-blue-600"></i>
+                                                        {{ __('Skip Logic') }}
+                                                    </button>
+
+                                                    <div
+                                                        x-show="!['header', 'group', 'note', 'hidden', 'acknowledge'].includes(q.type)">
+                                                        <button type="button" @click="q.showConstraint = !q.showConstraint"
+                                                            class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center border"
+                                                            :class="q.constraint || q.showConstraint ? 'bg-[#2271b1] text-white border-blue-500 shadow-sm' : 'bg-white text-gray-700 hover:bg-blue-50 border-gray-200'">
+                                                            <i class="fa-solid fa-shield-halved mr-1.5 text-xs"></i>
+                                                            {{ __('Constraints') }}
+                                                        </button>
                                                     </div>
                                                 </div>
+                                            </div>
+
+                                            <!-- Constraints Input Box -->
+                                            <div x-show="q.showConstraint" x-collapse x-cloak
+                                                class="p-3 bg-blue-50 rounded-xl border border-[#2271b1] space-y-2">
+                                                <label
+                                                    class="block text-xs font-black text-[#2271b1]  tracking-wider">{{ __('Constraint Expression') }}</label>
+                                                <input type="text" x-model="q.constraint" @input="syncToJson()"
+                                                    placeholder="{{ __('e.g. . < 100  or  . > 0') }}"
+                                                    class="w-full text-xs font-mono font-bold border border-amber-200 rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-amber-500">
+                                                <input type="text" x-model="q.constraint_message" @input="syncToJson()"
+                                                    placeholder="{{ __('Error message if constraint fails...') }}"
+                                                    class="w-full text-xs font-semibold border border-amber-200 rounded-lg px-3 py-1.5 bg-white">
+                                                <p class="text-[10px] text-[#2271b1]">
+                                                    {{ __('Use . for current value. Supports: < > <= >= == != and field refs like ${field_name}') }}
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <!-- Inline Add Button -->
-                                    <div
-                                        class="absolute -bottom-3 left-1/2 transform -translate-x-1/2 z-30 opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity">
-                                        <button type="button" @click.stop="addQuestionBelow(index)"
-                                            class="w-6 h-6 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-all ring-2 ring-white"
-                                            title="Add Question Below">
-                                            <i class="fa-solid fa-plus text-[10px]"></i>
+                                    <!-- Inline Circular + Button below Rules -->
+                                    <div class="flex items-center justify-center -mb-8 mt-6 group/add relative z-10">
+                                        <div
+                                            class="h-[1px] bg-gray-200 flex-1 group-hover/add:bg-[#2271b1]/40 transition-colors">
+                                        </div>
+                                        <button type="button" @click.stop="insertQuestionAt(index + 1)"
+                                            class="mx-4 w-8 h-8 rounded-full bg-white hover:bg-[#2271b1] hover:text-white border border-gray-200 text-gray-600 shadow-sm transition-all flex items-center justify-center font-bold"
+                                            title="{{ __('Insert Question Below') }}">
+                                            <i class="fa-solid fa-plus text-xs"></i>
                                         </button>
+                                        <div
+                                            class="h-[1px] bg-gray-200 flex-1 group-hover/add:bg-[#2271b1]/40 transition-colors">
+                                        </div>
                                     </div>
                                 </div>
                             </template>
 
                         </div>
 
-                        <!-- REMOVED: Question Toolbar from bottom -->
+                        <!-- Bottom Canvas Action Bar -->
+                        <div class="mt-10 pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
+                            <button type="button" @click="addQuestion()"
+                                class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
+                                <i class="fa-solid fa-plus text-xs"></i>
+                                <span>{{ __('Add Question') }}</span>
+                            </button>
+
+                            <button type="submit" form="surveyForm" id="bottomSaveBtn"
+                                class="px-6 py-2.5 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2 group active:scale-95">
+                                <i class="fa-solid fa-floppy-disk text-xs"></i>
+                                <span>{{ __('Save Survey') }}</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -1763,6 +1897,7 @@
 
             Alpine.data('surveyBuilder', () => ({
                 showDetails: false,
+                openMoreMenu: false,
                 activeMode: 'visual',
                 showLibrary: false,
                 showSkipModal: false,
@@ -1876,8 +2011,8 @@
 
                         if (!Array.isArray(rawValues)) {
                             rawValues = [
-                                { label: 'Option 1', value: 'option-1' },
-                                { label: 'Option 2', value: 'option-2' }
+                                { label: '', value: 'option-1' },
+                                { label: '', value: 'option-2' }
                             ];
                         }
 
@@ -1888,9 +2023,9 @@
                             name: field.name || 'field-' + Math.random().toString(36).substr(2, 9),
                             id: field.id || 'q-' + Math.random().toString(36).substr(2, 9),
                             required: !!field.required,
-                            values: rawValues.map(v => ({
-                                label: (v && typeof v === 'object' ? (v.label || v.text || v.value) : v) || '',
-                                value: (v && typeof v === 'object' ? (v.value || v.label || v.text) : v) || '',
+                            values: rawValues.map((v, idx) => ({
+                                label: (v && typeof v === 'object' ? (v.label || v.text || '') : (v || '')) || '',
+                                value: (v && typeof v === 'object' ? (v.value || v.label || v.text) : v) || ('option-' + (idx + 1)),
                                 next: (v && typeof v === 'object' ? v.next : '') || ''
                             })),
                             visible_if: field.visible_if || null,
@@ -1929,10 +2064,14 @@
                         };
                         if (q.subtype) legacy.subtype = q.subtype;
                         if (['select_one', 'select_many', 'select', 'ranking'].includes(q.type)) {
-                            legacy.values = (q.values || []).map(v => ({
-                                ...v,
-                                value: v.label || v.value
-                            }));
+                            legacy.values = (q.values || []).map((v, idx) => {
+                                const effectiveLabel = (v.label && String(v.label).trim() !== '') ? String(v.label).trim() : ('Option ' + (idx + 1));
+                                return {
+                                    ...v,
+                                    label: effectiveLabel,
+                                    value: (v.value && String(v.value).trim() !== '') ? v.value : effectiveLabel
+                                };
+                            });
                         }
                         if (q.visible_if && q.visible_if.field) {
                             legacy.visible_if = q.visible_if;
@@ -1963,8 +2102,8 @@
                         name: 'field-' + Date.now(),
                         required: false,
                         values: [
-                            { label: 'Option 1', value: 'option-1', next: '' },
-                            { label: 'Option 2', value: 'option-2', next: '' }
+                            { label: '', value: 'option-1', next: '' },
+                            { label: '', value: 'option-2', next: '' }
                         ],
                         visible_if: null,
                         constraint: '',
@@ -2018,8 +2157,8 @@
                         name: 'field-' + Date.now(),
                         required: false,
                         values: [
-                            { label: 'Option 1', value: 'option-1', next: '' },
-                            { label: 'Option 2', value: 'option-2', next: '' }
+                            { label: '', value: 'option-1', next: '' },
+                            { label: '', value: 'option-2', next: '' }
                         ],
                         visible_if: null
                     };
@@ -2038,6 +2177,73 @@
                 removeQuestion(index) {
                     const newQs = [...this.questions];
                     newQs.splice(index, 1);
+                    this.questions = newQs;
+                    this.syncToJson();
+                },
+
+                clipboardQuestion: null,
+
+                getQuestionNumber(index) {
+                    if (this.questions[index] && ['header', 'group', 'section_break', 'note'].includes(this.questions[index].type)) {
+                        return null;
+                    }
+                    let count = 0;
+                    for (let i = 0; i <= index; i++) {
+                        if (this.questions[i] && !['header', 'group', 'section_break', 'note'].includes(this.questions[i].type)) {
+                            count++;
+                        }
+                    }
+                    return count > 0 ? count : 1;
+                },
+
+                insertQuestionAt(pos) {
+                    const newQ = {
+                        id: 'q_' + Date.now(),
+                        name: 'question_' + Date.now(),
+                        type: 'text',
+                        label: '',
+                        required: false,
+                        values: [{ label: 'Option 1', value: 'option-1' }]
+                    };
+                    const newQs = [...this.questions];
+                    newQs.splice(pos, 0, newQ);
+                    this.questions = newQs;
+                    this.syncToJson();
+                },
+
+                cutQuestion(index) {
+                    this.clipboardQuestion = JSON.parse(JSON.stringify(this.questions[index]));
+                    const newQs = [...this.questions];
+                    newQs.splice(index, 1);
+                    this.questions = newQs;
+                    this.syncToJson();
+                },
+
+                pasteQuestionBelow(index) {
+                    if (!this.clipboardQuestion) return;
+                    const pasted = JSON.parse(JSON.stringify(this.clipboardQuestion));
+                    pasted.id = 'q_' + Date.now();
+                    pasted.name = 'question_' + Date.now();
+                    const newQs = [...this.questions];
+                    newQs.splice(index + 1, 0, pasted);
+                    this.questions = newQs;
+                    this.syncToJson();
+                },
+
+                moveQuestionUp(index) {
+                    if (index <= 0) return;
+                    const newQs = [...this.questions];
+                    const [item] = newQs.splice(index, 1);
+                    newQs.splice(index - 1, 0, item);
+                    this.questions = newQs;
+                    this.syncToJson();
+                },
+
+                moveQuestionDown(index) {
+                    if (index >= this.questions.length - 1) return;
+                    const newQs = [...this.questions];
+                    const [item] = newQs.splice(index, 1);
+                    newQs.splice(index + 1, 0, item);
                     this.questions = newQs;
                     this.syncToJson();
                 },
@@ -2235,21 +2441,27 @@
                             jQuery('#surveyForm').submit();
                         } else if (result.isDenied) {
                             Swal.showLoading();
-                            fetch("{{ route('surveys.destroy', $survey) }}", {
-                                method: 'DELETE',
-                                headers: {
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                    'Accept': 'application/json'
-                                }
-                            })
-                                .then(response => {
-                                    window.location.href = "{{ route('surveys.index') }}";
+                            @if(isset($survey) && $survey->exists && $survey->status !== 'draft')
+                                // Existing active/published survey: Simply discard un-saved builder changes and return to survey hub
+                                window.location.href = "{{ route('surveys.summary', $survey) }}";
+                            @else
+                                // Unsaved temporary draft survey: delete draft record and return to surveys index
+                                fetch("{{ isset($survey) ? route('surveys.destroy', $survey) : route('surveys.index') }}", {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                        'Accept': 'application/json'
+                                    }
                                 })
-                                .catch(err => {
-                                    console.error(err);
-                                    window.location.href = "{{ route('surveys.index') }}";
-                                });
-                        }
+                                    .then(response => {
+                                        window.location.href = "{{ route('surveys.index') }}";
+                                    })
+                                    .catch(err => {
+                                        console.error(err);
+                                        window.location.href = "{{ route('surveys.index') }}";
+                                    });
+                            @endif
+                                                        }
                     });
                 },
 
@@ -2718,12 +2930,12 @@
                             const id = fieldData.name;
                             return {
                                 field: `
-                                                                                                                                                                <div class="rating-wrapper bg-white py-6 px-4 rounded-2xl mb-4 border border-gray-100 shadow-sm">
-                                                                                                                                                                    <div class="likert-container" id="likert_${id}" style="display: flex !important; justify-content: space-between !important; gap: 8px !important;">
-                                                                                                                                                                        ${[1, 2, 3, 4, 5].map(i => `<div class="likert-item" data-value="${i}" onclick="setLikertValue('${id}', ${i})" style="flex:1; text-align:center; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; font-weight:700;">${i}</div>`).join('')}
-                                                                                                                                                                    </div>
-                                                                                                                                                                    <input type="hidden" name="${id}" id="input_${id}" value="" onchange="updatePreviewVisibility()">
-                                                                                                                                                                </div>`
+                                                                                                                                                                                                    <div class="rating-wrapper bg-white py-6 px-4 rounded-2xl mb-4 border border-gray-100 shadow-sm">
+                                                                                                                                                                                                        <div class="likert-container" id="likert_${id}" style="display: flex !important; justify-content: space-between !important; gap: 8px !important;">
+                                                                                                                                                                                                            ${[1, 2, 3, 4, 5].map(i => `<div class="likert-item" data-value="${i}" onclick="setLikertValue('${id}', ${i})" style="flex:1; text-align:center; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; font-weight:700;">${i}</div>`).join('')}
+                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                        <input type="hidden" name="${id}" id="input_${id}" value="" onchange="updatePreviewVisibility()">
+                                                                                                                                                                                                    </div>`
                             };
                         },
                         'ranking_list': function (fieldData) {
@@ -2731,25 +2943,25 @@
                             const options = fieldData.values || [];
                             return {
                                 field: `
-                                                                                                                                                                <div class="ranking-wrapper bg-white p-6 rounded-2xl mb-4 border border-gray-100 shadow-sm">
-                                                                                                                                                                    <div class="grid grid-cols-2 gap-4">
-                                                                                                                                                                        <div>
-                                                                                                                                                                            <span class="text-[10px] font-black text-zinc-2000 uppercase tracking-widest block mb-2">Choices</span>
-                                                                                                                                                                            <div id="pool_${id}" class="rank-pool" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;">
-                                                                                                                                                                                ${options.map(opt => `
-                                                                                                                                                                                    <div class="rank-item" data-value="${opt.value}" onclick="toggleRankItem('${id}', this)">
-                                                                                                                                                                                        ${opt.label}
-                                                                                                                                                                                    </div>
-                                                                                                                                                                                `).join('')}
-                                                                                                                                                                            </div>
-                                                                                                                                                                        </div>
-                                                                                                                                                                        <div>
-                                                                                                                                                                            <span class="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2">Your Order</span>
-                                                                                                                                                                            <div id="ranked_${id}" class="rank-ordered" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;"></div>
-                                                                                                                                                                        </div>
-                                                                                                                                                                    </div>
-                                                                                                                                                                    <input type="hidden" name="${id}" id="input_${id}" value="">
-                                                                                                                                                                </div>`,
+                                                                                                                                                                                                    <div class="ranking-wrapper bg-white p-6 rounded-2xl mb-4 border border-gray-100 shadow-sm">
+                                                                                                                                                                                                        <div class="grid grid-cols-2 gap-4">
+                                                                                                                                                                                                            <div>
+                                                                                                                                                                                                                <span class="text-[10px] font-black text-zinc-2000 uppercase tracking-widest block mb-2">Choices</span>
+                                                                                                                                                                                                                <div id="pool_${id}" class="rank-pool" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;">
+                                                                                                                                                                                                                    ${options.map(opt => `
+                                                                                                                                                                                                                        <div class="rank-item" data-value="${opt.value}" onclick="toggleRankItem('${id}', this)">
+                                                                                                                                                                                                                            ${opt.label}
+                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                    `).join('')}
+                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                            <div>
+                                                                                                                                                                                                                <span class="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2">Your Order</span>
+                                                                                                                                                                                                                <div id="ranked_${id}" class="rank-ordered" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;"></div>
+                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                        <input type="hidden" name="${id}" id="input_${id}" value="">
+                                                                                                                                                                                                    </div>`,
                                 onRender: () => setupRankingUI(id)
                             };
                         },
@@ -2757,38 +2969,38 @@
                             const id = fieldData.name + '_preview';
                             return {
                                 field: `
-                                                                                                  <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
-                                                                                                    <span class="kobo-status-badge" id="status_${id}">Voice Response</span>
+                                                                                                                                      <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
+                                                                                                                                        <span class="kobo-status-badge" id="status_${id}">Voice Response</span>
 
-                                                                                                    <div class="kobo-media-row mt-2">
-                                                                                                        <button type="button" id="start_${id}" class="kobo-record-btn">
-                                                                                                            <i class="fa-solid fa-microphone"></i>
-                                                                                                            <span>Start Recording</span>
-                                                                                                        </button>
+                                                                                                                                        <div class="kobo-media-row mt-2">
+                                                                                                                                            <button type="button" id="start_${id}" class="kobo-record-btn">
+                                                                                                                                                <i class="fa-solid fa-microphone"></i>
+                                                                                                                                                <span>Start Recording</span>
+                                                                                                                                            </button>
 
-                                                                                                        <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
-                                                                                                            <i class="fa-solid fa-square"></i>
-                                                                                                            <span>Stop</span>
-                                                                                                            <span class="kobo-timer" id="timer_${id}">00:00</span>
-                                                                                                        </button>
+                                                                                                                                            <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
+                                                                                                                                                <i class="fa-solid fa-square"></i>
+                                                                                                                                                <span>Stop</span>
+                                                                                                                                                <span class="kobo-timer" id="timer_${id}">00:00</span>
+                                                                                                                                            </button>
 
-                                                                                                        <div id="upload_container_${id}">
-                                                                                                            <label for="file_${id}" class="kobo-upload-btn">
-                                                                                                                <i class="fa-solid fa-upload"></i>
-                                                                                                                <span>Upload audio File</span>
-                                                                                                                <input type="file" id="file_${id}" accept="audio/*" class="hidden" style="display:none;">
-                                                                                                            </label>
-                                                                                                        </div>
+                                                                                                                                            <div id="upload_container_${id}">
+                                                                                                                                                <label for="file_${id}" class="kobo-upload-btn">
+                                                                                                                                                    <i class="fa-solid fa-upload"></i>
+                                                                                                                                                    <span>Upload audio File</span>
+                                                                                                                                                    <input type="file" id="file_${id}" accept="audio/*" class="hidden" style="display:none;">
+                                                                                                                                                </label>
+                                                                                                                                            </div>
 
-                                                                                                        <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
-                                                                                                            <i class="fa-solid fa-trash-can mr-1"></i> Discard
-                                                                                                        </button>
-                                                                                                    </div>
+                                                                                                                                            <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
+                                                                                                                                                <i class="fa-solid fa-trash-can mr-1"></i> Discard
+                                                                                                                                            </button>
+                                                                                                                                        </div>
 
-                                                                                                    <div class="mt-4">
-                                                                                                        <audio id="player_${id}" controls class="hidden w-full" style="display:none;"></audio>
-                                                                                                    </div>
-                                                                                                </div>`,
+                                                                                                                                        <div class="mt-4">
+                                                                                                                                            <audio id="player_${id}" controls class="hidden w-full" style="display:none;"></audio>
+                                                                                                                                        </div>
+                                                                                                                                    </div>`,
                                 onRender: () => setupPreviewRecorder(id, 'audio')
                             };
                         },
@@ -2796,39 +3008,39 @@
                             const id = fieldData.name + '_preview';
                             return {
                                 field: `
-                                                                                                  <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
-                                                                                                    <span class="kobo-status-badge" id="status_${id}">Video Response</span>
+                                                                                                                                      <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
+                                                                                                                                        <span class="kobo-status-badge" id="status_${id}">Video Response</span>
 
-                                                                                                    <div class="relative aspect-video bg-black rounded-xl overflow-hidden mb-4" style="background:black; aspect-ratio:16/9; position:relative;">
-                                                                                                        <video id="preview_${id}" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; opacity:0.8;"></video>
-                                                                                                        <video id="player_${id}" controls style="display:none; width:100%; height:100%; object-fit:contain;"></video>
-                                                                                                    </div>
+                                                                                                                                        <div class="relative aspect-video bg-black rounded-xl overflow-hidden mb-4" style="background:black; aspect-ratio:16/9; position:relative;">
+                                                                                                                                            <video id="preview_${id}" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; opacity:0.8;"></video>
+                                                                                                                                            <video id="player_${id}" controls style="display:none; width:100%; height:100%; object-fit:contain;"></video>
+                                                                                                                                        </div>
 
-                                                                                                    <div class="kobo-media-row">
-                                                                                                        <button type="button" id="start_${id}" class="kobo-record-btn">
-                                                                                                            <i class="fa-solid fa-video"></i>
-                                                                                                            <span>Start Recording</span>
-                                                                                                        </button>
+                                                                                                                                        <div class="kobo-media-row">
+                                                                                                                                            <button type="button" id="start_${id}" class="kobo-record-btn">
+                                                                                                                                                <i class="fa-solid fa-video"></i>
+                                                                                                                                                <span>Start Recording</span>
+                                                                                                                                            </button>
 
-                                                                                                        <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
-                                                                                                            <i class="fa-solid fa-square"></i>
-                                                                                                            <span>Stop</span>
-                                                                                                            <span class="kobo-timer" id="timer_${id}">00:00</span>
-                                                                                                        </button>
+                                                                                                                                            <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
+                                                                                                                                                <i class="fa-solid fa-square"></i>
+                                                                                                                                                <span>Stop</span>
+                                                                                                                                                <span class="kobo-timer" id="timer_${id}">00:00</span>
+                                                                                                                                            </button>
 
-                                                                                                        <div id="upload_container_${id}">
-                                                                                                            <label for="file_${id}" class="kobo-upload-btn">
-                                                                                                                <i class="fa-solid fa-upload"></i>
-                                                                                                                <span>Upload video File</span>
-                                                                                                                <input type="file" id="file_${id}" accept="video/*" class="hidden" style="display:none;">
-                                                                                                            </label>
-                                                                                                        </div>
+                                                                                                                                            <div id="upload_container_${id}">
+                                                                                                                                                <label for="file_${id}" class="kobo-upload-btn">
+                                                                                                                                                    <i class="fa-solid fa-upload"></i>
+                                                                                                                                                    <span>Upload video File</span>
+                                                                                                                                                    <input type="file" id="file_${id}" accept="video/*" class="hidden" style="display:none;">
+                                                                                                                                                </label>
+                                                                                                                                            </div>
 
-                                                                                                        <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
-                                                                                                            <i class="fa-solid fa-trash-can mr-1"></i> Discard
-                                                                                                        </button>
-                                                                                                    </div>
-                                                                                                </div>`,
+                                                                                                                                            <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
+                                                                                                                                                <i class="fa-solid fa-trash-can mr-1"></i> Discard
+                                                                                                                                            </button>
+                                                                                                                                        </div>
+                                                                                                                                    </div>`,
                                 onRender: () => setupPreviewRecorder(id, 'video')
                             };
                         },

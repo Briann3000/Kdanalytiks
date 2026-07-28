@@ -107,7 +107,8 @@ RULES:
 
             for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
                 $response = Http::withToken($this->apiKey)
-                    ->timeout(90)
+                    ->connectTimeout(5)
+                    ->timeout(15)
                     ->post('https://api.groq.com/openai/v1/chat/completions', [
                         'model' => $this->model,
                         'messages' => [
@@ -181,17 +182,20 @@ RULES:
         }
 
         $targetLang = $this->getTargetLanguage();
-        $systemPrompt = "You are a senior statistical analyst. 
+        $systemPrompt = "You are a senior statistical analyst writing an academic research report (Chapter 4 format). 
 STRICT DATA-GROUNDING RULE (CRITICAL):
 - Base your analysis STRICTLY AND EXCLUSIVELY on the provided question and frequency data payload.
 - You MUST NOT invent, hallucinate, or assume any external statistics, percentages, or non-existent industries (e.g. '72% adoption', 'finance', 'healthcare') not in the payload.
 - Provide a concise (2-3 sentences) strategic interpretation of the majorities, distribution, or consensus.
 - Avoid simply restating numbers verbatim; explain what the distribution suggests about respondent sentiment for this question.
+- DO NOT start your response with robotic intro phrases such as 'Based on the provided data' or 'Looking at the chart'.
+- CRITICAL: You must completely vary your starting sentence structure. Do NOT always start with 'The distribution reveals...' or 'Respondent patterns...'. Invent a completely unique academic opening sentence every single time.
 You MUST write the entire response in the {$targetLang} language.";
 
         try {
             $response = Http::withToken($this->apiKey)
-                ->timeout(60)
+                ->connectTimeout(5)
+                ->timeout(15)
                 ->post('https://api.groq.com/openai/v1/chat/completions', [
                     'model' => $this->model,
                     'messages' => [

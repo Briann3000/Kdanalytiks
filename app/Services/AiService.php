@@ -279,7 +279,7 @@ class AiService
 
         $responses = Http::pool(function (\Illuminate\Http\Client\Pool $pool) use ($prompts, $apiKey, $model, $finalSystemPrompt) {
             foreach ($prompts as $key => $prompt) {
-                $pool->as($key)->withToken($apiKey)->timeout(60)->post('https://api.groq.com/openai/v1/chat/completions', [
+                $pool->as($key)->withToken($apiKey)->connectTimeout(5)->timeout(20)->post('https://api.groq.com/openai/v1/chat/completions', [
                     'model' => $model,
                     'messages' => [
                         ['role' => 'system', 'content' => $finalSystemPrompt],
@@ -343,7 +343,8 @@ class AiService
                 Log::info("Groq API call (attempt {$attempt}): model={$model}, prompt_length=" . strlen($prompt));
 
                 $response = Http::withToken($apiKey)
-                    ->timeout(60)
+                    ->connectTimeout(5)
+                    ->timeout(20)
                     ->post('https://api.groq.com/openai/v1/chat/completions', $options);
 
                 if ($response->successful()) {

@@ -370,12 +370,25 @@ class InsightController extends Controller
 
         switch ($method) {
             case 'crosstab':
-                $prompt .= "Test: Chi-Square Test of Independence & Cross-Tabulation\n";
+                $prompt .= "Test: Cross-Tabulation Distribution Analysis\n";
                 $prompt .= "Variables: Row='{$data['rowLabel']}', Column='{$data['colLabel']}'\n";
-                $prompt .= "Chi-Square Value: {$data['chiSquare']}, df: {$data['df']}, p-value: {$data['pValue']}\n";
-                $prompt .= "Result is " . ($data['significant'] ? "Statistically Significant (p < 0.05)" : "Not Statistically Significant (p >= 0.05)") . ".\n\n";
-                $prompt .= "Observed Counts: " . json_encode($data['matrix']) . "\n";
-                $prompt .= "Expected Counts: " . json_encode($data['expectedMatrix']) . "\n\n";
+                $prompt .= "Total Responses: " . ($data['grandTotal'] ?? 0) . "\n";
+                $prompt .= "Observed Cell Frequencies: " . json_encode($data['matrix']) . "\n\n";
+                break;
+            case 'chisquare':
+                $prompt .= "Test: Chi-Square Test of Independence\n";
+                $prompt .= "Variables: Row='{$data['rowLabel']}', Column='{$data['colLabel']}'\n";
+                $prompt .= "Chi-Square Value (χ²): " . ($data['chiSquare'] ?? 0) . ", df: " . ($data['df'] ?? 1) . ", p-value: " . ($data['pValue'] ?? 1) . "\n";
+                $prompt .= "Cramer's V (Effect Size): " . ($data['cramersV'] ?? 'N/A') . " (" . ($data['effectLabel'] ?? 'N/A') . ")\n";
+                $prompt .= "Result is " . (!empty($data['significant']) ? "Statistically Significant (p < 0.05)" : "Not Statistically Significant (p >= 0.05)") . ".\n\n";
+                break;
+            case 'cronbach':
+                $prompt .= "Test: Cronbach's Alpha Reliability Analysis\n";
+                $prompt .= "Cronbach's Alpha (α): " . ($data['alpha'] ?? 0) . "\n";
+                $prompt .= "Standardized Alpha (α_std): " . ($data['std_alpha'] ?? $data['alpha'] ?? 0) . "\n";
+                $prompt .= "Number of Items (K): " . ($data['k_items'] ?? 0) . ", Valid Cases (N): " . ($data['valid_n'] ?? 0) . "\n";
+                $prompt .= "Interpretation: " . ($data['interpretation'] ?? 'N/A') . "\n";
+                $prompt .= "Item-Total Statistics: " . json_encode($data['item_stats'] ?? []) . "\n\n";
                 break;
             case 'ttest':
                 $prompt .= "Test: Independent Samples T-Test (Comparing 2 Group Means)\n";
@@ -420,9 +433,9 @@ class InsightController extends Controller
 
         $targetLang = $this->getTargetLanguage();
         $prompt .= "Instructions:\n";
-        $prompt .= "1. Interpret these results. Explain in simple, plain {$targetLang} what the test results mean (the relationship between variables, effect direction, and magnitude).\n";
-        $prompt .= "2. Explicitly interpret the statistical significance (p-value, confidence/errors) and what it implies for the research hypotheses.\n";
-        $prompt .= "3. Keep the interpretation concise (max 200 words), professional, and highly educational for a researcher.\n";
+        $prompt .= "1. Interpret these results. Generate a long, extensive, and highly comprehensive academic synthesis of the statistical test (minimum 3 paragraphs).\n";
+        $prompt .= "2. Explicitly interpret the statistical significance (p-value, confidence/errors) and what it implies for the research hypotheses in detail.\n";
+        $prompt .= "3. Format strictly as normal plain text paragraphs. DO NOT use any markdown bolding (e.g. **bold**) or headers. DO NOT use ANY uppercase words or ALL CAPS acronyms (convert them to normal capitalization if necessary).\n";
         $prompt .= "4. You MUST write the entire response and statistical interpretation in the {$targetLang} language. Do not output it in English if the target language is different.";
 
         try {

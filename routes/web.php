@@ -43,15 +43,24 @@ Route::get('/terms-and-conditions', function () {
 
 Route::get('/surveys/public', [SurveyController::class, 'publicIndex'])->name('surveys.public');
 
-// Documentation Routes
+// Public Info & Platform Routes
+Route::get('/about', [\App\Http\Controllers\AboutController::class, 'index'])->name('about');
+Route::get('/contact', [\App\Http\Controllers\ContactController::class, 'index'])->name('contact');
+Route::post('/contact', [\App\Http\Controllers\ContactController::class, 'send'])->name('contact.send');
+Route::get('/publications', [\App\Http\Controllers\PublicationController::class, 'index'])->name('publications');
+Route::get('/publications/{id}', [\App\Http\Controllers\PublicationController::class, 'show'])->name('publications.show');
+Route::delete('/publications/{id}', [\App\Http\Controllers\PublicationController::class, 'destroy'])->name('publications.destroy');
+Route::post('/publications', [\App\Http\Controllers\PublicationController::class, 'storePublication'])->name('publications.store');
+Route::post('/publications/test-wordpress', [\App\Http\Controllers\PublicationController::class, 'testWordPress'])->name('publications.test-wordpress');
+Route::post('/publications/publish-wordpress', [\App\Http\Controllers\PublicationController::class, 'publishToWordPress'])->name('publications.publish-wordpress');
+
+// Documentation & FAQ Routes
 Route::get('/docs', [\App\Http\Controllers\DocsController::class, 'index'])->name('docs');
 Route::get('/docs/{article}', [\App\Http\Controllers\DocsController::class, 'show'])->name('docs.show');
-
-// Help & Support Routes
-Route::get('/help', [\App\Http\Controllers\HelpController::class, 'index'])->name('help');
-Route::get('/help/tours/{tour}', [\App\Http\Controllers\HelpController::class, 'launchTour'])
-    ->middleware(['auth', 'verified'])
-    ->name('help.tours.launch');
+Route::get('/faq', [\App\Http\Controllers\FaqController::class, 'index'])->name('faq');
+Route::get('/help', function () {
+    return redirect()->route('faq');
+})->name('help');
 
 
 Route::post('/logout', function () {
@@ -212,6 +221,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/toggle-shared-report', [SurveyController::class, 'toggleSharedReport'])->name('reports.toggle-shared');
         Route::get('/crosstab', [SurveyController::class, 'crosstab'])->name('reports.crosstab');
         Route::get('/inferential-analysis', [SurveyController::class, 'inferentialAnalysis'])->name('reports.inferential');
+        Route::post('/inferential-analysis/save', [SurveyController::class, 'saveInferentialAnalysis'])->name('reports.inferential.save');
+        Route::delete('/inferential-analysis/{analysisId}', [SurveyController::class, 'deleteInferentialAnalysis'])->name('reports.inferential.delete');
 
         // Data Portability Export Routes
         Route::get('/export-package', [SurveyExportPackageController::class, 'exportPackage'])->name('export_package');

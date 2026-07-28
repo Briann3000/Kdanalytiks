@@ -438,7 +438,7 @@
 @push('styles')
 
 <!-- Trigger -->
-<button id="kda-btn" title="KM Autonomous Agent">
+<button id="kda-btn" title="KDA Autonomous Agent">
     <i class="fa fa-robot"></i>
     <span class="kda-dot"></span>
 </button>
@@ -448,7 +448,7 @@
     <div class="kda-hdr">
         <div class="kda-av"><i class="fa fa-robot"></i></div>
         <div class="kda-hdr-info">
-            <h4>KM Autonomous Agent</h4>
+            <h4>KDA Autonomous Agent</h4>
             <small>🟢 Active &nbsp;·&nbsp; I navigate &amp; fill forms for you</small>
         </div>
         <button class="kda-hdr-close" onclick="kmaToggle()"><i class="fa fa-times"></i></button>
@@ -501,7 +501,7 @@
                     👋 Hi <strong>{{ $userName }}</strong>! I'm <strong>KD Agent</strong>.<br>Tell me what to do — I'll open
                     any page and fill in forms for you automatically. Just speak!
                 @elseif ($role === 'independent')
-                    👋 Hi <strong>{{ $userName }}</strong>! I'm your <strong>KM Research Agent</strong>.<br>Just tell me
+                    👋 Hi <strong>{{ $userName }}</strong>! I'm your <strong>KD Research Agent</strong>.<br>Just tell me
                     your research goal — I'll open the right page and set everything up!
                 @elseif ($role === 'respondent')
                     👋 Hi <strong>{{ $userName }}</strong>! I'm <strong>KD Agent</strong>.<br>Tell me what you'd like to do
@@ -519,7 +519,7 @@
             oninput="kmaResize(this)" onkeydown="kmaKey(event)"></textarea>
         <button id="kda-send" onclick="kmaSend()"><i class="fa fa-paper-plane"></i></button>
     </div>
-    <div class="kda-footer-note">KM Autonomous Agent · Auto-navigate · Auto-fill · Powered by Groq AI</div>
+    <div class="kda-footer-note">KDA Autonomous Agent · Auto-navigate · Auto-fill </div>
 </div>
 
 @push('scripts')
@@ -618,13 +618,13 @@
                     : '';
 
                 d.innerHTML = `
-                    <div class="kda-ico"><i class="fa fa-robot"></i></div>
-                    <div class="kda-action">
-                        <div class="kda-action-top"><i class="fa ${icon}"></i>${fmt(data.message || 'Action ready...')}</div>
-                        <div class="kda-action-sub">${sub}</div>
-                        ${btnHtml}
-                        ${!isPrefill ? '<div class="kda-bar"><div class="kda-bar-fill" id="kda-bar-fill"></div></div>' : ''}
-                    </div>`;
+                            <div class="kda-ico"><i class="fa fa-robot"></i></div>
+                            <div class="kda-action">
+                                <div class="kda-action-top"><i class="fa ${icon}"></i>${fmt(data.message || 'Action ready...')}</div>
+                                <div class="kda-action-sub">${sub}</div>
+                                ${btnHtml}
+                                ${!isPrefill ? '<div class="kda-bar"><div class="kda-bar-fill" id="kda-bar-fill"></div></div>' : ''}
+                            </div>`;
                 wrap.appendChild(d);
                 wrap.scrollTop = wrap.scrollHeight;
 

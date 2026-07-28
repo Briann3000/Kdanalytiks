@@ -131,17 +131,9 @@
             }
         }
 
-        /* Mobile Menu Transitions */
+        /* Mobile Menu */
         #mobile-menu {
-            transition: max-height 0.3s ease-out, opacity 0.2s ease;
-            max-height: 0;
-            opacity: 0;
             overflow: hidden;
-        }
-
-        #mobile-menu.open {
-            max-height: 500px;
-            opacity: 1;
         }
 
         /* Split-Pane Styles */
@@ -354,7 +346,7 @@
         <i class="fa-solid fa-arrows-rotate animate-spin-slow"></i>
     </div>
     <div class="min-h-screen flex flex-col"
-        x-data="{ sidebarOpen: true, desktopSidebarOpen: window.innerWidth > 1024 && !{{ request()->routeIs('surveys.create', 'surveys.edit') ? 'true' : 'false' }} }"
+        x-data="{ mobileNavOpen: false, sidebarOpen: true, desktopSidebarOpen: window.innerWidth > 1024 && !{{ request()->routeIs('surveys.create', 'surveys.edit') ? 'true' : 'false' }} }"
         @close-sidebar.window="desktopSidebarOpen = false" @open-sidebar.window="desktopSidebarOpen = true">
         <!-- Navigation Bar -->
         <nav class="bg-[#1d2327] border-b border-[#2c3338] sticky top-0 z-[60] text-[#f0f0f1]">
@@ -385,36 +377,66 @@
                             </a>
                         </div>
 
-                        <!-- Desktop Nav Links -->
-                        @auth
-                            @if(auth()->user()->hasVerifiedEmail())
-                                <div class="hidden sm:ml-8 sm:flex sm:items-center">
+                        <!-- Desktop Nav Links (Visible to all users) -->
+                        <div class="hidden sm:ml-6 sm:flex sm:items-center space-x-1 lg:space-x-3">
+                            <a href="{{ url('/') }}"
+                                class="text-[#a7aaad] hover:text-white px-2.5 py-2 text-xs lg:text-sm font-bold transition-colors {{ request()->is('/') ? 'text-white font-extrabold' : '' }}">
+                                {{ __('Home') }}
+                            </a>
+                            <a href="{{ route('about') }}"
+                                class="text-[#a7aaad] hover:text-white px-2.5 py-2 text-xs lg:text-sm font-bold transition-colors {{ request()->routeIs('about') ? 'text-white font-extrabold' : '' }}">
+                                {{ __('About') }}
+                            </a>
+                            <a href="{{ route('publications') }}"
+                                class="text-[#a7aaad] hover:text-white px-2.5 py-2 text-xs lg:text-sm font-bold transition-colors {{ request()->routeIs('publications') ? 'text-white font-extrabold' : '' }}">
+                                {{ __('Publications') }}
+                            </a>
+
+                            <!-- Resources Dropdown -->
+                            <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+                                <button type="button" @click="open = !open"
+                                    class="text-[#a7aaad] hover:text-white px-2.5 py-2 text-xs lg:text-sm font-bold transition-colors flex items-center gap-1.5 {{ request()->routeIs('docs*', 'faq', 'privacy') ? 'text-white font-extrabold' : '' }}">
+                                    <span>{{ __('Resources') }}</span>
+                                    <i class="fa-solid fa-chevron-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                                </button>
+
+                                <div x-show="open" x-cloak x-transition:enter="transition ease-out duration-100"
+                                    x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                    x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                    x-transition:leave-end="opacity-0 scale-95"
+                                    class="absolute left-0 mt-0 w-48 rounded-xl shadow-xl bg-[#1d2327] border border-[#2c3338] z-[100] overflow-hidden py-1">
+                                    <a href="{{ route('docs') }}" class="flex items-center px-4 py-2.5 text-xs font-semibold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] transition-colors">
+                                        <i class="fa-solid fa-book mr-2.5 text-xs text-[#72aee6]"></i>
+                                        {{ __('Documentation') }}
+                                    </a>
+                                    <a href="{{ route('faq') }}" class="flex items-center px-4 py-2.5 text-xs font-semibold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] transition-colors">
+                                        <i class="fa-solid fa-circle-question mr-2.5 text-xs text-amber-400"></i>
+                                        {{ __('FAQ') }}
+                                    </a>
+                                    <a href="{{ route('privacy') }}" class="flex items-center px-4 py-2.5 text-xs font-semibold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] transition-colors">
+                                        <i class="fa-solid fa-shield-halved mr-2.5 text-xs text-emerald-400"></i>
+                                        {{ __('Privacy Policy') }}
+                                    </a>
+                                </div>
+                            </div>
+
+                            <a href="{{ route('contact') }}"
+                                class="text-[#a7aaad] hover:text-white px-2.5 py-2 text-xs lg:text-sm font-bold transition-colors {{ request()->routeIs('contact') ? 'text-white font-extrabold' : '' }}">
+                                {{ __('Contact') }}
+                            </a>
+
+                            @auth
+                                @if(auth()->user()->hasVerifiedEmail())
                                     @php
                                         $roleValNav = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
                                     @endphp
-
                                     <a href="{{ route($roleValNav . '.dashboard') }}"
-                                        class="text-[#a7aaad] hover:text-white px-3 py-2 text-sm font-bold transition-colors">
+                                        class="text-[#72aee6] hover:text-white px-2.5 py-2 text-xs lg:text-sm font-extrabold transition-colors">
                                         {{ __('Dashboard') }}
                                     </a>
-                                    <a href="{{ route('docs') }}"
-                                        class="text-[#a7aaad] hover:text-white px-3 py-2 text-sm font-bold transition-colors">
-                                        {{ __('Documentation') }}
-                                    </a>
-                                    <a href="{{ route('help') }}"
-                                        class="text-[#a7aaad] hover:text-white px-3 py-2 text-sm font-bold transition-colors">
-                                        {{ __('Help') }}
-                                    </a>
-                                    @if(request()->routeIs('surveys.create', 'surveys.edit'))
-                                        <button type="button" onclick="window.startSurveyBuilderTour()"
-                                            class="text-amber-600 hover:text-amber-700 px-3 py-2 text-sm font-bold transition-colors inline-flex items-center">
-                                            <i class="fa-solid fa-compass mr-2 text-xs"></i>
-                                            {{ __('Tour') }}
-                                        </button>
-                                    @endif
-                                </div>
-                            @endif
-                        @endauth
+                                @endif
+                            @endauth
+                        </div>
                     </div>
 
                     <div class="flex items-center">
@@ -430,15 +452,15 @@
                                         $displayName = auth()->user()->independent->name;
                                     }
                                 @endphp
-                                <span class="text-sm text-[#a7aaad] mr-4">{{ __('Welcome') }}, <span
+                                <span class="hidden lg:inline text-xs text-[#a7aaad] mr-3 truncate max-w-[180px]">{{ __('Welcome') }}, <span
                                         class="font-bold text-[#f0f0f1]">{{ $displayName }}</span></span>
 
                                 <!-- Language Picker (Auth) -->
-                                <div class="relative mr-4" x-data="{ open: false }">
+                                <div class="relative mr-3" x-data="{ open: false }">
                                     <button @click="open = !open"
-                                        class="flex items-center text-[10px] font-black uppercase tracking-widest text-[#a7aaad] hover:text-[#f0f0f1] transition-colors">
-                                        <i class="fa-solid fa-globe mr-2"></i>
-                                        <span>{{ app()->getLocale() }}</span>
+                                        class="flex items-center text-xs font-bold text-[#a7aaad] hover:text-[#f0f0f1] transition-colors px-2 py-1 rounded-lg hover:bg-[#101417]">
+                                        <i class="fa-solid fa-globe mr-1.5 text-xs"></i>
+                                        <span>{{ strtoupper(app()->getLocale()) }}</span>
                                     </button>
 
                                     <div x-show="open" @click.away="open = false" x-cloak
@@ -460,7 +482,7 @@
                                             @endphp
                                             @foreach($langs as $code => $lang)
                                                 <a href="{{ route('locale.switch', $code) }}"
-                                                    class="flex items-center px-4 py-2.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] transition-colors {{ app()->getLocale() === $code ? 'text-[#72aee6] bg-[#101417]' : '' }}">
+                                                    class="flex items-center px-4 py-2 text-xs font-semibold text-[#f0f0f1] hover:bg-[#101417] transition-colors {{ app()->getLocale() === $code ? 'text-[#72aee6] bg-[#101417]' : '' }}">
                                                     <span class="mr-3">{{ $lang['flag'] }}</span>
                                                     <span>{{ $lang['name'] }}</span>
                                                 </a>
@@ -469,25 +491,25 @@
                                     </div>
                                 </div>
 
-                                <form method="POST" action="{{ route('logout') }}">
+                                <form method="POST" action="{{ route('logout') }}" class="inline-block">
                                     @csrf
                                     <button type="submit"
-                                        class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#2c3338] bg-[#101417] text-[#f0f0f1] hover:bg-[#1d2327] hover:text-[#72aee6] transition-all font-bold text-[10px] uppercase tracking-wider">
-                                        <i class="fa-solid fa-power-off text-[#a7aaad]"></i> {{ __('Logout') }}
+                                        class="flex items-center gap-1.5 px-3 py-1 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all font-semibold text-xs shadow-sm"
+                                        title="{{ __('Logout') }}">
+                                        <i class="fa-solid fa-power-off text-xs"></i>
+                                        <span>{{ __('Logout') }}</span>
                                     </button>
                                 </form>
                             </div>
 
                             <!-- Mobile menu button -->
-                            @if(auth()->user()->hasVerifiedEmail())
-                                <div class="flex items-center sm:hidden">
-                                    <button type="button" onclick="toggleMobileMenu()"
-                                        class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-zinc-550">
-                                        <span class="sr-only">Open main menu</span>
-                                        <i class="fa-solid fa-bars text-xl" id="menu-icon"></i>
-                                    </button>
-                                </div>
-                            @endif
+                            <div class="flex items-center sm:hidden ml-2">
+                                <button type="button" @click="mobileNavOpen = !mobileNavOpen"
+                                    class="inline-flex items-center justify-center p-2 rounded-xl text-[#a7aaad] hover:text-white hover:bg-[#101417] focus:outline-none transition-all">
+                                    <span class="sr-only">Open main menu</span>
+                                    <i class="fa-solid" :class="mobileNavOpen ? 'fa-xmark text-xl text-white' : 'fa-bars text-xl text-[#a7aaad]'"></i>
+                                </button>
+                            </div>
                         @else
                             <div class="flex items-center space-x-6">
                                 <!-- Language Picker (Guest) -->
@@ -528,6 +550,15 @@
 
                                 <a href="{{ route('login') }}"
                                     class="text-sm font-bold text-[#a7aaad] hover:text-[#f0f0f1]">{{ __('Sign In') }}</a>
+
+                                <!-- Mobile menu button (Guest) -->
+                                <div class="flex items-center sm:hidden ml-2">
+                                    <button type="button" @click="mobileNavOpen = !mobileNavOpen"
+                                        class="inline-flex items-center justify-center p-2 rounded-xl text-[#a7aaad] hover:text-white hover:bg-[#101417] focus:outline-none transition-all">
+                                        <span class="sr-only">Open main menu</span>
+                                        <i class="fa-solid" :class="mobileNavOpen ? 'fa-xmark text-xl text-white' : 'fa-bars text-xl text-[#a7aaad]'"></i>
+                                    </button>
+                                </div>
                             </div>
                         @endauth
                     </div>
@@ -535,38 +566,59 @@
             </div>
 
             <!-- Mobile Menu -->
-            <div class="sm:hidden" id="mobile-menu">
-                <div class="pt-2 pb-3 space-y-1 px-4 border-t border-gray-100 bg-white shadow-lg">
+            <div class="sm:hidden" id="mobile-menu" x-show="mobileNavOpen" x-cloak x-transition>
+                <div class="pt-2 pb-4 space-y-1 px-4 border-t border-[#2c3338] bg-[#1d2327] text-white shadow-xl">
+                    <a href="{{ url('/') }}"
+                        class="block px-3 py-2 text-base font-bold text-[#f0f0f1] hover:bg-[#101417] rounded-xl">
+                        {{ __('Home') }}
+                    </a>
+                    <a href="{{ route('about') }}"
+                        class="block px-3 py-2 text-base font-bold text-[#f0f0f1] hover:bg-[#101417] rounded-xl">
+                        {{ __('About Us') }}
+                    </a>
+                    <a href="{{ route('publications') }}"
+                        class="block px-3 py-2 text-base font-bold text-[#f0f0f1] hover:bg-[#101417] rounded-xl">
+                        {{ __('Publications') }}
+                    </a>
+                    <a href="{{ route('docs') }}"
+                        class="block px-3 py-2 text-base font-bold text-[#f0f0f1] hover:bg-[#101417] rounded-xl">
+                        {{ __('Documentation') }}
+                    </a>
+                    <a href="{{ route('faq') }}"
+                        class="block px-3 py-2 text-base font-bold text-[#f0f0f1] hover:bg-[#101417] rounded-xl">
+                        {{ __('FAQ') }}
+                    </a>
+                    <a href="{{ route('contact') }}"
+                        class="block px-3 py-2 text-base font-bold text-[#f0f0f1] hover:bg-[#101417] rounded-xl">
+                        {{ __('Contact') }}
+                    </a>
+
                     @auth
                         @php
                             $roleValMob = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
                         @endphp
-                        <div class="py-3 mb-2 border-b border-gray-50">
-                            <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">{{ __('ACCOUNT') }}</p>
-                            <p class="text-sm font-bold text-gray-800">{{ auth()->user()->name }}</p>
-                        </div>
-                        @if(auth()->user()->hasVerifiedEmail())
-                            <a href="{{ route($roleValMob . '.dashboard') }}"
-                                class="block pl-3 pr-4 py-2 border-l-4 border-zinc-650 text-base font-medium text-white bg-zinc-700 rounded-r-md">
-                                {{ __('Dashboard') }}
-                            </a>
-                            <a href="{{ route('docs') }}"
-                                class="block pl-3 pr-4 py-2 text-base font-medium text-zinc-300 hover:text-white">
-                                {{ __('Documentation') }}
-                            </a>
-                            <a href="{{ route('help') }}"
-                                class="block pl-3 pr-4 py-2 text-base font-medium text-zinc-300 hover:text-white">
-                                {{ __('Help Center') }}
-                            </a>
-                        @endif
-                        <div class="mt-4 pt-4 border-t border-gray-100">
-                            <form method="POST" action="{{ route('logout') }}">
+                        <div class="mt-3 pt-3 border-t border-[#2c3338]">
+                            <p class="text-xs text-[#a7aaad] uppercase font-bold tracking-wider px-3 mb-1">{{ __('ACCOUNT') }} ({{ auth()->user()->name }})</p>
+                            @if(auth()->user()->hasVerifiedEmail())
+                                <a href="{{ route($roleValMob . '.dashboard') }}"
+                                    class="block px-3 py-2 text-base font-bold text-[#72aee6] hover:bg-[#101417] rounded-xl">
+                                    {{ __('Dashboard') }}
+                                </a>
+                            @endif
+                            <form method="POST" action="{{ route('logout') }}" class="mt-2">
                                 @csrf
                                 <button type="submit"
-                                    class="flex items-center w-full px-3 py-2 text-base font-bold text-red-600 hover:bg-red-50 rounded-md">
-                                    <i class="fa-solid fa-right-from-bracket mr-3"></i> {{ __('Sign Out') }}
+                                    class="flex items-center w-full px-3 py-2 text-base font-bold text-rose-400 hover:bg-rose-500/10 rounded-xl">
+                                    <i class="fa-solid fa-power-off mr-3"></i> {{ __('Sign Out') }}
                                 </button>
                             </form>
+                        </div>
+                    @else
+                        <div class="mt-3 pt-3 border-t border-[#2c3338]">
+                            <a href="{{ route('login') }}"
+                                class="block w-full text-center px-4 py-2.5 bg-[#2271b1] text-white font-bold text-sm rounded-xl">
+                                {{ __('Sign In') }}
+                            </a>
                         </div>
                     @endauth
                 </div>
@@ -576,7 +628,7 @@
         @php
             // Show sidebar for all authenticated pages except specific full-width ones (like taking a survey)
             // Also explicitly hide on landing, login, register, and email verification notice/verify pages
-            $excludedRoutes = ['home', 'login', 'register', 'login.role', 'password.request', 'password.reset', 'surveys.show', 'surveys.submit', 'verification.notice', 'verification.verify', 'admin.login', 'organization.login', 'independent.login', 'respondent.login', 'admin.register', 'organization.register', 'independent.register', 'respondent.register', 'docs', 'docs.show', 'help'];
+            $excludedRoutes = ['login', 'register', 'login.role', 'password.request', 'password.reset', 'surveys.show', 'surveys.submit', 'verification.notice', 'verification.verify', 'admin.login', 'organization.login', 'independent.login', 'respondent.login', 'admin.register', 'organization.register', 'independent.register', 'respondent.register', 'docs', 'docs.show', 'help'];
             $isWorkspace = auth()->check() && auth()->user()->hasVerifiedEmail() && !request()->routeIs($excludedRoutes);
         @endphp
 

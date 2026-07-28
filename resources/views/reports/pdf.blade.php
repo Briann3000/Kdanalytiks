@@ -199,20 +199,33 @@
 
     @if(!empty($aiSummary))
         <div class="summary-box"
-            style="background-color: #eef2ff; border: 1px solid #c3dafe; text-align: left; margin-bottom: 30px;">
-            <h3 style="color: #4338ca; margin-top: 0;">Chapter 4: Executive Thematic Analysis</h3>
-            <div style="font-size: 13px; color: #374151; white-space: pre-wrap;">{{ $aiSummary }}</div>
+            style="background-color: #f9fafb; border: 1px solid #e5e7eb; text-align: left; margin-bottom: 30px;">
+            <h3 style="color: #111827; margin-top: 0;">Executive Thematic Analysis</h3>
+            <div style="font-size: 13px; color: #374151; line-height: 1.6;">
+                @foreach(array_filter(preg_split('/\n+/', trim($aiSummary))) as $aiPara)
+                    <p style="margin: 0 0 8px 0;">{{ preg_replace('/\*\*(.*?)\*\*/', '$1', trim($aiPara)) }}</p>
+                @endforeach
+            </div>
         </div>
     @endif
 
+    @php $qNum = 1; @endphp
     @foreach($analysis as $index => $item)
+        @php
+            $labelLower = strtolower($item['label'] ?? '');
+            if (str_contains($labelLower, 'respondent id') || str_contains($labelLower, 'respondent_id')) {
+                continue;
+            }
+        @endphp
+
         <div class="question-section">
-            <div class="question-title">
-                Q{{ $index + 1 }}: {{ $item['label'] }}
+            <div class="question-title" style="background-color: #f9fafb; color: #111827; border-left: 5px solid {{ $branding['brandColor'] ?? '#4f46e5' }};">
+                Q{{ $qNum }}: {{ $item['label'] }}
             </div>
+            @php $qNum++; @endphp
 
             @if($item['isChartable'])
-                @if(!empty($item['chartUrl']))
+                @if(!empty($item['chartUrl']) && empty($item['isLikertLike']))
                     <div style="text-align: center; margin-bottom: 20px;">
                         <img src="{{ $item['chartBase64'] ?? $item['chartUrl'] }}"
                             style="max-width: 100%; height: auto; max-height: 250px;">
@@ -220,199 +233,407 @@
                 @endif
 
                 @if(!empty($item['aiInsight']) && is_string($item['aiInsight']))
-                    <div
-                        style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
-                        <span
-                            style="font-size: 10px; font-weight: bold; color: #15803d; text-transform: uppercase; display: block; margin-bottom: 5px;">AI
-                            Statistical Interpretation</span>
-                        <p style="font-size: 12px; color: #374151; margin: 0; line-height: 1.4;">{{ $item['aiInsight'] }}</p>
-                    </div>
-                @endif
-                <table>
-                    <thead>
-                        <tr>
-                            <th width="50%">Choice</th>
-                            <th width="20%">Count</th>
-                            <th width="30%">Distribution</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($item['stats'] as $stat)
-                            @if(!($stat['is_missing'] ?? false))
-                                <tr>
-                                    <td>{{ $stat['value'] }}</td>
-                                    <td>{{ $stat['count'] }} <small style="color:#6b7280;">({{ $stat['percentage'] }}%)</small></td>
-                                    <td>
-                                        <div class="bar-container">
-                                            <div class="bar-fill" style="width: {{ $stat['percentage'] }}%;"></div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endif
+                    <div style="margin-bottom: 15px;">
+                        @foreach(array_filter(preg_split('/\n+/', trim($item['aiInsight']))) as $aiPara)
+                            <p style="font-size: 12px; color: #374151; margin: 0 0 6px 0; line-height: 1.5;">{{ preg_replace('/\*\*(.*?)\*\*/', '$1', trim($aiPara)) }}</p>
                         @endforeach
-                    </tbody>
-                    <tfoot>
-                        <tr style="background-color: #f9fafb; font-weight: bold;">
-                            <td>TOTAL</td>
-                            <td>{{ $item['answered_count'] }} <small style="color:#6b7280;">(100%)</small></td>
-                            <td>
-                                <div class="bar-container">
-                                    <div class="bar-fill" style="width: 100%;"></div>
-                                </div>
-                            </td>
-                        </tr>
-                    </tfoot>
-                </table>
-            @else
-                @if(!empty($item['aiInsight']) && is_array($item['aiInsight']))
-                    <div
-                        style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 12px; margin-bottom: 25px;">
-                        <div style="margin-bottom: 15px; border-bottom: 1px solid #dcfce7; padding-bottom: 10px;">
-                            <span style="font-size: 10px; font-weight: bold; color: #15803d; text-transform: uppercase;">Sentiment
-                                Breakdown</span>
-                            <div
-                                style="height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-top: 6px; width: 100%;">
-                                <div
-                                    style="width: {{ $item['aiInsight']['sentiment_breakdown']['Positive'] }}%; background: #10b981; float: left; height: 100%;">
-                                </div>
-                                <div
-                                    style="width: {{ $item['aiInsight']['sentiment_breakdown']['Neutral'] }}%; background: #fbbf24; float: left; height: 100%;">
-                                </div>
-                                <div
-                                    style="width: {{ $item['aiInsight']['sentiment_breakdown']['Negative'] }}%; background: #ef4444; float: left; height: 100%;">
-                                </div>
-                            </div>
-                            <div style="font-size: 9px; margin-top: 4px; color: #166534; font-weight: bold;">
-                                Positive: {{ $item['aiInsight']['sentiment_breakdown']['Positive'] }}% |
-                                Neutral: {{ $item['aiInsight']['sentiment_breakdown']['Neutral'] }}% |
-                                Negative: {{ $item['aiInsight']['sentiment_breakdown']['Negative'] }}%
-                            </div>
-                        </div>
-
-                        <div style="margin-bottom: 15px;">
-                            <span style="font-size: 10px; font-weight: bold; color: #15803d; text-transform: uppercase;">Key
-                                Thematic Mapping</span>
-                            <table style="width: 100%; border: none; margin-top: 5px;">
-                                @foreach($item['aiInsight']['key_themes'] as $theme)
-                                    <tr>
-                                        <td
-                                            style="border: none; padding: 4px 0; vertical-align: top; width: 30%; font-size: 11px; font-weight: bold; color: #166534;">
-                                            {{ $theme['theme'] }}</td>
-                                        <td style="border: none; padding: 4px 0; vertical-align: top; font-size: 11px; color: #374151;">
-                                            {{ $theme['explanation'] }}</td>
-                                    </tr>
-                                @endforeach
-                            </table>
-                        </div>
-
-                        <div>
-                            <span
-                                style="font-size: 10px; font-weight: bold; color: #15803d; text-transform: uppercase;">Representative
-                                Voter Quotes</span>
-                            @foreach($item['aiInsight']['representative_quotes'] as $quote)
-                                <div
-                                    style="font-size: 11px; font-style: italic; color: #4b5563; margin-top: 8px; padding-left: 12px; border-left: 3px solid #10b981; line-height: 1.4;">
-                                    "{{ $quote }}"
-                                </div>
-                            @endforeach
-                        </div>
                     </div>
                 @endif
 
-                <ul class="text-answer-list">
-                    @forelse(array_slice((array) $item['answers'], 0, 15) as $answer)
+                @if(!empty($item['isLikertLike']))
+                    <!-- Likert Table -->
+                    <table>
+                        <thead>
+                            <tr>
+                                <th rowspan="2">Value</th>
+                                @foreach($item['stats'] as $stat)
+                                    @if(!($stat['is_missing'] ?? false))
+                                        <th colspan="2" style="text-align: center;">{{ $stat['value'] }}</th>
+                                    @endif
+                                @endforeach
+                            </tr>
+                            <tr>
+                                @foreach($item['stats'] as $stat)
+                                    @if(!($stat['is_missing'] ?? false))
+                                        <th style="text-align: center; font-size: 10px;">Frequency</th>
+                                        <th style="text-align: center; font-size: 10px;">%</th>
+                                    @endif
+                                @endforeach
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>{{ $item['label'] }}</td>
+                                @php
+                                    $totalFreqLikert = array_sum(array_column(array_filter($item['stats'], fn($s) => !isset($s['is_missing']) || !$s['is_missing']), 'count'));
+                                @endphp
+                                @foreach($item['stats'] as $stat)
+                                    @if(!($stat['is_missing'] ?? false))
+                                        @php
+                                            $percentLikert = $totalFreqLikert > 0 ? ($stat['count'] / $totalFreqLikert) * 100 : 0;
+                                        @endphp
+                                        <td style="text-align: center;">{{ number_format($stat['count']) }}</td>
+                                        <td style="text-align: center;">{{ number_format($percentLikert, 1) }}%</td>
+                                    @endif
+                                @endforeach
+                            </tr>
+                        </tbody>
+                    </table>
+                @else
+                    <!-- Standard 5-column table -->
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Value</th>
+                                <th style="text-align: right;">Frequency</th>
+                                <th style="text-align: right;">Percent</th>
+                                <th style="text-align: right;">Valid Percent</th>
+                                <th style="text-align: right;">Cumulative Percent</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @php
+                                $totalFreq = 0;
+                                $validFreq = 0;
+                                foreach($item['stats'] as $s) {
+                                    if (!isset($s['is_missing']) || !$s['is_missing']) {
+                                        $validFreq += $s['count'];
+                                    }
+                                    $totalFreq += $s['count'];
+                                }
+                                if ($validFreq === 0) $validFreq = $totalFreq;
+                                $cumulativePerc = 0;
+                            @endphp
+                            @foreach($item['stats'] as $stat)
+                                @php
+                                    $isMissing = isset($stat['is_missing']) && $stat['is_missing'];
+                                @endphp
+                                @if(!($isMissing && $stat['count'] == 0))
+                                    @php
+                                        $percent = $totalFreq > 0 ? ($stat['count'] / $totalFreq) * 100 : 0;
+                                        if ($isMissing) {
+                                            $validPercent = null;
+                                            $cumPercentDisplay = '-';
+                                        } else {
+                                            $validPercent = $validFreq > 0 ? ($stat['count'] / $validFreq) * 100 : 0;
+                                            $cumulativePerc += $validPercent;
+                                            $cumPercentDisplay = number_format($cumulativePerc, 1) . '%';
+                                        }
+                                    @endphp
+                                    <tr>
+                                        <td>{{ $stat['value'] }}</td>
+                                        <td style="text-align: right;">{{ number_format($stat['count']) }}</td>
+                                        <td style="text-align: right;">{{ number_format($percent, 1) }}%</td>
+                                        <td style="text-align: right;">{{ $validPercent !== null ? number_format($validPercent, 1) . '%' : '-' }}</td>
+                                        <td style="text-align: right;">{{ $cumPercentDisplay }}</td>
+                                    </tr>
+                                @endif
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            <tr style="background-color: #f9fafb; font-weight: bold;">
+                                <td>Total</td>
+                                <td style="text-align: right;">{{ number_format($totalFreq) }}</td>
+                                <td style="text-align: right;">100.0%</td>
+                                <td style="text-align: right;">100.0%</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                @endif
+            @else
+                <!-- Qualitative Insights -->
+                @if(!empty($item['aiInsight']) && is_array($item['aiInsight']))
+                    <div style="margin-bottom: 20px;">
                         @php
-                            $answerStr = is_array($answer) ? json_encode($answer) : (string) $answer;
-                            $isSignature = str_contains($answerStr, 'base64,');
-                            $isMedia = str_starts_with($answerStr, 'uploads/');
-                            $isImage = $isMedia && in_array(strtolower(pathinfo($answerStr, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                            $pos = $item['aiInsight']['sentiment_breakdown']['Positive'] ?? 0;
+                            $neu = $item['aiInsight']['sentiment_breakdown']['Neutral'] ?? 0;
+                            $neg = $item['aiInsight']['sentiment_breakdown']['Negative'] ?? 0;
+                            
+                            if ($pos >= 60) {
+                                $sentNarr = "Sentiment analysis of responses reveals a predominantly positive tone ({$pos}% positive, {$neu}% neutral, {$neg}% negative), suggesting general satisfaction and agreement.";
+                            } elseif ($neg >= 60) {
+                                $sentNarr = "Sentiment analysis indicates a predominantly negative tone ({$neg}% negative, {$neu}% neutral, {$pos}% positive), highlighting core concerns among respondents.";
+                            } elseif ($neu >= 50) {
+                                $sentNarr = "Respondent sentiment is largely neutral ({$neu}% neutral, {$pos}% positive, {$neg}% negative), reflecting balanced or objective views.";
+                            } else {
+                                $sentNarr = "Responses reflect a mixed sentiment profile: {$pos}% positive, {$neu}% neutral, and {$neg}% negative, demonstrating varied perspectives.";
+                            }
                         @endphp
-                        <li style="margin-bottom: 10px;">
-                            @if($isSignature)
-                                <div style="margin-top: 5px;">
-                                    <span style="font-size: 10px; color: #6b7280; display: block; margin-bottom: 3px;">Captured
-                                        Signature:</span>
-                                    <img src="{{ $answerStr }}"
-                                        style="max-height: 60px; border: 1px solid #e5e7eb; border-radius: 4px;">
-                                </div>
-                            @elseif($isImage)
-                                <div style="margin-top: 5px;">
-                                    <span style="font-size: 10px; color: #6b7280; display: block; margin-bottom: 3px;">Uploaded
-                                        Image:</span>
-                                    <img src="{{ public_path('storage/' . $answerStr) }}"
-                                        style="max-height: 120px; border: 1px solid #e5e7eb; border-radius: 8px;">
-                                </div>
-                            @elseif($isMedia)
-                                <span style="color: #4f46e5; font-weight: bold;">[Media File: {{ $answerStr }}]</span>
-                            @else
-                                {{ $answerStr }}
-                            @endif
-                        </li>
-                    @empty
-                        <li style="color: #9ca3af; font-style: italic;">No text responses recorded.</li>
-                    @endforelse
-                </ul>
-                @if(count((array) $item['answers']) > 15)
-                    <p style="font-size: 12px; color: #6b7280; font-style: italic;">(Showing only latest 15 text responses to
-                        conserve space. Generate CSV for full dump.)</p>
+                        <p style="font-size: 12px; color: #374151; line-height: 1.6; margin-bottom: 10px;">{{ $sentNarr }}</p>
+
+                        @if(!empty($item['aiInsight']['key_themes']))
+                            <p style="font-size: 12px; font-weight: bold; color: #111827; margin-bottom: 5px;">Key themes identified in responses:</p>
+                            <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #374151; line-height: 1.7;">
+                                @foreach($item['aiInsight']['key_themes'] as $theme)
+                                    <li><strong>{{ $theme['theme'] ?? 'Theme' }}:</strong> {{ $theme['explanation'] ?? '' }}</li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
                 @endif
             @endif
         </div>
     @endforeach
 
-    @if(isset($isPremium) && $isPremium)
+    @if(isset($savedInferentialTests) && $savedInferentialTests->count() > 0)
         <div style="page-break-before: always;">
-            <div class="header">
-                <h2 style="text-transform: uppercase; color: {{ $branding['brandColor'] ?? '#dc2626' }};">Appendix: Raw Data
-                    Dump</h2>
-                <p>Record of respondent submissions</p>
-                @if($responses->count() > 50)
-                    <p style="font-size: 10px; color: #ef4444; font-style: italic;">Note: To prevent PDF generation timeouts,
-                        this appendix is limited to the first 50 responses. Please export as CSV or DOCX to view the full
-                        dataset.</p>
-                @endif
-            </div>
+            <h2 style="text-transform: uppercase; color: {{ $branding['brandColor'] ?? '#111827' }}; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">Inferential Analysis</h2>
+            <p style="font-size: 12px; color: #6b7280; font-style: italic; margin-bottom: 20px;">Significance tests, correlations, and regressions saved to the report.</p>
 
-            @foreach($responses->take(50) as $resp)
-                <div style="margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
-                    <div style="background-color: #f9fafb; padding: 8px; border-radius: 4px; margin-bottom: 10px;">
-                        <span style="font-size: 10px; font-weight: bold; color: #6b7280;">RESPONSE ID: #{{ $resp->id }} |
-                            SUBMITTED: {{ $resp->created_at->format('M d, Y H:i') }}</span>
+            @foreach($savedInferentialTests as $test)
+                <div style="margin-bottom: 40px; page-break-inside: avoid;">
+                    <h3 style="color: #111827; margin-bottom: 5px;">{{ $test->title }}</h3>
+                    <div style="font-size: 11px; color: #4b5563; margin-bottom: 15px;">
+                        <strong>Method:</strong> {{ strtoupper($test->method) }} | 
+                        <strong>Variables:</strong> {{ $test->variables }}
                     </div>
 
-                    <table style="font-size: 10px; border: none;">
-                        @foreach($analysis as $item)
+                    @php
+                        $data = $test->payload['data'] ?? null;
+                        $method = strtolower($test->method);
+                    @endphp
+
+                    @if($data)
+                        @if($method === 'crosstab' || $method === 'chisquare')
                             @php
-                                $ans = null;
-                                if (!empty($survey->json_schema) && $survey->json_schema !== '[]') {
-                                    $data = json_decode($resp->answers->first()->value ?? '[]', true);
-                                    foreach ((array) $data as $entry) {
-                                        if (isset($entry['name']) && $entry['name'] === $item['id']) {
-                                            $ans = $entry['userData'] ?? null;
-                                            break;
-                                        }
-                                    }
-                                } else {
-                                    $ans = $resp->answers->where('question_id', $item['id'])->first()?->value;
-                                }
+                                $rows = $data['rows'] ?? [];
+                                $cols = $data['columns'] ?? ($data['cols'] ?? []);
+                                $matrix = $data['matrix'] ?? [];
+                                $rowTotals = $data['rowTotals'] ?? ($data['row_totals'] ?? []);
+                                $colTotals = $data['colTotals'] ?? ($data['col_totals'] ?? []);
+                                $grandTotal = $data['grandTotal'] ?? ($data['grand_total'] ?? 0);
                             @endphp
-                            <tr>
-                                <td style="width: 30%; font-weight: bold; background-color: #fcfcfc; border: 1px solid #f3f4f6;">
-                                    {{ $item['label'] }}</td>
-                                <td style="border: 1px solid #f3f4f6;">
-                                    @if(is_array($ans))
-                                        {{ implode(', ', $ans) }}
-                                    @elseif(str_contains((string) $ans, 'base64,'))
-                                        [Signature Captured]
-                                    @elseif(str_starts_with((string) $ans, 'uploads/'))
-                                        [Media: {{ basename($ans) }}]
-                                    @else
-                                        {{ $ans ?: '—' }}
+                            <table style="font-size: 11px; margin-bottom: 15px;">
+                                <thead>
+                                    <tr style="background-color: #f9fafb;">
+                                        <th>Row \ Column</th>
+                                        @foreach($cols as $col)
+                                            <th style="text-align: center;">{{ $col }}</th>
+                                        @endforeach
+                                        <th style="text-align: center;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($rows as $rowVal)
+                                        <tr>
+                                            <td style="font-weight: bold;">{{ $rowVal }}</td>
+                                            @foreach($cols as $colVal)
+                                                <td style="text-align: center;">{{ number_format($matrix[$rowVal][$colVal] ?? 0) }}</td>
+                                            @endforeach
+                                            <td style="text-align: center; font-weight: bold;">{{ number_format($rowTotals[$rowVal] ?? 0) }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot>
+                                    <tr style="font-weight: bold; background-color: #f9fafb;">
+                                        <td>Total</td>
+                                        @foreach($cols as $colVal)
+                                            <td style="text-align: center;">{{ number_format($colTotals[$colVal] ?? 0) }}</td>
+                                        @endforeach
+                                        <td style="text-align: center;">{{ number_format($grandTotal) }}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+
+                            @php
+                                $chiSqVal = $data['chiSquare'] ?? ($data['chi_square'] ?? null);
+                            @endphp
+                            @if($method === 'chisquare' && $chiSqVal !== null)
+                                <div style="font-size: 11px; margin-bottom: 15px; background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb;">
+                                    <strong>Chi-Square Statistic (χ²):</strong> {{ number_format($chiSqVal, 4) }} | 
+                                    <strong>df:</strong> {{ $data['df'] ?? 0 }} | 
+                                    <strong>p-value:</strong> {{ number_format($data['pValue'] ?? ($data['p_value'] ?? 0), 4) }}
+                                    @if(isset($data['cramersV']))
+                                        | <strong>Cramer's V:</strong> {{ number_format($data['cramersV'], 4) }}
                                     @endif
-                                </td>
-                            </tr>
-                        @endforeach
-                    </table>
+                                    <br>
+                                    <strong>Result:</strong> {{ ($data['significant'] ?? false) ? 'Statistically Significant' : 'Not Statistically Significant' }}
+                                </div>
+                            @endif
+
+                        @elseif($method === 'cronbach')
+                           @php
+                               $alpha = $data['alpha'] ?? 0;
+                               $itemsCount = $data['k_items'] ?? ($data['items_count'] ?? 0);
+                               $interp = $data['interpretation'] ?? ($data['internal_consistency'] ?? 'Unknown');
+                           @endphp
+                           <div style="font-size: 12px; background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
+                               <strong>Cronbach's Alpha (α):</strong> {{ number_format($alpha, 3) }} <br>
+                               <strong>Number of Items Analyzed:</strong> {{ $itemsCount }} <br>
+                               <strong>Internal Consistency:</strong> {{ $interp }}
+                           </div>
+
+                        @elseif($method === 'ttest')
+                           @if(!empty($data['groups']))
+                               <table style="font-size: 11px; margin-bottom: 15px;">
+                                   <thead>
+                                       <tr style="background-color: #f9fafb;">
+                                           <th>Group</th>
+                                           <th style="text-align: center;">N</th>
+                                           <th style="text-align: right;">Mean</th>
+                                           <th style="text-align: right;">Std. Deviation</th>
+                                           <th style="text-align: right;">Std. Error</th>
+                                       </tr>
+                                   </thead>
+                                   <tbody>
+                                       @foreach($data['groups'] as $g)
+                                           <tr>
+                                               <td style="font-weight: bold;">{{ $g['name'] ?? '' }}</td>
+                                               <td style="text-align: center;">{{ number_format($g['n'] ?? 0) }}</td>
+                                               <td style="text-align: right;">{{ number_format($g['mean'] ?? 0, 4) }}</td>
+                                               <td style="text-align: right;">{{ number_format($g['stdDev'] ?? 0, 4) }}</td>
+                                               <td style="text-align: right;">{{ number_format($g['stdError'] ?? 0, 4) }}</td>
+                                           </tr>
+                                       @endforeach
+                                   </tbody>
+                               </table>
+                           @endif
+
+                           <table style="font-size: 11px; margin-bottom: 15px;">
+                               <thead>
+                                   <tr style="background-color: #f9fafb;">
+                                       <th>Metric</th>
+                                       <th>Value</th>
+                                   </tr>
+                               </thead>
+                               <tbody>
+                                   <tr><td>t-Statistic</td><td>{{ number_format($data['tValue'] ?? ($data['t_stat'] ?? 0), 4) }}</td></tr>
+                                   <tr><td>Degrees of Freedom (df)</td><td>{{ $data['df'] ?? 0 }}</td></tr>
+                                   <tr><td>p-value</td><td>{{ number_format($data['pValue'] ?? ($data['p_value'] ?? 0), 4) }}</td></tr>
+                                   <tr><td>Mean Difference</td><td>{{ number_format($data['meanDiff'] ?? ($data['mean_diff'] ?? 0), 4) }}</td></tr>
+                                   <tr style="font-weight: bold;"><td>Significant</td><td>{{ ($data['significant'] ?? false) ? 'Yes' : 'No' }}</td></tr>
+                               </tbody>
+                           </table>
+
+                        @elseif($method === 'anova')
+                           @if(!empty($data['groupStats']))
+                               <p style="font-size: 11px; font-weight: bold; margin-bottom: 5px;">Group Descriptives:</p>
+                               <table style="font-size: 11px; margin-bottom: 15px;">
+                                   <thead>
+                                       <tr style="background-color: #f9fafb;">
+                                           <th>Group</th>
+                                           <th style="text-align: center;">N</th>
+                                           <th style="text-align: right;">Mean</th>
+                                           <th style="text-align: right;">Std. Dev</th>
+                                           <th style="text-align: right;">95% CI Lower</th>
+                                           <th style="text-align: right;">95% CI Upper</th>
+                                       </tr>
+                                   </thead>
+                                   <tbody>
+                                       @foreach($data['groupStats'] as $gs)
+                                           <tr>
+                                               <td style="font-weight: bold;">{{ $gs['name'] ?? '' }}</td>
+                                               <td style="text-align: center;">{{ number_format($gs['n'] ?? 0) }}</td>
+                                               <td style="text-align: right;">{{ number_format($gs['mean'] ?? 0, 4) }}</td>
+                                               <td style="text-align: right;">{{ number_format($gs['stdDev'] ?? 0, 4) }}</td>
+                                               <td style="text-align: right;">{{ number_format($gs['ciLower'] ?? 0, 4) }}</td>
+                                               <td style="text-align: right;">{{ number_format($gs['ciUpper'] ?? 0, 4) }}</td>
+                                           </tr>
+                                       @endforeach
+                                   </tbody>
+                               </table>
+                           @endif
+
+                           <table style="font-size: 11px; margin-bottom: 15px;">
+                               <thead>
+                                   <tr style="background-color: #f9fafb;">
+                                       <th>Source of Variation</th>
+                                       <th>SS</th>
+                                       <th>df</th>
+                                       <th>MS</th>
+                                       <th>F</th>
+                                       <th>p-value</th>
+                                   </tr>
+                               </thead>
+                               <tbody>
+                                   <tr>
+                                       <td>Between Groups</td>
+                                       <td>{{ number_format($data['ssb'] ?? ($data['between_ss'] ?? 0), 4) }}</td>
+                                       <td>{{ $data['dfBetween'] ?? ($data['df_between'] ?? 0) }}</td>
+                                       <td>{{ number_format($data['msb'] ?? ($data['ms_between'] ?? 0), 4) }}</td>
+                                       <td rowspan="2" style="vertical-align: middle; text-align: center; font-weight: bold;">{{ number_format($data['fValue'] ?? ($data['f_stat'] ?? 0), 4) }}</td>
+                                       <td rowspan="2" style="vertical-align: middle; text-align: center; font-weight: bold;">{{ number_format($data['pValue'] ?? ($data['p_value'] ?? 0), 4) }}</td>
+                                   </tr>
+                                   <tr>
+                                       <td>Within Groups</td>
+                                       <td>{{ number_format($data['ssw'] ?? ($data['within_ss'] ?? 0), 4) }}</td>
+                                       <td>{{ $data['dfWithin'] ?? ($data['df_within'] ?? 0) }}</td>
+                                       <td>{{ number_format($data['msw'] ?? ($data['ms_within'] ?? 0), 4) }}</td>
+                                   </tr>
+                               </tbody>
+                               <tfoot>
+                                   <tr style="font-weight: bold; background-color: #f9fafb;">
+                                       <td>Total</td>
+                                       <td>{{ number_format($data['sst'] ?? ($data['total_ss'] ?? 0), 4) }}</td>
+                                       <td>{{ $data['dfTotal'] ?? ($data['df_total'] ?? 0) }}</td>
+                                       <td colspan="3"></td>
+                                   </tr>
+                               </tfoot>
+                           </table>
+
+                        @elseif($method === 'correlation')
+                           <table style="font-size: 11px; margin-bottom: 15px;">
+                               <thead>
+                                   <tr style="background-color: #f9fafb;">
+                                       <th>Metric</th>
+                                       <th>Value</th>
+                                   </tr>
+                               </thead>
+                               <tbody>
+                                   <tr><td>Variables</td><td>{{ ($data['labelX'] ?? 'X') . ' vs ' . ($data['labelY'] ?? 'Y') }}</td></tr>
+                                   <tr><td>Pearson Correlation Coefficient (r)</td><td>{{ number_format($data['r'] ?? 0, 4) }}</td></tr>
+                                   <tr><td>p-value</td><td>{{ number_format($data['pValue'] ?? ($data['p_value'] ?? 0), 4) }}</td></tr>
+                                   <tr><td>Sample Size (N)</td><td>{{ $data['n'] ?? 0 }}</td></tr>
+                                   <tr><td>Direction</td><td>{{ $data['direction'] ?? 'None' }}</td></tr>
+                                   <tr><td>Strength</td><td>{{ $data['strength'] ?? 'None' }}</td></tr>
+                                   <tr style="font-weight: bold;"><td>Significant</td><td>{{ ($data['significant'] ?? false) ? 'Yes' : 'No' }}</td></tr>
+                               </tbody>
+                           </table>
+
+                        @elseif($method === 'regression' || $method === 'regression_multiple')
+                           <div style="font-size: 11px; margin-bottom: 12px; background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb;">
+                               <strong>R-Square (R²):</strong> {{ number_format($data['r2'] ?? 0, 4) }} | 
+                               <strong>Adjusted R-Square:</strong> {{ number_format($data['adjR2'] ?? ($data['adj_r2'] ?? 0), 4) }} | 
+                               <strong>Overall F-Stat:</strong> {{ number_format($data['fValue'] ?? ($data['f_stat'] ?? 0), 4) }} | 
+                               <strong>p-value:</strong> {{ number_format($data['pValue'] ?? ($data['p_value'] ?? 0), 4) }}
+                           </div>
+                           <table style="font-size: 11px; margin-bottom: 15px;">
+                               <thead>
+                                   <tr style="background-color: #f9fafb;">
+                                       <th>Variable</th>
+                                       <th>Coefficient</th>
+                                       <th>t-Stat</th>
+                                       <th>p-value</th>
+                                   </tr>
+                               </thead>
+                               <tbody>
+                                   <tr>
+                                       <td>Intercept (Constant)</td>
+                                       <td>{{ number_format($data['intercept'] ?? 0, 4) }}</td>
+                                       <td>—</td>
+                                       <td>—</td>
+                                   </tr>
+                                   @foreach(($data['coefficients'] ?? []) as $var => $details)
+                                       <tr>
+                                           <td style="font-weight: bold;">{{ is_string($var) ? $var : ($details['name'] ?? 'Variable') }}</td>
+                                           <td>{{ number_format($details['coef'] ?? 0, 4) }}</td>
+                                           <td>{{ number_format($details['t_stat'] ?? ($details['tStat'] ?? 0), 4) }}</td>
+                                           <td>{{ number_format($details['p_value'] ?? ($details['pValue'] ?? 0), 4) }}</td>
+                                       </tr>
+                                   @endforeach
+                               </tbody>
+                           </table>
+                        @endif
+                    @endif
+
+                    @if(!empty($test->ai_summary))
+                       <div style="margin-top: 10px;">
+                           @foreach(array_filter(preg_split('/\n+/', trim($test->ai_summary))) as $aiPara)
+                               <p style="font-size: 12px; color: #374151; margin: 0 0 6px 0; line-height: 1.5;">{{ preg_replace('/\*\*(.*?)\*\*/', '$1', trim($aiPara)) }}</p>
+                           @endforeach
+                       </div>
+                    @endif
                 </div>
             @endforeach
         </div>

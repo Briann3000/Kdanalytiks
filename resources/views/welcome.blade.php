@@ -6,37 +6,59 @@
 @section('content')
     <!-- Structured Data JSON-LD Schema for Google -->
     <script type="application/ld+json">
-        {
-          "@context": "https://schema.org",
-          "@type": "WebApplication",
-          "name": "KDAnalytiks",
-          "url": "{{ url('/') }}",
-          "applicationCategory": "BusinessApplication",
-          "operatingSystem": "All",
-          "description": "KDAnalytiks helps you collect and analyze data, and compile and report findings automatically with AI-powered survey analysis and research tools.",
-          "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "USD"
-          }
-        }
-        </script>
+                                {
+                                  "@context": "https://schema.org",
+                                  "@type": "WebApplication",
+                                  "name": "KDAnalytiks",
+                                  "url": "{{ url('/') }}",
+                                  "applicationCategory": "BusinessApplication",
+                                  "operatingSystem": "All",
+                                  "description": "KDAnalytiks helps you collect and analyze data, and compile and report findings automatically with AI-powered survey analysis and research tools.",
+                                  "offers": {
+                                    "@type": "Offer",
+                                    "price": "0",
+                                    "priceCurrency": "USD"
+                                  }
+                                }
+                                </script>
     <div class="relative bg-white overflow-hidden">
         <div class="max-w-7xl mx-auto">
             <div class="relative z-10 pb-8 bg-white sm:pb-16 md:pb-20 lg:max-w-2xl lg:w-full lg:pb-28 xl:pb-32">
                 <main class="mt-10 mx-auto max-w-7xl px-4 sm:mt-12 sm:px-6 md:mt-16 lg:mt-20 lg:px-8 xl:mt-28 relative">
                     <div class="sm:text-center lg:text-left">
-                        <h1 class="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
-                            <span class="block">KDAnalytiks</span>
-                            <span class="block text-[#2271b1]">{{ __('Tool you can rely on') }}</span>
-                        </h1>
-                        <p
-                            class="mt-3 sm:text-base text-gray-500 gap-x-4 sm:mt-5 sm:text-lg sm:mx-auto md:mt-5 md:text-xl lg:mx-0 flex flex-wrap sm:flex-nowrap">
-                            <span>&bull; {{ __('Collect Data') }}</span>
-                            <span>&bull; {{ __('Analyze Data') }}</span>
-                            <span>&bull; {{ __('Report Findings') }}</span>
-                            <span>&bull; {{ __('Compile Report') }}</span>
-                        </p>
+                        <div class="space-y-6">
+                            <!-- Main Branding & Tagline -->
+                            <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-gray-900">
+                                <span class="block">KDAnalytiks</span>
+                                <span class="block text-[#2271b1] mt-1">{{ __('Data Simplified') }}</span>
+                            </h1>
+                            <!-- Subtitle / Value Proposition (Styled as a distinct, readable sub-heading) -->
+                            <p class="text-lg sm:text-xl text-gray-600 font-medium max-w-2xl">
+                                {{ __('Transforming Complex Data into Actionable Strategies') }}
+                            </p>
+
+                            <!-- Feature Bullets (Clean inline list with proper separation) -->
+                            <ul
+                                class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm sm:text-base text-gray-500 font-medium pt-2">
+                                <li class="flex items-center space-x-2">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-[#2271b1]"></span>
+                                    <span>{{ __('Collect Data') }}</span>
+                                </li>
+                                <li class="flex items-center space-x-2">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-[#2271b1]"></span>
+                                    <span>{{ __('Analyze Data') }}</span>
+                                </li>
+                                <li class="flex items-center space-x-2">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-[#2271b1]"></span>
+                                    <span>{{ __('Compile Report') }}</span>
+                                </li>
+                                <li class="flex items-center space-x-2">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-[#2271b1]"></span>
+                                    <span>{{ __('Report Findings') }}</span>
+                                </li>
+
+                            </ul>
+                        </div>
 
                         <div class="mt-10 max-w-lg lg:mx-0 sm:mx-auto">
                             <div class="mb-6">

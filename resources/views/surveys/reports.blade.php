@@ -171,13 +171,13 @@
                     <div class="flex items-center gap-1 bg-gray-100/50 p-1 rounded-2xl w-fit">
                         <button @click="switchReportTab('quantitative')"
                             :class="reportTab === 'quantitative' ? 'bg-white text-indigo-700 shadow-sm border border-indigo-50' : 'text-gray-500 hover:text-gray-700'"
-                            class="px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all">
+                            class="px-5 py-2 rounded-xl text-xs font-black  tracking-wider transition-all">
                             <i class="fa-solid fa-chart-column mr-2"></i>
                             {{ __('Quantitative') }}
                         </button>
                         <button @click="switchReportTab('qualitative')"
                             :class="reportTab === 'qualitative' ? 'bg-white text-indigo-700 shadow-sm border border-indigo-50' : 'text-gray-500 hover:text-gray-700'"
-                            class="px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all">
+                            class="px-5 py-2 rounded-xl text-xs font-black  tracking-wider transition-all">
                             <i class="fa-solid fa-comments mr-2"></i>
                             {{ __('Qualitative') }}
                         </button>
@@ -193,9 +193,9 @@
                     <div class="flex items-center gap-1 bg-gray-100/50 p-1 rounded-2xl w-fit">
                         <button @click="switchReportTab('inferential')"
                             :class="reportTab === 'inferential' ? 'bg-white text-indigo-700 shadow-sm border border-indigo-50' : 'text-gray-500 hover:text-gray-700'"
-                            class="px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all">
+                            class="px-5 py-2 rounded-xl text-xs font-black  tracking-wider transition-all">
                             <i class="fa-solid fa-calculator mr-2"></i>
-                            {{ __('Analyse') }}
+                            {{ __('Analyze') }}
                             @if(!auth()->check() || !auth()->user()->hasActiveSubscription())
                                 <i class="fa-solid fa-lock ml-2 text-[10px] opacity-50"></i>
                             @endif
@@ -207,13 +207,13 @@
             <div class="flex items-center gap-3">
                 @if(!isset($isSharedView) || !$isSharedView)
                     <button type="button" onclick="window.startReportsDashboardTour()"
-                        class="inline-flex items-center gap-2 px-5 py-3 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all">
+                        class="inline-flex items-center gap-2 px-5 py-3 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl font-black text-[10px]  tracking-widest transition-all">
                         <i class="fa-solid fa-compass text-sm"></i>
                         {{ __('Tour') }}
                     </button>
                     <div class="relative" x-data="{ open: false }" @click.outside="open = false">
                         <button @click="open = !open"
-                            class="inline-flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
+                            class="inline-flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px]  tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
                             <i class="fa-solid fa-file-arrow-down text-sm"></i>
                             {{ __('Export') }}
                             <i class="fa-solid fa-chevron-down text-[9px] transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
@@ -224,12 +224,12 @@
                             x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
                             class="absolute right-0 mt-2 w-44 bg-white border border-gray-100 rounded-2xl shadow-2xl shadow-gray-200/60 z-50 overflow-hidden"
                             style="display:none;">
-                            <a href="{{ route('surveys.export_pdf', $survey) }}"
+                            <a href="{{ route('surveys.export_pdf', $survey) }}" @click.prevent="window.exportReportWithSettings('pdf', '{{ $survey->id }}')"
                                 class="flex items-center gap-3 px-4 py-3 text-xs font-semibold text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors">
                                 <i class="fa-solid fa-file-pdf text-red-500 w-4"></i>
                                 {{ __('PDF Report') }}
                             </a>
-                            <a href="{{ route('surveys.export_docx', $survey) }}"
+                            <a href="{{ route('surveys.export_docx', $survey) }}" @click.prevent="window.exportReportWithSettings('docx', '{{ $survey->id }}')"
                                 class="flex items-center gap-3 px-4 py-3 text-xs font-semibold text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors border-t border-gray-50">
                                 <i class="fa-solid fa-file-word text-blue-600 w-4"></i>
                                 {{ __('DOCX Report') }}
@@ -250,7 +250,7 @@
                         </div>
                     </div>
                 @else
-                    <div class="px-6 py-3 bg-indigo-50 text-indigo-700 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
+                    <div class="px-6 py-3 bg-indigo-50 text-indigo-700 rounded-xl font-black text-[10px]  tracking-widest flex items-center gap-2">
                         <i class="fa-solid fa-lock"></i> {{ __('Read-Only Live View') }}
                     </div>
                 @endif
@@ -267,126 +267,212 @@
             x-data="chartManager()">
             @foreach($analysis as $item)
                 @if($item['isChartable'])
-                    <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
-                        <div class="mb-8 border-b border-gray-50 pb-6 flex justify-between items-end">
-                            <h4 class="text-xl font-black text-gray-900 tracking-tight">
-                                <span class="text-indigo-600 mr-2 opacity-30 text-base font-black">#{{ $loop->iteration }}</span>
-                                {{ $item['label'] }}
-                            </h4>
-                            <div class="flex flex-col gap-2">
-                                <div class="flex gap-1 bg-gray-100 p-1 rounded-lg border border-gray-100">
-                                    @foreach(['bar', 'horizontal', 'line', 'area', 'pie', 'doughnut', 'polarArea', 'radar'] as $type)
-                                        <button @click="switchChartType('{{ $item['canvasId'] }}', '{{ $type }}')"
-                                            :class="chartTypes['{{ $item['canvasId'] }}'] === '{{ $type }}' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-600'"
-                                            class="p-1 px-2 rounded-md text-[9px] font-black uppercase transition-all"
-                                            title="{{ ucfirst($type) }}">
-                                            {{ substr($type, 0, 3) }}
+                    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm space-y-6">
+                        <div class="border-b border-gray-100 pb-6 space-y-4">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <h4 class="text-lg font-black text-gray-900 leading-snug w-full">
+                                    <span class="text-indigo-600 mr-2 opacity-30 text-base font-black">#{{ $loop->iteration }}</span>
+                                    {{ $item['label'] }}
+                                </h4>
+
+                                @if(empty($item['isLikertLike']))
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <!-- Chart Type Dropdown -->
+                                    <select @change="switchChartType('{{ $item['canvasId'] }}', $event.target.value)"
+                                        :value="chartTypes['{{ $item['canvasId'] }}'] || 'bar'"
+                                        class="bg-gray-100 text-gray-700 text-xs font-bold rounded-xl px-3 py-2 border border-gray-200 focus:ring-2 focus:ring-[#2271b1]">
+                                        <option value="bar">📊 Bar Chart</option>
+                                        <option value="horizontal">📐 Horizontal Bar</option>
+                                        <option value="line">📈 Line Chart</option>
+                                        <option value="area">🌊 Area Chart</option>
+                                        <option value="pie">🥧 Pie Chart</option>
+                                        <option value="doughnut">🍩 Doughnut Chart</option>
+                                        <option value="polarArea">⭕ Polar Area</option>
+                                        <option value="radar">🕸️ Radar Chart</option>
+                                    </select>
+
+                                    <!-- Palette Dropdown -->
+                                    <select @change="switchColor('{{ $item['canvasId'] }}', $event.target.value)"
+                                        :value="activeColors['{{ $item['canvasId'] }}'] || 'vibrant'"
+                                        class="bg-gray-100 text-gray-700 text-xs font-bold rounded-xl px-3 py-2 border border-gray-200 focus:ring-2 focus:ring-[#2271b1]">
+                                        <option value="vibrant">🎨 Vibrant</option>
+                                        <option value="indigo">🟦 Indigo</option>
+                                        <option value="emerald">🟩 Emerald</option>
+                                        <option value="rose">🟥 Rose</option>
+                                        <option value="amber">🟧 Amber</option>
+                                        <option value="purple">🟪 Purple</option>
+                                        <option value="greyscale">⬛ Greyscale</option>
+                                    </select>
+
+                                    <!-- Chart 3-Dot Action Dropdown -->
+                                    <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                                        <button type="button" @click="open = !open"
+                                            class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center transition-colors shadow-sm"
+                                            title="{{ __('Chart Actions') }}">
+                                            <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
                                         </button>
-                                    @endforeach
+                                        <div x-show="open" x-cloak x-transition
+                                            class="absolute right-0 mt-1 w-44 bg-white border border-gray-100 rounded-2xl shadow-xl z-30 p-1.5 space-y-0.5"
+                                            style="display:none;">
+                                            <button type="button" @click="window.copyChartToClipboard('{{ $item['canvasId'] }}', $event.currentTarget); open = false;"
+                                                class="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-zinc-100 hover:text-indigo-600 rounded-xl transition-colors">
+                                                <i class="fa-solid fa-copy text-indigo-500 w-4 text-center"></i>
+                                                <span>{{ __('Copy Chart') }}</span>
+                                            </button>
+                                            <button type="button" @click="window.exportChartToPng('{{ $item['canvasId'] }}', '{{ addslashes($item['label']) }}'); open = false;"
+                                                class="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-zinc-100 hover:text-indigo-600 rounded-xl transition-colors">
+                                                <i class="fa-solid fa-file-image text-emerald-600 w-4 text-center"></i>
+                                                <span>{{ __('Export PNG') }}</span>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="flex justify-end gap-1">
-                                    @foreach(['vibrant', 'indigo', 'emerald', 'rose', 'amber', 'purple', 'greyscale'] as $color)
-                                        <button @click="switchColor('{{ $item['canvasId'] }}', '{{ $color }}')"
-                                            class="w-4 h-4 rounded-full border border-white ring-1 ring-gray-200 transition-transform hover:scale-125 shadow-sm"
-                                            :class="{
-                                                                'bg-gradient-to-br from-indigo-500 via-emerald-500 to-rose-500': '{{ $color }}' === 'vibrant',
-                                                                'bg-indigo-500': '{{ $color }}' === 'indigo',
-                                                                'bg-emerald-500': '{{ $color }}' === 'emerald',
-                                                                'bg-rose-500': '{{ $color }}' === 'rose',
-                                                                'bg-amber-500': '{{ $color }}' === 'amber',
-                                                                'bg-purple-500': '{{ $color }}' === 'purple',
-                                                                'bg-gray-500': '{{ $color }}' === 'greyscale',
-                                                                'ring-2 ring-offset-2 ring-indigo-600 scale-125': activeColors['{{ $item['canvasId'] }}'] === '{{ $color }}'
-                                                            }">
-                                        </button>
-                                    @endforeach
-                                </div>
+                                @endif
                             </div>
                         </div>
 
-                        <div class="flex flex-col gap-12">
-                            <!-- Chart Area (Reduced Width) -->
+                        <div class="flex flex-col gap-10">
+                            @if(empty($item['isLikertLike']))
+                            <!-- Chart Canvas Area -->
                             <div
-                                class="h-96 w-full max-w-4xl mx-auto relative flex items-center justify-center bg-gray-50/30 rounded-3xl p-8 border border-gray-100 shadow-inner group/chart">
+                                class="h-96 w-full max-w-4xl mx-auto relative flex items-center justify-center bg-gray-50/30 rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-inner group/chart">
                                 <canvas id="{{ $item['canvasId'] }}"></canvas>
-                                
-                                <div class="absolute top-4 right-4 flex gap-2 z-20">
-                                    <button @click="window.copyChartToClipboard('{{ $item['canvasId'] }}', $event.currentTarget)"
-                                        class="inline-flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-emerald-600 hover:text-white text-gray-600 hover:shadow-md rounded-xl text-[10px] font-black uppercase tracking-widest border border-gray-100 shadow-sm transition-all"
-                                        title="{{ __('Copy Chart') }}">
-                                        <i class="fa-solid fa-copy"></i>
-                                        <span>{{ __('Copy') }}</span>
-                                    </button>
-                                    <button @click="window.exportChartToPng('{{ $item['canvasId'] }}', '{{ addslashes($item['label']) }}')"
-                                        class="inline-flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-indigo-600 hover:text-white text-gray-600 hover:shadow-md rounded-xl text-[10px] font-black uppercase tracking-widest border border-gray-100 shadow-sm transition-all"
-                                        title="{{ __('Export Chart') }}">
-                                        <i class="fa-solid fa-file-image"></i>
-                                        {{ __('Export') }}
-                                    </button>
-                                </div>
                             </div>
+                            @endif
 
                             <!-- Table Area (Below Chart) -->
-                            <div class="overflow-hidden bg-white rounded-2xl border border-gray-100" id="table-wrapper-{{ $item['canvasId'] }}">
-                                <div class="px-6 py-4 bg-gray-50/50 border-b border-gray-100 flex justify-between items-center">
-                                    <span class="text-xs font-bold text-zinc-500 tracking-tight">{{ __('Frequency Table') }}</span>
-                                    <div class="flex gap-2" data-html2canvas-ignore>
-                                        <button @click="window.copyTableToClipboard('table-{{ $item['canvasId'] }}')"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 border border-gray-200 text-gray-600 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm">
-                                            <i class="fa-solid fa-copy"></i>
-                                            {{ __('Copy') }}
+                            <div class="bg-white rounded-2xl border border-gray-100 relative z-20" id="table-wrapper-{{ $item['canvasId'] }}">
+                                <div class="px-6 py-4 bg-gray-50/50 border-b border-gray-100 flex justify-between items-center rounded-t-2xl">
+                                    <span class="text-xs font-bold text-zinc-500 tracking-tight">{{ empty($item['isLikertLike']) ? __('Frequency Table') : __('Likert Matrix Table') }}</span>
+                                    
+                                    <!-- Table 3-Dot Action Dropdown -->
+                                    <div class="relative z-30" x-data="{ open: false }" @click.outside="open = false" data-html2canvas-ignore>
+                                        <button type="button" @click="open = !open"
+                                            class="w-8 h-8 rounded-xl bg-white border border-gray-200 hover:bg-gray-100 text-gray-600 flex items-center justify-center transition-colors shadow-sm"
+                                            title="{{ __('Table Actions') }}">
+                                            <i class="fa-solid fa-ellipsis-vertical text-xs"></i>
                                         </button>
-                                        <button @click="window.exportTableToCsv('table-{{ $item['canvasId'] }}', '{{ addslashes($item['label']) }}')"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-indigo-600 hover:text-white border border-gray-200 text-gray-600 hover:border-indigo-600 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm">
-                                            <i class="fa-solid fa-file-csv"></i>
-                                            {{ __('CSV') }}
-                                        </button>
-                                        <button @click="window.exportTableToPng('table-wrapper-{{ $item['canvasId'] }}', '{{ addslashes($item['label']) }}')"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-emerald-600 hover:text-white border border-gray-200 text-gray-600 hover:border-emerald-600 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm">
-                                            <i class="fa-solid fa-file-image"></i>
-                                            {{ __('PNG') }}
-                                        </button>
+                                        <div x-show="open" x-cloak x-transition
+                                            class="absolute right-0 mt-1 w-40 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 p-1.5 space-y-0.5"
+                                            style="display:none;">
+                                            <button type="button" @click="window.copyTableToClipboard('table-{{ $item['canvasId'] }}'); open = false;"
+                                                class="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-zinc-100 hover:text-indigo-600 rounded-xl transition-colors">
+                                                <i class="fa-solid fa-copy text-indigo-500 w-4 text-center"></i>
+                                                <span>{{ __('Copy Data') }}</span>
+                                            </button>
+                                            <button type="button" @click="window.exportTableToCsv('table-{{ $item['canvasId'] }}', '{{ addslashes($item['label']) }}'); open = false;"
+                                                class="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-zinc-100 hover:text-indigo-600 rounded-xl transition-colors">
+                                                <i class="fa-solid fa-file-csv text-blue-600 w-4 text-center"></i>
+                                                <span>{{ __('Export CSV') }}</span>
+                                            </button>
+                                            <button type="button" @click="window.exportTableToPng('table-wrapper-{{ $item['canvasId'] }}', '{{ addslashes($item['label']) }}'); open = false;"
+                                                class="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-zinc-100 hover:text-indigo-600 rounded-xl transition-colors">
+                                                <i class="fa-solid fa-file-image text-emerald-600 w-4 text-center"></i>
+                                                <span>{{ __('Export PNG') }}</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="overflow-x-auto custom-scrollbar">
-                                    <table class="w-full text-left" id="table-{{ $item['canvasId'] }}">
-                                        <thead class="sticky top-0 bg-white z-10 border-b border-gray-100 shadow-sm">
-                                            <tr class="text-[12px] font-black text-gray-500 tracking-widest">
-                                                <th class="py-4 px-6">{{ __('Value') }}</th>
-                                                <th class="py-4 px-6 text-right">{{ __('Frequency') }}</th>
-                                                <th class="py-4 px-6 text-right">{{ __('Percentage') }}</th>
-                                            </tr>
-                                        </thead>
-                                    <tbody class="divide-y divide-gray-50">
-                                        @php 
-                                            $totalFreq = 0;
-                                            $totalPerc = 0;
-                                        @endphp
-                                        @foreach($item['stats'] as $stat)
-                                            @php 
-                                                $totalFreq += $stat['count'];
-                                                $totalPerc += (float)$stat['percentage'];
-                                            @endphp
-                                            <tr class="hover:bg-gray-50/30 transition-colors">
-                                                <td class="py-4 px-6 text-[13px] font-black text-gray-700 tracking-tight">
-                                                    {{ $stat['value'] }}</td>
-                                                <td class="py-4 px-6 text-right text-[12px] font-black text-gray-900">{{ number_format($stat['count']) }}
-                                                </td>
-                                                <td class="py-4 px-6 text-right">
-                                                    <span
-                                                        class="text-[12px] font-black text-indigo-600">{{ $stat['percentage'] }}%</span>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                    <tfoot class="bg-indigo-50/30 border-t-2 border-indigo-100">
-                                        <tr class="font-black text-indigo-900">
-                                            <td class="py-4 px-6 text-[11px] uppercase tracking-widest">{{ __('Total') }}</td>
-                                            <td class="py-4 px-6 text-right text-[11px]">{{ number_format($totalFreq) }}</td>
-                                            <td class="py-4 px-6 text-right text-[11px]">{{ round($totalPerc) }}%</td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
+                                <div class="w-full rounded-b-2xl overflow-x-auto">
+                                    <table class="w-full text-left border border-gray-200" id="table-{{ $item['canvasId'] }}">
+                                        @if(!empty($item['isLikertLike']))
+                                            <thead class="bg-gray-50/70 border-b border-gray-200 shadow-sm">
+                                                <tr class="text-[10px] sm:text-[11px] font-black text-gray-700 tracking-wider border-b border-gray-200">
+                                                    <th rowspan="2" class="py-3 px-4 break-words border-r border-gray-200 align-bottom bg-gray-50/90">{{ __('Value') }}</th>
+                                                    @foreach($item['stats'] as $stat)
+                                                        @if(!isset($stat['is_missing']) || !$stat['is_missing'])
+                                                            <th colspan="2" class="py-2 px-2 text-center border-b border-r border-gray-200 whitespace-nowrap font-bold text-gray-800">{{ $stat['value'] }}</th>
+                                                        @endif
+                                                    @endforeach
+                                                </tr>
+                                                <tr class="text-[10px] font-bold text-gray-500 tracking-wider">
+                                                    @foreach($item['stats'] as $stat)
+                                                        @if(!isset($stat['is_missing']) || !$stat['is_missing'])
+                                                            <th class="py-1.5 px-3 text-center border-r border-gray-200 bg-gray-50/50">Frequency</th>
+                                                            <th class="py-1.5 px-3 text-center border-r border-gray-200 bg-gray-50/50">%</th>
+                                                        @endif
+                                                    @endforeach
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-200">
+                                                <tr class="hover:bg-gray-50/30 transition-colors">
+                                                    <td class="py-3 px-4 text-xs font-normal text-gray-700 break-words leading-tight border-r border-gray-200 w-1/3">
+                                                        {{ $item['label'] }}
+                                                    </td>
+                                                    @foreach($item['stats'] as $stat)
+                                                        @if(!isset($stat['is_missing']) || !$stat['is_missing'])
+                                                            @php
+                                                                $totalFreqLikert = array_sum(array_column(array_filter($item['stats'], fn($s) => !isset($s['is_missing']) || !$s['is_missing']), 'count'));
+                                                                $percentLikert = $totalFreqLikert > 0 ? ($stat['count'] / $totalFreqLikert) * 100 : 0;
+                                                            @endphp
+                                                            <td class="py-3 px-2 text-center text-xs font-normal text-gray-900 border-r border-gray-200">{{ number_format($stat['count']) }}</td>
+                                                            <td class="py-3 px-2 text-center text-xs font-normal text-gray-900 border-r border-gray-200">{{ number_format($percentLikert, 1) }}%</td>
+                                                        @endif
+                                                    @endforeach
+                                                </tr>
+                                            </tbody>
+                                        @else
+                                            <thead class="bg-gray-50/70 border-b border-gray-200 shadow-sm">
+                                                <tr class="text-[10px] sm:text-[11px] font-black text-gray-700 tracking-wider border-b border-gray-200">
+                                                    <th class="py-3 px-4 break-words border-r border-gray-200">{{ __('Value') }}</th>
+                                                    <th class="py-3 px-4 text-right border-r border-gray-200">{{ __('Frequency') }}</th>
+                                                    <th class="py-3 px-4 text-right border-r border-gray-200">{{ __('Percent') }}</th>
+                                                    <th class="py-3 px-4 text-right border-r border-gray-200">{{ __('Valid Percent') }}</th>
+                                                    <th class="py-3 px-4 text-right border-r border-gray-200">{{ __('Cumulative Percent') }}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-200">
+                                                @php 
+                                                    $totalFreq = 0;
+                                                    $validFreq = 0;
+                                                    // First pass to get valid total
+                                                    foreach($item['stats'] as $s) {
+                                                        if (!isset($s['is_missing']) || !$s['is_missing']) {
+                                                            $validFreq += $s['count'];
+                                                        }
+                                                        $totalFreq += $s['count'];
+                                                    }
+                                                    if ($validFreq === 0) $validFreq = $totalFreq;
+                                                    
+                                                    $cumulativePerc = 0;
+                                                @endphp
+                                                @foreach($item['stats'] as $stat)
+                                                    @php
+                                                        $isMissing = isset($stat['is_missing']) && $stat['is_missing'];
+                                                        if ($isMissing && $stat['count'] == 0) continue; // Omit zero-count missing rows
+
+                                                        $percent = $totalFreq > 0 ? ($stat['count'] / $totalFreq) * 100 : 0;
+                                                        
+                                                        if ($isMissing) {
+                                                            $validPercent = null;
+                                                            $cumPercentDisplay = '-';
+                                                        } else {
+                                                            $validPercent = $validFreq > 0 ? ($stat['count'] / $validFreq) * 100 : 0;
+                                                            $cumulativePerc += $validPercent;
+                                                            $cumPercentDisplay = number_format($cumulativePerc, 1) . '%';
+                                                        }
+                                                    @endphp
+                                                    <tr class="hover:bg-gray-50/30 transition-colors border-b border-gray-100">
+                                                        <td class="py-2.5 px-4 text-xs font-normal text-gray-700 break-words leading-tight border-r border-gray-200">
+                                                            {{ $stat['value'] }}</td>
+                                                        <td class="py-2.5 px-4 text-right text-xs font-normal text-gray-900 border-r border-gray-200">{{ number_format($stat['count']) }}</td>
+                                                        <td class="py-2.5 px-4 text-right text-xs font-normal text-gray-900 border-r border-gray-200">{{ number_format($percent, 1) }}%</td>
+                                                        <td class="py-2.5 px-4 text-right text-xs font-normal text-gray-900 border-r border-gray-200">{{ $validPercent !== null ? number_format($validPercent, 1) . '%' : '-' }}</td>
+                                                        <td class="py-2.5 px-4 text-right text-xs font-normal text-gray-900 border-r border-gray-200">{{ $cumPercentDisplay }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                            <tfoot class="bg-gray-50/50 border-t-2 border-gray-200">
+                                                <tr class="font-normal text-gray-900 text-[11px]">
+                                                    <td class="py-3 px-4 tracking-wider border-r border-gray-200">{{ __('Total') }}</td>
+                                                    <td class="py-3 px-4 text-right border-r border-gray-200">{{ number_format($totalFreq) }}</td>
+                                                    <td class="py-3 px-4 text-right border-r border-gray-200">100.0%</td>
+                                                    <td class="py-3 px-4 text-right border-r border-gray-200">100.0%</td>
+                                                    <td class="py-3 px-4 text-right border-r border-gray-200"></td>
+                                                </tr>
+                                            </tfoot>
+                                        @endif
+                                    </table>
                                 </div>
                             </div>
 
@@ -436,21 +522,21 @@
                                         <canvas id="qual-{{ $item['canvasId'] }}"></canvas>
                                     </div>
                                     
-                                    <div class="overflow-hidden bg-white rounded-2xl border border-gray-100 max-h-64 overflow-y-auto custom-scrollbar">
-                                        <table class="w-full text-left">
-                                            <thead class="sticky top-0 bg-white z-10 border-b border-gray-100 shadow-sm">
-                                                <tr class="text-xs font-bold text-zinc-500 tracking-tight">
-                                                    <th class="py-3 px-4 font-bold">{{ __('Option') }}</th>
-                                                    <th class="py-3 px-4 text-right font-bold">{{ __('Count') }}</th>
-                                                    <th class="py-3 px-4 text-right font-bold">{{ __('Percentage') }}</th>
+                                    <div class="overflow-hidden bg-white rounded-2xl border border-gray-200 max-h-64 overflow-y-auto custom-scrollbar">
+                                        <table class="w-full text-left border border-gray-200">
+                                            <thead class="sticky top-0 bg-gray-50/70 z-10 border-b border-gray-200 shadow-sm">
+                                                <tr class="text-xs font-bold text-zinc-700 tracking-tight">
+                                                    <th class="py-3 px-4 font-bold border-r border-gray-200">{{ __('Option') }}</th>
+                                                    <th class="py-3 px-4 text-right font-bold border-r border-gray-200">{{ __('Count') }}</th>
+                                                    <th class="py-3 px-4 text-right font-bold border-r border-gray-200">{{ __('Percentage') }}</th>
                                                 </tr>
                                             </thead>
-                                            <tbody class="divide-y divide-gray-50">
+                                            <tbody class="divide-y divide-gray-200">
                                                 @foreach($item['stats'] as $stat)
-                                                    <tr class="hover:bg-gray-50/30 transition-colors">
-                                                        <td class="py-3 px-4 text-[11px] font-medium text-gray-700 tracking-tight">{{ $stat['value'] }}</td>
-                                                        <td class="py-3 px-4 text-right text-[11px] font-bold text-gray-900">{{ number_format($stat['count']) }}</td>
-                                                        <td class="py-3 px-4 text-right text-[11px] font-bold text-indigo-600">{{ $stat['percentage'] }}%</td>
+                                                    <tr class="hover:bg-gray-50/30 transition-colors border-b border-gray-100">
+                                                        <td class="py-3 px-4 text-[11px] font-normal text-gray-700 tracking-tight border-r border-gray-200">{{ $stat['value'] }}</td>
+                                                        <td class="py-3 px-4 text-right text-[11px] font-normal text-gray-900 border-r border-gray-200">{{ number_format($stat['count']) }}</td>
+                                                        <td class="py-3 px-4 text-right text-[11px] font-normal text-gray-900 border-r border-gray-200">{{ $stat['percentage'] }}%</td>
                                                     </tr>
                                                 @endforeach
                                             </tbody>
@@ -525,13 +611,13 @@
                                                                 },
                                                                 confirmButtonText: '{{ __("Close") }}',
                                                                 confirmButtonColor: '#4f46e5'
-                                                            })" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-100 transition-all">
+                                                            })" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl font-black text-[10px]  tracking-widest hover:bg-indigo-100 transition-all">
                                                                 <i class="fa-solid fa-signature text-sm"></i>
                                                                 {{ __('View Captured Signature') }}
                                                             </button>
                                                         @elseif($isMedia)
                                                             <a href="{{ asset('storage/' . $answer) }}" target="_blank"
-                                                               class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-100 transition-all">
+                                                               class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl font-black text-[10px]  tracking-widest hover:bg-emerald-100 transition-all">
                                                                 <i class="fa-solid fa-play-circle text-sm"></i>
                                                                 {{ __('Open Media File') }}
                                                             </a>
@@ -545,7 +631,7 @@
                                             <tr>
                                                 <td colspan="2" class="py-20 text-center">
                                                     <i class="fa-solid fa-comment-slash text-4xl mb-4 text-gray-200"></i>
-                                                    <p class="text-gray-400 italic text-xs uppercase font-black tracking-widest">
+                                                    <p class="text-gray-400 italic text-xs  font-black tracking-widest">
                                                         {{ __('No text data collected for this question') }}
                                                     </p>
                                                 </td>
@@ -570,19 +656,77 @@
         @endif
 
         <!-- Inferential Content -->
-        <div x-show="reportTab === 'inferential'" class="space-y-8 animate-in fade-in duration-500" style="display: none;">
-            <div x-data="inferentialManager()" class="space-y-8">
-                <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm relative overflow-hidden">
-                    <div class="mb-8 border-b border-gray-50 pb-6">
-                        <h4 class="text-xl font-black text-gray-900 tracking-tight">{{ __('Basic Inferential Stats') }}</h4>
-                        <p class="text-xs text-gray-500 mt-2">{{ __('Run significance tests, correlations, and regressions on your survey responses.') }}</p>
+        <div x-show="reportTab === 'inferential'" class="space-y-6 animate-in fade-in duration-500" style="display: none;">
+            <div x-data="inferentialManager({{ $savedInferentialTests->toJson() }})" class="space-y-6">
+
+                <div class="flex flex-col lg:flex-row gap-6 items-start">
+                    <!-- Left Sidebar (History/Manager) -->
+                    <div x-show="sidebarOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 -translate-x-4" x-transition:enter-end="opacity-100 translate-x-0" class="w-full lg:w-64 shrink-0 bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden sticky top-8" style="display: none;">
+                        <div class="p-5 border-b border-gray-100 bg-indigo-50/30 flex justify-between items-center">
+                            <div>
+                                <h4 class="text-xs font-black text-indigo-900 tracking-tight">{{ __('Saved Analyses') }}</h4>
+                                <p class="text-[10px] text-gray-500 font-bold">{{ __('Auto-included in report') }}</p>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <button @click="resetForm()" class="w-7 h-7 flex items-center justify-center bg-indigo-100 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-colors" title="{{ __('New Test') }}">
+                                    <i class="fa-solid fa-plus text-xs"></i>
+                                </button>
+                                <button @click="sidebarOpen = false" class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors" title="{{ __('Close') }}">
+                                    <i class="fa-solid fa-xmark text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-3 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-2.5 bg-gray-50/50">
+                            <template x-if="savedTests.length === 0">
+                                <div class="text-center py-8 opacity-60">
+                                    <i class="fa-solid fa-flask text-xl text-gray-300 mb-2"></i>
+                                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">{{ __('No tests saved yet') }}</p>
+                                </div>
+                            </template>
+                            <template x-for="test in savedTests" :key="test.id">
+                                <div class="bg-white border border-gray-200 rounded-2xl p-3 shadow-sm hover:border-indigo-300 transition-all cursor-pointer group" @click="loadTest(test)" :class="{'border-indigo-500 ring-2 ring-indigo-100 bg-indigo-50/10': loadedTestId === test.id}">
+                                    <div class="flex justify-between items-start mb-1.5">
+                                        <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[8px] font-black uppercase tracking-widest rounded-md" x-text="formatMethod(test.method)"></span>
+                                        <button @click.stop="deleteSavedTest(test.id)" class="text-gray-300 hover:text-red-500 transition-colors p-1">
+                                            <i class="fa-solid fa-trash-alt text-[10px]"></i>
+                                        </button>
+                                    </div>
+                                    <h5 class="text-xs font-bold text-gray-800 line-clamp-2 leading-tight" x-text="test.title"></h5>
+                                    <p class="text-[9px] text-gray-500 mt-1 font-medium" x-text="test.variables"></p>
+                                </div>
+                            </template>
+                        </div>
                     </div>
+
+                    <!-- Right Main Area -->
+                    <div class="w-full" :class="sidebarOpen ? 'lg:w-[calc(100%-17rem)]' : 'w-full'">
+                        <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm relative overflow-hidden space-y-8">
+                            
+                            <!-- Header Area -->
+                            <div class="border-b border-gray-50 pb-6 flex justify-between items-start">
+                                <div class="flex items-center gap-3">
+                                    <button type="button" @click="sidebarOpen = !sidebarOpen" 
+                                        class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200 text-gray-700 flex items-center justify-center transition-all shadow-sm shrink-0" 
+                                        :title="sidebarOpen ? '{{ __('Hide History Sidebar') }}' : '{{ __('Open History Sidebar') }}'">
+                                        <i class="fa-solid text-sm" :class="sidebarOpen ? 'fa-xmark' : 'fa-bars-staggered'"></i>
+                                    </button>
+                                    <div>
+                                        <h4 class="text-xl font-black text-gray-900 tracking-tight" x-text="loadedTestId ? '{{ __('View Saved Analysis') }}' : '{{ __('New Inferential Test') }}'"></h4>
+                                        <p class="text-xs text-gray-500 mt-1">{{ __('Run significance tests, correlations and regressions on your survey responses.') }}</p>
+                                    </div>
+                                </div>
+                                <span x-show="isSaving" class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl flex items-center gap-2">
+                                    <i class="fa-solid fa-spinner fa-spin"></i> {{ __('Auto-saving...') }}
+                                </span>
+                            </div>
 
                     <!-- Test Selection -->
                     <div class="mb-8">
-                        <label class="block text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-2">{{ __('Select Statistical Method') }}</label>
-                        <select x-model="testMethod" class="w-full md:w-1/2 bg-gray-50 border border-indigo-100 text-sm font-semibold rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 transition-all">
-                            <option value="crosstab">{{ __('Cross-Tabulation & Chi-Square Test') }}</option>
+                        <label class="block text-sm font-medium text-indigo-600  tracking-widest mb-2">{{ __('Select Statistical Method') }}</label>
+                        <select x-model="testMethod" class="w-full md:w-1/2 bg-gray-50 border border-indigo-100 text-xs sm:text-sm font-semibold rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 transition-all max-w-full">
+                            <option value="crosstab">{{ __('Cross-Tabulation Analysis') }}</option>
+                            <option value="chisquare">{{ __('Chi-Square for Independence (χ²)') }}</option>
+                            <option value="cronbach">{{ __('Reliability Test (Cronbach\'s Alpha α) — Pilot Data') }}</option>
                             <option value="ttest">{{ __('Independent Samples T-Test') }}</option>
                             <option value="correlation">{{ __('Pearson Correlation (r)') }}</option>
                             <option value="anova">{{ __('One-Way ANOVA') }}</option>
@@ -594,11 +738,11 @@
                     <!-- Dynamic Input Fields based on Selected Method -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-gray-50 pt-6">
                         <!-- Case 1: Crosstab / Chi-Square -->
-                        <template x-if="testMethod === 'crosstab'">
+                        <template x-if="testMethod === 'crosstab' || testMethod === 'chisquare'">
                             <div class="contents">
                                 <div>
-                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Row Variable (Categorical)') }}</label>
-                                    <select x-model="rowVar" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all">
+                                    <label class="block text-[12px] font-medium text-gray-500  tracking-widest mb-2">{{ __('Row Variable ') }}</label>
+                                    <select x-model="rowVar" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all max-w-full">
                                         <option value="">{{ __('Select Question...') }}</option>
                                         @foreach($analysis as $item)
                                             <option value="{{ $item['id'] }}">{{ \Illuminate\Support\Str::limit($item['label'], 60) }}</option>
@@ -606,8 +750,8 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Column Variable (Categorical)') }}</label>
-                                    <select x-model="colVar" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all">
+                                    <label class="block text-[12px] font-medium text-gray-500  tracking-widest mb-2">{{ __('Column Variable ') }}</label>
+                                    <select x-model="colVar" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all max-w-full">
                                         <option value="">{{ __('Select Question...') }}</option>
                                         @foreach($analysis as $item)
                                             <option value="{{ $item['id'] }}">{{ \Illuminate\Support\Str::limit($item['label'], 60) }}</option>
@@ -617,11 +761,29 @@
                             </div>
                         </template>
 
+                        <!-- Case 1b: Cronbach Alpha -->
+                        <template x-if="testMethod === 'cronbach'">
+                            <div class="col-span-full space-y-4">
+                                <label class="block text-xs font-bold text-gray-700  tracking-wider">{{ __('Select Likert / Rating Scale Items for Reliability Testing') }}</label>
+                                <p class="text-xs text-gray-500">{{ __('Evaluates internal consistency.') }}</p>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 bg-gray-50 p-4 rounded-2xl border border-gray-100 max-h-60 overflow-y-auto custom-scrollbar">
+                                    @foreach($analysis as $item)
+                                        @if($item['isChartable'])
+                                            <label class="flex items-center gap-2 text-xs font-semibold text-gray-700 bg-white p-2.5 rounded-xl border border-gray-200/80 cursor-pointer hover:bg-indigo-50/50 transition-colors">
+                                                <input type="checkbox" :value="'{{ $item['canvasId'] }}'" x-model="cronbachItems" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                                <span class="truncate" title="{{ $item['label'] }}">{{ $item['label'] }}</span>
+                                            </label>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            </div>
+                        </template>
+
                         <!-- Case 2: T-Test / ANOVA -->
                         <template x-if="testMethod === 'ttest' || testMethod === 'anova'">
                             <div class="contents">
                                 <div>
-                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Dependent Variable (Numeric)') }}</label>
+                                    <label class="block text-[10px] font-black text-gray-500  tracking-widest mb-2">{{ __('Dependent Variable (Numeric)') }}</label>
                                     <select x-model="depVar" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all">
                                         <option value="">{{ __('Select Question...') }}</option>
                                         @foreach($analysis as $item)
@@ -632,7 +794,7 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Grouping Variable (Categorical)') }}</label>
+                                    <label class="block text-[12px] font-medium text-gray-500  tracking-widest mb-2">{{ __('Grouping Variable ') }}</label>
                                     <select x-model="groupVar" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all">
                                         <option value="">{{ __('Select Question...') }}</option>
                                         @foreach($analysis as $item)
@@ -647,7 +809,7 @@
                         <template x-if="testMethod === 'correlation'">
                             <div class="contents">
                                 <div>
-                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Variable X (Numeric)') }}</label>
+                                    <label class="block text-[10px] font-black text-gray-500  tracking-widest mb-2">{{ __('Variable X (Numeric)') }}</label>
                                     <select x-model="varX" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all">
                                         <option value="">{{ __('Select Question...') }}</option>
                                         @foreach($analysis as $item)
@@ -658,7 +820,7 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Variable Y (Numeric)') }}</label>
+                                    <label class="block text-[10px] font-black text-gray-500  tracking-widest mb-2">{{ __('Variable Y (Numeric)') }}</label>
                                     <select x-model="varY" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all">
                                         <option value="">{{ __('Select Question...') }}</option>
                                         @foreach($analysis as $item)
@@ -675,7 +837,7 @@
                         <template x-if="testMethod === 'regression'">
                             <div class="contents">
                                 <div>
-                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Dependent Variable Y (Numeric)') }}</label>
+                                    <label class="block text-[10px] font-black text-gray-500  tracking-widest mb-2">{{ __('Dependent Variable Y (Numeric)') }}</label>
                                     <select x-model="depVar" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all">
                                         <option value="">{{ __('Select Question...') }}</option>
                                         @foreach($analysis as $item)
@@ -686,7 +848,7 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Independent Variable X (Numeric)') }}</label>
+                                    <label class="block text-[10px] font-black text-gray-500  tracking-widest mb-2">{{ __('Independent Variable X (Numeric)') }}</label>
                                     <select x-model="groupVar" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all">
                                         <option value="">{{ __('Select Question...') }}</option>
                                         @foreach($analysis as $item)
@@ -703,7 +865,7 @@
                         <template x-if="testMethod === 'regression_multiple'">
                             <div class="contents">
                                 <div>
-                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Dependent Variable Y (Numeric)') }}</label>
+                                    <label class="block text-[10px] font-black text-gray-500  tracking-widest mb-2">{{ __('Dependent Variable Y (Numeric)') }}</label>
                                     <select x-model="depVar" class="w-full bg-gray-50 border border-gray-200 text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-indigo-500 transition-all">
                                         <option value="">{{ __('Select Question...') }}</option>
                                         @foreach($analysis as $item)
@@ -714,7 +876,7 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{{ __('Independent Variables X (Select Multiple)') }}</label>
+                                    <label class="block text-[10px] font-black text-gray-500  tracking-widest mb-2">{{ __('Independent Variables X (Select Multiple)') }}</label>
                                     <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 max-h-[160px] overflow-y-auto space-y-2.5">
                                         @foreach($analysis as $item)
                                             @if($item['isChartable'])
@@ -732,25 +894,33 @@
 
                     <div class="flex justify-end border-t border-gray-50 mt-6 pt-6">
                         <button @click="runAnalysis()" :disabled="loading"
-                            class="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            class="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px]  tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                             <i class="fa-solid fa-calculator" :class="{'fa-spin': loading}"></i> <span x-text="loading ? '{{ __('Calculating...') }}' : '{{ __('Run Analysis') }}'"></span>
                         </button>
                     </div>
                 </div>
 
-                <!-- 1. Crosstab & Chi-Square Results -->
+                                <!-- 1. Pure Crosstabulation Results ( -->
                 <template x-if="testMethod === 'crosstab' && matrixData">
                     <div class="space-y-8 animate-in fade-in duration-500">
-                        <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
-                            <div class="overflow-x-auto mb-8">
+                        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm space-y-6">
+                            <div class="border-b border-gray-100 pb-4 flex justify-between items-center">
+                                <div>
+                                    <h4 class="text-lg font-black text-gray-900">{{ __('Cross-Tabulation Contingency Table') }}</h4>
+                                    <p class="text-xs text-gray-500 mt-1" x-text="'Joint frequency distribution of ' + (matrixData.rowLabel || 'Row') + ' vs ' + (matrixData.colLabel || 'Column')"></p>
+                                </div>
+                                
+                            </div>
+
+                            <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse min-w-[600px]">
                                     <thead>
                                         <tr>
-                                            <th class="p-4 border-b border-r border-gray-200 bg-gray-50 w-1/4"></th>
+                                            <th class="p-4 border-b border-r border-gray-200 bg-gray-50 w-1/4 text-xs font-medium text-gray-700  tracking-widest" x-text="matrixData.rowLabel + ' \\ ' + matrixData.colLabel"></th>
                                             <template x-for="col in matrixData.columns" :key="col">
-                                                <th class="p-4 border-b border-gray-200 bg-gray-50 text-[10px] font-black text-gray-600 uppercase tracking-widest text-center" x-text="col"></th>
+                                                <th class="p-4 border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-600  tracking-widest text-center" x-text="col"></th>
                                             </template>
-                                            <th class="p-4 border-b border-l border-gray-200 bg-indigo-50 text-[10px] font-black text-indigo-800 uppercase tracking-widest text-center">{{ __('Total') }}</th>
+                                            <th class="p-4 border-b border-l border-gray-200 bg-indigo-50 text-[12px] font-black text-indigo-800  tracking-widest text-center">{{ __('Total') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -759,8 +929,8 @@
                                                 <th class="p-4 border-b border-r border-gray-200 text-[11px] font-black text-gray-700" x-text="row"></th>
                                                 <template x-for="col in matrixData.columns" :key="col">
                                                     <td class="p-4 border-b border-gray-100 text-center text-sm font-medium text-gray-600">
-                                                        <div class="font-bold text-gray-900" x-text="getMatrixValue(row, col)"></div>
-                                                        <div class="text-[10px] text-gray-400 mt-0.5">{{ __('Expected:') }} <span x-text="matrixData.expectedMatrix[row][col]"></span></div>
+                                                        <div class="font-black text-gray-600" x-text="getMatrixValue(row, col)"></div>
+                                                        <div class="text-[10px] text-gray-400 mt-0.5" x-text="'Row: ' + ((matrixData.rowPercentages || {})[row] || {})[col] + '%'"></div>
                                                     </td>
                                                 </template>
                                                 <td class="p-4 border-b border-l border-gray-200 bg-indigo-50/30 text-center text-sm font-black text-indigo-700" x-text="(matrixData.rowTotals || {})[row] || 0"></td>
@@ -769,7 +939,7 @@
                                     </tbody>
                                     <tfoot>
                                         <tr>
-                                            <th class="p-4 border-t border-r border-gray-200 bg-indigo-50 text-[10px] font-black text-indigo-800 uppercase tracking-widest">{{ __('Total') }}</th>
+                                            <th class="p-4 border-t border-r border-gray-200 bg-indigo-50 text-[12px] font-medium text-indigo-800  tracking-widest">{{ __('Total') }}</th>
                                             <template x-for="col in matrixData.columns" :key="col">
                                                 <th class="p-4 border-t border-gray-200 bg-indigo-50 text-center text-sm font-black text-indigo-800" x-text="(matrixData.colTotals || {})[col] || 0"></th>
                                             </template>
@@ -779,57 +949,191 @@
                                 </table>
                             </div>
 
-                            <!-- Chi-Square Test Results -->
-                            <div class="mt-8 border-t border-gray-100 pt-6">
-                                <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Chi-Square Tests') }}</h5>
+                            <!-- AI Narrative Insight Card for Crosstab -->
+                            <template x-if="matrixData && matrixData.aiSummary">
+                                <div class="p-5 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 rounded-2xl border border-indigo-100 shadow-sm space-y-2">
+                                    <div class="flex items-center gap-2 text-indigo-950 font-bold text-xs">
+                                        <i class="fa-solid fa-sparkles text-indigo-600"></i>
+                                        <span>{{ __('AI Cross-Tabulation Academic Synthesis') }}</span>
+                                    </div>
+                                    <p class="text-xs text-gray-800 font-medium leading-relaxed" x-text="matrixData.aiSummary"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- 2. Standalone Chi-Square Test Results -->
+                <template x-if="testMethod === 'chisquare' && (chisquareData || matrixData)">
+                    <div class="space-y-8 animate-in fade-in duration-500">
+                        <div class="bg-white p-6 sm:p-8 border border-gray-100 shadow-sm space-y-6">
+                            <div class="border-b border-gray-100 pb-4 flex justify-between items-center">
+                                <div>
+                                    <h4 class="text-lg font-black text-gray-900">{{ __('Chi-Square for Independence ') }}</h4>
+                                    
+                                </div>
+                            </div>
+
+                            <!-- Key Statistics Summary Grid -->
+                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                                <div class="p-5 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 rounded-2xl border border-grey-100">
+                                    <span class="text-[12px] font-medium text-grey-600 tracking-widest">{{ __('Chi-Square (χ²)') }}</span>
+                                    <p class="text-2xl font-medium text-grey-300 mt-1" x-text="(chisquareData || matrixData).chiSquare"></p>
+                                </div>
+                                <div class="p-5 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 rounded-2xl border border-grey-100">
+                                    <span class="text-[12px] font-medium text-grey-600  tracking-widest">{{ __('Degrees of Freedom (df)') }}</span>
+                                    <p class="text-2xl font-medium text-grey-300 mt-1" x-text="(chisquareData || matrixData).df"></p>
+                                </div>
+                                <div class="p-5 rounded-2xl border" :class="(chisquareData || matrixData).significant ? 'bg-blue-50/50 border-grey-200 text-grey-900' : 'bg-indigo-50/50 border-grey-200 text-grey-900'">
+                                    <span class="text-[12px] font-medium  tracking-widest" :class="(chisquareData || matrixData).significant ? 'text-grey-700' : 'text-grey-600'">{{ __('p-Value (Sig.)') }}</span>
+                                    <p class="text-2xl font-medium mt-1" x-text="(chisquareData || matrixData).pValue"></p>
+                                    <span class="text-[10px] font-medium" x-text="(chisquareData || matrixData).significant ? 'Significant (p < 0.05)' : 'Not Significant (p >= 0.05)'"></span>
+                                </div>
+                                <div class="p-5 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 rounded-2xl border border-grey-100">
+                                    <span class="text-[12px] font-medium text-grey-700  tracking-widest">{{ __("Cramer's V (Effect Size)") }}</span>
+                                    <p class="text-2xl font-medium text-grey-950 mt-1" x-text="(chisquareData || matrixData).cramersV || 'N/A'"></p>
+                                    <span class="text-[10px] font-medium text-grey-800" x-text="((chisquareData || matrixData).effectLabel || 'Effect') + ' Association'"></span>
+                                </div>
+                            </div>
+
+                            <!-- Chi-Square Tests Table -->
+                            <div class="mt-6 border-t border-gray-100 pt-6 space-y-3">
+                                <h5 class="text-sm font-black text-gray-900">{{ __('Chi-Square Tests Table') }}</h5>
                                 <div class="overflow-x-auto">
-                                    <table class="w-full text-left border-collapse">
+                                    <table class="w-full text-left border-collapse min-w-[500px]">
                                         <thead>
                                             <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
-                                                <th class="p-3 border-b">{{ __('Statistic') }}</th>
+                                                <th class="p-3 border-b">{{ __('Test Statistic') }}</th>
                                                 <th class="p-3 border-b text-center">{{ __('Value') }}</th>
                                                 <th class="p-3 border-b text-center">{{ __('df') }}</th>
                                                 <th class="p-3 border-b text-center">{{ __('Asymp. Sig. (2-sided)') }}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr>
+                                            <tr class="hover:bg-gray-50/50">
                                                 <td class="p-3 border-b text-xs font-semibold text-gray-800">{{ __('Pearson Chi-Square') }}</td>
-                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="matrixData.chiSquare"></td>
-                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="matrixData.df"></td>
-                                                <td class="p-3 border-b text-xs font-black text-center" :class="matrixData.significant ? 'text-green-600' : 'text-gray-500'" x-text="matrixData.pValue"></td>
+                                                <td class="p-3 border-b text-xs font-bold text-gray-900 text-center" x-text="(chisquareData || matrixData).chiSquare"></td>
+                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="(chisquareData || matrixData).df"></td>
+                                                <td class="p-3 border-b text-xs font-black text-center" :class="(chisquareData || matrixData).significant ? 'text-emerald-600' : 'text-gray-500'" x-text="(chisquareData || matrixData).pValue"></td>
                                             </tr>
-                                            <template x-if="matrixData.likelihoodRatio !== undefined && matrixData.likelihoodRatio !== null">
-                                                <tr>
+                                            <template x-if="(chisquareData || matrixData).likelihoodRatio">
+                                                <tr class="hover:bg-gray-50/50">
                                                     <td class="p-3 border-b text-xs font-semibold text-gray-800">{{ __('Likelihood Ratio') }}</td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="matrixData.likelihoodRatio"></td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="matrixData.df"></td>
-                                                    <td class="p-3 border-b text-xs font-black text-center" :class="matrixData.likelihoodSignificant ? 'text-green-600' : 'text-gray-500'" x-text="matrixData.likelihoodPValue || matrixData.pValue"></td>
+                                                    <td class="p-3 border-b text-xs font-medium text-gray-700 text-center" x-text="(chisquareData || matrixData).likelihoodRatio"></td>
+                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="(chisquareData || matrixData).df"></td>
+                                                    <td class="p-3 border-b text-xs font-bold text-center" :class="(chisquareData || matrixData).likelihoodSignificant ? 'text-emerald-600' : 'text-gray-500'" x-text="(chisquareData || matrixData).likelihoodPValue"></td>
                                                 </tr>
                                             </template>
-                                            <template x-if="matrixData.linearAssociation !== undefined && matrixData.linearAssociation !== null">
-                                                <tr>
+                                            <template x-if="(chisquareData || matrixData).linearAssociation">
+                                                <tr class="hover:bg-gray-50/50">
                                                     <td class="p-3 border-b text-xs font-semibold text-gray-800">{{ __('Linear-by-Linear Association') }}</td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="matrixData.linearAssociation"></td>
+                                                    <td class="p-3 border-b text-xs font-medium text-gray-700 text-center" x-text="(chisquareData || matrixData).linearAssociation"></td>
                                                     <td class="p-3 border-b text-xs font-medium text-gray-600 text-center">1</td>
-                                                    <td class="p-3 border-b text-xs font-black text-center" x-text="matrixData.linearPValue"></td>
+                                                    <td class="p-3 border-b text-xs font-bold text-center" x-text="(chisquareData || matrixData).linearPValue"></td>
                                                 </tr>
                                             </template>
-                                            <template x-if="(matrixData.validCases !== undefined && matrixData.validCases !== null) || (matrixData.n !== undefined && matrixData.n !== null)">
-                                                <tr>
-                                                    <td class="p-3 border-b text-xs font-semibold text-gray-800">{{ __('N of Valid Cases') }}</td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="matrixData.validCases || matrixData.n || matrixData.grandTotal"></td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"></td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"></td>
-                                                </tr>
-                                            </template>
+                                            <tr class="hover:bg-gray-50/50 bg-gray-50/30">
+                                                <td class="p-3 border-b text-xs font-bold text-gray-900">{{ __('N of Valid Cases') }}</td>
+                                                <td class="p-3 border-b text-xs font-bold text-gray-900 text-center" x-text="(chisquareData || matrixData).grandTotal || (chisquareData || matrixData).validCases"></td>
+                                                <td class="p-3 border-b text-xs text-center"></td>
+                                                <td class="p-3 border-b text-xs text-center"></td>
+                                            </tr>
                                         </tbody>
                                     </table>
-                                    <template x-if="matrixData.footnote">
-                                        <div class="text-[10px] text-gray-500 italic mt-3" x-text="matrixData.footnote"></div>
-                                    </template>
+                                    <p class="text-xs text-gray-500 mt-1" x-text="(chisquareData || matrixData).footnote"></p>
                                 </div>
                             </div>
+
+                            <!-- Dedicated AI Academic Narrative Card for Chi-Square -->
+                            <template x-if="(chisquareData || matrixData) && (chisquareData || matrixData).aiSummary">
+                                <div class="p-5 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 rounded-2xl border border-indigo-100 shadow-sm space-y-2">
+                                    <div class="flex items-center gap-2 text-blue-950 font-bold text-xs">
+                                        <span>{{ __('Chi-Square Narrative Interpretation') }}</span>
+                                    </div>
+                                    <p class="text-xs text-gray-800 font-medium leading-relaxed" x-text="(chisquareData || matrixData).aiSummary"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- 3. Cronbach Alpha Reliability Test Results -->
+                <template x-if="testMethod === 'cronbach' && cronbachData">
+                    <div class="space-y-8 animate-in fade-in duration-500">
+                        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm space-y-6">
+                            <div class="border-b border-gray-100 pb-4 flex justify-between items-center">
+                                <div>
+                                    <h4 class="text-lg font-black text-gray-900">{{ __("Reliability Analysis (Cronbach's Alpha α)") }}</h4>
+                                    <p class="text-xs text-gray-500 mt-1">{{ __('Internal consistency assessment across scale items') }}</p>
+                                </div>
+                                <span class="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-100">{{ __('Scale Reliability') }}</span>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                                <div class="p-5 rounded-2xl border" :class="cronbachData.alpha >= 0.7 ? 'bg-emerald-50/50 border-emerald-200' : 'bg-amber-50/50 border-amber-200'">
+                                    <span class="text-[10px] font-black uppercase tracking-widest" :class="cronbachData.alpha >= 0.7 ? 'text-emerald-700' : 'text-amber-700'">{{ __("Cronbach's Alpha (α)") }}</span>
+                                    <p class="text-3xl font-black mt-1" :class="cronbachData.alpha >= 0.7 ? 'text-emerald-950' : 'text-amber-950'" x-text="cronbachData.alpha"></p>
+                                </div>
+                                <div class="p-5 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+                                    <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{{ __('Standardized Alpha (α_std)') }}</span>
+                                    <p class="text-3xl font-black text-indigo-900 mt-1" x-text="cronbachData.std_alpha || cronbachData.alpha"></p>
+                                </div>
+                                <div class="p-5 bg-gray-50 rounded-2xl border border-gray-200">
+                                    <span class="text-[10px] font-black text-gray-500 uppercase tracking-widest">{{ __('Items Evaluated (K)') }}</span>
+                                    <p class="text-3xl font-black text-gray-900 mt-1" x-text="cronbachData.k_items"></p>
+                                </div>
+                                <div class="p-5 bg-blue-50/50 rounded-2xl border border-blue-100">
+                                    <span class="text-[10px] font-black text-blue-600 uppercase tracking-widest">{{ __('Valid Cases (N)') }}</span>
+                                    <p class="text-3xl font-black text-blue-950 mt-1" x-text="cronbachData.valid_n"></p>
+                                </div>
+                            </div>
+
+                            <div class="p-4 rounded-2xl border bg-gray-50 border-gray-200 flex items-center justify-between">
+                                <span class="text-xs font-bold text-gray-700">{{ __('Scale Consistency Rating:') }}</span>
+                                <span class="text-xs font-black px-3 py-1 rounded-full text-indigo-700 bg-indigo-50 border border-indigo-100" x-text="cronbachData.interpretation"></span>
+                            </div>
+
+                            <!-- Item-Total Statistics Table -->
+                            <template x-if="cronbachData.item_stats && cronbachData.item_stats.length > 0">
+                                <div class="mt-6 border-t border-gray-100 pt-6 space-y-3">
+                                    <h5 class="text-sm font-black text-gray-900">{{ __('Item-Total Statistics Table') }}</h5>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-left border-collapse min-w-[600px]">
+                                            <thead>
+                                                <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                                    <th class="p-3 border-b">{{ __('Scale Item') }}</th>
+                                                    <th class="p-3 border-b text-center">{{ __('Scale Mean if Item Deleted') }}</th>
+                                                    <th class="p-3 border-b text-center">{{ __('Scale Variance if Item Deleted') }}</th>
+                                                    <th class="p-3 border-b text-center">{{ __('Corrected Item-Total Correlation') }}</th>
+                                                    <th class="p-3 border-b text-center">{{ __("Cronbach's Alpha if Item Deleted") }}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <template x-for="item in cronbachData.item_stats" :key="item.item_key">
+                                                    <tr class="hover:bg-gray-50/50 transition-colors">
+                                                        <td class="p-3 border-b text-xs font-semibold text-gray-800" x-text="item.label"></td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="item.scale_mean_if_deleted"></td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center" x-text="item.scale_var_if_deleted"></td>
+                                                        <td class="p-3 border-b text-xs font-black text-center" :class="item.item_total_corr >= 0.3 ? 'text-indigo-600' : 'text-rose-500'" x-text="item.item_total_corr"></td>
+                                                        <td class="p-3 border-b text-xs font-black text-center" :class="item.alpha_if_deleted > cronbachData.alpha ? 'text-amber-600 font-black' : 'text-gray-700'" x-text="item.alpha_if_deleted"></td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- AI Scale Reliability Academic Synthesis Card -->
+                            <template x-if="cronbachData && cronbachData.aiSummary">
+                                <div class="p-5 bg-gradient-to-r from-amber-50/80 to-indigo-50/80 rounded-2xl border border-amber-100 shadow-sm space-y-2">
+                                    <div class="flex items-center gap-2 text-amber-950 font-bold text-xs">
+                                        <i class="fa-solid fa-clipboard-check text-amber-600"></i>
+                                        <span>{{ __('AI Scale Reliability Academic Synthesis') }}</span>
+                                    </div>
+                                    <p class="text-xs text-gray-800 font-medium leading-relaxed" x-text="cronbachData.aiSummary"></p>
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </template>
@@ -1369,7 +1673,7 @@
                     <div class="mt-8 pt-8 border-t border-gray-100 flex flex-col items-center">
                         <div x-show="aiLoading" class="flex items-center gap-3 text-indigo-600 py-4">
                             <i class="fa-solid fa-circle-notch fa-spin text-xl"></i>
-                            <span class="text-[10px] font-black uppercase tracking-widest">{{ __('Analyzing Statistical Significance...') }}</span>
+                            <span class="text-xs font-black">{{ __('Analyzing Statistical Significance...') }}</span>
                         </div>
                         
                         <div x-show="aiMessages.length > 0" class="w-full bg-gradient-to-br from-indigo-50 to-white rounded-3xl p-8 border border-indigo-100 shadow-inner relative overflow-hidden">
@@ -1379,7 +1683,7 @@
                                     <i class="fa-solid fa-comments text-lg"></i>
                                 </div>
                                 <div class="w-full">
-                                    <h5 class="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-3">{{ __('Statistical Intelligence') }}</h5>
+                                    <h5 class="text-sm font-black text-indigo-600 mb-3">{{ __('Statistical Intelligence') }}</h5>
                                     
                                     <!-- Chat Logs -->
                                     <div class="space-y-4 py-2 w-full">
@@ -1399,29 +1703,19 @@
                                     <div x-show="!aiPolishing" class="border-t border-indigo-100/50 pt-4 mt-4 w-full">
                                         <div class="flex flex-col md:flex-row gap-3 items-end">
                                             <div class="flex-1 w-full">
-                                                <label class="block text-[9px] font-black text-indigo-600 uppercase tracking-widest mb-1.5">{{ __('Refine this statistical interpretation (e.g. "Focus on variable X", "Explain in simple words")') }}</label>
-                                                <input x-model="aiFeedback" type="text" placeholder="{{ __('Type instructions to refine...') }}" @keydown.enter="polishAiInsight()" class="w-full bg-white/70 border border-indigo-100 text-xs font-semibold rounded-xl px-3 py-2.5 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all">
+                                                <label class="block text-xs font-bold text-indigo-600 mb-1.5">{{ __('Refine this statistical interpretation') }}</label>
+                                                <input x-model="aiFeedback" type="text" placeholder="{{ __('Reflect your own voice...') }}" @keydown.enter="polishAiInsight()" class="w-full bg-white/70 border border-indigo-100 text-xs font-semibold rounded-xl px-3 py-2.5 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all">
                                             </div>
-                                            <button @click="polishAiInsight()" :disabled="aiPolishing || !aiFeedback.trim()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-1.5 self-stretch justify-center whitespace-nowrap">
-                                                <i class="fa-solid fa-paper-plane" :class="{'fa-spin': aiPolishing}"></i>
+                                            <button @click="polishAiInsight()" :disabled="aiPolishing || !aiFeedback.trim()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5 self-stretch justify-center whitespace-nowrap">
+                                                
                                                 <span x-text="aiPolishing ? '{{ __('Polishing...') }}' : '{{ __('Polish') }}'"></span>
                                             </button>
                                         </div>
                                     </div>
 
-                                    <!-- Export Chat Actions -->
-                                    <div x-show="aiMessages.length > 0 && !aiLoading" class="mt-4 pt-3 border-t border-indigo-100/30 flex items-center justify-between" style="display: none;">
-                                        <div class="flex items-center gap-3">
-                                            <button @click="copyFinalOutput()" class="flex items-center gap-1.5 text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors">
-                                                <i class="fa-solid fa-copy"></i>
-                                                {{ __('Copy Output') }}
-                                            </button>
-                                            <button @click="downloadFinalOutput()" class="flex items-center gap-1.5 text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors">
-                                                <i class="fa-solid fa-download"></i>
-                                                {{ __('Export TXT') }}
-                                            </button>
-                                        </div>
-                                        <button @click="aiMessages = []; aiInsight = null; aiFeedback = '';" class="text-[9px] font-black text-red-500 hover:text-red-700 uppercase tracking-widest transition-colors">
+                                    <!-- Reset Action -->
+                                    <div x-show="aiMessages.length > 0 && !aiLoading" class="mt-4 pt-3 border-t border-indigo-100/30 flex items-center justify-end" style="display: none;">
+                                        <button @click="aiMessages = []; aiInsight = null; aiFeedback = '';" class="text-xs font-bold text-red-500 hover:text-red-700 transition-colors">
                                             {{ __('Reset') }}
                                         </button>
                                     </div>
@@ -1430,7 +1724,7 @@
                         </div>
 
                         <button x-show="!aiLoading && aiMessages.length === 0" @click="getAiInterpretation()"
-                            class="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center gap-3 group">
+                            class="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px]  tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center gap-3 group">
                             <i class="fa-solid fa-brain group-hover:scale-110 transition-transform"></i> {{ __('Interpret with AI') }}
                         </button>
                     </div>
@@ -2053,8 +2347,13 @@
                 return new Chart(ctx, chartConfig);
             }
 
-            window.inferentialManager = function () {
+            window.inferentialManager = function (savedTestsInit = []) {
                 return {
+                    savedTests: savedTestsInit,
+                    loadedTestId: null,
+                    isSaving: false,
+                    sidebarOpen: false,
+                    
                     testMethod: 'crosstab',
                     rowVar: '',
                     colVar: '',
@@ -2063,6 +2362,7 @@
                     varX: '',
                     varY: '',
                     indVars: [],
+                    cronbachItems: [],
                     loading: false,
                     aiLoading: false,
                     aiInsight: null,
@@ -2071,6 +2371,8 @@
                     aiMessages: [],
                     
                     matrixData: null,
+                    chisquareData: null,
+                    cronbachData: null,
                     tTestData: null,
                     anovaData: null,
                     correlationData: null,
@@ -2079,12 +2381,20 @@
 
                     init() {
                         this.$watch('testMethod', () => {
-                            this.clearResults();
+                            if(!this.loadedTestId) this.clearResults();
                         });
+                    },
+                    
+                    resetForm() {
+                        this.loadedTestId = null;
+                        this.clearResults();
+                        this.testMethod = 'crosstab';
                     },
 
                     clearResults() {
                         this.matrixData = null;
+                        this.chisquareData = null;
+                        this.cronbachData = null;
                         this.tTestData = null;
                         this.anovaData = null;
                         this.correlationData = null;
@@ -2098,14 +2408,34 @@
                         this.aiPolishing = false;
                     },
 
+                    formatMethod(method) {
+                        const names = {
+                            'crosstab': 'Cross-Tab',
+                            'chisquare': 'Chi-Square',
+                            'cronbach': 'Cronbach α',
+                            'ttest': 'T-Test',
+                            'anova': 'ANOVA',
+                            'correlation': 'Correlation',
+                            'regression': 'Regression',
+                            'regression_multiple': 'Multiple Reg.'
+                        };
+                        return names[method] || method;
+                    },
+
                     async runAnalysis() {
                         this.clearResults();
                         this.loading = true;
 
                         let url = `{{ route('surveys.reports.inferential', $survey) }}?method=${this.testMethod}`;
-                        if (this.testMethod === 'crosstab') {
+                        if (this.testMethod === 'crosstab' || this.testMethod === 'chisquare') {
                             if (!this.rowVar || !this.colVar) return this.loading = false;
                             url += `&row=${this.rowVar}&col=${this.colVar}`;
+                        } else if (this.testMethod === 'cronbach') {
+                            if (this.cronbachItems.length < 2) {
+                                alert('Please select at least 2 questions for Cronbach Alpha reliability analysis.');
+                                return this.loading = false;
+                            }
+                            url += `&items=${this.cronbachItems.join(',')}`;
                         } else if (this.testMethod === 'ttest' || this.testMethod === 'anova') {
                             if (!this.depVar || !this.groupVar) return this.loading = false;
                             url += `&dep=${this.depVar}&group=${this.groupVar}`;
@@ -2129,6 +2459,10 @@
                             const data = await res.json();
                             if (this.testMethod === 'crosstab') {
                                 this.matrixData = data;
+                            } else if (this.testMethod === 'chisquare') {
+                                this.chisquareData = data;
+                            } else if (this.testMethod === 'cronbach') {
+                                this.cronbachData = data;
                             } else if (this.testMethod === 'ttest') {
                                 this.tTestData = data;
                             } else if (this.testMethod === 'anova') {
@@ -2142,13 +2476,123 @@
                             }
                             
                             // Auto-trigger AI Interpretation immediately
-                            this.$nextTick(() => {
-                                this.getAiInterpretation();
+                            this.$nextTick(async () => {
+                                await this.getAiInterpretation();
                             });
                         } catch (err) {
                             alert("Analysis Error: " + err.message);
                         } finally {
                             this.loading = false;
+                        }
+                    },
+
+                    async saveTest() {
+                        this.isSaving = true;
+                        
+                        let currentData = null;
+                        if (this.testMethod === 'crosstab') currentData = this.matrixData;
+                        else if (this.testMethod === 'chisquare') currentData = this.chisquareData;
+                        else if (this.testMethod === 'cronbach') currentData = this.cronbachData;
+                        else if (this.testMethod === 'ttest') currentData = this.tTestData;
+                        else if (this.testMethod === 'anova') currentData = this.anovaData;
+                        else if (this.testMethod === 'correlation') currentData = this.correlationData;
+                        else if (this.testMethod === 'regression') currentData = this.regressionData;
+                        else if (this.testMethod === 'regression_multiple') currentData = this.multipleRegressionData;
+                        
+                        let variables = [];
+                        if(this.rowVar) variables.push("Row: " + this.rowVar);
+                        if(this.colVar) variables.push("Col: " + this.colVar);
+                        if(this.depVar) variables.push("Dep: " + this.depVar);
+                        if(this.groupVar) variables.push("Grp: " + this.groupVar);
+                        if(this.varX) variables.push("X: " + this.varX);
+                        if(this.varY) variables.push("Y: " + this.varY);
+                        
+                        try {
+                            const res = await fetch(`{{ route('surveys.reports.inferential.save', $survey) }}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                },
+                                body: JSON.stringify({
+                                    survey_id: "{{ $survey->id }}",
+                                    method: this.testMethod,
+                                    title: "Saved " + this.formatMethod(this.testMethod) + " Analysis",
+                                    variables: variables.join(', '),
+                                    ai_summary: this.aiInsight,
+                                    payload: {
+                                        data: currentData,
+                                        vars: {
+                                            rowVar: this.rowVar,
+                                            colVar: this.colVar,
+                                            depVar: this.depVar,
+                                            groupVar: this.groupVar,
+                                            varX: this.varX,
+                                            varY: this.varY,
+                                            indVars: this.indVars,
+                                            cronbachItems: this.cronbachItems
+                                        }
+                                    }
+                                })
+                            });
+                            const result = await res.json();
+                            if(result.success) {
+                                this.savedTests.unshift(result.analysis);
+                                this.loadedTestId = result.analysis.id;
+                            }
+                        } catch(e) {
+                            console.error(e);
+                        } finally {
+                            this.isSaving = false;
+                        }
+                    },
+
+                    loadTest(test) {
+                        this.resetForm();
+                        this.loadedTestId = test.id;
+                        this.testMethod = test.method;
+                        
+                        let vars = test.payload.vars || {};
+                        this.rowVar = vars.rowVar || '';
+                        this.colVar = vars.colVar || '';
+                        this.depVar = vars.depVar || '';
+                        this.groupVar = vars.groupVar || '';
+                        this.varX = vars.varX || '';
+                        this.varY = vars.varY || '';
+                        this.indVars = vars.indVars || [];
+                        this.cronbachItems = vars.cronbachItems || [];
+                        
+                        let currentData = test.payload.data;
+                        if (this.testMethod === 'crosstab') this.matrixData = currentData;
+                        else if (this.testMethod === 'chisquare') { this.chisquareData = currentData; this.matrixData = currentData; }
+                        else if (this.testMethod === 'cronbach') this.cronbachData = currentData;
+                        else if (this.testMethod === 'ttest') this.tTestData = currentData;
+                        else if (this.testMethod === 'anova') this.anovaData = currentData;
+                        else if (this.testMethod === 'correlation') this.correlationData = currentData;
+                        else if (this.testMethod === 'regression') this.regressionData = currentData;
+                        else if (this.testMethod === 'regression_multiple') this.multipleRegressionData = currentData;
+                        
+                        this.aiInsight = test.ai_summary;
+                        if (this.aiInsight) {
+                            this.aiMessages = [{ role: 'assistant', content: this.aiInsight }];
+                        }
+                    },
+
+                    async deleteSavedTest(id) {
+                        if(!confirm("Are you sure you want to delete this saved analysis?")) return;
+                        try {
+                            const res = await fetch(`{{ url('/surveys/' . $survey->id . '/inferential-analysis') }}/${id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                }
+                            });
+                            if(res.ok) {
+                                this.savedTests = this.savedTests.filter(t => t.id !== id);
+                                if(this.loadedTestId === id) this.resetForm();
+                            }
+                        } catch(e) {
+                            console.error(e);
                         }
                     },
 
@@ -2162,6 +2606,8 @@
                     async getAiInterpretation() {
                         let currentData = null;
                         if (this.testMethod === 'crosstab') currentData = this.matrixData;
+                        else if (this.testMethod === 'chisquare') currentData = this.chisquareData || this.matrixData;
+                        else if (this.testMethod === 'cronbach') currentData = this.cronbachData;
                         else if (this.testMethod === 'ttest') currentData = this.tTestData;
                         else if (this.testMethod === 'anova') currentData = this.anovaData;
                         else if (this.testMethod === 'correlation') currentData = this.correlationData;
@@ -2194,9 +2640,11 @@
                             this.aiInsight = data.insight;
                             this.aiMessages = [{ role: 'assistant', content: data.insight }];
                         } catch (err) {
-                            alert("AI Interpretation Error: " + err.message);
+                            console.error("AI Interpretation Error: ", err);
                         } finally {
                             this.aiLoading = false;
+                            // Auto-save analysis test right after calculation & AI completion
+                            this.saveTest();
                         }
                     },
 
@@ -2394,6 +2842,23 @@
             };
 
 
+            window.currentActiveColors = {};
+            window.currentChartTypes = {};
+
+            window.exportReportWithSettings = function(format, surveyId) {
+                const baseUrl = format === 'pdf' 
+                    ? `{{ route('surveys.export_pdf', $survey) }}` 
+                    : `{{ route('surveys.export_docx', $survey) }}`;
+                const params = new URLSearchParams();
+                if (Object.keys(window.currentActiveColors).length > 0) {
+                    params.append('colors', JSON.stringify(window.currentActiveColors));
+                }
+                if (Object.keys(window.currentChartTypes).length > 0) {
+                    params.append('types', JSON.stringify(window.currentChartTypes));
+                }
+                window.location.href = `${baseUrl}?${params.toString()}`;
+            };
+
             window.chartManager = function () {
                 return {
                     chartTypes: {},
@@ -2403,17 +2868,21 @@
                             const el = document.getElementById(config.canvas_id);
                             if (el) {
                                 this.chartTypes[config.canvas_id] = 'bar';
-                                this.activeColors[config.canvas_id] = 'indigo';
-                                chartInstances[config.canvas_id] = createChart(config.canvas_id, config, 'bar', 'indigo');
+                                this.activeColors[config.canvas_id] = 'vibrant';
+                                window.currentChartTypes[config.canvas_id] = 'bar';
+                                window.currentActiveColors[config.canvas_id] = 'vibrant';
+                                chartInstances[config.canvas_id] = createChart(config.canvas_id, config, 'bar', 'vibrant');
                             }
                         });
                     },
                     switchChartType(canvasId, type) {
                         this.chartTypes[canvasId] = type;
+                        window.currentChartTypes[canvasId] = type;
                         this.refreshChart(canvasId);
                     },
                     switchColor(canvasId, color) {
                         this.activeColors[canvasId] = color;
+                        window.currentActiveColors[canvasId] = color;
                         this.refreshChart(canvasId);
                     },
                     refreshChart(canvasId) {
@@ -2424,7 +2893,7 @@
                         }
                         const el = document.getElementById(canvasId);
                         if (el && config) {
-                            chartInstances[canvasId] = createChart(canvasId, config, this.chartTypes[canvasId] || 'bar', this.activeColors[canvasId] || 'indigo');
+                            chartInstances[canvasId] = createChart(canvasId, config, this.chartTypes[canvasId] || 'bar', this.activeColors[canvasId] || 'vibrant');
                         }
                     }
                 }
@@ -2694,8 +3163,8 @@
                             customClass: {
                                 popup: 'rounded-3xl border-none shadow-2xl',
                                 title: 'text-2xl font-black tracking-tight text-gray-900',
-                                confirmButton: 'rounded-xl px-6 py-2.5 text-xs font-black uppercase tracking-widest',
-                                cancelButton: 'rounded-xl px-6 py-2.5 text-xs font-black uppercase tracking-widest'
+                                confirmButton: 'rounded-xl px-6 py-2.5 text-xs font-black  tracking-widest',
+                                cancelButton: 'rounded-xl px-6 py-2.5 text-xs font-black  tracking-widest'
                             }
                         });
 
@@ -3794,7 +4263,7 @@
                             
                             target.innerHTML = `<div class="animate-pulse flex flex-col items-center gap-3 p-8">
                                 <i class="fa-solid fa-wand-magic-sparkles fa-bounce text-indigo-400 text-2xl"></i>
-                                <span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">{{ __('Visualizing Analysis...') }}</span>
+                                <span class="text-[10px] text-slate-500  tracking-widest font-bold">{{ __('Visualizing Analysis...') }}</span>
                             </div>`;
                             
                             await this.loadSingleImage(prompt, target, el);
@@ -3843,7 +4312,7 @@
                                     img.onerror = () => {
                                         target.innerHTML = `<div class="p-6 text-center bg-slate-800/40 rounded-xl border border-slate-700/30">
                                             <i class="fa-solid fa-triangle-exclamation text-amber-500/50 text-xl mb-2"></i>
-                                            <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">{{ __('Image Source Unreachable') }}</p>
+                                            <p class="text-[10px] text-slate-400  font-bold tracking-widest">{{ __('Image Source Unreachable') }}</p>
                                         </div>`;
                                         resolve();
                                     };
@@ -3957,8 +4426,8 @@
                             customClass: {
                                 popup: 'rounded-3xl border-none shadow-2xl',
                                 title: 'text-2xl font-black tracking-tight text-gray-900',
-                                confirmButton: 'rounded-xl px-6 py-2.5 text-xs font-black uppercase tracking-widest',
-                                cancelButton: 'rounded-xl px-6 py-2.5 text-xs font-black uppercase tracking-widest'
+                                confirmButton: 'rounded-xl px-6 py-2.5 text-xs font-black  tracking-widest',
+                                cancelButton: 'rounded-xl px-6 py-2.5 text-xs font-black  tracking-widest'
                             }
                         });
 

@@ -205,7 +205,90 @@
         </form>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
+    <!-- Mobile Survey Cards View (< 640px) -->
+    <div class="block sm:hidden space-y-4 mb-8">
+        @forelse ($surveys as $survey)
+            @php 
+                $statusVal = $survey->status instanceof \BackedEnum ? $survey->status->value : $survey->status;
+                $statusColor = match($statusVal) {
+                    'active' => 'bg-green-50 text-green-700 border-green-200',
+                    'draft' => 'bg-amber-50 text-amber-700 border-amber-200',
+                    'archived' => 'bg-gray-100 text-gray-700 border-gray-200',
+                    default => 'bg-slate-50 text-slate-600 border-slate-100',
+                };
+            @endphp
+            <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm space-y-3 relative group"
+                 x-data="{ deleted: false, confirming: false }"
+                 x-show="!deleted"
+                 x-transition>
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-2.5 flex-1 min-w-0">
+                        <input type="checkbox" 
+                               value="{{ $survey->id }}" 
+                               x-model="selected"
+                               @change="updateSelectAll()"
+                               class="survey-checkbox h-4 w-4 text-[#2271b1] border-gray-300 rounded focus:ring-[#2271b1] cursor-pointer shrink-0">
+                        <a href="{{ route('surveys.summary', $survey) }}" class="block min-w-0 flex-1">
+                            <h3 class="text-sm font-bold text-gray-900 truncate leading-snug hover:text-[#2271b1]">{{ $survey->title }}</h3>
+                            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{{ __($survey->category->value ?? 'General') }}</p>
+                        </a>
+                    </div>
+
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider border shrink-0 {{ $statusColor }}">
+                        {{ ucfirst(__($statusVal)) }}
+                    </span>
+                </div>
+
+                <div class="flex items-center justify-between pt-2 border-t border-gray-100 text-xs">
+                    <div class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-chart-simple text-[#2271b1]"></i>
+                        <span class="font-extrabold text-[#2271b1]">{{ $survey->responses_count ?? 0 }}</span>
+                        <span class="text-[10px] text-gray-500">{{ __('Responses') }}</span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <a href="{{ route('surveys.summary', $survey) }}" 
+                           class="px-3 py-1.5 bg-[#2271b1] text-white rounded-xl text-[10px] font-bold shadow-sm hover:bg-[#135e96] flex items-center gap-1">
+                            <span>{{ __('Manage') }}</span>
+                            <i class="fa-solid fa-arrow-right text-[9px]"></i>
+                        </a>
+
+                        <button type="button" 
+                                x-show="!confirming"
+                                @click.stop="confirming = true"
+                                class="p-1.5 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-colors border border-rose-200">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                        <button type="button" 
+                                x-show="confirming"
+                                @click.stop="
+                                    fetch('{{ route('surveys.destroy', $survey) }}', {
+                                        method: 'POST',
+                                        headers: {
+                                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                            'Content-Type': 'application/json',
+                                            'Accept': 'application/json'
+                                        },
+                                        body: JSON.stringify({ _method: 'DELETE' })
+                                    }).then(res => {
+                                        if(res.ok) { deleted = true; }
+                                    });
+                                "
+                                class="px-2.5 py-1 bg-rose-600 text-white text-[10px] font-bold rounded-xl shadow">
+                            {{ __('Yes, Delete') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        @empty
+            <div class="bg-white rounded-2xl p-8 border border-gray-200 text-center text-gray-500 text-xs font-bold shadow-sm">
+                {{ __('No surveys found.') }}
+            </div>
+        @endforelse
+    </div>
+
+    <!-- Desktop Survey Table (≥ 640px) -->
+    <div class="hidden sm:block bg-white rounded-xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
         <div class="overflow-x-auto custom-scrollbar">
             <table class="min-w-[900px] w-full divide-y divide-gray-100">
                 <thead class="bg-gray-50/50">

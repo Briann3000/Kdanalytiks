@@ -987,6 +987,72 @@ class SurveyController extends Controller
 
         return \Maatwebsite\Excel\Facades\Excel::download($export, $filename);
     }
+    public static function isLikertScale($options)
+    {
+        if (empty($options))
+            return false;
+
+        $optionsLower = array_map('strtolower', $options);
+        $optionsLower = array_map('trim', $optionsLower);
+
+        $likertKeywords = [
+            'agree',
+            'disagree',
+            'strongly agree',
+            'strongly disagree',
+            'neutral',
+            'undecided',
+            'a',
+            'sa',
+            'd',
+            'sd',
+            'ud',
+            'n',
+            'satisfied',
+            'dissatisfied',
+            'very satisfied',
+            'very dissatisfied',
+            'excellent',
+            'good',
+            'average',
+            'poor',
+            'very poor',
+            'always',
+            'often',
+            'sometimes',
+            'rarely',
+            'never',
+            'very important',
+            'important',
+            'moderately important',
+            'slightly important',
+            'not important',
+            'extremely',
+            'very',
+            'moderately',
+            'slightly',
+            'not at all',
+            'yes',
+            'no',
+            'maybe'
+        ];
+
+        $matchCount = 0;
+        foreach ($optionsLower as $opt) {
+            if ($opt === '[missing / skipped]')
+                continue;
+            if (in_array($opt, $likertKeywords)) {
+                $matchCount++;
+            }
+        }
+
+        $actualOptionsCount = count(array_filter($optionsLower, fn($o) => $o !== '[missing / skipped]' && $o !== ''));
+        if ($actualOptionsCount > 0 && ($matchCount / $actualOptionsCount) >= 0.6) {
+            return true;
+        }
+        return false;
+    }
+
     public function getAnalyticalData(\App\Models\Survey $survey, $responses, $includeAi = false, $forceGenerate = false)
     {
         @set_time_limit(180);
@@ -1102,10 +1168,13 @@ class SurveyController extends Controller
                 $canvasId = 'chart-' . $fieldId;
 
                 $stats = [];
+                $uniqueAnswers = [];
                 if ($isChartable) {
                     foreach ($answersList as $ans) {
                         if ($ans !== null && $ans !== '') {
                             $frequencyCount[$ans] = ($frequencyCount[$ans] ?? 0) + 1;
+                            if (!in_array($ans, $uniqueAnswers))
+                                $uniqueAnswers[] = $ans;
                         }
                     }
                     foreach ($frequencyCount as $val => $count) {
@@ -1123,8 +1192,13 @@ class SurveyController extends Controller
                     ];
                 }
 
+                $isLikertLike = false;
+                if ($isChartable && !empty($uniqueAnswers)) {
+                    $isLikertLike = self::isLikertScale($uniqueAnswers);
+                }
+
                 $chartUrl = null;
-                if ($isChartable && !empty($frequencyCount)) {
+                if ($isChartable && !empty($frequencyCount) && !$isLikertLike) {
                     $qName = $field['label'] ?? $field['name'] ?? '';
                     $shortTheme = self::formatShortCategoryTheme($qName);
                     $chartConfigs[] = [
@@ -1182,6 +1256,7 @@ class SurveyController extends Controller
                     'label' => $label,
                     'type' => $type,
                     'isChartable' => $isChartable,
+                    'isLikertLike' => $isLikertLike,
                     'isAnalyzable' => $isAnalyzable,
                     'canvasId' => $canvasId,
                     'answers' => $answersList,
@@ -1230,9 +1305,14 @@ class SurveyController extends Controller
                     'is_missing' => true
                 ];
 
-                $chartUrl = null;
+                $isLikertLike = false;
                 if ($isChartable && !empty($frequencyCount)) {
-                    $qName = $field['label'] ?? $field['name'] ?? '';
+                    $isLikertLike = self::isLikertScale(array_keys($frequencyCount));
+                }
+
+                $chartUrl = null;
+                if ($isChartable && !empty($frequencyCount) && !$isLikertLike) {
+                    $qName = $question->text;
                     $shortTheme = self::formatShortCategoryTheme($qName);
                     $chartConfigs[] = [
                         'canvas_id' => $canvasId,
@@ -1289,6 +1369,7 @@ class SurveyController extends Controller
                     'label' => $question->text,
                     'type' => $question->type,
                     'isChartable' => $isChartable,
+                    'isLikertLike' => $isLikertLike,
                     'isAnalyzable' => $isAnalyzable,
                     'canvasId' => $canvasId,
                     'answers' => $answersList,
@@ -1343,7 +1424,11 @@ class SurveyController extends Controller
         }
         $myGroup = $user->surveyGroups()->where('survey_id', $survey->id)->first();
 
-        return view('surveys.reports', compact('survey', 'responses', 'analysis', 'chartConfigs', 'aiSummary', 'canAnalyze', 'groups', 'myGroup'));
+        $savedInferentialTests = \App\Models\SurveyInferentialAnalysis::where('survey_id', $survey->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('surveys.reports', compact('survey', 'responses', 'analysis', 'chartConfigs', 'aiSummary', 'canAnalyze', 'groups', 'myGroup', 'savedInferentialTests'));
     }
 
     public function exportPdf(\App\Models\Survey $survey)
@@ -1351,18 +1436,143 @@ class SurveyController extends Controller
         set_time_limit(300);
         $this->authorizeOwner($survey);
 
+        $userColors = json_decode(request('colors', '{}'), true) ?? [];
+        $userTypes = json_decode(request('types', '{}'), true) ?? [];
+
+        $branding = $this->getBrandingContext($survey);
+
         $responses = $survey->responses()->with('answers.question')->get();
         $analyticalData = $this->getAnalyticalData($survey, $responses, true, true);
         $analysis = $analyticalData['analysis'];
 
-        // Convert Chart URLs to Base64 for PDF reliability
+        $colorPalettes = [
+            'vibrant' => ['#6366f1', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#f97316'],
+            'indigo' => ['#4f46e5', '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff', '#3730a3', '#312e81'],
+            'emerald' => ['#10b981', '#059669', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5', '#065f46', '#064e3b'],
+            'rose' => ['#f43f5e', '#e11d48', '#fb7185', '#fda4af', '#fecdd3', '#fff1f2', '#9f1239', '#881337'],
+            'amber' => ['#f59e0b', '#d97706', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7', '#b45309', '#92400e'],
+            'purple' => ['#8b5cf6', '#7c3aed', '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe', '#5b21b6', '#4c1d95'],
+            'greyscale' => ['#374151', '#4b5563', '#6b7280', '#9ca3af', '#d1d5db', '#e5e7eb', '#1f2937', '#111827'],
+        ];
+
+        // Re-generate chart URLs matching user selected color palettes & chart types
         foreach ($analysis as &$item) {
+            if ($item['isChartable'] && empty($item['isLikertLike']) && !empty($item['stats'])) {
+                $freqMap = [];
+                foreach ($item['stats'] as $stat) {
+                    if (!isset($stat['is_missing']) || !$stat['is_missing']) {
+                        $freqMap[$stat['value']] = $stat['count'];
+                    }
+                }
+                if (!empty($freqMap)) {
+                    $canvasId = $item['canvasId'] ?? '';
+                    $userPaletteKey = $userColors[$canvasId] ?? 'vibrant';
+                    $userTypeKey = $userTypes[$canvasId] ?? 'bar';
+
+                    $palette = $colorPalettes[$userPaletteKey] ?? $colorPalettes['vibrant'];
+                    $primaryColor = $palette[0];
+                    $labels = array_values(array_keys($freqMap));
+                    $totalCnt = array_sum($freqMap);
+                    $percData = array_map(fn($c) => $totalCnt > 0 ? round(($c / $totalCnt) * 100, 1) : 0, array_values($freqMap));
+
+                    $barColors = [];
+                    foreach ($labels as $idx => $lbl) {
+                        $barColors[] = $palette[$idx % count($palette)];
+                    }
+
+                    $chartType = $userTypeKey;
+                    $indexAxis = 'x';
+                    $fill = false;
+                    $showLegend = in_array($userTypeKey, ['pie', 'doughnut', 'polarArea', 'radar']);
+
+                    if ($userTypeKey === 'horizontal') {
+                        $chartType = 'bar';
+                        $indexAxis = 'y';
+                    } elseif ($userTypeKey === 'area') {
+                        $chartType = 'line';
+                        $fill = true;
+                    }
+
+                    $isCategorical = in_array($userTypeKey, ['pie', 'doughnut', 'polarArea', 'bar', 'horizontal']);
+                    $shortTheme = self::formatShortCategoryTheme($item['label'] ?? '');
+
+                    $maxVal = !empty($percData) ? max($percData) : 0;
+                    $suggestedMax = min(100, max(10, ceil(($maxVal * 1.25) / 5) * 5));
+
+                    $labelAxisConfig = [
+                        'grid' => ['display' => false],
+                        'title' => [
+                            'display' => !$showLegend,
+                            'text' => $shortTheme,
+                            'color' => '#64748b',
+                            'font' => ['weight' => '600', 'size' => 12]
+                        ]
+                    ];
+
+                    $valueAxisConfig = [
+                        'beginAtZero' => true,
+                        'suggestedMax' => $suggestedMax,
+                        'title' => [
+                            'display' => !$showLegend,
+                            'text' => 'Percentage (%)',
+                            'color' => '#64748b',
+                            'font' => ['weight' => '600', 'size' => 12]
+                        ]
+                    ];
+
+                    $qcConfig = [
+                        'type' => $chartType,
+                        'data' => [
+                            'labels' => $labels,
+                            'datasets' => [
+                                [
+                                    'label' => 'Responses (%)',
+                                    'data' => $percData,
+                                    'backgroundColor' => $isCategorical ? $barColors : ($fill ? $primaryColor . '44' : $primaryColor),
+                                    'borderColor' => $isCategorical ? ($chartType === 'bar' ? $barColors : '#ffffff') : $primaryColor,
+                                    'maxBarThickness' => 45,
+                                    'borderRadius' => ($chartType === 'bar') ? 6 : 0,
+                                    'fill' => $fill
+                                ]
+                            ]
+                        ],
+                        'options' => [
+                            'indexAxis' => $indexAxis,
+                            'plugins' => [
+                                'legend' => [
+                                    'display' => $showLegend,
+                                    'position' => 'bottom'
+                                ],
+                                'datalabels' => [
+                                    'display' => !$showLegend,
+                                    'anchor' => 'end',
+                                    'align' => 'end',
+                                    'offset' => 2,
+                                    'color' => '#374151',
+                                    'font' => ['weight' => 'bold', 'size' => 10],
+                                    'formatter' => 'function(v){return v + "%";}'
+                                ]
+                            ],
+                            'scales' => [
+                                'x' => $indexAxis === 'y' ? $valueAxisConfig : $labelAxisConfig,
+                                'y' => $indexAxis === 'y' ? $labelAxisConfig : $valueAxisConfig
+                            ]
+                        ]
+                    ];
+                    $item['chartUrl'] = 'https://quickchart.io/chart?c=' . urlencode(json_encode($qcConfig)) . '&w=600&h=300&bkg=white&version=3';
+                }
+            }
+
+            // Convert Chart URLs to Base64 for PDF reliability
             if (!empty($item['chartUrl'])) {
                 try {
                     $context = stream_context_create([
                         "ssl" => [
                             "verify_peer" => false,
                             "verify_peer_name" => false,
+                        ],
+                        "http" => [
+                            "timeout" => 3,
                         ],
                     ]);
                     $imgData = file_get_contents($item['chartUrl'], false, $context);
@@ -1382,9 +1592,12 @@ class SurveyController extends Controller
         } catch (\Exception $e) {
         }
 
-        $branding = $this->getBrandingContext($survey);
         $isPremium = auth()->user()->hasActiveSubscription();
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.pdf', compact('survey', 'responses', 'analysis', 'branding', 'aiSummary', 'isPremium'));
+        $savedInferentialTests = \App\Models\SurveyInferentialAnalysis::where('survey_id', $survey->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.pdf', compact('survey', 'responses', 'analysis', 'branding', 'aiSummary', 'isPremium', 'savedInferentialTests'));
         $filename = "Analytical_Report_" . Str::slug($survey->title) . "_" . date('Ymd_His') . ".pdf";
 
         // Save for History
@@ -1402,9 +1615,13 @@ class SurveyController extends Controller
     {
         $this->authorizeOwner($survey);
 
+        $userColors = json_decode(request('colors', '{}'), true) ?? [];
+        $userTypes = json_decode(request('types', '{}'), true) ?? [];
+
         $phpWord = new \PhpOffice\PhpWord\PhpWord();
         $branding = $this->getBrandingContext($survey);
         $brandHex = ltrim($branding['brandColor'] ?? '4f46e5', '#');
+        $brandColor = '#' . $brandHex;
 
         // Define Styles
         $phpWord->addTitleStyle(1, ['size' => 26, 'bold' => true, 'color' => '1e1b4b', 'name' => 'Arial'], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER, 'spaceAfter' => 240]);
@@ -1413,13 +1630,13 @@ class SurveyController extends Controller
 
         $phpWord->addFontStyle('Normal', ['size' => 10, 'name' => 'Arial', 'color' => '374151']);
         $phpWord->addFontStyle('Italic', ['size' => 10, 'name' => 'Arial', 'color' => '6b7280', 'italic' => true]);
-        $phpWord->addFontStyle('AiHeading', ['size' => 10, 'bold' => true, 'color' => '15803d', 'name' => 'Arial']);
+        $phpWord->addFontStyle('AiHeading', ['size' => 10, 'bold' => true, 'color' => $brandHex, 'name' => 'Arial']);
         $phpWord->addFontStyle('AiText', ['size' => 10, 'color' => '374151', 'name' => 'Arial']);
         $phpWord->addFontStyle('Quote', ['size' => 10, 'italic' => true, 'color' => '4b5563', 'name' => 'Arial']);
 
-        $phpWord->addTableStyle('StatsTable', [
+        $phpWord->addTableStyle('StandardStatsTable', [
             'borderSize' => 6,
-            'borderColor' => 'e5e7eb',
+            'borderColor' => 'cccccc',
             'cellMargin' => 80
         ], [
             'bgColor' => 'f9fafb'
@@ -1432,10 +1649,40 @@ class SurveyController extends Controller
             'marginRight' => 1200
         ]);
 
+        // Helper to parse ** to bold
+        $addParsedText = function ($element, $text) {
+            if (empty($text))
+                return;
+            $parts = explode('**', $text);
+            $isBold = false;
+            $run = ($element instanceof \PhpOffice\PhpWord\Element\TextRun) ? $element : $element->addTextRun();
+            foreach ($parts as $part) {
+                if ($part === '') {
+                    $isBold = !$isBold;
+                    continue;
+                }
+                $run->addText($part, ['bold' => $isBold, 'name' => 'Arial', 'size' => 10, 'color' => '374151']);
+                $isBold = !$isBold;
+            }
+        };
+
+        // Helper to add AI text as line-break paragraphs without headers/boxes
+        $addAiParagraphs = function ($targetSection, $text) use ($addParsedText) {
+            if (empty($text))
+                return;
+            $paras = preg_split('/\n+/', trim($text));
+            foreach ($paras as $para) {
+                $para = trim($para);
+                if ($para !== '') {
+                    $addParsedText($targetSection, $para);
+                }
+            }
+        };
+
         // Cover Page
         $section->addTextBreak(4);
         $section->addTitle($survey->title, 1);
-        $section->addText("Analytical Executive Report", ['size' => 14, 'color' => '6366f1', 'bold' => true], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
+        $section->addText("Analytical Executive Report", ['size' => 14, 'color' => $brandHex, 'bold' => true], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
         $section->addTextBreak(1);
         $section->addText("Date Generated: " . now()->format('F d, Y'), ['italic' => true], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
         $section->addTextBreak(2);
@@ -1443,6 +1690,126 @@ class SurveyController extends Controller
         $responses = $survey->responses()->with('answers.question')->get();
         $analyticalData = $this->getAnalyticalData($survey, $responses, true, true);
         $analysis = $analyticalData['analysis'];
+
+        $colorPalettes = [
+            'vibrant' => ['#6366f1', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#f97316'],
+            'indigo' => ['#4f46e5', '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff', '#3730a3', '#312e81'],
+            'emerald' => ['#10b981', '#059669', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5', '#065f46', '#064e3b'],
+            'rose' => ['#f43f5e', '#e11d48', '#fb7185', '#fda4af', '#fecdd3', '#fff1f2', '#9f1239', '#881337'],
+            'amber' => ['#f59e0b', '#d97706', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7', '#b45309', '#92400e'],
+            'purple' => ['#8b5cf6', '#7c3aed', '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe', '#5b21b6', '#4c1d95'],
+            'greyscale' => ['#374151', '#4b5563', '#6b7280', '#9ca3af', '#d1d5db', '#e5e7eb', '#1f2937', '#111827'],
+        ];
+
+        // Re-generate chart URLs matching user selected color palettes & chart types
+        foreach ($analysis as &$item) {
+            if ($item['isChartable'] && empty($item['isLikertLike']) && !empty($item['stats'])) {
+                $freqMap = [];
+                foreach ($item['stats'] as $stat) {
+                    if (!isset($stat['is_missing']) || !$stat['is_missing']) {
+                        $freqMap[$stat['value']] = $stat['count'];
+                    }
+                }
+                if (!empty($freqMap)) {
+                    $canvasId = $item['canvasId'] ?? '';
+                    $userPaletteKey = $userColors[$canvasId] ?? 'vibrant';
+                    $userTypeKey = $userTypes[$canvasId] ?? 'bar';
+
+                    $palette = $colorPalettes[$userPaletteKey] ?? $colorPalettes['vibrant'];
+                    $primaryColor = $palette[0];
+                    $labels = array_values(array_keys($freqMap));
+                    $totalCnt = array_sum($freqMap);
+                    $percData = array_map(fn($c) => $totalCnt > 0 ? round(($c / $totalCnt) * 100, 1) : 0, array_values($freqMap));
+
+                    $barColors = [];
+                    foreach ($labels as $idx => $lbl) {
+                        $barColors[] = $palette[$idx % count($palette)];
+                    }
+
+                    $chartType = $userTypeKey;
+                    $indexAxis = 'x';
+                    $fill = false;
+                    $showLegend = in_array($userTypeKey, ['pie', 'doughnut', 'polarArea', 'radar']);
+
+                    if ($userTypeKey === 'horizontal') {
+                        $chartType = 'bar';
+                        $indexAxis = 'y';
+                    } elseif ($userTypeKey === 'area') {
+                        $chartType = 'line';
+                        $fill = true;
+                    }
+
+                    $isCategorical = in_array($userTypeKey, ['pie', 'doughnut', 'polarArea', 'bar', 'horizontal']);
+                    $shortTheme = self::formatShortCategoryTheme($item['label'] ?? '');
+
+                    $maxVal = !empty($percData) ? max($percData) : 0;
+                    $suggestedMax = min(100, max(10, ceil(($maxVal * 1.25) / 5) * 5));
+
+                    $labelAxisConfig = [
+                        'grid' => ['display' => false],
+                        'title' => [
+                            'display' => !$showLegend,
+                            'text' => $shortTheme,
+                            'color' => '#64748b',
+                            'font' => ['weight' => '600', 'size' => 14]
+                        ]
+                    ];
+
+                    $valueAxisConfig = [
+                        'beginAtZero' => true,
+                        'suggestedMax' => $suggestedMax,
+                        'title' => [
+                            'display' => !$showLegend,
+                            'text' => 'Percentage (%)',
+                            'color' => '#64748b',
+                            'font' => ['weight' => '600', 'size' => 14]
+                        ]
+                    ];
+
+                    $qcConfig = [
+                        'type' => $chartType,
+                        'data' => [
+                            'labels' => $labels,
+                            'datasets' => [
+                                [
+                                    'label' => 'Responses (%)',
+                                    'data' => $percData,
+                                    'backgroundColor' => $isCategorical ? $barColors : ($fill ? $primaryColor . '44' : $primaryColor),
+                                    'borderColor' => $isCategorical ? ($chartType === 'bar' ? $barColors : '#ffffff') : $primaryColor,
+                                    'maxBarThickness' => 45,
+                                    'borderRadius' => ($chartType === 'bar') ? 6 : 0,
+                                    'fill' => $fill
+                                ]
+                            ]
+                        ],
+                        'options' => [
+                            'indexAxis' => $indexAxis,
+                            'plugins' => [
+                                'legend' => [
+                                    'display' => $showLegend,
+                                    'position' => 'bottom'
+                                ],
+                                'datalabels' => [
+                                    'display' => !$showLegend,
+                                    'anchor' => 'end',
+                                    'align' => 'end',
+                                    'offset' => 2,
+                                    'color' => '#374151',
+                                    'font' => ['weight' => 'bold', 'size' => 10],
+                                    'formatter' => 'function(v){return v + "%";}'
+                                ]
+                            ],
+                            'scales' => [
+                                'x' => $indexAxis === 'y' ? $valueAxisConfig : $labelAxisConfig,
+                                'y' => $indexAxis === 'y' ? $labelAxisConfig : $valueAxisConfig
+                            ]
+                        ]
+                    ];
+                    $item['chartUrl'] = 'https://quickchart.io/chart?c=' . urlencode(json_encode($qcConfig)) . '&w=600&h=300&bkg=white&version=3';
+                }
+            }
+        }
+        unset($item);
 
         $section->addText("This document provides a comprehensive statistical and qualitative interpretation of gathered data, utilizing AI-driven thematic mapping and sentiment analysis to reveal core respondent trends.", 'Italic', ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
         $section->addPageBreak();
@@ -1453,42 +1820,123 @@ class SurveyController extends Controller
         } catch (\Exception $e) {
         }
 
-        // Summary Stats (Chapter 4 starts here)
-        $section->addTitle('Chapter 4: Executive Thematic Analysis', 2);
-        $section->addText($aiSummary);
+        // Summary Stats
+        $section->addTitle('Executive Thematic Analysis', 2);
+        $addAiParagraphs($section, $aiSummary);
         $section->addTextBreak(2);
 
         // Detailed Findings
+        $qNumber = 1;
         foreach ($analysis as $index => $item) {
-            $section->addHeading("Q" . ($index + 1) . ": " . $item['label'], 3);
+            $labelLower = strtolower($item['label'] ?? '');
+            if (str_contains($labelLower, 'respondent id') || str_contains($labelLower, 'respondent_id')) {
+                continue;
+            }
+
+            $section->addTitle("Q" . $qNumber . ": " . $item['label'], 3);
+            $qNumber++;
 
             if ($item['isChartable']) {
-                $table = $section->addTable('StatsTable');
-                $table->addRow(400, ['bgColor' => '4338ca']);
-                $table->addCell(4000)->addText("Choice", ['bold' => true, 'color' => 'ffffff']);
-                $table->addCell(2000)->addText("Count", ['bold' => true, 'color' => 'ffffff']);
-                $table->addCell(2000)->addText("Ratio", ['bold' => true, 'color' => 'ffffff']);
+                if (!empty($item['isLikertLike'])) {
+                    // Likert Grid Layout
+                    $table = $section->addTable('StandardStatsTable');
 
-                foreach ($item['stats'] as $stat) {
-                    if ($stat['is_missing'] ?? false)
-                        continue;
+                    // Header Row 1
                     $table->addRow();
-                    $table->addCell(4000)->addText($stat['value'], 'Normal');
-                    $table->addCell(2000)->addText($stat['count'], 'Normal');
-                    $table->addCell(2000)->addText($stat['percentage'] . '%', 'Normal');
+                    $table->addCell(3000, ['vMerge' => 'restart'])->addText("Value", ['bold' => true]);
+                    foreach ($item['stats'] as $stat) {
+                        if (!isset($stat['is_missing']) || !$stat['is_missing']) {
+                            $table->addCell(2000, ['gridSpan' => 2])->addText($stat['value'], ['bold' => true], ['alignment' => 'center']);
+                        }
+                    }
+
+                    // Header Row 2
+                    $table->addRow();
+                    $table->addCell(3000, ['vMerge' => 'continue']);
+                    foreach ($item['stats'] as $stat) {
+                        if (!isset($stat['is_missing']) || !$stat['is_missing']) {
+                            $table->addCell(1000)->addText("Frequency", ['bold' => true], ['alignment' => 'center']);
+                            $table->addCell(1000)->addText("%", ['bold' => true], ['alignment' => 'center']);
+                        }
+                    }
+
+                    // Data Row
+                    $table->addRow();
+                    $table->addCell(3000)->addText($item['label'], 'Normal');
+
+                    $totalFreqLikert = array_sum(array_column(array_filter($item['stats'], fn($s) => !isset($s['is_missing']) || !$s['is_missing']), 'count'));
+                    foreach ($item['stats'] as $stat) {
+                        if (!isset($stat['is_missing']) || !$stat['is_missing']) {
+                            $percentLikert = $totalFreqLikert > 0 ? ($stat['count'] / $totalFreqLikert) * 100 : 0;
+                            $table->addCell(1000)->addText(number_format($stat['count']), 'Normal', ['alignment' => 'center']);
+                            $table->addCell(1000)->addText(number_format($percentLikert, 1) . '%', 'Normal', ['alignment' => 'center']);
+                        }
+                    }
+                } else {
+                    // Standard Frequency Table (5 Columns)
+                    $table = $section->addTable('StandardStatsTable');
+                    $table->addRow();
+                    $table->addCell(3000)->addText("Value", ['bold' => true]);
+                    $table->addCell(1500)->addText("Frequency", ['bold' => true], ['alignment' => 'right']);
+                    $table->addCell(1500)->addText("Percent", ['bold' => true], ['alignment' => 'right']);
+                    $table->addCell(1800)->addText("Valid Percent", ['bold' => true], ['alignment' => 'right']);
+                    $table->addCell(1800)->addText("Cumulative Percent", ['bold' => true], ['alignment' => 'right']);
+
+                    $totalFreq = 0;
+                    $validFreq = 0;
+                    foreach ($item['stats'] as $s) {
+                        if (!isset($s['is_missing']) || !$s['is_missing']) {
+                            $validFreq += $s['count'];
+                        }
+                        $totalFreq += $s['count'];
+                    }
+                    if ($validFreq === 0)
+                        $validFreq = $totalFreq;
+
+                    $cumulativePerc = 0;
+                    foreach ($item['stats'] as $stat) {
+                        $isMissing = isset($stat['is_missing']) && $stat['is_missing'];
+                        if ($isMissing && $stat['count'] == 0)
+                            continue;
+
+                        $percent = $totalFreq > 0 ? ($stat['count'] / $totalFreq) * 100 : 0;
+                        if ($isMissing) {
+                            $validPercent = null;
+                            $cumPercentDisplay = '-';
+                        } else {
+                            $validPercent = $validFreq > 0 ? ($stat['count'] / $validFreq) * 100 : 0;
+                            $cumulativePerc += $validPercent;
+                            $cumPercentDisplay = number_format($cumulativePerc, 1) . '%';
+                        }
+
+                        $table->addRow();
+                        $table->addCell(3000)->addText($stat['value'], 'Normal');
+                        $table->addCell(1500)->addText(number_format($stat['count']), 'Normal', ['alignment' => 'right']);
+                        $table->addCell(1500)->addText(number_format($percent, 1) . '%', 'Normal', ['alignment' => 'right']);
+                        $table->addCell(1800)->addText($validPercent !== null ? number_format($validPercent, 1) . '%' : '-', 'Normal', ['alignment' => 'right']);
+                        $table->addCell(1800)->addText($cumPercentDisplay, 'Normal', ['alignment' => 'right']);
+                    }
+
+                    // Total Row
+                    $table->addRow();
+                    $table->addCell(3000)->addText("Total", ['bold' => true]);
+                    $table->addCell(1500)->addText(number_format($totalFreq), ['bold' => true], ['alignment' => 'right']);
+                    $table->addCell(1500)->addText("100.0%", ['bold' => true], ['alignment' => 'right']);
+                    $table->addCell(1800)->addText("100.0%", ['bold' => true], ['alignment' => 'right']);
+                    $table->addCell(1800)->addText("", 'Normal');
                 }
 
-                $table->addRow(300, ['bgColor' => 'f3f4f6']);
-                $table->addCell(4000)->addText("TOTAL", ['bold' => true]);
-                $table->addCell(2000)->addText($item['answered_count'], ['bold' => true]);
-                $table->addCell(2000)->addText("100%", ['bold' => true]);
-                if (!empty($item['chartUrl'])) {
+                // Add Chart Image
+                if (!empty($item['chartUrl']) && empty($item['isLikertLike'])) {
                     $section->addTextBreak(1);
                     try {
                         $context = stream_context_create([
                             "ssl" => [
                                 "verify_peer" => false,
                                 "verify_peer_name" => false,
+                            ],
+                            "http" => [
+                                "timeout" => 3,
                             ],
                         ]);
                         $img = file_get_contents($item['chartUrl'], false, $context);
@@ -1501,99 +1949,298 @@ class SurveyController extends Controller
                     }
                 }
 
+                // AI Insight (Statistical Interpretation) - No header/border, plain paragraphs
                 if (!empty($item['aiInsight']) && is_string($item['aiInsight'])) {
                     $section->addTextBreak(1);
-                    $aiTable = $section->addTable(['borderColor' => 'bbf7d0', 'borderSize' => 6, 'cellMargin' => 120]);
-                    $aiTable->addRow();
-                    $aiCell = $aiTable->addCell(8000, ['bgColor' => 'f0fdf4']);
-                    $aiCell->addText("AI STATISTICAL INTERPRETATION", 'AiHeading');
-                    $aiCell->addText($item['aiInsight'], 'AiText');
+                    $addAiParagraphs($section, $item['aiInsight']);
                 }
             } else {
+                // Qualitative Detailed Analysis - Narrative prose & professional list
                 if (!empty($item['aiInsight']) && is_array($item['aiInsight'])) {
-                    $aiTable = $section->addTable(['borderColor' => 'bbf7d0', 'borderSize' => 6, 'cellMargin' => 120]);
-                    $aiTable->addRow();
-                    $aiCell = $aiTable->addCell(8000, ['bgColor' => 'f0fdf4']);
+                    $section->addTextBreak(1);
+                    $pos = $item['aiInsight']['sentiment_breakdown']['Positive'] ?? 0;
+                    $neu = $item['aiInsight']['sentiment_breakdown']['Neutral'] ?? 0;
+                    $neg = $item['aiInsight']['sentiment_breakdown']['Negative'] ?? 0;
 
-                    $aiCell->addText("AI QUALITATIVE INSIGHTS", 'AiHeading');
-                    $aiCell->addText("Sentiment Distribution:", ['bold' => true, 'size' => 9]);
-                    $aiCell->addText("Positive: " . $item['aiInsight']['sentiment_breakdown']['Positive'] . "% | Neutral: " . $item['aiInsight']['sentiment_breakdown']['Neutral'] . "% | Negative: " . $item['aiInsight']['sentiment_breakdown']['Negative'] . "%", 'AiText');
-
-                    $aiCell->addTextBreak(1);
-                    $aiCell->addText("Key Thematic Mapping:", ['bold' => true, 'size' => 9]);
-                    foreach ($item['aiInsight']['key_themes'] as $theme) {
-                        $aiCell->addListItem($theme['theme'] . ": " . $theme['explanation'], 0, 'AiText');
-                    }
-
-                    $aiCell->addTextBreak(1);
-                    $aiCell->addText("Representative Voter Quotes:", ['bold' => true, 'size' => 9]);
-                    foreach ($item['aiInsight']['representative_quotes'] as $quote) {
-                        $aiCell->addText('"' . $quote . '"', 'Quote');
-                    }
-                }
-                foreach (array_slice((array) $item['answers'], 0, 15) as $answer) {
-                    $val = is_array($answer) ? json_encode($answer) : (string) $answer;
-
-                    if (str_contains($val, 'base64,')) {
-                        try {
-                            $section->addText("Captured Signature:", ['size' => 8, 'color' => '666666']);
-                            $imageData = explode('base64,', $val)[1];
-                            $section->addMemoryImage(base64_decode($imageData), ['height' => 40]);
-                        } catch (\Exception $e) {
-                            $section->addText("[Signature Rendering Error]");
-                        }
-                    } elseif (str_starts_with($val, 'uploads/') && in_array(strtolower(pathinfo($val, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                        try {
-                            $section->addText("Uploaded Image:", ['size' => 8, 'color' => '666666']);
-                            $section->addImage(public_path('storage/' . $val), ['height' => 80]);
-                        } catch (\Exception $e) {
-                            $section->addText("[Image File Missing: $val]");
-                        }
+                    if ($pos >= 60) {
+                        $sentNarr = "Sentiment analysis of responses reveals a predominantly positive tone ({$pos}% positive, {$neu}% neutral, {$neg}% negative), suggesting general satisfaction and agreement.";
+                    } elseif ($neg >= 60) {
+                        $sentNarr = "Sentiment analysis indicates a predominantly negative tone ({$neg}% negative, {$neu}% neutral, {$pos}% positive), highlighting core concerns among respondents.";
+                    } elseif ($neu >= 50) {
+                        $sentNarr = "Respondent sentiment is largely neutral ({$neu}% neutral, {$pos}% positive, {$neg}% negative), reflecting balanced or objective views.";
                     } else {
-                        $section->addListItem($val);
+                        $sentNarr = "Responses reflect a mixed sentiment profile: {$pos}% positive, {$neu}% neutral, and {$neg}% negative, demonstrating varied perspectives.";
+                    }
+                    $section->addText($sentNarr, 'Normal');
+
+                    $themes = $item['aiInsight']['key_themes'] ?? [];
+                    if (!empty($themes)) {
+                        $section->addTextBreak(1);
+                        $section->addText("Key themes identified in responses:", ['bold' => true]);
+                        foreach ($themes as $theme) {
+                            $tName = $theme['theme'] ?? 'Theme';
+                            $tExpl = $theme['explanation'] ?? '';
+                            $section->addListItem($tName . ": " . $tExpl, 0, 'Normal', \PhpOffice\PhpWord\Style\ListItem::TYPE_BULLET_FILLED);
+                        }
                     }
                 }
             }
             $section->addTextBreak(1);
         }
 
-        // Raw Data Appendix (Premium Only)
-        if (auth()->user()->hasActiveSubscription()) {
+        // Inferential Saved Analysis Section
+        $savedInferentialTests = \App\Models\SurveyInferentialAnalysis::where('survey_id', $survey->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        if ($savedInferentialTests->count() > 0) {
             $section = $phpWord->addSection(['breakType' => 'nextPage']);
-            $section->addTitle("Appendix: Raw Data Dump", 2);
-            $section->addText("Complete record of all respondent submissions.", 'Italic');
+            $section->addTitle("Inferential Analysis", 2);
+            $section->addText("Significance tests, correlations, and regressions saved to the report.", 'Italic');
             $section->addTextBreak(1);
 
-            foreach ($responses as $resp) {
-                $section->addText("RESPONSE ID: #{$resp->id} | SUBMITTED: " . $resp->created_at->format('M d, Y H:i'), ['bold' => true, 'size' => 9, 'color' => '666666']);
-
-                $table = $section->addTable(['borderSize' => 6, 'borderColor' => 'f3f4f6', 'cellMargin' => 40]);
-                foreach ($analysis as $item) {
-                    $ans = null;
-                    if (!empty($survey->json_schema) && $survey->json_schema !== '[]') {
-                        $data = json_decode($resp->answers->first()->value ?? '[]', true);
-                        foreach ((array) $data as $entry) {
-                            if (isset($entry['name']) && $entry['name'] === $item['id']) {
-                                $ans = $entry['userData'] ?? null;
-                                break;
-                            }
-                        }
-                    } else {
-                        $ans = $resp->answers->where('question_id', $item['id'])->first()?->value;
-                    }
-
-                    $table->addRow();
-                    $table->addCell(3000, ['bgColor' => 'f9fafb'])->addText($item['label'], ['bold' => true, 'size' => 8]);
-
-                    $valStr = is_array($ans) ? implode(', ', $ans) : (string) $ans;
-                    if (str_contains($valStr, 'base64,'))
-                        $valStr = "[Signature Captured]";
-                    elseif (str_starts_with($valStr, 'uploads/'))
-                        $valStr = "[Media: " . basename($valStr) . "]";
-
-                    $table->addCell(7000)->addText($valStr ?: '—', ['size' => 8]);
-                }
+            foreach ($savedInferentialTests as $test) {
+                $section->addTitle($test->title, 3);
+                $section->addText("Method: " . strtoupper($test->method), ['bold' => true]);
+                $section->addText("Variables: " . $test->variables, 'Normal');
                 $section->addTextBreak(1);
+
+                $data = $test->payload['data'] ?? null;
+                if ($data) {
+                    $method = strtolower($test->method);
+                    if ($method === 'crosstab' || $method === 'chisquare') {
+                        $rows = $data['rows'] ?? [];
+                        $cols = $data['columns'] ?? ($data['cols'] ?? []);
+                        $matrix = $data['matrix'] ?? [];
+                        $rowTotals = $data['rowTotals'] ?? ($data['row_totals'] ?? []);
+                        $colTotals = $data['colTotals'] ?? ($data['col_totals'] ?? []);
+                        $grandTotal = $data['grandTotal'] ?? ($data['grand_total'] ?? 0);
+
+                        $table = $section->addTable('StandardStatsTable');
+
+                        $table->addRow();
+                        $table->addCell(3000)->addText("Row \\ Column", ['bold' => true]);
+                        foreach ($cols as $col) {
+                            $table->addCell(1500)->addText($col, ['bold' => true], ['alignment' => 'center']);
+                        }
+                        $table->addCell(1500)->addText("Total", ['bold' => true], ['alignment' => 'center']);
+
+                        foreach ($rows as $rowVal) {
+                            $table->addRow();
+                            $table->addCell(3000)->addText($rowVal, 'Normal');
+                            foreach ($cols as $colVal) {
+                                $val = $matrix[$rowVal][$colVal] ?? 0;
+                                $table->addCell(1500)->addText(number_format($val), 'Normal', ['alignment' => 'center']);
+                            }
+                            $rTotal = $rowTotals[$rowVal] ?? 0;
+                            $table->addCell(1500)->addText(number_format($rTotal), ['bold' => true], ['alignment' => 'center']);
+                        }
+
+                        $table->addRow();
+                        $table->addCell(3000)->addText("Total", ['bold' => true]);
+                        foreach ($cols as $colVal) {
+                            $cTotal = $colTotals[$colVal] ?? 0;
+                            $table->addCell(1500)->addText(number_format($cTotal), ['bold' => true], ['alignment' => 'center']);
+                        }
+                        $table->addCell(1500)->addText(number_format($grandTotal), ['bold' => true], ['alignment' => 'center']);
+
+                        $chiSqVal = $data['chiSquare'] ?? ($data['chi_square'] ?? null);
+                        if ($method === 'chisquare' && $chiSqVal !== null) {
+                            $section->addTextBreak(1);
+                            $section->addText("Chi-Square Statistic (χ²): " . number_format($chiSqVal, 4), 'Normal');
+                            $section->addText("Degrees of Freedom (df): " . ($data['df'] ?? 0), 'Normal');
+                            $section->addText("p-value: " . number_format($data['pValue'] ?? ($data['p_value'] ?? 0), 4), 'Normal');
+                            if (isset($data['cramersV'])) {
+                                $section->addText("Cramer's V: " . number_format($data['cramersV'], 4), 'Normal');
+                            }
+                            $section->addText("Result: " . (($data['significant'] ?? false) ? "Statistically Significant" : "Not Statistically Significant"), ['bold' => true]);
+                        }
+                    } elseif ($method === 'cronbach') {
+                        $alpha = $data['alpha'] ?? 0;
+                        $itemsCount = $data['k_items'] ?? ($data['items_count'] ?? 0);
+                        $interpretation = $data['interpretation'] ?? ($data['internal_consistency'] ?? 'Unknown');
+                        $section->addText("Cronbach's Alpha (α): " . number_format($alpha, 3), ['bold' => true]);
+                        $section->addText("Number of Items: " . $itemsCount, 'Normal');
+                        $section->addText("Internal Consistency: " . $interpretation, 'Italic');
+                    } elseif ($method === 'ttest') {
+                        if (!empty($data['groups'])) {
+                            $table = $section->addTable('StandardStatsTable');
+                            $table->addRow();
+                            $table->addCell(2400)->addText("Group", ['bold' => true]);
+                            $table->addCell(1500)->addText("N", ['bold' => true], ['alignment' => 'center']);
+                            $table->addCell(1800)->addText("Mean", ['bold' => true], ['alignment' => 'right']);
+                            $table->addCell(1800)->addText("Std. Dev", ['bold' => true], ['alignment' => 'right']);
+                            $table->addCell(1800)->addText("Std. Error", ['bold' => true], ['alignment' => 'right']);
+
+                            foreach ($data['groups'] as $g) {
+                                $table->addRow();
+                                $table->addCell(2400)->addText($g['name'] ?? '', 'Normal');
+                                $table->addCell(1500)->addText(number_format($g['n'] ?? 0), 'Normal', ['alignment' => 'center']);
+                                $table->addCell(1800)->addText(number_format($g['mean'] ?? 0, 4), 'Normal', ['alignment' => 'right']);
+                                $table->addCell(1800)->addText(number_format($g['stdDev'] ?? 0, 4), 'Normal', ['alignment' => 'right']);
+                                $table->addCell(1800)->addText(number_format($g['stdError'] ?? 0, 4), 'Normal', ['alignment' => 'right']);
+                            }
+                            $section->addTextBreak(1);
+                        }
+
+                        $table = $section->addTable('StandardStatsTable');
+                        $table->addRow();
+                        $table->addCell(4000)->addText("Metric", ['bold' => true]);
+                        $table->addCell(4000)->addText("Value", ['bold' => true]);
+
+                        $tVal = $data['tValue'] ?? ($data['t_stat'] ?? 0);
+                        $pVal = $data['pValue'] ?? ($data['p_value'] ?? 0);
+                        $mDiff = $data['meanDiff'] ?? ($data['mean_diff'] ?? 0);
+
+                        $metrics = [
+                            't-Statistic' => number_format($tVal, 4),
+                            'Degrees of Freedom (df)' => $data['df'] ?? 0,
+                            'p-value' => number_format($pVal, 4),
+                            'Mean Difference' => number_format($mDiff, 4),
+                            'Significant' => ($data['significant'] ?? false) ? 'Yes' : 'No'
+                        ];
+
+                        foreach ($metrics as $metric => $val) {
+                            $table->addRow();
+                            $table->addCell(4000)->addText($metric, 'Normal');
+                            $table->addCell(4000)->addText($val, 'Normal');
+                        }
+                    } elseif ($method === 'anova') {
+                        if (!empty($data['groupStats'])) {
+                            $section->addText("Group Descriptives:", ['bold' => true]);
+                            $gTable = $section->addTable('StandardStatsTable');
+                            $gTable->addRow();
+                            $gTable->addCell(2400)->addText("Group", ['bold' => true]);
+                            $gTable->addCell(1200)->addText("N", ['bold' => true], ['alignment' => 'center']);
+                            $gTable->addCell(1600)->addText("Mean", ['bold' => true], ['alignment' => 'right']);
+                            $gTable->addCell(1600)->addText("Std. Dev", ['bold' => true], ['alignment' => 'right']);
+                            $gTable->addCell(1600)->addText("95% CI Lower", ['bold' => true], ['alignment' => 'right']);
+                            $gTable->addCell(1600)->addText("95% CI Upper", ['bold' => true], ['alignment' => 'right']);
+
+                            foreach ($data['groupStats'] as $gs) {
+                                $gTable->addRow();
+                                $gTable->addCell(2400)->addText($gs['name'] ?? '', 'Normal');
+                                $gTable->addCell(1200)->addText(number_format($gs['n'] ?? 0), 'Normal', ['alignment' => 'center']);
+                                $gTable->addCell(1600)->addText(number_format($gs['mean'] ?? 0, 4), 'Normal', ['alignment' => 'right']);
+                                $gTable->addCell(1600)->addText(number_format($gs['stdDev'] ?? 0, 4), 'Normal', ['alignment' => 'right']);
+                                $gTable->addCell(1600)->addText(number_format($gs['ciLower'] ?? 0, 4), 'Normal', ['alignment' => 'right']);
+                                $gTable->addCell(1600)->addText(number_format($gs['ciUpper'] ?? 0, 4), 'Normal', ['alignment' => 'right']);
+                            }
+                            $section->addTextBreak(1);
+                        }
+
+                        $table = $section->addTable('StandardStatsTable');
+
+                        $table->addRow();
+                        $table->addCell(2000)->addText("Source of Variation", ['bold' => true]);
+                        $table->addCell(1500)->addText("Sum of Squares (SS)", ['bold' => true]);
+                        $table->addCell(1500)->addText("df", ['bold' => true]);
+                        $table->addCell(1500)->addText("Mean Square (MS)", ['bold' => true]);
+                        $table->addCell(1500)->addText("F-Stat", ['bold' => true]);
+                        $table->addCell(1500)->addText("p-value", ['bold' => true]);
+
+                        $ssb = $data['ssb'] ?? ($data['between_ss'] ?? 0);
+                        $dfB = $data['dfBetween'] ?? ($data['df_between'] ?? 0);
+                        $msb = $data['msb'] ?? ($data['ms_between'] ?? 0);
+                        $fVal = $data['fValue'] ?? ($data['f_stat'] ?? 0);
+                        $pVal = $data['pValue'] ?? ($data['p_value'] ?? 0);
+                        $ssw = $data['ssw'] ?? ($data['within_ss'] ?? 0);
+                        $dfW = $data['dfWithin'] ?? ($data['df_within'] ?? 0);
+                        $msw = $data['msw'] ?? ($data['ms_within'] ?? 0);
+                        $sst = $data['sst'] ?? ($data['total_ss'] ?? 0);
+                        $dfT = $data['dfTotal'] ?? ($data['df_total'] ?? 0);
+
+                        $table->addRow();
+                        $table->addCell(2000)->addText("Between Groups", 'Normal');
+                        $table->addCell(1500)->addText(number_format($ssb, 4), 'Normal');
+                        $table->addCell(1500)->addText($dfB, 'Normal');
+                        $table->addCell(1500)->addText(number_format($msb, 4), 'Normal');
+                        $table->addCell(1500, ['vMerge' => 'restart'])->addText(number_format($fVal, 4), 'Normal');
+                        $table->addCell(1500, ['vMerge' => 'restart'])->addText(number_format($pVal, 4), 'Normal');
+
+                        $table->addRow();
+                        $table->addCell(2000)->addText("Within Groups", 'Normal');
+                        $table->addCell(1500)->addText(number_format($ssw, 4), 'Normal');
+                        $table->addCell(1500)->addText($dfW, 'Normal');
+                        $table->addCell(1500)->addText(number_format($msw, 4), 'Normal');
+                        $table->addCell(1500, ['vMerge' => 'continue']);
+                        $table->addCell(1500, ['vMerge' => 'continue']);
+
+                        $table->addRow();
+                        $table->addCell(2000)->addText("Total", ['bold' => true]);
+                        $table->addCell(1500)->addText(number_format($sst, 4), ['bold' => true]);
+                        $table->addCell(1500)->addText($dfT, ['bold' => true]);
+                        $table->addCell(1500)->addText("", 'Normal');
+                        $table->addCell(1500)->addText("", 'Normal');
+                        $table->addCell(1500)->addText("", 'Normal');
+                    } elseif ($method === 'correlation') {
+                        $table = $section->addTable('StandardStatsTable');
+                        $table->addRow();
+                        $table->addCell(4000)->addText("Metric", ['bold' => true]);
+                        $table->addCell(4000)->addText("Value", ['bold' => true]);
+
+                        $rVal = $data['r'] ?? 0;
+                        $pVal = $data['pValue'] ?? ($data['p_value'] ?? 0);
+
+                        $metrics = [
+                            'Variables' => ($data['labelX'] ?? 'X') . ' vs ' . ($data['labelY'] ?? 'Y'),
+                            'Pearson Correlation (r)' => number_format($rVal, 4),
+                            'p-value' => number_format($pVal, 4),
+                            'Sample Size (N)' => $data['n'] ?? 0,
+                            'Direction' => $data['direction'] ?? 'None',
+                            'Strength' => $data['strength'] ?? 'None',
+                            'Significant' => ($data['significant'] ?? false) ? 'Yes' : 'No'
+                        ];
+
+                        foreach ($metrics as $metric => $val) {
+                            $table->addRow();
+                            $table->addCell(4000)->addText($metric, 'Normal');
+                            $table->addCell(4000)->addText($val, 'Normal');
+                        }
+                    } elseif ($method === 'regression' || $method === 'regression_multiple') {
+                        $r2 = $data['r2'] ?? 0;
+                        $adjR2 = $data['adjR2'] ?? ($data['adj_r2'] ?? 0);
+                        $fVal = $data['fValue'] ?? ($data['f_stat'] ?? 0);
+                        $pVal = $data['pValue'] ?? ($data['p_value'] ?? 0);
+
+                        $section->addText("Regression Statistics:", ['bold' => true]);
+                        $section->addText("R-Square (R²): " . number_format($r2, 4), 'Normal');
+                        $section->addText("Adjusted R-Square: " . number_format($adjR2, 4), 'Normal');
+                        $section->addText("Overall F-Stat: " . number_format($fVal, 4), 'Normal');
+                        $section->addText("p-value: " . number_format($pVal, 4), 'Normal');
+                        $section->addTextBreak(1);
+
+                        $section->addText("Coefficients & Significance:", ['bold' => true]);
+                        $table = $section->addTable('StandardStatsTable');
+                        $table->addRow();
+                        $table->addCell(3000)->addText("Variable", ['bold' => true]);
+                        $table->addCell(2000)->addText("Coefficient", ['bold' => true]);
+                        $table->addCell(2000)->addText("t-Stat", ['bold' => true]);
+                        $table->addCell(2000)->addText("p-value", ['bold' => true]);
+
+                        $intercept = $data['intercept'] ?? 0;
+                        $table->addRow();
+                        $table->addCell(3000)->addText("Intercept (Constant)", 'Normal');
+                        $table->addCell(2000)->addText(number_format($intercept, 4), 'Normal');
+                        $table->addCell(2000)->addText("—", 'Normal');
+                        $table->addCell(2000)->addText("—", 'Normal');
+
+                        $coefs = $data['coefficients'] ?? [];
+                        foreach ($coefs as $var => $details) {
+                            $table->addRow();
+                            $table->addCell(3000)->addText(is_string($var) ? $var : ($details['name'] ?? 'Variable'), 'Normal');
+                            $table->addCell(2000)->addText(number_format($details['coef'] ?? 0, 4), 'Normal');
+                            $table->addCell(2000)->addText(number_format($details['t_stat'] ?? ($details['tStat'] ?? 0), 4), 'Normal');
+                            $table->addCell(2000)->addText(number_format($details['p_value'] ?? ($details['pValue'] ?? 0), 4), 'Normal');
+                        }
+                    }
+                }
+
+                if (!empty($test->ai_summary)) {
+                    $section->addTextBreak(1);
+                    $addAiParagraphs($section, $test->ai_summary);
+                }
+                $section->addTextBreak(2);
             }
         }
 
@@ -2868,6 +3515,43 @@ class SurveyController extends Controller
         }
     }
 
+    public function saveInferentialAnalysis(Request $request)
+    {
+        $validated = $request->validate([
+            'survey_id' => 'required|exists:surveys,id',
+            'method' => 'required|string',
+            'title' => 'required|string',
+            'variables' => 'nullable|string',
+            'ai_summary' => 'nullable|string',
+            'payload' => 'required|array'
+        ]);
+
+        $survey = \App\Models\Survey::findOrFail($validated['survey_id']);
+        $this->authorizeOwner($survey);
+
+        $analysis = \App\Models\SurveyInferentialAnalysis::create([
+            'survey_id' => $survey->id,
+            'user_id' => auth()->id(),
+            'method' => $validated['method'],
+            'title' => $validated['title'],
+            'variables' => $validated['variables'],
+            'ai_summary' => $validated['ai_summary'],
+            'payload' => $validated['payload']
+        ]);
+
+        return response()->json(['success' => true, 'analysis' => $analysis]);
+    }
+
+    public function deleteInferentialAnalysis(Request $request, $analysisId)
+    {
+        $analysis = \App\Models\SurveyInferentialAnalysis::findOrFail($analysisId);
+        $this->authorizeOwner($analysis->survey);
+
+        $analysis->delete();
+
+        return response()->json(['success' => true]);
+    }
+
     public function inferentialAnalysis(Request $request, \App\Models\Survey $survey)
     {
         $this->authorizeOwner($survey);
@@ -2886,7 +3570,11 @@ class SurveyController extends Controller
         try {
             switch ($method) {
                 case 'crosstab':
-                    return $this->handleChiSquareAndCrosstab($request, $survey, $responses, $isJson);
+                    return $this->handleCrosstab($request, $survey, $responses, $isJson);
+                case 'chisquare':
+                    return $this->handleChiSquare($request, $survey, $responses, $isJson);
+                case 'cronbach':
+                    return $this->handleCronbachAlpha($request, $survey, $responses, $isJson);
                 case 'ttest':
                     return $this->handleTTest($request, $survey, $responses, $isJson);
                 case 'correlation':
@@ -2912,7 +3600,58 @@ class SurveyController extends Controller
         }
     }
 
-    private function handleChiSquareAndCrosstab($request, $survey, $responses, $isJson)
+    private function convertValueToNumeric($val, array &$uniqueValues)
+    {
+        if ($val === null || $val === '')
+            return null;
+        if (is_numeric($val))
+            return (float) $val;
+
+        $cleanVal = strtolower(trim((string) $val));
+
+        $likertMap = [
+            'strongly_agree' => 5,
+            'strongly agree' => 5,
+            'certain' => 5,
+            'definitely' => 5,
+            'excellent' => 5,
+            'very_high' => 5,
+            'agree' => 4,
+            'very_likely' => 4,
+            'very likely' => 4,
+            'probably' => 4,
+            'good' => 4,
+            'high' => 4,
+            'neutral' => 3,
+            'moderate' => 3,
+            'not_sure' => 3,
+            'sometimes' => 3,
+            'average' => 3,
+            'disagree' => 2,
+            'unlikely' => 2,
+            'probably_not' => 2,
+            'rarely' => 2,
+            'poor' => 2,
+            'low' => 2,
+            'strongly_disagree' => 1,
+            'strongly disagree' => 1,
+            'very_unlikely' => 1,
+            'definitely_not' => 1,
+            'never' => 1,
+            'very_poor' => 1
+        ];
+
+        if (isset($likertMap[$cleanVal])) {
+            return (float) $likertMap[$cleanVal];
+        }
+
+        if (!in_array($val, $uniqueValues)) {
+            $uniqueValues[] = $val;
+        }
+        return (float) (array_search($val, $uniqueValues) + 1);
+    }
+
+    private function handleCrosstab($request, $survey, $responses, $isJson)
     {
         $rowId = $request->query('row');
         $colId = $request->query('col');
@@ -2973,7 +3712,6 @@ class SurveyController extends Controller
             $grandTotal++;
         }
 
-        // Fill gaps in matrix
         foreach ($rows as $r) {
             foreach ($cols as $c) {
                 if (!isset($matrix[$r][$c])) {
@@ -2982,7 +3720,108 @@ class SurveyController extends Controller
             }
         }
 
-        // Chi-Square calculation
+        $rowPercentages = [];
+        $colPercentages = [];
+        foreach ($rows as $r) {
+            foreach ($cols as $c) {
+                $count = $matrix[$r][$c];
+                $rTot = $rowTotals[$r] ?? 1;
+                $cTot = $colTotals[$c] ?? 1;
+                $rowPercentages[$r][$c] = round(($count / $rTot) * 100, 1);
+                $colPercentages[$r][$c] = round(($count / $cTot) * 100, 1);
+            }
+        }
+
+        $aiSummary = "Cross-tabulation analysis of '{$rowLabel}' across '{$colLabel}' (N = {$grandTotal} responses). The contingency table highlights the observed response joint distributions and marginal proportions across sub-groups.";
+
+        return response()->json([
+            'success' => true,
+            'method' => 'crosstab',
+            'rowId' => $rowId,
+            'colId' => $colId,
+            'rowLabel' => $rowLabel,
+            'colLabel' => $colLabel,
+            'matrix' => $matrix,
+            'rowPercentages' => $rowPercentages,
+            'colPercentages' => $colPercentages,
+            'rows' => $rows,
+            'columns' => $cols,
+            'rowTotals' => $rowTotals,
+            'colTotals' => $colTotals,
+            'grandTotal' => $grandTotal,
+            'aiSummary' => $aiSummary
+        ]);
+    }
+
+    private function handleChiSquare($request, $survey, $responses, $isJson)
+    {
+        $rowId = $request->query('row');
+        $colId = $request->query('col');
+
+        if (!$rowId || !$colId) {
+            return response()->json(['success' => false, 'message' => 'Row and Column variables are required.'], 400);
+        }
+
+        $rowLabel = "Variable A";
+        $colLabel = "Variable B";
+
+        if ($isJson) {
+            $schema = json_decode($survey->json_schema, true);
+            foreach ($schema as $f) {
+                if (isset($f['name'])) {
+                    if ($f['name'] === $rowId)
+                        $rowLabel = $f['label'] ?? $rowId;
+                    if ($f['name'] === $colId)
+                        $colLabel = $f['label'] ?? $colId;
+                }
+            }
+        } else {
+            $rowLabel = \App\Models\Question::find($rowId)?->text ?? $rowId;
+            $colLabel = \App\Models\Question::find($colId)?->text ?? $colId;
+        }
+
+        $matrix = [];
+        $rows = [];
+        $cols = [];
+        $rowTotals = [];
+        $colTotals = [];
+        $grandTotal = 0;
+
+        foreach ($responses as $resp) {
+            $rowVal = $this->getAnswerValue($resp, $rowId, $isJson);
+            $colVal = $this->getAnswerValue($resp, $colId, $isJson);
+
+            if ($rowVal === null)
+                $rowVal = "[Missing]";
+            if ($colVal === null)
+                $colVal = "[Missing]";
+
+            $rowVal = (string) $rowVal;
+            $colVal = (string) $colVal;
+
+            if (!in_array($rowVal, $rows))
+                $rows[] = $rowVal;
+            if (!in_array($colVal, $cols))
+                $cols[] = $colVal;
+
+            if (!isset($matrix[$rowVal][$colVal])) {
+                $matrix[$rowVal][$colVal] = 0;
+            }
+            $matrix[$rowVal][$colVal]++;
+
+            $rowTotals[$rowVal] = ($rowTotals[$rowVal] ?? 0) + 1;
+            $colTotals[$colVal] = ($colTotals[$colVal] ?? 0) + 1;
+            $grandTotal++;
+        }
+
+        foreach ($rows as $r) {
+            foreach ($cols as $c) {
+                if (!isset($matrix[$r][$c])) {
+                    $matrix[$r][$c] = 0;
+                }
+            }
+        }
+
         $chiSquare = 0.0;
         $expectedMatrix = [];
         foreach ($rows as $r) {
@@ -2999,16 +3838,16 @@ class SurveyController extends Controller
             }
         }
 
-        $df = (count($rows) - 1) * (count($cols) - 1);
-        if ($df <= 0)
-            $df = 1;
+        $numRows = count($rows);
+        $numCols = count($cols);
+        $df = max(1, ($numRows - 1) * ($numCols - 1));
         $pValue = $this->chiSquareProbability($chiSquare, $df);
 
-        // Likelihood Ratio & expected counts check
+        // Likelihood Ratio
         $likelihoodRatio = 0.0;
         $cellsWithExpectedLessThan5 = 0;
         $minExpected = null;
-        $totalCells = count($rows) * count($cols);
+        $totalCells = $numRows * $numCols;
 
         foreach ($rows as $r) {
             foreach ($cols as $c) {
@@ -3028,7 +3867,7 @@ class SurveyController extends Controller
         $likelihoodRatio = 2.0 * $likelihoodRatio;
         $likelihoodPValue = $this->chiSquareProbability($likelihoodRatio, $df);
 
-        // Linear-by-Linear Association calculation using Pearson r score correlation
+        // Linear-by-Linear Association
         $rowScores = [];
         foreach (array_values($rows) as $idx => $r) {
             $rowScores[$r] = $idx;
@@ -3038,12 +3877,7 @@ class SurveyController extends Controller
             $colScores[$c] = $idx;
         }
 
-        $sumX = 0;
-        $sumY = 0;
-        $sumX2 = 0;
-        $sumY2 = 0;
-        $sumXY = 0;
-        $N_valid = 0;
+        $sumX = $sumY = $sumX2 = $sumY2 = $sumXY = $N_valid = 0;
         foreach ($responses as $resp) {
             $rowVal = (string) $this->getAnswerValue($resp, $rowId, $isJson);
             $colVal = (string) $this->getAnswerValue($resp, $colId, $isJson);
@@ -3069,6 +3903,22 @@ class SurveyController extends Controller
             $linearPValue = $this->chiSquareProbability($linearAssociation, 1);
         }
 
+        // Effect Size: Cramer's V & Phi Coefficient
+        $minDim = max(1, min($numRows - 1, $numCols - 1));
+        $cramersV = $grandTotal > 0 ? sqrt($chiSquare / ($grandTotal * $minDim)) : 0;
+        $cramersV = round(min(1.0, max(0.0, $cramersV)), 4);
+
+        $phi = $grandTotal > 0 ? sqrt($chiSquare / $grandTotal) : 0;
+        $phi = round($phi, 4);
+
+        $effectLabel = "Negligible";
+        if ($cramersV >= 0.50)
+            $effectLabel = "Very Strong";
+        elseif ($cramersV >= 0.30)
+            $effectLabel = "Strong";
+        elseif ($cramersV >= 0.10)
+            $effectLabel = "Moderate";
+
         $footnotePercent = $totalCells > 0 ? round(($cellsWithExpectedLessThan5 / $totalCells) * 100, 1) : 0.0;
         $footnote = __("a. :cells cells (:percent%) have expected count less than 5. The minimum expected count is :min.", [
             'cells' => $cellsWithExpectedLessThan5,
@@ -3076,8 +3926,16 @@ class SurveyController extends Controller
             'min' => number_format($minExpected, 2)
         ]);
 
+        $significant = $pValue < 0.05;
+        if ($significant) {
+            $aiSummary = "A Chi-Square Test of Independence was conducted to evaluate the relationship between '{$rowLabel}' and '{$colLabel}'. The relationship was statistically significant, χ²({$df}, N = {$grandTotal}) = " . number_format($chiSquare, 4) . ", p = " . number_format($pValue, 4) . " (p < 0.05). We reject the null hypothesis (H₀) of independence. Cramer's V = {$cramersV} indicates a {$effectLabel} association between the two variables.";
+        } else {
+            $aiSummary = "A Chi-Square Test of Independence was conducted to evaluate the relationship between '{$rowLabel}' and '{$colLabel}'. The relationship was not statistically significant, χ²({$df}, N = {$grandTotal}) = " . number_format($chiSquare, 4) . ", p = " . number_format($pValue, 4) . " (p ≥ 0.05). We fail to reject the null hypothesis (H₀); there is no evidence of a systematic association between '{$rowLabel}' and '{$colLabel}'.";
+        }
+
         return response()->json([
             'success' => true,
+            'method' => 'chisquare',
             'rowId' => $rowId,
             'colId' => $colId,
             'rowLabel' => $rowLabel,
@@ -3092,15 +3950,217 @@ class SurveyController extends Controller
             'chiSquare' => round($chiSquare, 4),
             'df' => $df,
             'pValue' => round($pValue, 4),
-            'significant' => $pValue < 0.05,
+            'significant' => $significant,
             'likelihoodRatio' => round($likelihoodRatio, 4),
             'likelihoodPValue' => round($likelihoodPValue, 4),
             'likelihoodSignificant' => $likelihoodPValue < 0.05,
             'linearAssociation' => round($linearAssociation, 4),
             'linearPValue' => round($linearPValue, 4),
             'linearSignificant' => $linearPValue < 0.05,
+            'cramersV' => $cramersV,
+            'phi' => $phi,
+            'effectLabel' => $effectLabel,
             'validCases' => $N_valid,
-            'footnote' => $footnote
+            'footnote' => $footnote,
+            'aiSummary' => $aiSummary
+        ]);
+    }
+
+    private function handleCronbachAlpha($request, $survey, $responses, $isJson)
+    {
+        $selectedItems = array_filter(explode(',', $request->query('items', '')));
+        if (count($selectedItems) < 2) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Reliability analysis requires selecting at least 2 items.'
+            ], 400);
+        }
+
+        $itemLabels = [];
+        if ($isJson) {
+            $schema = json_decode($survey->json_schema, true);
+            foreach ($schema as $f) {
+                if (isset($f['name']) && in_array($f['name'], $selectedItems)) {
+                    $itemLabels[$f['name']] = $f['label'] ?? $f['name'];
+                }
+            }
+        } else {
+            foreach ($selectedItems as $itemKey) {
+                $itemLabels[$itemKey] = \App\Models\Question::find($itemKey)?->text ?? $itemKey;
+            }
+        }
+        foreach ($selectedItems as $itemKey) {
+            if (!isset($itemLabels[$itemKey]))
+                $itemLabels[$itemKey] = $itemKey;
+        }
+
+        $dataMatrix = [];
+        $uniqueValuesPerItem = [];
+
+        foreach ($responses as $resp) {
+            $row = [];
+            foreach ($selectedItems as $itemKey) {
+                if (!isset($uniqueValuesPerItem[$itemKey]))
+                    $uniqueValuesPerItem[$itemKey] = [];
+                $rawVal = $this->getAnswerValue($resp, $itemKey, $isJson);
+                $numVal = $this->convertValueToNumeric($rawVal, $uniqueValuesPerItem[$itemKey]);
+                if ($numVal !== null) {
+                    $row[$itemKey] = $numVal;
+                }
+            }
+            if (count($row) === count($selectedItems)) {
+                $dataMatrix[] = $row;
+            }
+        }
+
+        $N = count($dataMatrix);
+        $K = count($selectedItems);
+
+        if ($K < 2 || $N < 2) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Insufficient response data across the selected scale items to perform reliability analysis.'
+            ], 400);
+        }
+
+        $itemVariances = [];
+        $itemMeans = [];
+        $totalScores = [];
+
+        foreach ($dataMatrix as $row) {
+            $tot = 0;
+            foreach ($row as $v)
+                $tot += $v;
+            $totalScores[] = $tot;
+        }
+
+        foreach ($selectedItems as $itemKey) {
+            $vals = array_column($dataMatrix, $itemKey);
+            $mean = array_sum($vals) / $N;
+            $itemMeans[$itemKey] = $mean;
+
+            $sqDiff = 0;
+            foreach ($vals as $v) {
+                $sqDiff += pow($v - $mean, 2);
+            }
+            $itemVariances[$itemKey] = $N > 1 ? $sqDiff / ($N - 1) : 0;
+        }
+
+        $totalMean = array_sum($totalScores) / $N;
+        $totalSqDiff = 0;
+        foreach ($totalScores as $t) {
+            $totalSqDiff += pow($t - $totalMean, 2);
+        }
+        $totalVariance = $N > 1 ? $totalSqDiff / ($N - 1) : 0;
+
+        $sumItemVariances = array_sum($itemVariances);
+
+        $alpha = 0.0;
+        if ($totalVariance > 0 && $K > 1) {
+            $alpha = ($K / ($K - 1)) * (1.0 - ($sumItemVariances / $totalVariance));
+        }
+        $alpha = round(max(0, min(1, $alpha)), 4);
+
+        $itemStats = [];
+        $sumCorr = 0;
+        $corrCount = 0;
+
+        foreach ($selectedItems as $itemKey) {
+            $subTotalScores = [];
+            foreach ($dataMatrix as $row) {
+                $subTot = 0;
+                foreach ($row as $k => $v) {
+                    if ($k !== $itemKey)
+                        $subTot += $v;
+                }
+                $subTotalScores[] = $subTot;
+            }
+
+            $subMean = array_sum($subTotalScores) / $N;
+            $subSqDiff = 0;
+            foreach ($subTotalScores as $st) {
+                $subSqDiff += pow($st - $subMean, 2);
+            }
+            $subVar = $N > 1 ? $subSqDiff / ($N - 1) : 0;
+
+            $itemVals = array_column($dataMatrix, $itemKey);
+            $num = 0;
+            $denX = 0;
+            $denY = 0;
+            $iMean = $itemMeans[$itemKey];
+            for ($idx = 0; $idx < $N; $idx++) {
+                $xDiff = $itemVals[$idx] - $iMean;
+                $yDiff = $subTotalScores[$idx] - $subMean;
+                $num += $xDiff * $yDiff;
+                $denX += pow($xDiff, 2);
+                $denY += pow($yDiff, 2);
+            }
+            $denom = sqrt(max(1e-12, $denX * $denY));
+            $itemTotalCorr = $denom > 0 ? round($num / $denom, 4) : 0.0;
+
+            $sumCorr += $itemTotalCorr;
+            $corrCount++;
+
+            $subItemVariances = 0;
+            foreach ($selectedItems as $otherKey) {
+                if ($otherKey !== $itemKey) {
+                    $subItemVariances += $itemVariances[$otherKey];
+                }
+            }
+
+            $alphaIfDeleted = 0.0;
+            if ($subVar > 0 && ($K - 1) > 1) {
+                $alphaIfDeleted = (($K - 1) / ($K - 2)) * (1.0 - ($subItemVariances / $subVar));
+            }
+            $alphaIfDeleted = round(max(0, min(1, $alphaIfDeleted)), 4);
+
+            $itemStats[] = [
+                'item_key' => $itemKey,
+                'label' => $itemLabels[$itemKey] ?? $itemKey,
+                'scale_mean_if_deleted' => round($subMean, 2),
+                'scale_var_if_deleted' => round($subVar, 2),
+                'item_total_corr' => $itemTotalCorr,
+                'alpha_if_deleted' => $alphaIfDeleted
+            ];
+        }
+
+        $meanInterItemCorr = $corrCount > 0 ? $sumCorr / $corrCount : 0;
+        $stdAlpha = 0.0;
+        if ($K > 1) {
+            $stdAlpha = ($K * $meanInterItemCorr) / (1 + ($K - 1) * $meanInterItemCorr);
+        }
+        $stdAlpha = round(max(0, min(1, $stdAlpha)), 4);
+
+        $interpretation = "Poor Internal Consistency (Tool needs revision)";
+        if ($alpha >= 0.90) {
+            $interpretation = "Excellent Reliability (High internal consistency)";
+        } elseif ($alpha >= 0.80) {
+            $interpretation = "Good Reliability (Good internal consistency)";
+        } elseif ($alpha >= 0.70) {
+            $interpretation = "Acceptable Reliability (Suitable for pilot data tool)";
+        } elseif ($alpha >= 0.60) {
+            $interpretation = "Questionable Reliability (Borderline consistency)";
+        }
+
+        $aiSummary = "Cronbach's Alpha (α) for the {$K} evaluated scale items was calculated as " . number_format($alpha, 4) . " (Standardized α = " . number_format($stdAlpha, 4) . ") across N = {$N} valid responses. This indicates {$interpretation}. ";
+        if ($alpha >= 0.70) {
+            $aiSummary .= "The scale items show strong cohesion and internal validity, suitable for research measurement.";
+        } else {
+            $aiSummary .= "Item-total statistics indicate that removing items with low corrected item-total correlation (< 0.30) will improve overall scale reliability.";
+        }
+
+        return response()->json([
+            'success' => true,
+            'method' => 'cronbach',
+            'alpha' => $alpha,
+            'std_alpha' => $stdAlpha,
+            'k_items' => $K,
+            'valid_n' => $N,
+            'interpretation' => $interpretation,
+            'item_stats' => $itemStats,
+            'sumItemVariances' => round($sumItemVariances, 4),
+            'totalVariance' => round($totalVariance, 4),
+            'aiSummary' => $aiSummary
         ]);
     }
 
