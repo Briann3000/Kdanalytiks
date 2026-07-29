@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('meta_robots', 'noindex, nofollow')
+
 @php
     $roleName = in_array($role, ['independent', 'researcher']) ? 'researcher' : $role;
     $roleLabel = $roleName === 'researcher' ? 'Researcher' : ucfirst($roleName);

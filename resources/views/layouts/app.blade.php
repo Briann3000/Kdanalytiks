@@ -15,7 +15,7 @@
     <!-- SEO & Indexing Directives -->
     <title>@yield('title', 'KDAnalytiks | Collect & Analyze Data, Compile & Report Findings')</title>
     <meta name="description"
-        content="@yield('meta_description', 'KDAnalytiks helps you collect and analyze data, and compile and report findings automatically with AI-powered survey analysis and research tools.')">
+        content="@yield('meta_description', 'KDAnalytiks is an AI-powered research platform that helps users collect data,run statistical analysis and compile automated reports.')">
     <meta name="keywords"
         content="@yield('meta_keywords', 'collect and analyze data, compile and report findings, survey tool, AI survey analysis, APA report generator, survey builder, data analytics, AI humanizer')">
     <meta name="robots" content="@yield('meta_robots', 'index, follow')">
@@ -28,7 +28,7 @@
     <meta property="og:title"
         content="@yield('title', 'KDAnalytiks | Collect & Analyze Data, Compile & Report Findings')">
     <meta property="og:description"
-        content="@yield('meta_description', 'KDAnalytiks helps you collect and analyze data, and compile and report findings automatically with AI-powered survey analysis and research tools.')">
+        content="@yield('meta_description', 'KDAnalytiks is an end-to-end research ecosystem engineered for academics and organizations to automate survey data collection, analysis, and report generation.')">
     <meta property="og:image" content="{{ asset('images/logo.png') }}">
 
     <!-- Twitter Card Meta Tags -->
@@ -36,7 +36,7 @@
     <meta name="twitter:title"
         content="@yield('title', 'KDAnalytiks | Collect & Analyze Data, Compile & Report Findings')">
     <meta name="twitter:description"
-        content="@yield('meta_description', 'KDAnalytiks helps you collect and analyze data, and compile and report findings automatically with AI-powered survey analysis and research tools.')">
+        content="@yield('meta_description', 'KDAnalytiks is an end-to-end research ecosystem engineered for academics and organizations to automate survey data collection, analysis, and report generation.')">
     <meta name="twitter:image" content="{{ asset('images/logo.png') }}">
 
     <!-- Tailwind CSS (via Vite) -->

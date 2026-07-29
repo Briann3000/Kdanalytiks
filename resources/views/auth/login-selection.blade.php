@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Login Selection')
+@section('title', 'Sign In — KDAnalytiks Portal')
+@section('meta_description', 'Sign in to your KDAnalytiks account to access interactive survey reports, statistical analysis tools and your research workspace.')
 
 @section('content')
     <div class="min-h-[70vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8">

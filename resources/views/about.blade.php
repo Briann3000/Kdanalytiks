@@ -1,15 +1,11 @@
 @extends('layouts.app')
 
-@section('title', __('About Us — KDAnalytiks Overview'))
+@section('title', __('About Us — KDAnalytiks'))
+@section('meta_description', __('KDAnalytiks is an end-to-end research ecosystem engineered for researchers and organizations to automate data collection and analysis.'))
 
 @push('styles')
-    <meta name="description"
-        content="{{ __('KDAnalytiks is an end-to-end, web-based research ecosystem engineered for academicians, practitioners, organizations humanitarian aid workers. Automate data collection, analysis report generation.') }}">
     <meta name="keywords"
         content="KDAnalytiks, research platform, survey tool, qualitative analysis, quantitative analysis, data collection, humanitarian aid research, academic synthesis">
-    <meta property="og:title" content="{{ __('About Us — KDAnalytiks Overview') }}">
-    <meta property="og:description"
-        content="{{ __('KDAnalytiks is an end-to-end, web-based research ecosystem engineered for academicians, practitioners, organizations humanitarian aid workers.') }}">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ url('/about') }}">
     <link rel="canonical" href="{{ url('/about') }}">

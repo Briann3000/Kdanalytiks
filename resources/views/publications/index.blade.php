@@ -1,14 +1,10 @@
 @extends('layouts.app')
 
 @section('title', __('Publications Hub — KDAnalytiks'))
+@section('meta_description', __('Browse and submit empirical survey research findings, executive summaries and academic papers on KDAnalytiks.'))
 
 @push('styles')
-    <meta name="description"
-        content="{{ __('Browse and submit empirical survey research findings, executive summaries and academic papers on KDAnalytiks.') }}">
     <meta name="keywords" content="KDAnalytiks publications, research papers, survey findings, academic publishing">
-    <meta property="og:title" content="{{ __('Publications Hub — KDAnalytiks') }}">
-    <meta property="og:description"
-        content="{{ __('Discover empirical survey findings, academic publications and integrated WordPress research syndication.') }}">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ url('/publications') }}">
     <link rel="canonical" href="{{ url('/publications') }}">
@@ -171,34 +167,34 @@
                 </div>
 
                 <form @submit.prevent="
-                                    wpTesting = true; wpMessage = '';
-                                    fetch('{{ route('publications.test-wordpress') }}', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                        },
-                                        body: JSON.stringify({
-                                            site_url: $refs.wp_url.value,
-                                            username: $refs.wp_user.value,
-                                            app_password: $refs.wp_pass.value
+                                        wpTesting = true; wpMessage = '';
+                                        fetch('{{ route('publications.test-wordpress') }}', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                            },
+                                            body: JSON.stringify({
+                                                site_url: $refs.wp_url.value,
+                                                username: $refs.wp_user.value,
+                                                app_password: $refs.wp_pass.value
+                                            })
                                         })
-                                    })
-                                    .then(res => res.json())
-                                    .then(data => {
-                                        wpTesting = false;
-                                        wpSuccess = data.success;
-                                        wpMessage = data.message;
-                                        if(data.success) {
-                                            setTimeout(() => { wpModalOpen = false; window.location.reload(); }, 1500);
-                                        }
-                                    })
-                                    .catch(err => {
-                                        wpTesting = false;
-                                        wpSuccess = false;
-                                        wpMessage = 'Unable to reach the WordPress website URL. Please double-check that your website address is spelled correctly and online.';
-                                    });
-                                " class="space-y-4">
+                                        .then(res => res.json())
+                                        .then(data => {
+                                            wpTesting = false;
+                                            wpSuccess = data.success;
+                                            wpMessage = data.message;
+                                            if(data.success) {
+                                                setTimeout(() => { wpModalOpen = false; window.location.reload(); }, 1500);
+                                            }
+                                        })
+                                        .catch(err => {
+                                            wpTesting = false;
+                                            wpSuccess = false;
+                                            wpMessage = 'Unable to reach the WordPress website URL. Please double-check that your website address is spelled correctly and online.';
+                                        });
+                                    " class="space-y-4">
                     <div class="space-y-1">
                         <label
                             class="block text-xs font-bold text-gray-700 uppercase tracking-wider">{{ __('WordPress Site URL') }}</label>

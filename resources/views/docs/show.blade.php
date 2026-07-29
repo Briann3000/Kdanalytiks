@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@section('title', ($articles[$article] ?? 'Documentation') . ' — KDAnalytiks Docs')
+@section('meta_description', 'Learn how to use KDAnalytiks ' . strtolower($articles[$article] ?? 'features') . ' for automated survey data collection, statistical analysis, and report generation.')
+
 @section('content')
     <div class="docs-page-wrap">
         <!-- Docs Sidebar (Sticky Header + Independent Scrollbar) -->

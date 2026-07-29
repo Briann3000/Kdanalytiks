@@ -1,9 +1,14 @@
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
-        Options -MultiViews -Indexes
+        # Options -MultiViews -Indexes
     </IfModule>
 
     RewriteEngine On
+
+    # 1. Force HTTPS and WWW simultaneously
+    RewriteCond %{HTTPS} off [OR]
+    RewriteCond %{HTTP_HOST} !^www\. [NC]
+    RewriteRule ^(.*)$ https://www.kdanalytiks.com/$1 [L,R=301]
 
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .

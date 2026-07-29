@@ -1,15 +1,11 @@
 @extends('layouts.app')
 
 @section('title', __('Contact Us — KDAnalytiks'))
+@section('meta_description', __('Contact KDAnalytiks for research inquiries, platform support and organization partnerships'))
 
 @push('styles')
-    <meta name="description"
-        content="{{ __('Contact KDAnalytiks for research inquiries, platform support, organization partnerships, and humanitarian research deployments. Call +254 725 788 400 or email infokdanalytiks@gmail.com.') }}">
     <meta name="keywords"
         content="KDAnalytiks contact, research support, KENPRO, survey tool support, academic research contact">
-    <meta property="og:title" content="{{ __('Contact Us — KDAnalytiks') }}">
-    <meta property="og:description"
-        content="{{ __('Get in touch with the KDAnalytiks support team for research inquiries, partnerships, and technical assistance.') }}">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ url('/contact') }}">
     <link rel="canonical" href="{{ url('/contact') }}">

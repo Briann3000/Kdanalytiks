@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('meta_robots', 'noindex, nofollow')
+
 @php
     $statusVal = is_object($status) ? $status->value : (string)$status;
 @endphp

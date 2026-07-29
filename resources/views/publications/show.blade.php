@@ -1,12 +1,9 @@
 @extends('layouts.app')
 
 @section('title', $publication['title'] . ' — KDAnalytiks Publications')
+@section('meta_description', \Illuminate\Support\Str::limit(strip_tags($publication['summary']), 150))
 
 @push('styles')
-    <meta name="description" content="{{ \Illuminate\Support\Str::limit(strip_tags($publication['summary']), 150) }}">
-    <meta property="og:title" content="{{ $publication['title'] }}">
-    <meta property="og:description"
-        content="{{ \Illuminate\Support\Str::limit(strip_tags($publication['summary']), 150) }}">
     <meta property="og:type" content="article">
 @endpush
 

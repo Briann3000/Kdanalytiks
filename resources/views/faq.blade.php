@@ -1,15 +1,11 @@
 @extends('layouts.app')
 
 @section('title', __('Frequently Asked Questions (FAQ) — KDAnalytiks'))
+@section('meta_description', __('Find answers to common questions about using KDAnalytiks for academic and organizational research.'))
 
 @push('styles')
-    <meta name="description"
-        content="{{ __('Frequently asked questions about KDAnalytiks research ecosystem, survey builder, quantitative and qualitative analysis engines, human voice guard, and publications.') }}">
     <meta name="keywords"
         content="KDAnalytiks FAQ, survey help, quantitative analysis help, qualitative thematic analysis, research platform questions">
-    <meta property="og:title" content="{{ __('Frequently Asked Questions (FAQ) — KDAnalytiks') }}">
-    <meta property="og:description"
-        content="{{ __('Find instant answers to common questions about using KDAnalytiks for academic and organizational research.') }}">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ url('/faq') }}">
     <link rel="canonical" href="{{ url('/faq') }}">
