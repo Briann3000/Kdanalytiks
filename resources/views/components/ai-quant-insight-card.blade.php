@@ -19,49 +19,48 @@
                 <span class="text-xs font-semibold">{{ __('Analyzing trends...') }}</span>
             </div>
 
+            <!-- Refinement / Polishing Loader -->
+            <div x-show="aiPolishing" class="flex items-center gap-2 text-[#2271b1] py-2 animate-pulse"
+                style="display: none;">
+                <i class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                <span class="text-xs font-semibold">{{ __('Polishing interpretation...') }}</span>
+            </div>
+
             <!-- Error -->
             <p x-show="error" class="text-xs text-red-500 font-medium italic py-2" x-text="error"
                 style="display: none;"></p>
 
-            <!-- Chat Message Logs -->
-            <div x-show="messages.length > 0" class="space-y-4 py-2" style="display: none;">
-                <template x-for="(msg, index) in messages" :key="index">
-                    <div class="flex flex-col mb-1 group/msg"
-                        :class="msg.role === 'user' ? 'items-end' : 'items-start'">
-                        <div class="relative max-w-[85%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed font-medium shadow-sm"
-                            :class="msg.role === 'user' 
-                                     ? 'bg-[#2271b1] text-white rounded-br-none' 
-                                     : 'bg-gray-100/80 text-gray-800 rounded-bl-none border border-gray-200/50'">
-                            <p class="whitespace-pre-wrap" x-text="msg.content"></p>
-
-                            <!-- Hover Copy Button -->
-                            <button type="button" @click="navigator.clipboard.writeText(msg.content)"
-                                class="absolute top-2 right-2 opacity-0 group-hover/msg:opacity-100 transition-opacity p-1 bg-white/80 hover:bg-white text-gray-600 rounded-lg text-[10px] shadow border border-gray-200/60"
-                                title="{{ __('Copy Message') }}">
-                                <i class="fa-solid fa-copy"></i>
-                            </button>
-                        </div>
-                    </div>
-                </template>
+            <!-- In-place Trend Interpretation Block -->
+            <div x-show="currentText" class="relative group/trend mb-4" style="display: none;">
+                <p class="whitespace-pre-wrap rounded-2xl px-4 py-3 text-[13px] leading-relaxed font-medium bg-gray-100/80 text-gray-800 border border-gray-200/50 shadow-sm"
+                    x-text="currentText"></p>
+                <!-- Copy Text Button on Bottom Right of the text block container -->
+                <div class="absolute bottom-2 right-3"
+                    x-show="currentText !== 'Unable to analyze data at this time.' && currentText !== 'Analysis temporarily unavailable.'">
+                    <button type="button" @click="copyText()"
+                        class="text-[10px] font-bold text-gray-400 hover:text-[#2271b1] transition-all bg-white/60 hover:bg-white px-2 py-0.5 rounded border border-gray-200/40"
+                        x-text="copied ? '{{ __('copied') }}' : '{{ __('copy') }}'">
+                    </button>
+                </div>
             </div>
 
             <!-- Empty State Prompt -->
-            <div x-show="messages.length === 0 && !loading && !error" class="py-2">
+            <div x-show="!currentText && !loading && !error" class="py-2">
                 <p class="text-xs text-gray-400 font-medium italic">
                     {{ __('Generating interpretation...') }}
                 </p>
             </div>
 
-            <!-- Polish / Refinement Input Bar inside Chat -->
-            <div x-show="messages.length > 0 && !loading" class="mt-5 pt-4 border-t border-zinc-200/50"
-                style="display: none;">
+            <!-- Polish / Refinement Input Bar -->
+            <div x-show="currentText && currentText !== 'Unable to analyze data at this time.' && currentText !== 'Analysis temporarily unavailable.' && !loading"
+                class="mt-5 pt-4 border-t border-zinc-200/50" style="display: none;">
                 <div class="flex flex-col md:flex-row gap-3 items-end">
                     <div class="flex-1 w-full">
                         <label
                             class="block text-[10px] font-bold text-[#2271b1] mb-1.5">{{ __('Refine this analysis ') }}</label>
                         <textarea x-model="feedback" rows="1" placeholder="{{ __('Reflect your own voice...') }}"
                             @input="$el.style.height = 'auto'; $el.style.height = $el.scrollHeight + 'px'"
-                            @keydown.enter.prevent="if(!$event.shiftKey) polish()"
+                            @keydown.enter.prevent="if(!$event.shiftKey && !$event.ctrlKey) polish()"
                             class="w-full bg-gray-50 border border-zinc-200 text-xs font-semibold rounded-xl px-3 py-2.5 focus:ring-1 focus:ring-[#2271b1] focus:outline-none transition-all resize-none max-h-32 overflow-y-auto"></textarea>
                     </div>
                     <button @click="polish()" :disabled="aiPolishing || !feedback.trim()"
@@ -74,28 +73,49 @@
             <!-- Actions Menu -->
             <div class="mt-4 pt-4 border-t border-zinc-200/50 flex justify-between items-center">
                 <div class="flex items-center">
-                    <button x-show="messages.length > 0" @click="copyFinalOutput()"
+                    <button
+                        x-show="currentText && currentText !== 'Unable to analyze data at this time.' && currentText !== 'Analysis temporarily unavailable.'"
+                        @click="copyFinalOutput()"
                         class="flex items-center gap-1 text-[9px] font-black text-gray-400 tracking-widest hover:text-[#2271b1] transition-colors mr-4"
                         style="display: none;">
                         <i class="fa-solid fa-copy"></i>
                         {{ __('Copy Output') }}
                     </button>
-                    <button x-show="messages.length > 0" @click="downloadFinalOutput()"
+                    <button
+                        x-show="currentText && currentText !== 'Unable to analyze data at this time.' && currentText !== 'Analysis temporarily unavailable.'"
+                        @click="downloadFinalOutput()"
                         class="flex items-center gap-1 text-[9px] font-black text-gray-400 tracking-widest hover:text-[#2271b1] transition-colors"
                         style="display: none;">
                         <i class="fa-solid fa-download"></i>
                         {{ __('Export') }}
                     </button>
                 </div>
-                <div>
+                <div class="flex items-center gap-3">
+                    <!-- Regenerate / Retry Button for Errors -->
+                    <button type="button"
+                        x-show="error || currentText === 'Unable to analyze data at this time.' || currentText === 'Analysis temporarily unavailable.'"
+                        @click="generate(true)"
+                        class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-[10px] font-black tracking-widest transition-all flex items-center gap-1.5 border border-indigo-100 shadow-sm"
+                        style="display: none;">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                        {{ __('Regenerate') }}
+                    </button>
+
+                    <!-- Muted Undo Button (Single level rollback) -->
+                    <button type="button" x-show="previousText" @click="undo()"
+                        class="text-[10px] font-black text-gray-400 hover:text-gray-600 tracking-widest transition-colors"
+                        style="display: none;">
+                        {{ __('Undo') }}
+                    </button>
+
                     @if(auth()->user() && auth()->user()->canUseAiAnalysis())
-                        <button @click="generate()" x-show="messages.length === 0 && !loading"
+                        <button @click="generate()" x-show="!currentText && !loading"
                             class="flex items-center gap-2 text-[9px] font-black text-[#2271b1] tracking-widest hover:text-[#135e96] transition-colors">
                             <i class="fa-solid fa-chart-line"></i>
                             {{ __('Deep Trend Analysis') }}
                         </button>
-                        <button x-show="messages.length > 0" @click="reset()"
-                            class="text-[9px] font-black text-red-500 hover:text-red-700 tracking-widest transition-colors"
+                        <button x-show="currentText" @click="reset()"
+                            class="text-[10px] font-black text-red-500 hover:text-red-700 tracking-widest transition-colors"
                             style="display: none;">
                             {{ __('Reset') }}
                         </button>
@@ -125,7 +145,13 @@
                 messages: [],
                 hasFetched: false,
                 retryCount: 0,
+                currentText: '',
+                previousText: null,
+                copied: false,
                 init() {
+                    window.quantInsightInstances = window.quantInsightInstances || {};
+                    window.quantInsightInstances[this.qId] = this;
+
                     // Use IntersectionObserver to lazy-load AI insights only when scrolled into view
                     if ('IntersectionObserver' in window) {
                         const observer = new IntersectionObserver((entries) => {
@@ -152,7 +178,8 @@
                     this.loading = true;
                     this.error = null;
                     try {
-                        const url = `/ai/insights/quantitative/${this.qId}?survey_id=${this.sId}` + (forceRefresh ? '&refresh=1' : '');
+                        const style = window.currentReportingStyle || 'apa';
+                        const url = `/ai/insights/quantitative/${this.qId}?survey_id=${this.sId}&style=${style}` + (forceRefresh ? '&refresh=1' : '');
                         const response = await fetch(url, {
                             headers: { 'Accept': 'application/json' }
                         });
@@ -165,11 +192,13 @@
                         const data = await this.parseJsonResponse(response);
                         if (!response.ok) throw new Error(data.message || data.error || @js(__('Failed to fetch analysis.')));
                         this.messages = [{ role: 'assistant', content: data.insight }];
+                        this.currentText = data.insight;
+                        this.previousText = null;
                         this.retryCount = 0;
                     } catch (err) {
                         this.error = err.message;
                     } finally {
-                        if (this.retryCount === 0 || this.messages.length > 0) {
+                        if (this.retryCount === 0 || this.currentText) {
                             this.loading = false;
                         }
                     }
@@ -178,10 +207,13 @@
                     if (!this.feedback.trim()) return;
                     const userMsg = this.feedback.trim();
                     this.messages.push({ role: 'user', content: userMsg });
+
+                    const previousVal = this.currentText;
                     this.feedback = '';
                     this.aiPolishing = true;
                     this.error = null;
                     try {
+                        const style = window.currentReportingStyle || 'apa';
                         const response = await fetch(`/ai/insights/quantitative/${this.qId}/refine`, {
                             method: 'POST',
                             headers: {
@@ -191,7 +223,8 @@
                             body: JSON.stringify({
                                 survey_id: this.sId,
                                 messages: this.messages,
-                                feedback: userMsg
+                                feedback: userMsg,
+                                style: style
                             })
                         });
                         if (!response.ok) {
@@ -201,6 +234,8 @@
                         const data = await response.json();
                         if (data.success) {
                             this.messages.push({ role: 'assistant', content: data.insight });
+                            this.previousText = previousVal;
+                            this.currentText = data.insight;
                         } else {
                             throw new Error(data.message || @js(__('Failed to refine analysis.')));
                         }
@@ -212,17 +247,74 @@
                         this.aiPolishing = false;
                     }
                 },
+                async refineFromGlobal(feedbackText, style) {
+                    if (this.aiPolishing || this.loading) return;
+                    this.aiPolishing = true;
+                    this.error = null;
+
+                    const userMsg = feedbackText.trim();
+                    this.messages.push({ role: 'user', content: userMsg });
+                    const previousVal = this.currentText;
+
+                    try {
+                        const response = await fetch(`/ai/insights/quantitative/${this.qId}/refine`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector("meta[name='csrf-token']").getAttribute('content')
+                            },
+                            body: JSON.stringify({
+                                survey_id: this.sId,
+                                messages: this.messages,
+                                feedback: userMsg,
+                                style: style
+                            })
+                        });
+                        if (!response.ok) {
+                            const errData = await response.json();
+                            throw new Error(errData.message || @js(__('Failed to refine analysis.')));
+                        }
+                        const data = await response.json();
+                        if (data.success) {
+                            this.messages.push({ role: 'assistant', content: data.insight });
+                            this.previousText = previousVal;
+                            this.currentText = data.insight;
+                        } else {
+                            throw new Error(data.message || @js(__('Failed to refine analysis.')));
+                        }
+                    } catch (err) {
+                        this.error = err.message;
+                        this.messages.pop();
+                    } finally {
+                        this.aiPolishing = false;
+                    }
+                },
+                copyText() {
+                    if (!this.currentText) return;
+                    navigator.clipboard.writeText(this.currentText).then(() => {
+                        this.copied = true;
+                        setTimeout(() => { this.copied = false; }, 2000);
+                    });
+                },
+                undo() {
+                    if (this.previousText) {
+                        this.currentText = this.previousText;
+                        this.previousText = null;
+                        if (this.messages.length >= 2) {
+                            this.messages.pop(); // Remove assistant
+                            this.messages.pop(); // Remove user
+                        }
+                    }
+                },
                 copyFinalOutput() {
-                    const lastMsg = [...this.messages].reverse().find(function (m) { return m.role === 'assistant'; });
-                    if (!lastMsg) return;
-                    navigator.clipboard.writeText(lastMsg.content).then(() => {
+                    if (!this.currentText) return;
+                    navigator.clipboard.writeText(this.currentText).then(() => {
                         alert(@js(__('Copied interpretation to clipboard!')));
                     });
                 },
                 downloadFinalOutput() {
-                    const lastMsg = [...this.messages].reverse().find(function (m) { return m.role === 'assistant'; });
-                    if (!lastMsg) return;
-                    const blob = new Blob([lastMsg.content], { type: 'text/plain;charset=utf-8' });
+                    if (!this.currentText) return;
+                    const blob = new Blob([this.currentText], { type: 'text/plain;charset=utf-8' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
@@ -234,6 +326,8 @@
                 },
                 reset() {
                     this.messages = [];
+                    this.currentText = '';
+                    this.previousText = null;
                     this.error = null;
                     this.feedback = '';
                     this.generate(true);

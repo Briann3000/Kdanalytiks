@@ -260,17 +260,19 @@ class InsightController extends Controller
             return response()->json(['error' => 'Premium subscription required for Trend Interpretation.'], 403);
         }
 
-        $cacheKey = "quantitative_analysis_{$survey->id}_{$questionId}";
+        $style = $request->query('style', $survey->reporting_style ?? 'apa');
+
+        $cacheKey = "quantitative_analysis_{$survey->id}_{$questionId}_{$style}";
         if ($request->has('refresh')) {
             Cache::forget($cacheKey);
         }
 
-        $insight = Cache::remember($cacheKey, 86400, function () use ($survey, $questionId) {
+        $insight = Cache::remember($cacheKey, 86400, function () use ($survey, $questionId, $style) {
             $data = $this->getQuestionStatsAndLabel($survey, $questionId);
             if (empty($data['stats'])) {
                 return "Insufficient data for trend interpretation.";
             }
-            return $this->analysisService->analyzeQuantitativeData($data['stats'], $data['label']);
+            return $this->analysisService->analyzeQuantitativeData($data['stats'], $data['label'], $style);
         });
 
         return response()->json(['insight' => $insight]);
@@ -458,6 +460,7 @@ class InsightController extends Controller
 
         $messages = $request->input('messages');
         $feedback = $request->input('feedback');
+        $style = $request->input('style', $survey->reporting_style ?? 'apa');
 
         if (empty($messages) || empty($feedback)) {
             return response()->json(['success' => false, 'message' => 'Conversation history and refinement instructions are required.'], 400);
@@ -470,11 +473,47 @@ class InsightController extends Controller
             $statsText .= "Choice: {$stat['value']} | Count: {$stat['count']} | Percentage: {$stat['percentage']}%\n";
         }
 
-        $prompt = "You are an expert research analyst and statistician.\n";
-        $prompt .= "We are analyzing a specific survey question from '{$survey->title}'.\n\n";
-        $prompt .= "TARGET QUESTION: {$questionLabel}\n";
-        $prompt .= "STATISTICAL FREQUENCY DATA FOR THIS QUESTION:\n{$statsText}\n\n";
-        $prompt .= "Here is the conversation history with the researcher:\n\n";
+        $stylePrompts = [
+            'apa' => "You are a senior quantitative research analyst writing in formal academic APA Style (7th Edition).
+STRICT RULES:
+- Do NOT include raw sample size counts / frequencies in narrative prose, e.g., do NOT write '(n = 122)' or '(n = 92)'. Always use percentages only (e.g. 24.4%).
+- Formulate your interpretation dynamically in formal academic APA style.
+- Base your analysis STRICTLY on the statistical payload.",
+            'harvard' => "You are a senior quantitative research analyst writing in formal academic Harvard Style.
+STRICT RULES:
+- Use Harvard referencing and citation style conventions in the text structure.
+- Present findings in a formal academic tone focusing on percentages and relative distributions.",
+            'oscola' => "You are a senior quantitative research analyst writing in OSCOLA (Oxford Standard for the Citation of Legal Authorities) Style.
+STRICT RULES:
+- Use legal research formatting and OSCOLA citation tone.
+- Analyze findings with a highly structured, precise analytical tone suitable for legal scholarship.",
+            'ieee' => "You are a senior quantitative research analyst writing in IEEE technical style.
+STRICT RULES:
+- Use technical, precise, objective engineering style.
+- Employ IEEE citation conventions and bracketed references where appropriate.",
+            'vancouver' => "You are a senior quantitative research analyst writing in Vancouver medical style.
+STRICT RULES:
+- Use biomedical and clinical research reporting conventions.
+- Focus on objective percentage indicators and systematic data summary.",
+            'mla' => "You are a senior quantitative research analyst writing in MLA (Modern Language Association) Style.
+STRICT RULES:
+- Use MLA narrative voice conventions suitable for humanities research.
+- Present statistical insights in a cohesive, prose-driven flow."
+        ];
+
+        $styleRules = $stylePrompts[$style] ?? $stylePrompts['apa'];
+        $targetLang = $this->getTargetLanguage();
+
+        $prompt = "{$styleRules}
+We are refining the statistical interpretation of a specific survey question from '{$survey->title}'.
+
+TARGET QUESTION: {$questionLabel}
+STATISTICAL FREQUENCY DATA FOR THIS QUESTION:
+{$statsText}
+
+Here is the conversation history with the researcher:
+
+";
 
         foreach ($messages as $msg) {
             $roleName = $msg['role'] === 'assistant' ? 'AI' : 'Researcher';
@@ -483,7 +522,6 @@ class InsightController extends Controller
 
         $prompt .= "Researcher's latest refinement instruction:\n";
         $prompt .= "\"\"\"\n{$feedback}\n\"\"\"\n\n";
-        $targetLang = $this->getTargetLanguage();
         $prompt .= "Instructions:\n";
         $prompt .= "1. Refine the interpretation for THIS TARGET QUESTION ONLY, incorporating the researcher's instruction.\n";
         $prompt .= "2. Base ALL findings strictly on the provided target question statistical frequency data above.\n";

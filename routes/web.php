@@ -171,6 +171,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/surveys/{survey}/export-docx', [SurveyController::class, 'exportDocx'])->name('surveys.export_docx');
     Route::get('/surveys/{survey}/responses/{response}/export-pdf', [SurveyController::class, 'exportSinglePdf'])->name('surveys.responses.export_pdf');
     Route::get('/surveys/{survey}/responses/{response}/export-docx', [SurveyController::class, 'exportSingleDocx'])->name('surveys.responses.export_docx');
+    Route::post('/surveys/{survey}/reporting-style', [SurveyController::class, 'updateReportingStyle'])->name('surveys.reporting-style');
     Route::get('/surveys/{survey}/report', [SurveyController::class, 'report'])->name('surveys.report');
 
     // Core Survey CRUD

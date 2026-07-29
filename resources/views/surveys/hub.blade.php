@@ -22,7 +22,7 @@
                         </a>
                         <span class="text-gray-300">•</span>
                         <span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider bg-gray-100 text-gray-500">
-                            {{ __($survey->category->value) }}
+                            {{ __(ucfirst($survey->category->value)) }}
                         </span>
                         @if($survey->status->value === 'draft')
                             <span

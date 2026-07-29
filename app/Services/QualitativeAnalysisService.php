@@ -7,13 +7,11 @@ use Illuminate\Support\Facades\Log;
 
 class QualitativeAnalysisService
 {
-    protected string $apiKey;
-    protected string $model;
+    protected AiService $aiService;
 
-    public function __construct()
+    public function __construct(AiService $aiService)
     {
-        $this->apiKey = config('services.groq.api_key');
-        $this->model = config('services.groq.model', 'llama-3.1-8b-instant');
+        $this->aiService = $aiService;
     }
 
     /**
@@ -102,42 +100,12 @@ RULES:
         try {
             Log::info("QualitativeAnalysisService: Analyzing batch of " . count($batch) . " responses.");
 
-            $response = null;
-            $maxRetries = 3;
+            $content = $this->aiService->callAi("VOTER RESPONSES TO ANALYZE:\n" . $textData, $systemPrompt, true);
 
-            for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
-                $response = Http::withToken($this->apiKey)
-                    ->connectTimeout(5)
-                    ->timeout(15)
-                    ->post('https://api.groq.com/openai/v1/chat/completions', [
-                        'model' => $this->model,
-                        'messages' => [
-                            ['role' => 'system', 'content' => $systemPrompt],
-                            ['role' => 'user', 'content' => "VOTER RESPONSES TO ANALYZE:\n" . $textData]
-                        ],
-                        'response_format' => ['type' => 'json_object'],
-                        'temperature' => 0.1
-                    ]);
-
-                if ($response->successful()) {
-                    break;
-                }
-
-                // Rate limited - wait and retry
-                if ($response->status() === 429 && $attempt < $maxRetries) {
-                    Log::warning("QualitativeAnalysisService: Rate limited, retry {$attempt}/{$maxRetries}");
-                    sleep($attempt * 3); // 3s, 6s backoff
-                    continue;
-                }
-            }
-
-            if ($response->failed()) {
-                Log::error('QualitativeAnalysisService Error: ' . $response->body());
+            if (empty($content)) {
                 throw new \Exception('AI analysis service failed/rate limited.');
             }
 
-            $result = $response->json();
-            $content = $result['choices'][0]['message']['content'] ?? '{}';
             Log::info("QualitativeAnalysisService: Raw AI content: " . substr($content, 0, 100) . "...");
 
             $data = json_decode($content, true);
@@ -169,7 +137,7 @@ RULES:
     /**
      * Analyze quantitative statistical data.
      */
-    public function analyzeQuantitativeData(array $stats, ?string $questionText = null): string
+    public function analyzeQuantitativeData(array $stats, ?string $questionText = null, string $style = 'apa'): string
     {
         $statsText = "";
         if ($questionText) {
@@ -181,33 +149,47 @@ RULES:
             $statsText .= "Choice: " . $stat['value'] . " | Count: " . $stat['count'] . " | Percentage: " . $stat['percentage'] . "%\n";
         }
 
+        $stylePrompts = [
+            'apa' => "You are a senior quantitative research analyst writing in formal academic APA Style (7th Edition).
+STRICT RULES:
+- Do NOT include raw sample size counts / frequencies in narrative prose, e.g., do NOT write '(n = 122)' or '(n = 92)'. Always use percentages only (e.g. 24.4%).
+- Formulate your interpretation dynamically in formal academic APA style.
+- Base your analysis STRICTLY on the statistical payload.",
+            'harvard' => "You are a senior quantitative research analyst writing in formal academic Harvard Style.
+STRICT RULES:
+- Use Harvard referencing and citation style conventions in the text structure.
+- Present findings in a formal academic tone focusing on percentages and relative distributions.",
+            'oscola' => "You are a senior quantitative research analyst writing in OSCOLA (Oxford Standard for the Citation of Legal Authorities) Style.
+STRICT RULES:
+- Use legal research formatting and OSCOLA citation tone.
+- Analyze findings with a highly structured, precise analytical tone suitable for legal scholarship.",
+            'ieee' => "You are a senior quantitative research analyst writing in IEEE technical style.
+STRICT RULES:
+- Use technical, precise, objective engineering style.
+- Employ IEEE citation conventions and bracketed references where appropriate.",
+            'vancouver' => "You are a senior quantitative research analyst writing in Vancouver medical style.
+STRICT RULES:
+- Use biomedical and clinical research reporting conventions.
+- Focus on objective percentage indicators and systematic data summary.",
+            'mla' => "You are a senior quantitative research analyst writing in MLA (Modern Language Association) Style.
+STRICT RULES:
+- Use MLA narrative voice conventions suitable for humanities research.
+- Present statistical insights in a cohesive, prose-driven flow."
+        ];
+
+        $styleRules = $stylePrompts[$style] ?? $stylePrompts['apa'];
         $targetLang = $this->getTargetLanguage();
-        $systemPrompt = "You are a senior quantitative research analyst writing in professional APA Style (7th Edition format). 
-STRICT APA DATA-SYNTHESIS & DATA-GROUNDING RULES:
+
+        $systemPrompt = "{$styleRules}
+STRICT DATA-SYNTHESIS & DATA-GROUNDING RULES:
 - Base your analysis STRICTLY AND EXCLUSIVELY on the provided question title and statistical payload. Do NOT hallucinate external facts or statistics not in the payload.
-- Formulate your interpretation dynamically in formal academic APA style (e.g., incorporating sample percentages and distribution trends naturally, such as: 'Statistical evaluation indicated a strong consensus among respondents (64.5%, n = 129)...').
 - DO NOT use a rigid or hardcoded template structure. Synthesize the findings dynamically, explaining the practical significance of the majorities, central tendencies, or distribution spread.
 - Avoid cliché robotic intro phrases like 'Based on the provided data' or 'Looking at the chart'. Use varied, scholarly sentence structures every single time.
 - You MUST write the entire response in the {$targetLang} language.";
 
         try {
-            $response = Http::withToken($this->apiKey)
-                ->connectTimeout(5)
-                ->timeout(15)
-                ->post('https://api.groq.com/openai/v1/chat/completions', [
-                    'model' => $this->model,
-                    'messages' => [
-                        ['role' => 'system', 'content' => $systemPrompt],
-                        ['role' => 'user', 'content' => "STATISTICAL DATA:\n" . $statsText]
-                    ],
-                    'temperature' => 0.1
-                ]);
-
-            if ($response->failed())
-                return "Analysis temporarily unavailable.";
-
-            $result = $response->json();
-            return $result['choices'][0]['message']['content'] ?? "No insight generated.";
+            $content = $this->aiService->callAi("STATISTICAL DATA:\n" . $statsText, $systemPrompt, false);
+            return $content ?? "No insight generated.";
 
         } catch (\Exception $e) {
             Log::error('QualitativeAnalysisService Quant Error: ' . $e->getMessage());

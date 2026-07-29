@@ -1525,10 +1525,12 @@ class SurveyController extends Controller
                         ]
                     ];
 
+                    $wrappedLabels = array_map(fn($lbl) => self::wrapChartLabel($lbl, 25), $labels);
+
                     $qcConfig = [
                         'type' => $chartType,
                         'data' => [
-                            'labels' => $labels,
+                            'labels' => $wrappedLabels,
                             'datasets' => [
                                 [
                                     'label' => 'Responses (%)',
@@ -1616,6 +1618,26 @@ class SurveyController extends Controller
         file_put_contents($exportDir . $filename, $output);
 
         return $pdf->download($filename);
+    }
+
+    public function updateReportingStyle(\Illuminate\Http\Request $request, \App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+        $request->validate([
+            'reporting_style' => 'required|in:apa,harvard,oscola,ieee,vancouver,mla'
+        ]);
+
+        $survey->update([
+            'reporting_style' => $request->reporting_style
+        ]);
+
+        // Clear cached quantitative AI interpretations so they refresh with the new style
+        $questions = $survey->questions()->get();
+        foreach ($questions as $q) {
+            \Illuminate\Support\Facades\Cache::forget("quantitative_analysis_{$survey->id}_{$q->id}");
+        }
+
+        return response()->json(['success' => true]);
     }
 
 
@@ -1774,10 +1796,12 @@ class SurveyController extends Controller
                         ]
                     ];
 
+                    $wrappedLabels = array_map(fn($lbl) => self::wrapChartLabel($lbl, 25), $labels);
+
                     $qcConfig = [
                         'type' => $chartType,
                         'data' => [
-                            'labels' => $labels,
+                            'labels' => $wrappedLabels,
                             'datasets' => [
                                 [
                                     'label' => 'Responses (%)',
@@ -5322,6 +5346,18 @@ class SurveyController extends Controller
         }
 
         return redirect()->route('surveys.reports', $survey)->with('success', "You have joined the analysis group '{$group->name}' for this survey.");
+    }
+
+    public static function wrapChartLabel(?string $label, int $width = 25): array|string
+    {
+        if (empty($label)) {
+            return '';
+        }
+        if (mb_strlen($label) <= $width) {
+            return $label;
+        }
+        $wrapped = wordwrap($label, $width, "\n");
+        return explode("\n", $wrapped);
     }
 
     public static function formatShortCategoryTheme(?string $rawText): string

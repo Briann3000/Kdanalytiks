@@ -28,8 +28,10 @@ class AiQuantInsightCard extends Component
     protected function generateInsight()
     {
         try {
-            $aiService = new \App\Services\QualitativeAnalysisService();
-            $this->insight = $aiService->analyzeQuantitativeData($this->stats, $this->questionId);
+            $aiService = app(\App\Services\QualitativeAnalysisService::class);
+            $survey = \App\Models\Survey::find($this->surveyId);
+            $style = $survey ? ($survey->reporting_style ?? 'apa') : 'apa';
+            $this->insight = $aiService->analyzeQuantitativeData($this->stats, $this->questionId, $style);
         } catch (\Exception $e) {
             $this->error = $e->getMessage();
         }

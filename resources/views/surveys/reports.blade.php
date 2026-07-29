@@ -27,13 +27,39 @@
             humanizerOriginal: '',
             humanizerResult: '',
             isHumanizing: false,
-            isAnalyzing: false,
-            humanizerMode: 'standard',
-            humanizerIntensity: 'medium',
-            customInstructions: '',
-            originalAnalysis: null,
-            humanizedAnalysis: null,
+            reportingStyle: @js($survey->reporting_style ?? 'apa'),
+            isPremium: @js(auth()->user() ? auth()->user()->hasActiveSubscription() : false),
+            globalFeedback: '',
+            globalRefining: false,
+            globalRefineProgress: '',
+            quantQuestionIds: @js(collect($analysis)->where('isChartable', true)->where('isLikertLike', false)->pluck('id')),
             init() {
+                window.currentReportingStyle = this.reportingStyle;
+                this.$watch('reportingStyle', (val) => {
+                    window.currentReportingStyle = val;
+                    // Persist reporting style to database via fetch
+                    fetch(`{{ route('surveys.reporting-style', $survey->id) }}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                        },
+                        body: JSON.stringify({ reporting_style: val })
+                    }).then(res => {
+                        if (!res.ok) {
+                            console.error('Failed to update reporting style');
+                        } else {
+                            // If style changed, regenerate the visible cards
+                            for (const qId of this.quantQuestionIds) {
+                                const card = window.quantInsightInstances && window.quantInsightInstances[qId];
+                                if (card) {
+                                    card.generate(true); // Force refresh
+                                }
+                            }
+                        }
+                    });
+                });
+
                 this.$watch('reportTab', (tab) => {
                     if (tab === 'analyse') {
                         this.$nextTick(() => {
@@ -54,6 +80,35 @@
                         }
                     });
                 }
+            },
+            async globalRefineAll() {
+                if (!this.isPremium) {
+                    alert('Premium subscription required for bulk refinement.');
+                    return;
+                }
+                if (!this.globalFeedback.trim()) return;
+                this.globalRefining = true;
+                this.globalRefineProgress = '';
+                const total = this.quantQuestionIds.length;
+                let count = 0;
+                
+                for (const qId of this.quantQuestionIds) {
+                    count++;
+                    this.globalRefineProgress = `Refining question ${count} of ${total}...`;
+                    const card = window.quantInsightInstances && window.quantInsightInstances[qId];
+                    if (card) {
+                        try {
+                            await card.refineFromGlobal(this.globalFeedback, this.reportingStyle);
+                        } catch (e) {
+                            console.error(`Refinement failed for question ${qId}:`, e);
+                        }
+                        // Introduce 1000ms delay to prevent rate limits
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+                this.globalFeedback = '';
+                this.globalRefining = false;
+                this.globalRefineProgress = '';
             },
             switchReportTab(tab) {
                 this.reportTab = tab;
@@ -205,6 +260,19 @@
             </div>
 
             <div class="flex items-center gap-3">
+                <!-- Reporting Style Selector Dropdown -->
+                <div x-show="reportTab === 'quantitative'" class="flex items-center gap-2" style="display: none;">
+                    <span class="text-xs font-bold text-zinc-500 tracking-tight">{{ __('Style:') }}</span>
+                    <select x-model="reportingStyle" class="bg-white border border-zinc-200 shadow-sm text-xs font-black tracking-wider text-indigo-700 rounded-xl px-4 py-3 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all">
+                        <option value="apa">APA 7th</option>
+                        <option value="harvard">Harvard</option>
+                        <option value="oscola">OSCOLA</option>
+                        <option value="ieee">IEEE</option>
+                        <option value="vancouver">Vancouver</option>
+                        <option value="mla">MLA</option>
+                    </select>
+                </div>
+
                 @if(!isset($isSharedView) || !$isSharedView)
                     <button type="button" onclick="window.startReportsDashboardTour()"
                         class="inline-flex items-center gap-2 px-5 py-3 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl font-black text-[10px]  tracking-widest transition-all">
@@ -257,9 +325,26 @@
             </div>
         </div>
 
-
-
-
+        <!-- Global Refinement Toolbar -->
+        <div x-show="reportTab === 'quantitative' && isPremium" class="bg-gradient-to-r from-indigo-50 to-indigo-50/20 rounded-3xl p-6 border border-indigo-100/80 shadow-inner mb-10 flex flex-col md:flex-row items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4 duration-300" style="display: none;">
+            <div class="flex items-center gap-4 w-full md:w-auto shrink-0">
+                
+                <div>
+                    <h5 class="text-xs font-black text-indigo-900 tracking-tight">{{ __('Review') }}</h5>
+                    <p class="text-[10px] text-gray-500 font-bold" x-text="globalRefining ? globalRefineProgress : '{{ __('Review the entire report') }}'"></p>
+                </div>
+            </div>
+            
+            <div class="flex flex-1 items-center gap-2 sm:gap-3 w-full relative">
+                <input x-model="globalFeedback" type="text" :disabled="globalRefining" placeholder="{{ __('Reflect your own voice...') }}" @keydown.enter.prevent="globalRefineAll()" class="w-full bg-white border border-indigo-100 text-xs font-semibold rounded-xl sm:rounded-2xl px-3 sm:px-5 py-3 sm:py-3.5 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all disabled:bg-gray-50 disabled:text-gray-400">
+                
+                <button @click="globalRefineAll()" :disabled="globalRefining || !globalFeedback.trim()" class="px-3 sm:px-6 py-3 sm:py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl sm:rounded-2xl text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1 sm:gap-2 whitespace-nowrap">
+                    <i x-show="globalRefining" class="fa-solid fa-circle-notch fa-spin text-xs"></i>
+                    <span class="hidden sm:inline" x-text="globalRefining ? '{{ __('Refining...') }}' : '{{ __('Apply to All Questions') }}'"></span>
+                    <span class="sm:hidden" x-text="globalRefining ? '{{ __('Refining...') }}' : '{{ __('Apply') }}'"></span>
+                </button>
+            </div>
+        </div>
 
         <!-- Quantitative Content -->
         <!-- Quantitative Content -->
@@ -377,26 +462,28 @@
                                     <table class="w-full text-left border border-gray-200" id="table-{{ $item['canvasId'] }}">
                                         @if(!empty($item['isLikertLike']))
                                             <thead class="bg-gray-50/70 border-b border-gray-200 shadow-sm">
-                                                <tr class="text-[10px] sm:text-[11px] font-black text-gray-700 tracking-wider border-b border-gray-200">
-                                                    <th rowspan="2" class="py-3 px-4 break-words border-r border-gray-200 align-bottom bg-gray-50/90">{{ __('Value') }}</th>
+                                                <tr class="text-[9px] sm:text-[11px] font-black text-gray-700 tracking-wider border-b border-gray-200">
+                                                    <th rowspan="2" class="py-2 sm:py-3 px-2 sm:px-4 break-words border-r border-gray-200 align-bottom bg-gray-50/90 w-1/4 sm:w-1/3">{{ __('Value') }}</th>
                                                     @foreach($item['stats'] as $stat)
                                                         @if(!isset($stat['is_missing']) || !$stat['is_missing'])
-                                                            <th colspan="2" class="py-2 px-2 text-center border-b border-r border-gray-200 whitespace-nowrap font-bold text-gray-800">{{ $stat['value'] }}</th>
+                                                            <th colspan="2" class="hidden sm:table-cell py-2 px-2 text-center border-b border-r border-gray-200 whitespace-nowrap font-bold text-gray-800">{{ $stat['value'] }}</th>
+                                                            <th colspan="1" class="sm:hidden py-1 px-1 text-center border-b border-r border-gray-200 text-[9px] font-bold text-gray-800 leading-tight">{{ $stat['value'] }}</th>
                                                         @endif
                                                     @endforeach
                                                 </tr>
-                                                <tr class="text-[10px] font-bold text-gray-500 tracking-wider">
+                                                <tr class="text-[9px] sm:text-[10px] font-bold text-gray-500 tracking-wider">
                                                     @foreach($item['stats'] as $stat)
                                                         @if(!isset($stat['is_missing']) || !$stat['is_missing'])
-                                                            <th class="py-1.5 px-3 text-center border-r border-gray-200 bg-gray-50/50">Frequency</th>
-                                                            <th class="py-1.5 px-3 text-center border-r border-gray-200 bg-gray-50/50">%</th>
+                                                            <th class="hidden sm:table-cell py-1.5 px-3 text-center border-r border-gray-200 bg-gray-50/50">Frequency</th>
+                                                            <th class="hidden sm:table-cell py-1.5 px-3 text-center border-r border-gray-200 bg-gray-50/50">%</th>
+                                                            <th class="sm:hidden py-1 px-1 text-center border-r border-gray-200 bg-gray-50/50 text-[8px]">Freq (%)</th>
                                                         @endif
                                                     @endforeach
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-200">
                                                 <tr class="hover:bg-gray-50/30 transition-colors">
-                                                    <td class="py-3 px-4 text-xs font-normal text-gray-700 break-words leading-tight border-r border-gray-200 w-1/3">
+                                                    <td class="py-2 sm:py-3 px-2 sm:px-4 text-[10px] sm:text-xs font-normal text-gray-700 break-words leading-tight border-r border-gray-200">
                                                         {{ $item['label'] }}
                                                     </td>
                                                     @foreach($item['stats'] as $stat)
@@ -405,20 +492,35 @@
                                                                 $totalFreqLikert = array_sum(array_column(array_filter($item['stats'], fn($s) => !isset($s['is_missing']) || !$s['is_missing']), 'count'));
                                                                 $percentLikert = $totalFreqLikert > 0 ? ($stat['count'] / $totalFreqLikert) * 100 : 0;
                                                             @endphp
-                                                            <td class="py-3 px-2 text-center text-xs font-normal text-gray-900 border-r border-gray-200">{{ number_format($stat['count']) }}</td>
-                                                            <td class="py-3 px-2 text-center text-xs font-normal text-gray-900 border-r border-gray-200">{{ number_format($percentLikert, 1) }}%</td>
+                                                            <td class="hidden sm:table-cell py-3 px-2 text-center text-xs font-normal text-gray-900 border-r border-gray-200">{{ number_format($stat['count']) }}</td>
+                                                            <td class="hidden sm:table-cell py-3 px-2 text-center text-xs font-normal text-gray-900 border-r border-gray-200">{{ number_format($percentLikert, 1) }}%</td>
+                                                            <td class="sm:hidden py-2 px-1 text-center text-[10px] font-normal text-gray-900 border-r border-gray-200 whitespace-nowrap">
+                                                                {{ number_format($stat['count']) }} <span class="text-gray-500">({{ number_format($percentLikert, 0) }}%)</span>
+                                                            </td>
                                                         @endif
                                                     @endforeach
                                                 </tr>
                                             </tbody>
                                         @else
                                             <thead class="bg-gray-50/70 border-b border-gray-200 shadow-sm">
-                                                <tr class="text-[10px] sm:text-[11px] font-black text-gray-700 tracking-wider border-b border-gray-200">
-                                                    <th class="py-3 px-4 break-words border-r border-gray-200">{{ __('Value') }}</th>
-                                                    <th class="py-3 px-4 text-right border-r border-gray-200">{{ __('Frequency') }}</th>
-                                                    <th class="py-3 px-4 text-right border-r border-gray-200">{{ __('Percent') }}</th>
-                                                    <th class="py-3 px-4 text-right border-r border-gray-200">{{ __('Valid Percent') }}</th>
-                                                    <th class="py-3 px-4 text-right border-r border-gray-200">{{ __('Cumulative Percent') }}</th>
+                                                <tr class="text-[9px] sm:text-[11px] font-black text-gray-700 tracking-wider border-b border-gray-200">
+                                                    <th class="py-2 sm:py-3 px-2 sm:px-4 break-words border-r border-gray-200">{{ __('Value') }}</th>
+                                                    <th class="py-2 sm:py-3 px-2 sm:px-4 text-right border-r border-gray-200">
+                                                        <span class="hidden sm:inline">{{ __('Frequency') }}</span>
+                                                        <span class="sm:hidden">Freq</span>
+                                                    </th>
+                                                    <th class="py-2 sm:py-3 px-2 sm:px-4 text-right border-r border-gray-200">
+                                                        <span class="hidden sm:inline">{{ __('Percent') }}</span>
+                                                        <span class="sm:hidden">%</span>
+                                                    </th>
+                                                    <th class="py-2 sm:py-3 px-2 sm:px-4 text-right border-r border-gray-200">
+                                                        <span class="hidden sm:inline">{{ __('Valid Percent') }}</span>
+                                                        <span class="sm:hidden">Valid %</span>
+                                                    </th>
+                                                    <th class="py-2 sm:py-3 px-2 sm:px-4 text-right border-r border-gray-200">
+                                                        <span class="hidden sm:inline">{{ __('Cumulative Percent') }}</span>
+                                                        <span class="sm:hidden">Cumulative %</span>
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-200">
@@ -453,22 +555,22 @@
                                                         }
                                                     @endphp
                                                     <tr class="hover:bg-gray-50/30 transition-colors border-b border-gray-100">
-                                                        <td class="py-2.5 px-4 text-xs font-normal text-gray-700 break-words leading-tight border-r border-gray-200">
+                                                        <td class="py-2 sm:py-2.5 px-2 sm:px-4 text-[10px] sm:text-xs font-normal text-gray-700 break-words leading-tight border-r border-gray-200">
                                                             {{ $stat['value'] }}</td>
-                                                        <td class="py-2.5 px-4 text-right text-xs font-normal text-gray-900 border-r border-gray-200">{{ number_format($stat['count']) }}</td>
-                                                        <td class="py-2.5 px-4 text-right text-xs font-normal text-gray-900 border-r border-gray-200">{{ number_format($percent, 1) }}%</td>
-                                                        <td class="py-2.5 px-4 text-right text-xs font-normal text-gray-900 border-r border-gray-200">{{ $validPercent !== null ? number_format($validPercent, 1) . '%' : '-' }}</td>
-                                                        <td class="py-2.5 px-4 text-right text-xs font-normal text-gray-900 border-r border-gray-200">{{ $cumPercentDisplay }}</td>
+                                                        <td class="py-2 sm:py-2.5 px-2 sm:px-4 text-right text-[10px] sm:text-xs font-normal text-gray-900 border-r border-gray-200">{{ number_format($stat['count']) }}</td>
+                                                        <td class="py-2 sm:py-2.5 px-2 sm:px-4 text-right text-[10px] sm:text-xs font-normal text-gray-900 border-r border-gray-200">{{ number_format($percent, 1) }}%</td>
+                                                        <td class="py-2 sm:py-2.5 px-2 sm:px-4 text-right text-[10px] sm:text-xs font-normal text-gray-900 border-r border-gray-200">{{ $validPercent !== null ? number_format($validPercent, 1) . '%' : '-' }}</td>
+                                                        <td class="py-2 sm:py-2.5 px-2 sm:px-4 text-right text-[10px] sm:text-xs font-normal text-gray-900 border-r border-gray-200">{{ $cumPercentDisplay }}</td>
                                                     </tr>
                                                 @endforeach
                                             </tbody>
                                             <tfoot class="bg-gray-50/50 border-t-2 border-gray-200">
-                                                <tr class="font-normal text-gray-900 text-[11px]">
-                                                    <td class="py-3 px-4 tracking-wider border-r border-gray-200">{{ __('Total') }}</td>
-                                                    <td class="py-3 px-4 text-right border-r border-gray-200">{{ number_format($totalFreq) }}</td>
-                                                    <td class="py-3 px-4 text-right border-r border-gray-200">100.0%</td>
-                                                    <td class="py-3 px-4 text-right border-r border-gray-200">100.0%</td>
-                                                    <td class="py-3 px-4 text-right border-r border-gray-200"></td>
+                                                <tr class="font-normal text-gray-900 text-[10px] sm:text-[11px]">
+                                                    <td class="py-2 sm:py-3 px-2 sm:px-4 tracking-wider border-r border-gray-200">{{ __('Total') }}</td>
+                                                    <td class="py-2 sm:py-3 px-2 sm:px-4 text-right border-r border-gray-200">{{ number_format($totalFreq) }}</td>
+                                                    <td class="py-2 sm:py-3 px-2 sm:px-4 text-right border-r border-gray-200">100.0%</td>
+                                                    <td class="py-2 sm:py-3 px-2 sm:px-4 text-right border-r border-gray-200">100.0%</td>
+                                                    <td class="py-2 sm:py-3 px-2 sm:px-4 text-right border-r border-gray-200"></td>
                                                 </tr>
                                             </tfoot>
                                         @endif
@@ -2173,6 +2275,13 @@
                 return formatted.charAt(0).toUpperCase() + formatted.slice(1);
             }
 
+            function wrapJsChartLabel(label, maxLen = 18) {
+                if (!label) return '';
+                if (typeof label !== 'string') return label;
+                if (label.length <= maxLen) return label;
+                return label.slice(0, maxLen - 3) + '...';
+            }
+
             function createChart(canvasId, config, type = 'bar', colorTheme = 'indigo') {
                 const canvasElement = document.getElementById(canvasId);
                 if (!canvasElement) return;
@@ -2240,10 +2349,12 @@
                     }
                 };
 
+                const wrappedLabels = (config.labels || []).map(lbl => wrapJsChartLabel(lbl, 25));
+
                 const chartConfig = {
                     type: chartType,
                     data: {
-                        labels: config.labels,
+                        labels: wrappedLabels,
                         datasets: [{
                             label: 'Responses (%)',
                             data: percentageData, // Y-axis uses percentages
@@ -2319,7 +2430,12 @@
                     };
                     const labelAxisConfig = {
                         grid: { display: false },
-                        ticks: { font: { weight: '500', size: 12, color: '#64748b' } },
+                        ticks: { 
+                            font: { weight: '500', size: 11, color: '#64748b' },
+                            maxRotation: 45,
+                            minRotation: 0,
+                            autoSkip: true
+                        },
                         title: {
                             display: true,
                             text: config.short_theme || formatShortCategoryTheme(config.question_name) || 'Choices',
@@ -4163,9 +4279,18 @@
                                                     font: { weight: '600', size: 10 }
                                                 }
                                             };
+                                            if (config.data && config.data.labels) {
+                                                config.data.labels = config.data.labels.map(lbl => wrapJsChartLabel(lbl, 18));
+                                            }
+
                                             const labelAxisConfig = {
                                                 grid: { display: false },
-                                                ticks: { font: { weight: '600', size: 10, color: '#94a3b8' } },
+                                                ticks: { 
+                                                    font: { weight: '600', size: 10, color: '#94a3b8' },
+                                                    maxRotation: 45,
+                                                    minRotation: 0,
+                                                    autoSkip: true
+                                                },
                                                 title: {
                                                     display: true,
                                                     text: formatShortCategoryTheme(config.short_theme || (config.options?.scales?.[isHorizontal ? 'y' : 'x']?.title?.text) || (config.options.plugins?.title?.text) || config.question_name) || 'Categories',

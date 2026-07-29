@@ -37,6 +37,7 @@ class Survey extends Model
         'remove_kd_branding',
         'export_logo_url',
         'export_org_name',
+        'reporting_style',
     ];
 
     protected $casts = [

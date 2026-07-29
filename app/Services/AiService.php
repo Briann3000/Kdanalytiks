@@ -154,7 +154,7 @@ class AiService
     {
         $provider = env('AI_PROVIDER', 'groq');
         if ($provider === 'gemini') {
-            return $this->callGemini($prompt, $systemPrompt);
+            return $this->callGemini($prompt, $systemPrompt, $isJson);
         }
         return $this->callGroq($prompt, $systemPrompt, $isJson);
     }
@@ -174,7 +174,7 @@ class AiService
     /**
      * Call Google Gemini API.
      */
-    public function callGemini($prompt, $systemPrompt = null)
+    public function callGemini($prompt, $systemPrompt = null, $isJson = false)
     {
         $apiKey = config('services.gemini.api_key');
         $model = config('services.gemini.model', 'gemini-2.5-flash');
@@ -193,6 +193,12 @@ class AiService
                 ['role' => 'user', 'parts' => [['text' => $fullPrompt]]]
             ]
         ];
+
+        if ($isJson) {
+            $payload['generationConfig'] = [
+                'responseMimeType' => 'application/json'
+            ];
+        }
 
         $maxRetries = 3;
         for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
