@@ -22,20 +22,11 @@ class ResearchProposalController extends Controller
     }
 
     /**
-     * Show the main page: Survey to Report Generator.
+     * Show the main Proposal Studio.
      */
     public function index()
     {
-        $user = auth()->user();
-        $surveys = \App\Models\Survey::where('is_template', false)
-            ->where('status', \App\Enums\SurveyStatus::Active)
-            ->where(function ($query) use ($user) {
-                $query->where('created_by', $user->id)
-                    ->orWhere('type', \App\Enums\SurveyType::Public);
-            })
-            ->get();
-
-        return view('admin.research-proposal.index', compact('surveys'));
+        return redirect()->route('research-proposal.create');
     }
 
     /**
@@ -342,7 +333,7 @@ class ResearchProposalController extends Controller
     {
         $this->authorizeOwner($research_proposal);
         $research_proposal->delete();
-        return back()->with('success', 'Draft report deleted successfully.');
+        return back()->with('success', 'Proposal draft deleted successfully.');
     }
 
     private function authorizeOwner(ResearchProposal $research_proposal)

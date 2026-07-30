@@ -8,8 +8,9 @@
         </div>
         <div class="flex-1 w-full overflow-hidden">
             <div class="flex items-center justify-between mb-3">
-                <h5 class="text-xs font-bold text-[#2271b1]">
-                    {{ __('Trend Interpretation') }}
+                <h5 class="text-xs font-bold text-[#2271b1] flex items-center gap-2">
+                    <span>{{ __('Trend Interpretation') }}</span>
+                    <span x-show="isUpdated" class="text-[9px] font-black bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200 shadow-xs" style="display: none;">Updated ✓</span>
                 </h5>
             </div>
 
@@ -32,7 +33,7 @@
 
             <!-- In-place Trend Interpretation Block -->
             <div x-show="currentText" class="relative group/trend mb-4" style="display: none;">
-                <p class="whitespace-pre-wrap rounded-2xl px-4 py-3 text-[13px] leading-relaxed font-medium bg-gray-100/80 text-gray-800 border border-gray-200/50 shadow-sm"
+                <p class="whitespace-pre-wrap rounded-2xl px-4 py-3 pb-8 text-[13px] leading-relaxed font-medium bg-gray-100/80 text-gray-800 border border-gray-200/50 shadow-sm"
                     x-text="currentText"></p>
                 <!-- Copy Text Button on Bottom Right of the text block container -->
                 <div class="absolute bottom-2 right-3"
@@ -51,45 +52,11 @@
                 </p>
             </div>
 
-            <!-- Polish / Refinement Input Bar -->
-            <div x-show="currentText && currentText !== 'Unable to analyze data at this time.' && currentText !== 'Analysis temporarily unavailable.' && !loading"
-                class="mt-5 pt-4 border-t border-zinc-200/50" style="display: none;">
-                <div class="flex flex-col md:flex-row gap-3 items-end">
-                    <div class="flex-1 w-full">
-                        <label
-                            class="block text-[10px] font-bold text-[#2271b1] mb-1.5">{{ __('Refine this analysis ') }}</label>
-                        <textarea x-model="feedback" rows="1" placeholder="{{ __('Reflect your own voice...') }}"
-                            @input="$el.style.height = 'auto'; $el.style.height = $el.scrollHeight + 'px'"
-                            @keydown.enter.prevent="if(!$event.shiftKey && !$event.ctrlKey) polish()"
-                            class="w-full bg-gray-50 border border-zinc-200 text-xs font-semibold rounded-xl px-3 py-2.5 focus:ring-1 focus:ring-[#2271b1] focus:outline-none transition-all resize-none max-h-32 overflow-y-auto"></textarea>
-                    </div>
-                    <button @click="polish()" :disabled="aiPolishing || !feedback.trim()"
-                        class="px-5 py-2.5 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5 self-stretch justify-center whitespace-nowrap">
-                        <span x-text="aiPolishing ? '{{ __('Polishing...') }}' : '{{ __('Polish') }}'"></span>
-                    </button>
-                </div>
-            </div>
+
 
             <!-- Actions Menu -->
             <div class="mt-4 pt-4 border-t border-zinc-200/50 flex justify-between items-center">
-                <div class="flex items-center">
-                    <button
-                        x-show="currentText && currentText !== 'Unable to analyze data at this time.' && currentText !== 'Analysis temporarily unavailable.'"
-                        @click="copyFinalOutput()"
-                        class="flex items-center gap-1 text-[9px] font-black text-gray-400 tracking-widest hover:text-[#2271b1] transition-colors mr-4"
-                        style="display: none;">
-                        <i class="fa-solid fa-copy"></i>
-                        {{ __('Copy Output') }}
-                    </button>
-                    <button
-                        x-show="currentText && currentText !== 'Unable to analyze data at this time.' && currentText !== 'Analysis temporarily unavailable.'"
-                        @click="downloadFinalOutput()"
-                        class="flex items-center gap-1 text-[9px] font-black text-gray-400 tracking-widest hover:text-[#2271b1] transition-colors"
-                        style="display: none;">
-                        <i class="fa-solid fa-download"></i>
-                        {{ __('Export') }}
-                    </button>
-                </div>
+                
                 <div class="flex items-center gap-3">
                     <!-- Regenerate / Retry Button for Errors -->
                     <button type="button"
@@ -148,6 +115,7 @@
                 currentText: '',
                 previousText: null,
                 copied: false,
+                isUpdated: false,
                 init() {
                     window.quantInsightInstances = window.quantInsightInstances || {};
                     window.quantInsightInstances[this.qId] = this;
@@ -236,6 +204,7 @@
                             this.messages.push({ role: 'assistant', content: data.insight });
                             this.previousText = previousVal;
                             this.currentText = data.insight;
+                            this.isUpdated = true;
                         } else {
                             throw new Error(data.message || @js(__('Failed to refine analysis.')));
                         }
@@ -279,6 +248,7 @@
                             this.messages.push({ role: 'assistant', content: data.insight });
                             this.previousText = previousVal;
                             this.currentText = data.insight;
+                            this.isUpdated = true;
                         } else {
                             throw new Error(data.message || @js(__('Failed to refine analysis.')));
                         }

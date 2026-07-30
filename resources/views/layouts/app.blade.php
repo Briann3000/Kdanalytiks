@@ -339,7 +339,7 @@
     </style>
 </head>
 
-<body class="font-sans antialiased bg-gray-50 text-gray-900" x-data="{ mobileMenuOpen: false }"
+<body class="font-sans antialiased bg-gray-50 text-gray-900 overflow-x-hidden" x-data="{ mobileMenuOpen: false }"
     :class="Capacitor.isNativePlatform() ? 'is-native-app' : ''">
     <!-- Pull to Refresh Indicator -->
     <div id="ptr-indicator">
@@ -393,27 +393,34 @@
                             </a>
 
                             <!-- Resources Dropdown -->
-                            <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+                            <div class="relative" x-data="{ open: false }" @mouseenter="open = true"
+                                @mouseleave="open = false">
                                 <button type="button" @click="open = !open"
                                     class="text-[#a7aaad] hover:text-white px-2.5 py-2 text-xs lg:text-sm font-bold transition-colors flex items-center gap-1.5 {{ request()->routeIs('docs*', 'faq', 'privacy') ? 'text-white font-extrabold' : '' }}">
                                     <span>{{ __('Resources') }}</span>
-                                    <i class="fa-solid fa-chevron-down text-[10px] transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                                    <i class="fa-solid fa-chevron-down text-[10px] transition-transform"
+                                        :class="open ? 'rotate-180' : ''"></i>
                                 </button>
 
                                 <div x-show="open" x-cloak x-transition:enter="transition ease-out duration-100"
-                                    x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                                    x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100"
+                                    x-transition:enter-start="opacity-0 scale-95"
+                                    x-transition:enter-end="opacity-100 scale-100"
+                                    x-transition:leave="transition ease-in duration-75"
+                                    x-transition:leave-start="opacity-100 scale-100"
                                     x-transition:leave-end="opacity-0 scale-95"
                                     class="absolute left-0 mt-0 w-48 rounded-xl shadow-xl bg-[#1d2327] border border-[#2c3338] z-[100] overflow-hidden py-1">
-                                    <a href="{{ route('docs') }}" class="flex items-center px-4 py-2.5 text-xs font-semibold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] transition-colors">
+                                    <a href="{{ route('docs') }}"
+                                        class="flex items-center px-4 py-2.5 text-xs font-semibold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] transition-colors">
                                         <i class="fa-solid fa-book mr-2.5 text-xs text-[#72aee6]"></i>
                                         {{ __('Documentation') }}
                                     </a>
-                                    <a href="{{ route('faq') }}" class="flex items-center px-4 py-2.5 text-xs font-semibold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] transition-colors">
+                                    <a href="{{ route('faq') }}"
+                                        class="flex items-center px-4 py-2.5 text-xs font-semibold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] transition-colors">
                                         <i class="fa-solid fa-circle-question mr-2.5 text-xs text-amber-400"></i>
                                         {{ __('FAQ') }}
                                     </a>
-                                    <a href="{{ route('privacy') }}" class="flex items-center px-4 py-2.5 text-xs font-semibold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] transition-colors">
+                                    <a href="{{ route('privacy') }}"
+                                        class="flex items-center px-4 py-2.5 text-xs font-semibold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] transition-colors">
                                         <i class="fa-solid fa-shield-halved mr-2.5 text-xs text-emerald-400"></i>
                                         {{ __('Privacy Policy') }}
                                     </a>
@@ -452,8 +459,9 @@
                                         $displayName = auth()->user()->independent->name;
                                     }
                                 @endphp
-                                <span class="hidden lg:inline text-xs text-[#a7aaad] mr-3 truncate max-w-[180px]">{{ __('Welcome') }}, <span
-                                        class="font-bold text-[#f0f0f1]">{{ $displayName }}</span></span>
+                                <span
+                                    class="hidden lg:inline text-xs text-[#a7aaad] mr-3 truncate max-w-[180px]">{{ __('Welcome') }},
+                                    <span class="font-bold text-[#f0f0f1]">{{ $displayName }}</span></span>
 
                                 <!-- Language Picker (Auth) -->
                                 <div class="relative mr-3" x-data="{ open: false }">
@@ -507,7 +515,8 @@
                                 <button type="button" @click="mobileNavOpen = !mobileNavOpen"
                                     class="inline-flex items-center justify-center p-2 rounded-xl text-[#a7aaad] hover:text-white hover:bg-[#101417] focus:outline-none transition-all">
                                     <span class="sr-only">Open main menu</span>
-                                    <i class="fa-solid" :class="mobileNavOpen ? 'fa-xmark text-xl text-white' : 'fa-bars text-xl text-[#a7aaad]'"></i>
+                                    <i class="fa-solid"
+                                        :class="mobileNavOpen ? 'fa-xmark text-xl text-white' : 'fa-bars text-xl text-[#a7aaad]'"></i>
                                 </button>
                             </div>
                         @else
@@ -556,7 +565,8 @@
                                     <button type="button" @click="mobileNavOpen = !mobileNavOpen"
                                         class="inline-flex items-center justify-center p-2 rounded-xl text-[#a7aaad] hover:text-white hover:bg-[#101417] focus:outline-none transition-all">
                                         <span class="sr-only">Open main menu</span>
-                                        <i class="fa-solid" :class="mobileNavOpen ? 'fa-xmark text-xl text-white' : 'fa-bars text-xl text-[#a7aaad]'"></i>
+                                        <i class="fa-solid"
+                                            :class="mobileNavOpen ? 'fa-xmark text-xl text-white' : 'fa-bars text-xl text-[#a7aaad]'"></i>
                                     </button>
                                 </div>
                             </div>
@@ -598,7 +608,8 @@
                             $roleValMob = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
                         @endphp
                         <div class="mt-3 pt-3 border-t border-[#2c3338]">
-                            <p class="text-xs text-[#a7aaad] uppercase font-bold tracking-wider px-3 mb-1">{{ __('ACCOUNT') }} ({{ auth()->user()->name }})</p>
+                            <p class="text-xs text-[#a7aaad] uppercase font-bold tracking-wider px-3 mb-1">
+                                {{ __('ACCOUNT') }} ({{ auth()->user()->name }})</p>
                             @if(auth()->user()->hasVerifiedEmail())
                                 <a href="{{ route($roleValMob . '.dashboard') }}"
                                     class="block px-3 py-2 text-base font-bold text-[#72aee6] hover:bg-[#101417] rounded-xl">
@@ -655,9 +666,10 @@
                 <!-- Sub Sidebar (Contextual) -->
                 @yield('sub_sidebar')
 
-                <main class="content-pane custom-scrollbar pb-24 md:pb-0 flex-1"
+                <main class="content-pane custom-scrollbar pb-24 md:pb-0 flex-1 overflow-x-hidden"
                     style="{{ (request()->routeIs('docs*') || request('reportTab') === 'analyse') ? 'overflow: hidden !important; padding: 0 !important;' : '' }}">
-                    <div class="{{ (request()->routeIs('docs*') || request('reportTab') === 'analyse') ? 'h-full flex flex-col' : 'flex-grow' }}">
+                    <div
+                        class="{{ (request()->routeIs('docs*') || request('reportTab') === 'analyse') ? 'h-full flex flex-col' : 'flex-grow' }}">
                         <!-- Global Session Alerts -->
                         @if(session('success') || session('error'))
                             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
@@ -894,6 +906,22 @@
         }
     </script>
     <script src="/js/tours.js" defer></script>
+
+    <!-- Global Floating Scroll Stack (Top / Bottom) -->
+    <div class="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-[999999] flex flex-col gap-2 pointer-events-auto">
+        <button type="button"
+            onclick="const p = document.querySelector('.content-pane') || document.documentElement; p.scrollTo({ top: 0, behavior: 'smooth' }); window.scrollTo({ top: 0, behavior: 'smooth' });"
+            title="{{ __('Scroll to Top') }}"
+            class="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xl flex items-center justify-center transition-all hover:scale-110 border-2 border-white cursor-pointer">
+            <i class="fa-solid fa-chevron-up text-xs font-black"></i>
+        </button>
+        <button type="button"
+            onclick="const p = document.querySelector('.content-pane') || document.documentElement; p.scrollTo({ top: p.scrollHeight, behavior: 'smooth' }); window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });"
+            title="{{ __('Scroll to Bottom') }}"
+            class="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xl flex items-center justify-center transition-all hover:scale-110 border-2 border-white cursor-pointer">
+            <i class="fa-solid fa-chevron-down text-xs font-black"></i>
+        </button>
+    </div>
 </body>
 
 </html>

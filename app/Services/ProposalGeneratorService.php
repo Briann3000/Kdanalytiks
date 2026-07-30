@@ -35,9 +35,10 @@ class ProposalGeneratorService
         ];
         $language = $langMap[$locale] ?? 'English';
 
-        $systemPrompt = "You are a professional academic consultant. " .
-            "Transform sparse researcher inputs into high-quality, persuasive, logically sound 5-chapter drafts. " .
+        $systemPrompt = "You are a professional academic research consultant. " .
+            "Transform sparse researcher inputs into high-quality, persuasive, logically sound academic research proposals. " .
             "Formal tone. Academic style: {$style}. " .
+            "CRITICAL TENSE DIRECTIVE: This is a formal RESEARCH PROPOSAL (pre-study plan). You MUST write entirely in FUTURE TENSE throughout all chapters (e.g., 'The study will examine...', 'Data will be collected using...', 'The target population will comprise...'). Do NOT use past tense. " .
             "CRITICAL: You MUST use the exact English markers [SECTION: Name] provided in the prompt before every new section you write. " .
             "Do NOT translate the names inside the [SECTION: ...] markers, even if you are writing the content in another language. " .
             "IMPORTANT: You MUST write the entire CONTENT of the sections in {$language}.";

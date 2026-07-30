@@ -22,6 +22,7 @@ class ResearchProposal extends Model
     ];
 
     protected $casts = [
+        'user_id' => 'integer',
         'content' => 'array'
     ];
 

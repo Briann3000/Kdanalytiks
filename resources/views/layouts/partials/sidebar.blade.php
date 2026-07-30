@@ -538,7 +538,7 @@
             <div class="flex items-center">
                 <i
                     class="fa-solid fa-graduation-cap mr-3 {{ request()->routeIs('research-proposal.*') ? 'text-[#f0f0f1]' : 'text-zinc-200 group-hover:text-[#f0f0f1]' }}"></i>
-                {{ __('Write Report') }}
+                {{ __('Research Proposal') }}
             </div>
             <i class="fa-solid fa-chevron-right text-[10px] text-zinc-300 transition-transform duration-300"
                 :class="expandedItem === 'studio' ? 'rotate-90 text-[#f0f0f1]' : ''"></i>
@@ -549,22 +549,18 @@
                 x-show="hoverItem === 'studio' && expandedItem !== 'studio'"
                 :style="{ top: (parseInt(flyoutTop) > 400 ? (parseInt(flyoutTop) - 80) : parseInt(flyoutTop)) + 'px', left: flyoutLeft + 'px' }"
                 style="display: none;" @mouseenter="hoverItem = 'studio'" @mouseleave="clearFlyout()">
-                <a href="{{ route('research-proposal.index') }}"
-                    class="block px-3 py-1.5 text-xs font-bold font-bold {{ request()->routeIs('research-proposal.index') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Report Generator') }}</a>
                 <a href="{{ route('research-proposal.create') }}"
-                    class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-proposal.create') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Draft Reports') }}</a>
+                    class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-proposal.create') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Proposal Studio') }}</a>
                 <a href="{{ route('research-proposal.history') }}"
-                    class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-proposal.history') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Reports History') }}</a>
+                    class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-proposal.history') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Proposal History') }}</a>
             </div>
         </template>
 
         <div x-show="expandedItem === 'studio'" x-collapse class="sidebar-submenu">
-            <a href="{{ route('research-proposal.index') }}"
-                class="block py-1 text-xs font-bold {{ request()->routeIs('research-proposal.index') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Report Generator') }}</a>
             <a href="{{ route('research-proposal.create') }}"
-                class="block py-1 text-xs font-bold {{ request()->routeIs('research-proposal.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Draft Reports') }}</a>
+                class="block py-1 text-xs font-bold {{ request()->routeIs('research-proposal.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Proposal Studio') }}</a>
             <a href="{{ route('research-proposal.history') }}"
-                class="block py-1 text-xs font-bold {{ request()->routeIs('research-proposal.history') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Reports History') }}</a>
+                class="block py-1 text-xs font-bold {{ request()->routeIs('research-proposal.history') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Proposal History') }}</a>
         </div>
     </div>
 

@@ -1,19 +1,19 @@
 @extends('layouts.app')
 
-@section('title', __('Draft New Report - Research Studio'))
+@section('title', __('Research Proposal Studio — KDAnalytiks'))
 
 @section('content')
     <div class="container-fluid px-4 md:px-8 py-8">
         <div class="max-w-full mx-auto">
             <header class="mb-8 flex items-center justify-between">
                 <div>
-                    <a href="{{ route('research-proposal.index') }}"
+                    <a href="{{ route('research-proposal.history') }}"
                         class="inline-flex items-center text-xs font-bold text-gray-400 hover:text-[#2271b1] mb-2 transition-colors uppercase tracking-widest">
-                        <i class="fa-solid fa-arrow-left mr-2"></i> {{ __('Back to Studio') }}
+                        <i class="fa-solid fa-arrow-left mr-2"></i> {{ __('View Past Proposals') }}
                     </a>
-                    <h1 class="text-3xl font-black text-gray-900 tracking-tight uppercase">{{ __('Draft New Report') }}</h1>
+                    <h1 class="text-3xl font-black text-gray-900 tracking-tight uppercase">{{ __('Research Proposal Studio') }}</h1>
                     <p class="text-gray-500 font-medium">
-                        {{ __('Define your research vision and let AI draft the formal documentation.') }}</p>
+                        {{ __('Define your research question and objectives. AI will draft your formal academic proposal in future tense.') }}</p>
                 </div>
                 <div class="hidden md:block">
 
@@ -29,7 +29,7 @@
                     <div class="grid grid-cols-1 gap-6 border-b border-gray-50 pb-8">
                         <div>
                             <label for="title"
-                                class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">{{ __('Report Title') }}</label>
+                                class="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">{{ __('Proposal Title') }}</label>
                             <input type="text" name="title" id="title" required
                                 class="w-full bg-gray-50 border-gray-100 rounded-2xl px-5 py-4 text-gray-900 font-bold placeholder-gray-300 focus:ring-2 focus:ring-[#2271b1]/20 focus:border-[#2271b1] transition-all"
                                 placeholder="{{ __('e.g. Socio-Economic Impact of Remote Work in Urban Environments') }}">
@@ -136,13 +136,13 @@
                         {{ __('This can take up to 60 seconds.') }}
                     </p>
                     <div class="flex items-center space-x-4">
-                        <a href="{{ route('research-proposal.index') }}"
+                        <a href="{{ route('research-proposal.history') }}"
                             class="px-8 py-4 rounded-2xl text-xs font-black text-gray-500 uppercase tracking-widest hover:bg-gray-100 transition-all">{{ __('Cancel') }}</a>
                         <button type="submit" @click="loading = true"
                             class="w-full md:w-auto px-10 py-4 bg-[#2271b1] text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-zinc-200/50 hover:bg-[#135e96] transition-all flex items-center justify-center border-none group">
                             <template x-if="!loading">
                                 <div class="flex items-center justify-center w-full">
-                                    <span class="mr-3">{{ __('Draft Reports') }}</span>
+                                    <span class="mr-3">{{ __('Draft Proposal') }}</span>
                                     <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
                                 </div>
                             </template>
