@@ -38,6 +38,29 @@ class PaymentManager
                 'subscription_expiry' => null,
                 'payment_status' => 'paid',
             ]);
+
+            if ($entity instanceof \App\Models\User) {
+                if ($entity->independent) {
+                    $entity->independent->update([
+                        'subscription_tier_id' => $tier->id,
+                        'subscription_expiry' => null,
+                        'payment_status' => 'paid',
+                    ]);
+                }
+                if ($entity->organization) {
+                    $entity->organization->update([
+                        'subscription_tier_id' => $tier->id,
+                        'subscription_expiry' => null,
+                        'payment_status' => 'paid',
+                    ]);
+                }
+            } elseif (method_exists($entity, 'user') && $entity->user) {
+                $entity->user->update([
+                    'subscription_tier_id' => $tier->id,
+                    'subscription_expiry' => null,
+                    'payment_status' => 'paid',
+                ]);
+            }
             return ['status' => 'success', 'message' => 'Successfully upgraded to the ' . $tier->name . ' plan.'];
         }
 

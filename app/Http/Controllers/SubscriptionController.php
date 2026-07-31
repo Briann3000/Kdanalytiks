@@ -147,12 +147,37 @@ class SubscriptionController extends Controller
 
             // 1. Update Entity Tier
             $duration = ($cycle === 'YEAR') ? 365 : 30;
+            $expiryDate = now()->addDays($duration);
             $entity->update([
                 'subscription_tier_id' => $tier->id,
-                'subscription_expiry' => now()->addDays($duration),
+                'subscription_expiry' => $expiryDate,
                 'ai_usage_monthly' => 0, // Reset AI usage for the new tier
                 'payment_status' => 'paid',
             ]);
+
+            // Synchronize parent User or child profiles
+            if ($entity instanceof \App\Models\User) {
+                if ($entity->independent) {
+                    $entity->independent->update([
+                        'subscription_tier_id' => $tier->id,
+                        'subscription_expiry' => $expiryDate,
+                        'payment_status' => 'paid',
+                    ]);
+                }
+                if ($entity->organization) {
+                    $entity->organization->update([
+                        'subscription_tier_id' => $tier->id,
+                        'subscription_expiry' => $expiryDate,
+                        'payment_status' => 'paid',
+                    ]);
+                }
+            } elseif (method_exists($entity, 'user') && $entity->user) {
+                $entity->user->update([
+                    'subscription_tier_id' => $tier->id,
+                    'subscription_expiry' => $expiryDate,
+                    'payment_status' => 'paid',
+                ]);
+            }
 
             // 2. Create Payment Record
             $paymentData = [
@@ -230,6 +255,29 @@ class SubscriptionController extends Controller
             'subscription_expiry' => null,
             'payment_status' => 'unpaid',
         ]);
+
+        if ($entity instanceof \App\Models\User) {
+            if ($entity->independent) {
+                $entity->independent->update([
+                    'subscription_tier_id' => $freeTier->id,
+                    'subscription_expiry' => null,
+                    'payment_status' => 'unpaid',
+                ]);
+            }
+            if ($entity->organization) {
+                $entity->organization->update([
+                    'subscription_tier_id' => $freeTier->id,
+                    'subscription_expiry' => null,
+                    'payment_status' => 'unpaid',
+                ]);
+            }
+        } elseif (method_exists($entity, 'user') && $entity->user) {
+            $entity->user->update([
+                'subscription_tier_id' => $freeTier->id,
+                'subscription_expiry' => null,
+                'payment_status' => 'unpaid',
+            ]);
+        }
 
         return back()->with('success', 'Your subscription has been cancelled. You have been reverted to the Free tier.');
     }
