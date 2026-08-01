@@ -113,6 +113,9 @@ RULES:
                 throw new \Exception('Malformed AI JSON response.');
 
             // Ensure structure consistency with ai-insight-card.blade.php
+            $rawQuotes = $data['top_quotes'] ?? [];
+            $cleanQuotes = is_array($rawQuotes) ? array_values(array_unique(array_filter(array_map('trim', $rawQuotes)))) : [];
+
             return [
                 'sentiment_breakdown' => [
                     'Positive' => $data['sentiment']['positive'] ?? 0,
@@ -120,7 +123,7 @@ RULES:
                     'Negative' => $data['sentiment']['negative'] ?? 0
                 ],
                 'key_themes' => $data['key_themes'] ?? [],
-                'representative_quotes' => $data['top_quotes'] ?? []
+                'representative_quotes' => $cleanQuotes
             ];
 
         } catch (\Exception $e) {
@@ -149,46 +152,48 @@ RULES:
             $statsText .= "Choice: " . $stat['value'] . " | Count: " . $stat['count'] . " | Percentage: " . $stat['percentage'] . "%\n";
         }
 
-        $stylePrompts = [
-            'apa' => "You are a senior quantitative research analyst writing in formal academic APA Style (7th Edition).
-STRICT RULES:
-- Do NOT include raw sample size counts / frequencies in narrative prose, e.g., do NOT write '(n = 122)' or '(n = 92)'. Always use percentages only (e.g. 24.4%).
-- Formulate your interpretation dynamically in formal academic APA style.
-- Base your analysis STRICTLY on the statistical payload.",
-            'harvard' => "You are a senior quantitative research analyst writing in formal academic Harvard Style.
-STRICT RULES:
-- Use Harvard referencing and citation style conventions in the text structure.
-- Present findings in a formal academic tone focusing on percentages and relative distributions.",
-            'oscola' => "You are a senior quantitative research analyst writing in OSCOLA (Oxford Standard for the Citation of Legal Authorities) Style.
-STRICT RULES:
-- Use legal research formatting and OSCOLA citation tone.
-- Analyze findings with a highly structured, precise analytical tone suitable for legal scholarship.",
-            'ieee' => "You are a senior quantitative research analyst writing in IEEE technical style.
-STRICT RULES:
-- Use technical, precise, objective engineering style.
-- Employ IEEE citation conventions and bracketed references where appropriate.",
-            'vancouver' => "You are a senior quantitative research analyst writing in Vancouver medical style.
-STRICT RULES:
-- Use biomedical and clinical research reporting conventions.
-- Focus on objective percentage indicators and systematic data summary.",
-            'mla' => "You are a senior quantitative research analyst writing in MLA (Modern Language Association) Style.
-STRICT RULES:
-- Use MLA narrative voice conventions suitable for humanities research.
-- Present statistical insights in a cohesive, prose-driven flow."
+        // Style-specific tone descriptors — tone only, length and format are enforced globally below
+        $styleTones = [
+            'apa' => 'Write in a formal academic tone consistent with APA 7th edition conventions.',
+            'harvard' => 'Write in a formal academic tone consistent with Harvard referencing conventions.',
+            'oscola' => 'Write in a precise, structured analytical tone consistent with legal scholarship.',
+            'ieee' => 'Write in a concise, technical and objective tone consistent with IEEE engineering style.',
+            'vancouver' => 'Write in an objective, systematic tone consistent with biomedical research reporting.',
+            'mla' => 'Write in a cohesive, prose-driven tone consistent with MLA humanities conventions.',
         ];
 
-        $styleRules = $stylePrompts[$style] ?? $stylePrompts['apa'];
+        $styleTone = $styleTones[$style] ?? $styleTones['apa'];
         $targetLang = $this->getTargetLanguage();
 
-        $systemPrompt = "{$styleRules}
-STRICT DATA-SYNTHESIS & DATA-GROUNDING RULES:
-- Base your analysis STRICTLY AND EXCLUSIVELY on the provided question title and statistical payload. Do NOT hallucinate external facts or statistics not in the payload.
-- DO NOT use a rigid or hardcoded template structure. Synthesize the findings dynamically, explaining the practical significance of the majorities, central tendencies, or distribution spread.
-- Avoid cliché robotic intro phrases like 'Based on the provided data' or 'Looking at the chart'. Use varied, scholarly sentence structures every single time.
-- You MUST write the entire response in the {$targetLang} language.";
+        $systemPrompt = <<<PROMPT
+You are a quantitative research analyst. Your task is to write a brief trend interpretation of survey frequency data.
+
+OUTPUT FORMAT — NON-NEGOTIABLE:
+- Write EXACTLY ONE paragraph.
+- EXACTLY 3 to 4 sentences total. No more. No fewer.
+- No bullet points, no numbered lists, no headings, no Markdown of any kind.
+- No asterisks, no pound signs, no backticks, no bold, no italics.
+- Pure plain text only.
+
+TONE: {$styleTone}
+
+LANGUAGE: Write entirely in {$targetLang}.
+
+WRITING RULES:
+- Write in past tense throughout (e.g., "emerged", "indicated", "accounted for", "revealed").
+- Use plain, direct English. Replace complex academic jargon with simpler words (e.g., use "split" not "bifurcated", "divided" not "dichotomized", "pattern" not "paradigm").
+- Do not open with clichés like "Based on the provided data", "Looking at the chart", or "The data shows".
+- Use percentages only (e.g., 24.4%). Never include raw counts or sample sizes like (n = 122).
+
+STRUCTURE (do NOT produce visible labels — write it as seamless flowing prose):
+- Sentences 1–2: Report and rank the key percentage findings. Highlight the dominant choice and notable contrasts.
+- Sentences 3–4: Provide a grounded analytical conclusion. Begin naturally with an academic marker phrase (vary these — do not always use the same opener). Keep the conclusion strictly tied to the numbers. Do not speculate, invent causes, or introduce external context not present in the data.
+PROMPT;
+
+        $userMessage = "STATISTICAL DATA:\n{$statsText}\n\nWrite ONE paragraph, 3 to 4 sentences, plain text only.";
 
         try {
-            $content = $this->aiService->callAi("STATISTICAL DATA:\n" . $statsText, $systemPrompt, false);
+            $content = $this->aiService->callAi($userMessage, $systemPrompt, false, 300, 0.3);
             return $content ?? "No insight generated.";
 
         } catch (\Exception $e) {

@@ -28,10 +28,25 @@ class AiQuantInsightCard extends Component
     protected function generateInsight()
     {
         try {
-            $aiService = app(\App\Services\QualitativeAnalysisService::class);
             $survey = \App\Models\Survey::find($this->surveyId);
             $style = $survey ? ($survey->reporting_style ?? 'apa') : 'apa';
-            $this->insight = $aiService->analyzeQuantitativeData($this->stats, $this->questionId, $style);
+
+            $cacheKeyStyle = "quantitative_analysis_{$this->surveyId}_{$this->questionId}_{$style}";
+            $cacheKeyDefault = "quantitative_analysis_{$this->surveyId}_{$this->questionId}";
+
+            $aiService = app(\App\Services\QualitativeAnalysisService::class);
+
+            $this->insight = \Illuminate\Support\Facades\Cache::remember($cacheKeyStyle, 86400, function () use ($aiService, $style) {
+                $cacheKeyDefault = "quantitative_analysis_{$this->surveyId}_{$this->questionId}";
+                if (\Illuminate\Support\Facades\Cache::has($cacheKeyDefault)) {
+                    return \Illuminate\Support\Facades\Cache::get($cacheKeyDefault);
+                }
+                return $aiService->analyzeQuantitativeData($this->stats, $this->questionId, $style);
+            });
+
+            if (!\Illuminate\Support\Facades\Cache::has($cacheKeyDefault)) {
+                \Illuminate\Support\Facades\Cache::put($cacheKeyDefault, $this->insight, 86400);
+            }
         } catch (\Exception $e) {
             $this->error = $e->getMessage();
         }

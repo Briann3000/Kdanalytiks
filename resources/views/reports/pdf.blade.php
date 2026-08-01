@@ -197,17 +197,7 @@
         </div>
     </div>
 
-    @if(!empty($aiSummary))
-        <div class="summary-box"
-            style="background-color: #f9fafb; border: 1px solid #e5e7eb; text-align: left; margin-bottom: 30px;">
-            <h3 style="color: #111827; margin-top: 0;">Executive Thematic Analysis</h3>
-            <div style="font-size: 13px; color: #374151; line-height: 1.6;">
-                @foreach(array_filter(preg_split('/\n+/', trim($aiSummary))) as $aiPara)
-                    <p style="margin: 0 0 8px 0;">{{ preg_replace('/\*\*(.*?)\*\*/', '$1', trim($aiPara)) }}</p>
-                @endforeach
-            </div>
-        </div>
-    @endif
+
 
     @php $qNum = 1; @endphp
     @foreach($analysis as $index => $item)

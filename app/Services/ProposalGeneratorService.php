@@ -38,93 +38,83 @@ class ProposalGeneratorService
         $systemPrompt = "You are a professional academic research consultant. " .
             "Transform sparse researcher inputs into high-quality, persuasive, logically sound academic research proposals. " .
             "Formal tone. Academic style: {$style}. " .
-            "CRITICAL TENSE DIRECTIVE: This is a formal RESEARCH PROPOSAL (pre-study plan). You MUST write entirely in FUTURE TENSE throughout all chapters (e.g., 'The study will examine...', 'Data will be collected using...', 'The target population will comprise...'). Do NOT use past tense. " .
+            "PROPOSAL BOUNDARY RULE: This is a formal RESEARCH PROPOSAL (pre-study plan). Generate ONLY Front Matter, Chapter 1, Chapter 2, Chapter 3, References, and Appendices. DO NOT generate Chapter 4 (Findings) or Chapter 5 (Conclusions), as no data has been collected yet. " .
+            "CRITICAL TENSE DIRECTIVE: Use future tense ('will') STRICTLY for proposed research actions to be conducted by the researcher (e.g., 'Data will be collected using...', 'The target population will comprise...'). Use PRESENT TENSE for definitions, established facts, theoretical frameworks (e.g., TAM, Cognitive Load Theory), and existing literature summaries (e.g., 'AI refers to...', 'Cognitive Load Theory posits...'). Do NOT apply future tense to static definitions or facts. " .
+            "ABSTRACT & KEYWORD RULES: Cap the Abstract at a maximum of 200 words. Enforce keyword frequency caps—do not repeat key terms or acronyms (e.g. 'AI-assisted code generators') more than 3 times in the abstract. " .
+            "CITATION REALISM: Ensure generated references strictly conform to valid APA 7th edition formatting and historical context (do not attribute modern AI concepts to pre-2015 literature). " .
+            "STRICT NO-MARKDOWN FORMATTING DIRECTIVE: Output clean PLAIN TEXT ONLY. DO NOT use any Markdown formatting characters such as asterisks (* or **), hashes (#), backticks (`), or bullet points (*). Format definitions and lists as clean paragraphs or numbered items (e.g., '1.', '2.'). " .
             "CRITICAL: You MUST use the exact English markers [SECTION: Name] provided in the prompt before every new section you write. " .
             "Do NOT translate the names inside the [SECTION: ...] markers, even if you are writing the content in another language. " .
             "IMPORTANT: You MUST write the entire CONTENT of the sections in {$language}.";
 
         // ── 1. PRELIMINARIES ──
-        $p0 = "Draft PRELIMINARY pages for a research study titled '{$proposal->title}':\n" .
+        $p0 = "Draft PRELIMINARY PAGES (Front Matter) for a research proposal titled '{$proposal->title}':\n" .
             "Use markers [SECTION: Name] for:\n" .
-            "[SECTION: Abstract] - 250-word formal abstract.\n" .
-            "[SECTION: Abbreviations] - Relevant list.\n" .
-            "[SECTION: Definition of Key Terms] - 5-8 core terms.";
+            "[SECTION: Title Page] - Formal academic title reflecting independent & dependent variables.\n" .
+            "[SECTION: Abstract] - Maximum 200-word concise formal abstract (problem statement, objectives, proposed methodology, scope).\n" .
+            "[SECTION: Abbreviations] - List of abbreviations and acronyms.\n" .
+            "[SECTION: Definition of Key Terms] - 5-8 core terms with operational definitions using present tense.";
         Log::info("Drafting Preliminaries for ID: {$proposal->id}");
         $this->batchProcess($p0, $generatedContent, $systemPrompt);
 
         // ── 2. CHAPTER 1: INTRODUCTION ──
-        sleep(2);
+        sleep(1);
         $p1 = "Draft CHAPTER 1: INTRODUCTION for '{$proposal->title}':\n" .
             "Objectives: {$proposal->objectives}\n" .
             "Question: {$proposal->research_question}\n" .
             "Scope: {$proposal->scope}\n\n" .
-            "Use markers [SECTION: Name] for:\n" .
-            "[SECTION: 1.1 Background of the Study]\n" .
-            "[SECTION: 1.2 Statement of the Problem]\n" .
-            "[SECTION: 1.3 Objectives and Research Questions]\n" .
-            "[SECTION: 1.4 Significance of the Study]\n" .
-            "[SECTION: 1.5 Scope and Limitations]";
+            "Use markers [SECTION: Name] for ALL of the following sub-sections:\n" .
+            "[SECTION: 1.1 Background to the Study] - Historical, global, regional, and local context of the research problem.\n" .
+            "[SECTION: 1.2 Statement of the Problem] - Clear identification of the research gap and empirical problem.\n" .
+            "[SECTION: 1.3 Purpose of the Study] - Overall goal and general objective.\n" .
+            "[SECTION: 1.4 Specific Research Objectives] - Bulleted list of actionable objectives.\n" .
+            "[SECTION: 1.5 Research Questions & Hypotheses] - Specific research questions or testable hypotheses.\n" .
+            "[SECTION: 1.6 Justification and Significance] - Value to policy makers, scholars, and industry practitioners.\n" .
+            "[SECTION: 1.7 Scope and Delimitation] - Geographical, thematic, and temporal boundaries.\n" .
+            "[SECTION: 1.8 Limitations and Mitigation] - Potential constraints and proposed strategies to mitigate them.\n" .
+            "[SECTION: 1.9 Assumptions of the Study] - Underlying assumptions taken for granted in conducting the research.";
         Log::info("Drafting Ch 1 for ID: {$proposal->id}");
         $this->batchProcess($p1, $generatedContent, $systemPrompt);
 
         // ── 3. CHAPTER 2: LITERATURE REVIEW ──
-        sleep(2);
+        sleep(1);
         $p2 = "Draft CHAPTER 2: LITERATURE REVIEW for '{$proposal->title}':\n" .
-            "Use markers:\n" .
-            "[SECTION: 2.1 Introduction]\n" .
-            "[SECTION: 2.2 Theoretical Framework]\n" .
-            "[SECTION: 2.3 Conceptual Framework] - Discuss variables relationships.\n" .
-            "[SECTION: 2.4 Empirical Review] - Discuss past studies trends.\n" .
-            "[SECTION: 2.5 Research Gaps]";
+            "Use markers [SECTION: Name] for ALL of the following sub-sections:\n" .
+            "[SECTION: 2.1 Introduction] - Overview of literature themes.\n" .
+            "[SECTION: 2.2 Theoretical Framework] - Theories underpinning the study (e.g. TAM, UTAUT, Systems Theory).\n" .
+            "[SECTION: 2.3 Conceptual Framework] - Narrative explanation of variable relationships.\n" .
+            "[SECTION: 2.4 Empirical Review] - Systematic review of past empirical studies by key objective themes.\n" .
+            "[SECTION: 2.5 Critique of Existing Literature] - Critical appraisal of methodologies and findings in previous studies.\n" .
+            "[SECTION: 2.6 Summary of Knowledge Gaps] - Explicit summary of unaddressed empirical, methodological, or contextual gaps.";
         Log::info("Drafting Ch 2 for ID: {$proposal->id}");
         $this->batchProcess($p2, $generatedContent, $systemPrompt);
 
         // ── 4. CHAPTER 3: METHODOLOGY ──
-        sleep(2);
+        sleep(1);
         $p3 = "Draft CHAPTER 3: RESEARCH METHODOLOGY for '{$proposal->title}':\n" .
             "Methodology Type: {$proposal->methodology_type}\n\n" .
-            "Use markers:\n" .
-            "[SECTION: 3.1 Research Design]\n" .
-            "[SECTION: 3.2 Target Population & Sampling]\n" .
-            "[SECTION: 3.3 Data Collection Instruments]\n" .
-            "[SECTION: 3.4 Validity and Reliability]\n" .
-            "[SECTION: 3.5 Data Analysis Plan]";
+            "CRITICAL: Use FUTURE TENSE ('will be collected', 'will be selected') for all proposed procedures.\n" .
+            "Use markers [SECTION: Name] for ALL of the following sub-sections:\n" .
+            "[SECTION: 3.1 Introduction] - Overview of methodology structure.\n" .
+            "[SECTION: 3.2 Research Design] - Justification of descriptive/correlational/mixed-methods design.\n" .
+            "[SECTION: 3.3 Target Population] - Target demographic and accessible population description.\n" .
+            "[SECTION: 3.4 Sampling Frame, Techniques & Sample Size] - Sampling frame, formula (e.g., Yamane/Krejcie-Morgan), and sampling strategy.\n" .
+            "[SECTION: 3.5 Data Collection Instruments] - Structure of questionnaires, interview guides, or observation checklists.\n" .
+            "[SECTION: 3.6 Data Collection Procedures] - Step-by-step administration and logistics protocol.\n" .
+            "[SECTION: 3.7 Pilot Testing] - Pre-testing sample size (10% rule) and procedures.\n" .
+            "[SECTION: 3.8 Validity and Reliability] - Construct/content validity and Cronbach's alpha reliability thresholds.\n" .
+            "[SECTION: 3.9 Data Analysis Plan] - Statistical software (SPSS/R), descriptive statistics, and inferential models.\n" .
+            "[SECTION: 3.10 Ethical Considerations] - Informed consent, confidentiality, anonymity, and institutional review permissions.";
         Log::info("Drafting Ch 3 for ID: {$proposal->id}");
         $this->batchProcess($p3, $generatedContent, $systemPrompt);
 
-        // ── 5. CHAPTER 4: EXPECTED RESULTS ──
-        sleep(2);
-        $p4 = "Draft CHAPTER 4: DATA ANALYSIS, PRESENTATION AND INTERPRETATION for '{$proposal->title}':\n" .
-            "Use markers: [SECTION: 4.1 Introduction], [SECTION: 4.2 Response Rate], [SECTION: 4.3 Respondent Demographics], [SECTION: 4.4 Data Analysis and Presentation], [SECTION: 4.5 Discussion of Findings], [SECTION: 4.6 Summary].\n" .
-            "GUIDELINES for 4.4:\n" .
-            "- For each area, provide a sub-heading like '4.4.x [Topic Name]'.\n" .
-            "- Present expected findings objectively, then provide a brief interpretation.\n" .
-            "- DO NOT use asterisks (**) for sub-headings. Write them as plain text on their own line.\n" .
-            "GUIDELINES for 4.5:\n" .
-            "- Structure 4.5 around the specific Research Objectives you generated in Chapter 1.\n" .
-            "- For each objective, discuss how the expected findings would address it.\n";
-        Log::info("Drafting Ch 4 for ID: {$proposal->id}");
-        $this->batchProcess($p4, $generatedContent, $systemPrompt);
-
-        // ── 6. CHAPTER 5: RECOMMENDATIONS ──
-        sleep(2);
-        $p5 = "Draft CHAPTER 5: SUMMARY, CONCLUSIONS AND RECOMMENDATIONS for '{$proposal->title}':\n" .
-            "Discuss conclusions for the study design.\n" .
-            "Use markers:\n" .
-            "[SECTION: 5.1 Summary of the Study Plan]\n" .
-            "[SECTION: 5.2 Conclusions]\n" .
-            "[SECTION: 5.3 Limitations of the Study]\n" .
-            "[SECTION: 5.4 Recommendations for Future Research]";
-        Log::info("Drafting Ch 5 for ID: {$proposal->id}");
-        $this->batchProcess($p5, $generatedContent, $systemPrompt);
-
-        // ── 7. REFERENCES & APPENDIX ──
-        sleep(2);
+        // ── 5. REFERENCES & APPENDIX ──
+        sleep(1);
         $p6 = "Draft REFERENCES and APPENDIX for '{$proposal->title}':\n" .
             "Style: {$style}\n\n" .
             "Use markers:\n" .
-            "[SECTION: REFERENCES] - 10-15 mock bibliography entries.\n" .
-            "[SECTION: APPENDIX: Sample Questionnaire] - Draft a 10-question instrument.";
+            "[SECTION: REFERENCES] - 12-18 realistic, historically accurate bibliography entries conforming strictly to APA 7th edition.\n" .
+            "[SECTION: APPENDIX: Data Collection Instrument] - Draft a full 10-item research questionnaire with demographic and Likert scale sections.";
         Log::info("Drafting Appendix for ID: {$proposal->id}");
         $this->batchProcess($p6, $generatedContent, $systemPrompt);
 
@@ -145,7 +135,11 @@ class ProposalGeneratorService
                 $title = trim($parts[$i]);
                 $body = trim($parts[$i + 1] ?? '');
                 if ($title && $body) {
-                    $contentArray[$title] = $body;
+                    // Clean out raw markdown formatting (asterisks, hashtags, backticks)
+                    $body = preg_replace('/\*{1,3}/', '', $body);
+                    $body = preg_replace('/^#+\s+/m', '', $body);
+                    $body = str_replace('`', '', $body);
+                    $contentArray[$title] = trim($body);
                 }
             }
         }

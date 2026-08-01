@@ -487,4 +487,19 @@
             });
         </script>
     @endpush
+
+    <!-- Floating Scroll Control Stack (Positioned at bottom-24 to avoid KDA button conflict) -->
+    <div x-data="{ showTop: false, showBottom: true }"
+        @scroll.window="showTop = (window.pageYOffset > 300); showBottom = ((window.innerHeight + window.pageYOffset) < document.body.offsetHeight - 300);"
+        class="fixed bottom-24 right-6 z-[999] flex flex-col gap-2">
+        <button x-show="showTop" x-transition @click="window.scrollTo({top: 0, behavior: 'smooth'})"
+            class="w-10 h-10 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-full shadow-xl flex items-center justify-center transition-all cursor-pointer border border-white/20">
+            <i class="fa-solid fa-arrow-up text-sm"></i>
+        </button>
+        <button x-show="showBottom" x-transition
+            @click="window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'})"
+            class="w-10 h-10 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-full shadow-xl flex items-center justify-center transition-all cursor-pointer border border-white/20">
+            <i class="fa-solid fa-arrow-down text-sm"></i>
+        </button>
+    </div>
 @endsection

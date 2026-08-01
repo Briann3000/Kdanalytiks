@@ -79,17 +79,40 @@ class DocumentExtractionService
     {
         try {
             $document = IOFactory::load($path);
+            $chunks = [];
+
+            foreach ($document->getSections() as $section) {
+                $this->extractPhpWordElements($section->getElements(), $chunks);
+            }
+
+            $text = trim(implode("\n\n", $chunks));
+            if (!empty($text)) {
+                return $text;
+            }
         } catch (\Throwable $e) {
-            throw new RuntimeException('This DOCX file could not be read. Please re-save it as a standard Word document and try again.', 0, $e);
+            // Fallback to direct XML parsing if PhpWord fails
         }
 
-        $chunks = [];
+        return $this->extractDocxXmlText($path);
+    }
 
-        foreach ($document->getSections() as $section) {
-            $this->extractPhpWordElements($section->getElements(), $chunks);
+    private function extractDocxXmlText(string $path): string
+    {
+        $zip = new \ZipArchive();
+        if ($zip->open($path) === true) {
+            $xmlContent = $zip->getFromName('word/document.xml');
+            $zip->close();
+
+            if ($xmlContent !== false) {
+                // Replace paragraph closing tags with double newlines
+                $xmlContent = str_replace('</w:p>', "\n\n", $xmlContent);
+                $text = strip_tags($xmlContent);
+                $text = html_entity_decode($text, ENT_QUOTES | ENT_XML1, 'UTF-8');
+                return trim($text);
+            }
         }
 
-        return implode("\n\n", $chunks);
+        throw new RuntimeException('This DOCX file could not be read. Please re-save it as a standard Word document and try again.');
     }
 
     private function extractPhpWordElements(iterable $elements, array &$chunks): void

@@ -118,7 +118,20 @@
                                 <a href="{{ route('surveys.reports', $survey) }}?reportTab=inferential"
                                     class="flex items-center gap-3 px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-zinc-100 hover:text-[#135e96] rounded-xl transition-colors">
                                     <i class="fa-solid fa-calculator text-zinc-400 w-4 text-center"></i>
-                                    {{ __('Analyse') }}
+                                    {{ __('Analyze') }}
+                                </a>
+                            </div>
+
+                            <!-- Compiled Synthesis Section -->
+                            <div class="px-4 py-2 bg-gray-50 border-t border-b border-gray-100 mt-1">
+                                <span
+                                    class="text-[9px] font-black text-indigo-600 tracking-widest">{{ __('Unified Report') }}</span>
+                            </div>
+                            <div class="p-1.5 space-y-0.5">
+                                <a href="{{ route('surveys.reports', $survey) }}?reportTab=compiled"
+                                    class="flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-indigo-700 hover:bg-indigo-50 rounded-xl transition-colors">
+                                    <i class="fa-solid fa-file-contract text-indigo-500 w-4 text-center"></i>
+                                    {{ __('Compiled Report') }}
                                 </a>
                             </div>
                         </div>

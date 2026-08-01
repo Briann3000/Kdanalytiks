@@ -609,7 +609,8 @@
                         @endphp
                         <div class="mt-3 pt-3 border-t border-[#2c3338]">
                             <p class="text-xs text-[#a7aaad] uppercase font-bold tracking-wider px-3 mb-1">
-                                {{ __('ACCOUNT') }} ({{ auth()->user()->name }})</p>
+                                {{ __('ACCOUNT') }} ({{ auth()->user()->name }})
+                            </p>
                             @if(auth()->user()->hasVerifiedEmail())
                                 <a href="{{ route($roleValMob . '.dashboard') }}"
                                     class="block px-3 py-2 text-base font-bold text-[#72aee6] hover:bg-[#101417] rounded-xl">
@@ -666,7 +667,7 @@
                 <!-- Sub Sidebar (Contextual) -->
                 @yield('sub_sidebar')
 
-                <main class="content-pane custom-scrollbar pb-24 md:pb-0 flex-1 overflow-x-hidden"
+                <main id="main-viewport" class="content-pane custom-scrollbar pb-24 md:pb-0 flex-1 overflow-x-hidden"
                     style="{{ (request()->routeIs('docs*') || request('reportTab') === 'analyse') ? 'overflow: hidden !important; padding: 0 !important;' : '' }}">
                     <div
                         class="{{ (request()->routeIs('docs*') || request('reportTab') === 'analyse') ? 'h-full flex flex-col' : 'flex-grow' }}">
@@ -710,27 +711,30 @@
                         $roleValNav = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
                     @endphp
                     <nav
-                        class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 flex justify-around items-center h-16 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe pt-2">
-                        <a href="{{ route($roleValNav . '.dashboard') }}"
-                            class="flex flex-col items-center justify-center w-full text-zinc-500 hover:text-[#2271b1] {{ request()->routeIs($roleValNav . '.dashboard') ? 'text-[#2271b1]' : '' }} transition-colors">
-                            <i class="fa-solid fa-house mb-1 text-lg"></i>
-                            <span class="text-[10px] font-bold">{{ __('Home') }}</span>
-                        </a>
-                        <a href="{{ route('surveys.index', ['status' => 'active']) }}"
-                            class="flex flex-col items-center justify-center w-full text-zinc-500 hover:text-[#2271b1] {{ (request()->routeIs('surveys.index') && request('status') === 'active') ? 'text-[#2271b1]' : '' }} transition-colors">
-                            <i class="fa-solid fa-layer-group mb-1 text-lg"></i>
-                            <span class="text-[10px] font-bold">{{ __('Projects') }}</span>
-                        </a>
-                        <a href="{{ route('surveys.create') }}"
-                            class="flex flex-col items-center justify-center w-full text-zinc-500 hover:text-[#2271b1] {{ request()->routeIs('surveys.create') ? 'text-[#2271b1]' : '' }} transition-colors">
-                            <i class="fa-solid fa-plus mb-1 text-lg"></i>
-                            <span class="text-[10px] font-bold">{{ __('Create') }}</span>
-                        </a>
-                        <a href="{{ route('research-proposal.index') }}"
-                            class="flex flex-col items-center justify-center w-full text-zinc-500 hover:text-[#2271b1] {{ request()->routeIs('research-proposal.*') ? 'text-[#2271b1]' : '' }} transition-colors">
-                            <i class="fa-solid fa-file-signature mb-1 text-lg"></i>
-                            <span class="text-[10px] font-bold">{{ __('Report') }}</span>
-                        </a>
+                        class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 sm:hidden {{ request('reportTab') === 'analyse' ? 'hidden' : 'flex' }} items-center justify-around py-2 z-40">
+                        <nav
+                            class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 flex justify-around items-center h-16 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe pt-2">
+                            <a href="{{ route($roleValNav . '.dashboard') }}"
+                                class="flex flex-col items-center justify-center w-full text-zinc-500 hover:text-[#2271b1] {{ request()->routeIs($roleValNav . '.dashboard') ? 'text-[#2271b1]' : '' }} transition-colors">
+                                <i class="fa-solid fa-house mb-1 text-lg"></i>
+                                <span class="text-[10px] font-bold">{{ __('Home') }}</span>
+                            </a>
+                            <a href="{{ route('surveys.index', ['status' => 'active']) }}"
+                                class="flex flex-col items-center justify-center w-full text-zinc-500 hover:text-[#2271b1] {{ (request()->routeIs('surveys.index') && request('status') === 'active') ? 'text-[#2271b1]' : '' }} transition-colors">
+                                <i class="fa-solid fa-layer-group mb-1 text-lg"></i>
+                                <span class="text-[10px] font-bold">{{ __('Projects') }}</span>
+                            </a>
+                            <a href="{{ route('surveys.create') }}"
+                                class="flex flex-col items-center justify-center w-full text-zinc-500 hover:text-[#2271b1] {{ request()->routeIs('surveys.create') ? 'text-[#2271b1]' : '' }} transition-colors">
+                                <i class="fa-solid fa-plus mb-1 text-lg"></i>
+                                <span class="text-[10px] font-bold">{{ __('Create') }}</span>
+                            </a>
+                            <a href="{{ route('research-proposal.index') }}"
+                                class="flex flex-col items-center justify-center w-full text-zinc-500 hover:text-[#2271b1] {{ request()->routeIs('research-proposal.*') ? 'text-[#2271b1]' : '' }} transition-colors">
+                                <i class="fa-solid fa-file-signature mb-1 text-lg"></i>
+                                <span class="text-[10px] font-bold">{{ __('Report') }}</span>
+                            </a>
+                        </nav>
                     </nav>
                 @endauth
             </div>
@@ -907,20 +911,23 @@
     </script>
     <script src="/js/tours.js" defer></script>
 
-    <!-- Global Floating Scroll Stack (Top / Bottom) -->
-    <div class="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-[999999] flex flex-col gap-2 pointer-events-auto">
-        <button type="button"
-            onclick="const p = document.querySelector('.content-pane') || document.documentElement; p.scrollTo({ top: 0, behavior: 'smooth' }); window.scrollTo({ top: 0, behavior: 'smooth' });"
-            title="{{ __('Scroll to Top') }}"
-            class="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xl flex items-center justify-center transition-all hover:scale-110 border-2 border-white cursor-pointer">
-            <i class="fa-solid fa-chevron-up text-xs font-black"></i>
-        </button>
-        <button type="button"
-            onclick="const p = document.querySelector('.content-pane') || document.documentElement; p.scrollTo({ top: p.scrollHeight, behavior: 'smooth' }); window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });"
-            title="{{ __('Scroll to Bottom') }}"
-            class="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xl flex items-center justify-center transition-all hover:scale-110 border-2 border-white cursor-pointer">
-            <i class="fa-solid fa-chevron-down text-xs font-black"></i>
-        </button>
+    <div x-show="activeTab !== 'analyse'"
+        class="fixed bottom-24 sm:bottom-28 right-4 sm:right-6 z-[999999] flex flex-col gap-2">
+        <!-- Global Floating Scroll Stack (Top / Bottom) -->
+        <div class="fixed bottom-24 sm:bottom-28 right-4 sm:right-6 z-[999999] flex flex-col gap-2 pointer-events-auto">
+            <button type="button"
+                onclick="const p = document.querySelector('.content-pane') || document.documentElement; p.scrollTo({ top: 0, behavior: 'smooth' }); window.scrollTo({ top: 0, behavior: 'smooth' });"
+                title="{{ __('Scroll to Top') }}"
+                class="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xl flex items-center justify-center transition-all hover:scale-110 border-2 border-white cursor-pointer">
+                <i class="fa-solid fa-chevron-up text-xs font-black"></i>
+            </button>
+            <button type="button"
+                onclick="const p = document.querySelector('.content-pane') || document.documentElement; p.scrollTo({ top: p.scrollHeight, behavior: 'smooth' }); window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });"
+                title="{{ __('Scroll to Bottom') }}"
+                class="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xl flex items-center justify-center transition-all hover:scale-110 border-2 border-white cursor-pointer">
+                <i class="fa-solid fa-chevron-down text-xs font-black"></i>
+            </button>
+        </div>
     </div>
 </body>
 

@@ -169,6 +169,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/auth/google/callback', [\App\Http\Controllers\GoogleController::class, 'handleGoogleCallback']);
     Route::get('/surveys/{survey}/export-pdf', [SurveyController::class, 'exportPdf'])->name('surveys.export_pdf');
     Route::get('/surveys/{survey}/export-docx', [SurveyController::class, 'exportDocx'])->name('surveys.export_docx');
+    Route::get('/surveys/{survey}/export-compiled-pdf', [SurveyController::class, 'exportCompiledPdf'])->name('surveys.export_compiled_pdf');
+    Route::get('/surveys/{survey}/export-compiled-docx', [SurveyController::class, 'exportCompiledDocx'])->name('surveys.export_compiled_docx');
     Route::get('/surveys/{survey}/responses/{response}/export-pdf', [SurveyController::class, 'exportSinglePdf'])->name('surveys.responses.export_pdf');
     Route::get('/surveys/{survey}/responses/{response}/export-docx', [SurveyController::class, 'exportSingleDocx'])->name('surveys.responses.export_docx');
     Route::post('/surveys/{survey}/reporting-style', [SurveyController::class, 'updateReportingStyle'])->name('surveys.reporting-style');
@@ -285,6 +287,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/research-proposal/store', [\App\Http\Controllers\ResearchProposalController::class, 'storeProposal'])->name('research-proposal.store');
     Route::get('/research-proposal/export-proposal/{id}', [\App\Http\Controllers\ResearchProposalController::class, 'exportProposal'])->name('research-proposal.export-proposal');
     Route::post('/research-proposal/generate', [\App\Http\Controllers\ResearchProposalController::class, 'generate'])->name('research-proposal.generate');
+
+    // Research Studio - Full Report & Standalone Proofread Routes
+    Route::get('/research-studio/report/create', [\App\Http\Controllers\ResearchStudioController::class, 'createReport'])->name('research-studio.report.create');
+    Route::post('/research-studio/report/store', [\App\Http\Controllers\ResearchStudioController::class, 'storeReport'])->name('research-studio.report.store');
+    Route::get('/research-studio/report/history', [\App\Http\Controllers\ResearchStudioController::class, 'reportHistory'])->name('research-studio.report.history');
+    Route::get('/research-studio/report/download/{report}', [\App\Http\Controllers\ResearchStudioController::class, 'downloadReport'])->name('research-studio.report.download');
+    Route::get('/research-studio/report/preview/{report}', [\App\Http\Controllers\ResearchStudioController::class, 'previewReport'])->name('research-studio.report.preview');
+    Route::get('/research-studio/report/inferential-tests/{survey}', [\App\Http\Controllers\ResearchStudioController::class, 'getInferentialTests'])->name('research-studio.report.inferential-tests');
+    Route::get('/research-studio/proofread', [\App\Http\Controllers\ResearchStudioController::class, 'createProofread'])->name('research-studio.proofread.create');
+    Route::post('/research-studio/proofread/process', [\App\Http\Controllers\ResearchStudioController::class, 'processProofread'])->name('research-studio.proofread.process');
+    Route::post('/research-studio/proofread/download', [\App\Http\Controllers\ResearchStudioController::class, 'downloadProofread'])->name('research-studio.proofread.download');
 
     // Standalone Humanizer Routes
     Route::get('/humanizer', [\App\Http\Controllers\HumanizerController::class, 'index'])->name('humanizer.index');

@@ -606,7 +606,7 @@ class SociusChatController extends Controller
         $message = strtolower($e->getMessage());
 
         if (str_contains($message, 'scanned pdfs are not supported')) {
-            return 'This PDF looks like a scanned document, so Socius could not read text from it. Please upload a text-based PDF instead.';
+            return 'This PDF looks like a scanned document,Socius could not read text from it. Please upload a text-based PDF instead.';
         }
 
         if (str_contains($message, 'docx file could not be read')) {

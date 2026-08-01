@@ -1246,13 +1246,24 @@ class SurveyController extends Controller
                         if ($isAnalyzable) {
                             // Qualitative Analysis - FREE (Standard)
                             $aiInsight = \Illuminate\Support\Facades\Cache::remember("qualitative_analysis_{$survey->id}_{$fieldId}", 86400, function () use ($answersList, $label) {
-                                return (new \App\Services\QualitativeAnalysisService())->analyzeResponses($answersList, $label);
+                                return app(\App\Services\QualitativeAnalysisService::class)->analyzeResponses($answersList, $label);
                             });
                         } elseif ($isChartable && $canAnalyze) {
                             // Quantitative AI Trend Interpretation - PREMIUM
-                            $aiInsight = \Illuminate\Support\Facades\Cache::remember("quantitative_analysis_{$survey->id}_{$fieldId}", 86400, function () use ($stats, $label) {
-                                return (new \App\Services\QualitativeAnalysisService())->analyzeQuantitativeData($stats, $label);
-                            });
+                            $style = $survey->reporting_style ?? 'apa';
+                            $cacheKeyStyle = "quantitative_analysis_{$survey->id}_{$fieldId}_{$style}";
+                            $cacheKeyDefault = "quantitative_analysis_{$survey->id}_{$fieldId}";
+
+                            if (\Illuminate\Support\Facades\Cache::has($cacheKeyStyle)) {
+                                $aiInsight = \Illuminate\Support\Facades\Cache::get($cacheKeyStyle);
+                            } elseif (\Illuminate\Support\Facades\Cache::has($cacheKeyDefault)) {
+                                $aiInsight = \Illuminate\Support\Facades\Cache::get($cacheKeyDefault);
+                                \Illuminate\Support\Facades\Cache::put($cacheKeyStyle, $aiInsight, 86400);
+                            } else {
+                                $aiInsight = app(\App\Services\QualitativeAnalysisService::class)->analyzeQuantitativeData($stats, $label, $style);
+                                \Illuminate\Support\Facades\Cache::put($cacheKeyStyle, $aiInsight, 86400);
+                                \Illuminate\Support\Facades\Cache::put($cacheKeyDefault, $aiInsight, 86400);
+                            }
                         }
                     } catch (\Exception $e) {
                         \Illuminate\Support\Facades\Log::error("AI Insight Generation Failed: " . $e->getMessage());
@@ -1355,13 +1366,24 @@ class SurveyController extends Controller
                         if ($isAnalyzable) {
                             // Qualitative Analysis - FREE (Standard)
                             $aiInsight = \Illuminate\Support\Facades\Cache::remember("qualitative_analysis_{$survey->id}_{$question->id}", 86400, function () use ($answersList, $question) {
-                                return (new \App\Services\QualitativeAnalysisService())->analyzeResponses($answersList, $question->text);
+                                return app(\App\Services\QualitativeAnalysisService::class)->analyzeResponses($answersList, $question->text);
                             });
                         } elseif ($isChartable && $canAnalyze) {
                             // Quantitative AI Trend Interpretation - PREMIUM
-                            $aiInsight = \Illuminate\Support\Facades\Cache::remember("quantitative_analysis_{$survey->id}_{$question->id}", 86400, function () use ($stats, $question) {
-                                return (new \App\Services\QualitativeAnalysisService())->analyzeQuantitativeData($stats, $question->text);
-                            });
+                            $style = $survey->reporting_style ?? 'apa';
+                            $cacheKeyStyle = "quantitative_analysis_{$survey->id}_{$question->id}_{$style}";
+                            $cacheKeyDefault = "quantitative_analysis_{$survey->id}_{$question->id}";
+
+                            if (\Illuminate\Support\Facades\Cache::has($cacheKeyStyle)) {
+                                $aiInsight = \Illuminate\Support\Facades\Cache::get($cacheKeyStyle);
+                            } elseif (\Illuminate\Support\Facades\Cache::has($cacheKeyDefault)) {
+                                $aiInsight = \Illuminate\Support\Facades\Cache::get($cacheKeyDefault);
+                                \Illuminate\Support\Facades\Cache::put($cacheKeyStyle, $aiInsight, 86400);
+                            } else {
+                                $aiInsight = app(\App\Services\QualitativeAnalysisService::class)->analyzeQuantitativeData($stats, $question->text, $style);
+                                \Illuminate\Support\Facades\Cache::put($cacheKeyStyle, $aiInsight, 86400);
+                                \Illuminate\Support\Facades\Cache::put($cacheKeyDefault, $aiInsight, 86400);
+                            }
                         }
                     } catch (\Exception $e) {
                         \Illuminate\Support\Facades\Log::error("AI Insight Generation Failed: " . $e->getMessage());
@@ -1569,6 +1591,7 @@ class SurveyController extends Controller
                     $qcJson = json_encode($qcConfig);
                     $qcJson = str_replace('"function(v){return v + \"%\";}"', 'function(v){return v + "%";}', $qcJson);
                     $qcJson = str_replace('"function(value){return value + \"%\";}"', 'function(value){return value + "%";}', $qcJson);
+                    $item['chartConfig'] = $qcConfig;
                     $item['chartUrl'] = 'https://quickchart.io/chart?c=' . urlencode($qcJson) . '&w=600&h=300&bkg=white&version=3';
                 }
             }
@@ -1615,9 +1638,17 @@ class SurveyController extends Controller
         if (!is_dir($exportDir))
             mkdir($exportDir, 0755, true);
         $output = $pdf->output();
-        file_put_contents($exportDir . $filename, $output);
-
         return $pdf->download($filename);
+    }
+
+    public function exportCompiledPdf(Survey $survey)
+    {
+        return $this->exportPdf($survey);
+    }
+
+    public function exportCompiledDocx(Survey $survey)
+    {
+        return $this->exportDocx($survey);
     }
 
     public function updateReportingStyle(\Illuminate\Http\Request $request, \App\Models\Survey $survey)
@@ -1840,6 +1871,7 @@ class SurveyController extends Controller
                     $qcJson = json_encode($qcConfig);
                     $qcJson = str_replace('"function(v){return v + \"%\";}"', 'function(v){return v + "%";}', $qcJson);
                     $qcJson = str_replace('"function(value){return value + \"%\";}"', 'function(value){return value + "%";}', $qcJson);
+                    $item['chartConfig'] = $qcConfig;
                     $item['chartUrl'] = 'https://quickchart.io/chart?c=' . urlencode($qcJson) . '&w=600&h=300&bkg=white&version=3';
                 }
             }
@@ -1848,17 +1880,6 @@ class SurveyController extends Controller
 
         $section->addText("This document provides a comprehensive statistical and qualitative interpretation of gathered data, utilizing AI-driven thematic mapping and sentiment analysis to reveal core respondent trends.", 'Italic', ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
         $section->addPageBreak();
-
-        $aiSummary = "No AI summary available.";
-        try {
-            $aiSummary = (new \App\Services\AiService())->generateSurveySummary($survey);
-        } catch (\Exception $e) {
-        }
-
-        // Summary Stats
-        $section->addTitle('Executive Thematic Analysis', 2);
-        $addAiParagraphs($section, $aiSummary);
-        $section->addTextBreak(2);
 
         // Detailed Findings
         $qNumber = 1;

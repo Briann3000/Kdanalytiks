@@ -150,13 +150,13 @@ class AiService
     /**
      * Unified AI caller that routes to the active provider.
      */
-    public function callAi($prompt, $systemPrompt = null, $isJson = false)
+    public function callAi($prompt, $systemPrompt = null, $isJson = false, ?int $maxTokens = null, ?float $temperature = null)
     {
         $provider = env('AI_PROVIDER', 'groq');
         if ($provider === 'gemini') {
-            return $this->callGemini($prompt, $systemPrompt, $isJson);
+            return $this->callGemini($prompt, $systemPrompt, $isJson, $maxTokens, $temperature);
         }
-        return $this->callGroq($prompt, $systemPrompt, $isJson);
+        return $this->callGroq($prompt, $systemPrompt, $isJson, $maxTokens, $temperature);
     }
 
     /**
@@ -174,7 +174,7 @@ class AiService
     /**
      * Call Google Gemini API.
      */
-    public function callGemini($prompt, $systemPrompt = null, $isJson = false)
+    public function callGemini($prompt, $systemPrompt = null, $isJson = false, ?int $maxTokens = null, ?float $temperature = null)
     {
         $apiKey = config('services.gemini.api_key');
         $model = config('services.gemini.model', 'gemini-2.5-flash');
@@ -188,16 +188,24 @@ class AiService
 
         $fullPrompt = $systemPrompt ? "SYSTEM INSTRUCTIONS: {$systemPrompt}\n\nUSER PROMPT: {$prompt}" : $prompt;
 
+        $generationConfig = [];
+        if ($isJson) {
+            $generationConfig['responseMimeType'] = 'application/json';
+        }
+        if ($maxTokens !== null) {
+            $generationConfig['maxOutputTokens'] = $maxTokens;
+        }
+        if ($temperature !== null) {
+            $generationConfig['temperature'] = $temperature;
+        }
+
         $payload = [
             'contents' => [
                 ['role' => 'user', 'parts' => [['text' => $fullPrompt]]]
             ]
         ];
-
-        if ($isJson) {
-            $payload['generationConfig'] = [
-                'responseMimeType' => 'application/json'
-            ];
+        if (!empty($generationConfig)) {
+            $payload['generationConfig'] = $generationConfig;
         }
 
         $maxRetries = 3;
@@ -313,7 +321,7 @@ class AiService
         return $results;
     }
 
-    public function callGroq($prompt, $systemPrompt = null, $isJson = false)
+    public function callGroq($prompt, $systemPrompt = null, $isJson = false, ?int $maxTokens = null, ?float $temperature = null)
     {
         $apiKey = config('services.groq.api_key');
         $model = config('services.groq.model', 'llama-3.1-8b-instant');
@@ -334,8 +342,8 @@ class AiService
                 ['role' => 'system', 'content' => $finalSystemPrompt],
                 ['role' => 'user', 'content' => $prompt],
             ],
-            'temperature' => $isJson ? 0.1 : 0.4,
-            'max_tokens' => 4096,
+            'temperature' => $temperature ?? ($isJson ? 0.1 : 0.4),
+            'max_tokens' => $maxTokens ?? 4096,
         ];
 
         if ($isJson) {

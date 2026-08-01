@@ -434,14 +434,18 @@ class InsightController extends Controller
         }
 
         $targetLang = $this->getTargetLanguage();
-        $prompt .= "Instructions:\n";
-        $prompt .= "1. Interpret these results. Generate a long, extensive, and highly comprehensive academic synthesis of the statistical test (minimum 3 paragraphs).\n";
-        $prompt .= "2. Explicitly interpret the statistical significance (p-value, confidence/errors) and what it implies for the research hypotheses in detail.\n";
-        $prompt .= "3. Format strictly as normal plain text paragraphs. DO NOT use any markdown bolding (e.g. **bold**) or headers. DO NOT use ANY uppercase words or ALL CAPS acronyms (convert them to normal capitalization if necessary).\n";
-        $prompt .= "4. You MUST write the entire response and statistical interpretation in the {$targetLang} language. Do not output it in English if the target language is different.";
+        $prompt .= "OUTPUT FORMAT — NON-NEGOTIABLE:\n";
+        $prompt .= "- Write EXACTLY ONE paragraph.\n";
+        $prompt .= "- EXACTLY 3 to 4 sentences total. No more. No fewer.\n";
+        $prompt .= "- Plain text only. NO Markdown formatting (no asterisks, no bolding, no italics, no bullet points, no headers).\n\n";
+        $prompt .= "WRITING RULES:\n";
+        $prompt .= "- Write in past tense throughout (e.g. 'indicated', 'showed', 'revealed', 'accounted for').\n";
+        $prompt .= "- Use plain, direct English. Avoid GRE/SAT jargon.\n";
+        $prompt .= "- Explicitly state whether the test result was statistically significant and what it means for the variables.\n";
+        $prompt .= "- You MUST write the entire response in {$targetLang}.";
 
         try {
-            $insight = $this->aiService->callAi($prompt, "You are an expert statistician and research advisor. Provide clear, direct, and academically sound interpretation of statistical analysis results.");
+            $insight = $this->aiService->callAi($prompt, "You are an expert statistician. Write a concise, 3 to 4 sentence plain-text academic interpretation of statistical test results in past tense.", false, 300, 0.3);
             return response()->json(['success' => true, 'insight' => $insight]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'AI Analysis Failed: ' . $e->getMessage()], 500);
@@ -530,6 +534,13 @@ Here is the conversation history with the researcher:
 
         try {
             $insight = $this->aiService->callAi($prompt, "You are an expert research analyst and statistician. Base all findings strictly on the target question data provided.");
+
+            // Save refined interpretation to cache keys to persist it
+            $cacheKeyStyle = "quantitative_analysis_{$survey->id}_{$questionId}_{$style}";
+            $cacheKeyDefault = "quantitative_analysis_{$survey->id}_{$questionId}";
+            \Illuminate\Support\Facades\Cache::put($cacheKeyStyle, $insight, 86400);
+            \Illuminate\Support\Facades\Cache::put($cacheKeyDefault, $insight, 86400);
+
             return response()->json(['success' => true, 'insight' => $insight]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'AI Refinement Failed: ' . $e->getMessage()], 500);

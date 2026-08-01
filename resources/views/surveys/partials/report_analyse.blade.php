@@ -9,7 +9,7 @@
 </style>
 <div x-data="sociusManager({
         canAnalyze: @js($canAnalyze),
-        initialThreadId: @js((int) request('thread')),
+        initialThreadId: null,
         activeGroupId: @js($myGroup?->id ?? null),
         groups: @js($groups ?? []),
         isOwner: @js((int) $survey->created_by === (int) auth()->id() || auth()->user()->isAdmin()),
@@ -179,7 +179,7 @@
         </aside>
 
         <section
-            class="flex-1 bg-[#252525] text-white rounded-[2rem] border border-white/5 shadow-2xl overflow-hidden flex flex-col h-full relative min-w-0">
+            class="w-full min-h-[calc(100vh-140px)] sm:min-h-[calc(100vh-100px)] bg-[#252525] rounded-3xl flex flex-col justify-between overflow-hidden shadow-2xl">
 
             {{-- Toggle Button when Sidebar is hidden --}}
             <template x-if="!historyOpen">
@@ -223,7 +223,7 @@
                 </div>
             </div>
 
-            <div class="px-5 py-2 border-b border-white/10 flex items-center justify-between gap-4">
+            <div class="px-5 py-2 border-b border-white/10 flex items-center justify-between gap-4 shrink-0">
                 <div class="flex items-center gap-3">
                     <button @click="historyOpen = !historyOpen"
                         class="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-all"
@@ -231,12 +231,12 @@
                         <i class="fa-solid fa-bars-staggered"></i>
                     </button>
                     <a href="{{ route('surveys.reports', $survey) }}?reportTab=quantitative"
-                        class="p-2 rounded-xl bg-white/5 border border-white/10 text-[#3894dc] hover:text-[#4ba3e3] hover:bg-white/10 transition-all font-bold text-[10px] flex items-center gap-1.5 tracking-tight"
+                        class="p-2 rounded-xl bg-white/5 border border-white/10 text-[#2271b1] hover:text-blue hover:bg-white/10 transition-all font-bold text-[15px] flex items-center gap-1.5 tracking-tight"
                         title="{{ __('Back to Dashboard Reports') }}">
                         <i class="fa-solid fa-arrow-left text-[9px]"></i>
-                        <span class="hidden sm:inline">{{ __('Stats Dashboard') }}</span>
+                        <span class="hidden sm:inline">{{ __('Back') }}</span>
                     </a>
-                    <h3 class="text-sm font-semibold tracking-tight truncate max-w-[200px] md:max-w-md"
+                    <h3 class="text-sm text-white font-semibold tracking-tight truncate max-w-[200px] md:max-w-md"
                         x-text="currentThread ? currentThread.title : '{{ __('Socius') }}'"></h3>
                 </div>
 
@@ -305,11 +305,11 @@
                     </div>
                 </template>
 
-                <template x-if="canAnalyze && !currentThreadId && threads.length === 0 && !loadingThreads">
+                <template x-if="canAnalyze && !currentThreadId && !loadingThreads">
                     <div class="max-w-3xl mx-auto pt-10">
                         <div class="text-center mb-8">
 
-                            <h4 class="text-4xl font-semibold tracking-tight mt-6">{{ __('Socius') }}</h4>
+                            <h4 class="text-4xl font-semibold text-white tracking-tight mt-6">{{ __('Socius') }}</h4>
                             <p class="text-slate-300 mt-4 max-w-2xl mx-auto">
                                 {{ __('I am Socius, your guide. Analyze your data and develop your literature') }}
                             </p>
@@ -494,8 +494,8 @@
             <div class="px-4 py-2 border-t border-white/10 bg-[#2b2b2b]">
                 <input type="file" x-ref="fileInput" class="hidden" multiple
                     accept=".pdf,.csv,.txt,.docx,.jpg,.jpeg,.png,.webp" @change="handleFileSelection">
-
-                <div class="rounded-2xl border border-white/10 bg-[#363636] px-4 py-2">
+                <!--Input area for user prompt -->
+                <div class="rounded-2xl border border-white/10 bg-[#363636] px-4 py-2" x-data="{ toolsOpen: false }">
                     <template x-if="pendingFiles.length">
                         <div class="flex flex-wrap gap-2 mb-2">
                             <template x-for="(file, index) in pendingFiles" :key="file.name + file.size + index">
@@ -520,64 +520,96 @@
                         :placeholder="reviewModeEnabled ? '{{ __('Describe supervisor corrections or ask Socius to fix them...') }}' : '{{ __('Ask Socius...') }}'"
                         :disabled="sending || !canAnalyze"></textarea>
 
-                    <div class="flex items-center justify-between gap-3 pt-2">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <button type="button" @click="pickFiles()" :disabled="sending || !canAnalyze"
-                                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.06] border border-white/10 text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-                                <i class="fa-solid fa-paperclip text-[10px]"></i>
-                                {{ __('Attach') }}
+
+                    <div class="flex items-center justify-between gap-3 pt-2" x-data="{ toolsOpen: false }">
+                        <!-- Left: Plus Icon Button & Collapsible Dropup Menu -->
+                        <div class="relative">
+                            <!-- Trigger Button -->
+                            <button type="button" @click="toolsOpen = !toolsOpen" @click.outside="toolsOpen = false"
+                                class="w-8 h-8 rounded-full bg-white/[0.06] border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center transition-all duration-150"
+                                :class="{ 'rotate-45 text-white bg-white/20': toolsOpen }"
+                                title="{{ __('More tools') }}">
+                                <i class="fa-solid fa-plus text-xs"></i>
                             </button>
 
-                            <label
-                                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all select-none"
-                                :class="includeSurveyContext ? 'bg-[#2271b1]/15 border-[#2271b1]/30 text-[#3894dc]' : 'bg-white/[0.06] border-white/10 text-slate-400 hover:text-slate-200'">
-                                <input type="checkbox" x-model="includeSurveyContext" class="hidden">
-                                <i class="fa-solid fa-database text-[10px]"></i>
-                                {{ __('Context') }}
-                            </label>
+                            <!-- Tool Menu Popover (Opens upward) -->
+                            <div x-show="toolsOpen" x-transition:enter="transition ease-out duration-150"
+                                x-transition:enter-start="opacity-0 translate-y-2 scale-95"
+                                x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                                x-transition:leave="transition ease-in duration-100"
+                                x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                                x-transition:leave-end="opacity-0 translate-y-2 scale-95"
+                                class="absolute bottom-11 left-0 z-50 min-w-[200px] bg-[#2a2a2a] border border-white/10 rounded-2xl shadow-2xl p-2 flex flex-col gap-1.5 backdrop-blur-md"
+                                style="display: none;">
 
-                            <label
-                                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all select-none"
-                                :class="webSearchEnabled ? 'bg-blue-400/15 border-blue-400/30 text-blue-300' : 'bg-white/[0.06] border-white/10 text-slate-400 hover:text-slate-200'">
-                                <input type="checkbox" x-model="webSearchEnabled" class="hidden">
-                                <i class="fa-solid fa-globe text-[10px]"></i>
-                                {{ __('Search') }}
-                            </label>
+                                <!-- Attach Files -->
+                                <button type="button" @click="pickFiles(); toolsOpen = false"
+                                    :disabled="sending || !canAnalyze"
+                                    class="w-full inline-flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-left">
+                                    <i class="fa-solid fa-paperclip text-xs w-4 text-center"></i>
+                                    <span>{{ __('Attach') }}</span>
+                                </button>
 
-                            <label
-                                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all select-none"
-                                :class="reviewModeEnabled ? 'bg-purple-400/15 border-purple-400/30 text-purple-300' : 'bg-white/[0.06] border-white/10 text-slate-400 hover:text-slate-200'">
-                                <input type="checkbox" x-model="reviewModeEnabled" class="hidden">
-                                <i class="fa-solid fa-clipboard-check text-[10px]"></i>
-                                {{ __('Review') }}
-                            </label>
+                                <!-- Context Toggle -->
+                                <label
+                                    class="w-full inline-flex items-center gap-2.5 px-3 py-2 rounded-xl border text-xs font-semibold cursor-pointer transition-all select-none"
+                                    :class="includeSurveyContext ? 'bg-[#2271b1]/20 border-[#2271b1]/40 text-[#3894dc]' : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/10'">
+                                    <input type="checkbox" x-model="includeSurveyContext" class="hidden">
+                                    <i class="fa-solid fa-database text-xs w-4 text-center"></i>
+                                    <span>{{ __('Context') }}</span>
+                                </label>
 
-                            <button type="button"
-                                @click="draft = '{{ __('Generate an image of ') }}'; $nextTick(() => $refs.textarea.focus())"
-                                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.06] border border-white/10 text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-white/10 transition-all">
-                                <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
-                                {{ __('AI Image') }}
-                            </button>
+                                <!-- Search Toggle -->
+                                <label
+                                    class="w-full inline-flex items-center gap-2.5 px-3 py-2 rounded-xl border text-xs font-semibold cursor-pointer transition-all select-none"
+                                    :class="webSearchEnabled ? 'bg-blue-400/20 border-blue-400/40 text-blue-300' : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/10'">
+                                    <input type="checkbox" x-model="webSearchEnabled" class="hidden">
+                                    <i class="fa-solid fa-globe text-xs w-4 text-center"></i>
+                                    <span>{{ __('Search') }}</span>
+                                </label>
 
-                            <button type="button" @click="toggleVoiceInput()"
-                                :class="isListening ? 'bg-red-500/20 border-red-500/40 text-red-400' : 'bg-white/[0.06] border-white/10 text-slate-400'"
-                                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold hover:text-slate-200 hover:bg-white/10 transition-all">
-                                <i class="fa-solid"
-                                    :class="isListening ? 'fa-microphone-lines animate-pulse' : 'fa-microphone text-[10px]'"></i>
-                                <span x-text="isListening ? '{{ __('Listening...') }}' : '{{ __('Voice') }}'"></span>
-                            </button>
+                                <!-- Review Mode Toggle -->
+                                <label
+                                    class="w-full inline-flex items-center gap-2.5 px-3 py-2 rounded-xl border text-xs font-semibold cursor-pointer transition-all select-none"
+                                    :class="reviewModeEnabled ? 'bg-purple-400/20 border-purple-400/40 text-purple-300' : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/10'">
+                                    <input type="checkbox" x-model="reviewModeEnabled" class="hidden">
+                                    <i class="fa-solid fa-clipboard-check text-xs w-4 text-center"></i>
+                                    <span>{{ __('Review') }}</span>
+                                </label>
 
+                                <!-- AI Image Prompt -->
+                                <button type="button"
+                                    @click="draft = '{{ __('Generate an image of ') }}'; toolsOpen = false; $nextTick(() => $refs.textarea.focus())"
+                                    class="w-full inline-flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-white/10 transition-all text-left">
+                                    <i class="fa-solid fa-wand-magic-sparkles text-xs w-4 text-center"></i>
+                                    <span>{{ __('AI Image') }}</span>
+                                </button>
+
+                                <!-- Voice Toggle -->
+                                <button type="button" @click="toggleVoiceInput()"
+                                    :class="isListening ? 'bg-red-500/20 border-red-500/40 text-red-400' : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/10'"
+                                    class="w-full inline-flex items-center gap-2.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-all text-left">
+                                    <i class="fa-solid w-4 text-center"
+                                        :class="isListening ? 'fa-microphone-lines animate-pulse' : 'fa-microphone text-xs'"></i>
+                                    <span
+                                        x-text="isListening ? '{{ __('Listening...') }}' : '{{ __('Voice') }}'"></span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Right: Error message & Send Button -->
+                        <div class="flex items-center gap-2">
                             <template x-if="error">
                                 <p class="text-xs text-red-400 max-w-[180px] truncate" x-text="error"></p>
                             </template>
-                        </div>
 
-                        <button type="button" @click="sendMessage()"
-                            :disabled="sending || !canAnalyze || (!draft.trim() && pendingFiles.length === 0)"
-                            class="w-8 h-8 rounded-full bg-white/10 border border-white/10 text-white flex items-center justify-center hover:bg-[#2271b1] hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-                            <i class="fa-solid text-xs"
-                                :class="sending ? 'fa-circle-notch fa-spin' : 'fa-arrow-up'"></i>
-                        </button>
+                            <button type="button" @click="sendMessage()"
+                                :disabled="sending || !canAnalyze || (!draft.trim() && pendingFiles.length === 0)"
+                                class="w-8 h-8 rounded-full bg-white/10 border border-white/10 text-white flex items-center justify-center hover:bg-[#2271b1] hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                                <i class="fa-solid text-xs"
+                                    :class="sending ? 'fa-circle-notch fa-spin' : 'fa-arrow-up'"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <p class="text-[9px] text-slate-500 text-center mt-1">
@@ -586,6 +618,7 @@
             </div>
         </section>
     </div>
+
 
     {{-- Knowledge Base Modal --}}
     <div x-show="kbModalOpen"

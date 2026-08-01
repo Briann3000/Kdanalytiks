@@ -1,4 +1,4 @@
-@props(['questionId', 'surveyId', 'stats'])
+@props(['questionId', 'surveyId', 'stats', 'readOnly' => false])
 
 <div x-data="quantInsightCard('{{ $questionId }}', '{{ $surveyId }}')" x-init="init()"
     class="bg-gradient-to-br from-white to-zinc-100/30 rounded-3xl p-6 border border-zinc-200 shadow-sm mt-6 min-h-[100px] flex flex-col justify-center">
@@ -10,7 +10,9 @@
             <div class="flex items-center justify-between mb-3">
                 <h5 class="text-xs font-bold text-[#2271b1] flex items-center gap-2">
                     <span>{{ __('Trend Interpretation') }}</span>
-                    <span x-show="isUpdated" class="text-[9px] font-black bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200 shadow-xs" style="display: none;">Updated ✓</span>
+                    <span x-show="isUpdated"
+                        class="text-[9px] font-black bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200 shadow-xs"
+                        style="display: none;">Updated ✓</span>
                 </h5>
             </div>
 
@@ -52,49 +54,83 @@
                 </p>
             </div>
 
-
-
-            <!-- Actions Menu -->
-            <div class="mt-4 pt-4 border-t border-zinc-200/50 flex justify-between items-center">
-                
-                <div class="flex items-center gap-3">
-                    <!-- Regenerate / Retry Button for Errors -->
-                    <button type="button"
-                        x-show="error || currentText === 'Unable to analyze data at this time.' || currentText === 'Analysis temporarily unavailable.'"
-                        @click="generate(true)"
-                        class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-[10px] font-black tracking-widest transition-all flex items-center gap-1.5 border border-indigo-100 shadow-sm"
-                        style="display: none;">
-                        <i class="fa-solid fa-arrows-rotate"></i>
-                        {{ __('Regenerate') }}
-                    </button>
-
-                    <!-- Muted Undo Button (Single level rollback) -->
-                    <button type="button" x-show="previousText" @click="undo()"
-                        class="text-[10px] font-black text-gray-400 hover:text-gray-600 tracking-widest transition-colors"
-                        style="display: none;">
-                        {{ __('Undo') }}
-                    </button>
-
-                    @if(auth()->user() && auth()->user()->canUseAiAnalysis())
-                        <button @click="generate()" x-show="!currentText && !loading"
-                            class="flex items-center gap-2 text-[9px] font-black text-[#2271b1] tracking-widest hover:text-[#135e96] transition-colors">
-                            <i class="fa-solid fa-chart-line"></i>
-                            {{ __('Deep Trend Analysis') }}
+            {{-- Refine / Polish Section --}}
+            <div x-show="currentText && !loading" class="mt-4" style="display: none;">
+                <p class="text-[10px] font-black text-gray-400  tracking-widest mb-2">
+                    {{ __('Refine this analysis') }}
+                </p>
+                <div class="flex flex-col gap-2">
+                    <textarea x-model="feedback" @keydown.enter.prevent="polish()" rows="2"
+                        placeholder="{{ __('Reflect your own voice...') }}"
+                        class="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-1 focus:ring-[#2271b1] transition-all placeholder-gray-300"></textarea>
+                    <div class="flex justify-end">
+                        <button type="button" @click="polish()" :disabled="!feedback.trim() || aiPolishing"
+                            class="px-5 py-2 bg-[#7eb3d4] hover:bg-[#2271b1] text-white font-black text-[10px]  tracking-widest rounded-xl shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles text-[9px]"></i>
+                            {{ __('Polish') }}
                         </button>
-                        <button x-show="currentText" @click="reset()"
-                            class="text-[10px] font-black text-red-500 hover:text-red-700 tracking-widest transition-colors"
-                            style="display: none;">
-                            {{ __('Reset') }}
-                        </button>
-                    @else
-                        <button @click="window.location.href='{{ route('subscriptions.index') }}'"
-                            class="flex items-center gap-2 text-[9px] font-black text-gray-400 uppercase tracking-widest hover:text-zinc-2000 transition-colors">
-                            <i class="fa-solid fa-lock text-[8px]"></i>
-                            {{ __('Deep Analysis (Premium)') }}
-                        </button>
-                    @endif
+                    </div>
                 </div>
             </div>
+
+            @if(!$readOnly)
+                <!-- Actions Menu -->
+                <div class="mt-4 pt-4 border-t border-zinc-200/50 flex justify-between items-center">
+
+                    <div class="flex items-center gap-3">
+                        <!-- Regenerate / Retry Button for Errors -->
+                        <button type="button"
+                            x-show="error || currentText === 'Unable to analyze data at this time.' || currentText === 'Analysis temporarily unavailable.'"
+                            @click="generate(true)"
+                            class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-[10px] font-black tracking-widest transition-all flex items-center gap-1.5 border border-indigo-100 shadow-sm"
+                            style="display: none;">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                            {{ __('Regenerate') }}
+                        </button>
+
+                        <!-- Muted Undo Button (Single level rollback) -->
+                        <button type="button" x-show="previousText" @click="undo()"
+                            class="text-[10px] font-black text-gray-400 hover:text-gray-600 tracking-widest transition-colors"
+                            style="display: none;">
+                            {{ __('Undo') }}
+                        </button>
+
+                        @if(auth()->user() && auth()->user()->canUseAiAnalysis())
+                            <button @click="generate()" x-show="!currentText && !loading"
+                                class="flex items-center gap-2 text-[9px] font-black text-[#2271b1] tracking-widest hover:text-[#135e96] transition-colors">
+                                <i class="fa-solid fa-chart-line"></i>
+                                {{ __('Deep Trend Analysis') }}
+                            </button>
+                        @else
+                            <button @click="window.location.href='{{ route('subscriptions.index') }}'"
+                                class="flex items-center gap-2 text-[9px] font-black text-gray-400  tracking-widest hover:text-zinc-2000 transition-colors">
+                                <i class="fa-solid fa-lock text-[8px]"></i>
+                                {{ __('Deep Analysis (Premium)') }}
+                            </button>
+                        @endif
+                    </div>
+
+                    <!-- Right-side output actions (visible only when there is text) -->
+                    <div x-show="currentText" class="flex items-center gap-3" style="display: none;">
+                        <button type="button" @click="copyFinalOutput()"
+                            class="flex items-center gap-1.5 text-[10px] font-black text-gray-400 hover:text-[#2271b1] tracking-widest transition-colors">
+                            <i class="fa-regular fa-copy"></i>
+                            {{ __('Copy Output') }}
+                        </button>
+                        <button type="button" @click="downloadFinalOutput()"
+                            class="flex items-center gap-1.5 text-[10px] font-black text-gray-400 hover:text-[#2271b1] tracking-widest transition-colors">
+                            <i class="fa-solid fa-download"></i>
+                            {{ __('Export') }}
+                        </button>
+                        @if(auth()->user() && auth()->user()->canUseAiAnalysis())
+                            <button type="button" @click="reset()"
+                                class="text-[10px] font-black text-red-400 hover:text-red-600 tracking-widest transition-colors">
+                                {{ __('Reset') }}
+                            </button>
+                        @endif
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 </div>

@@ -210,6 +210,13 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                {{-- AI Trend Interpretation Card --}}
+                                <x-ai-quant-insight-card
+                                    :question-id="$item['id']"
+                                    :survey-id="$survey->id"
+                                    :stats="$item['stats'] ?? []"
+                                />
                             @else
                                 <!-- Hybrid Qualitative View (Integrated into Quantitative Tab) -->
                                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
@@ -431,28 +438,56 @@
                 if (!canvasElement) return;
                 const ctx = canvasElement.getContext('2d');
 
-                const isMultipleColors = ['pie', 'doughnut', 'polarArea', 'bar'].includes(type);
-                const colors = [
-                    '#4f46e5', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff',
-                    '#6366f1', '#4338ca', '#3730a3', '#312e81', '#1e1b4b',
-                    '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9'
-                ];
+                const isMultipleColors = ['pie', 'doughnut', 'polarArea'].includes(type);
+
+                // Sanitize labels to remove undefined / blank values
+                const rawLabels = (config.labels || []).map(l => (l === undefined || l === null || l === 'undefined' || l === 'null') ? '' : String(l));
+
+                // 1. Compute percentages for dataset
+                const total = (config.data || []).reduce((a, b) => a + (parseFloat(b) || 0), 0);
+                const percentageData = (config.data || []).map(val => total > 0 ? parseFloat(((val / total) * 100).toFixed(1)) : 0);
+
+                // Compute dynamic Y max with padding so bars aren't squished or stretched to fixed 100
+                const maxPct = Math.max(...percentageData, 10);
+                const ySuggestedMax = Math.min(100, Math.ceil(maxPct * 1.15));
+
+                // 2. Custom inline plugin to draw percentage datalabels on bars/lines
+                const datalabelsPlugin = {
+                    id: 'customDatalabels',
+                    afterDatasetsDraw(chart) {
+                        const { ctx } = chart;
+                        ctx.save();
+                        chart.data.datasets.forEach((dataset, i) => {
+                            const meta = chart.getDatasetMeta(i);
+                            meta.data.forEach((element, index) => {
+                                const val = dataset.data[index];
+                                if (val === undefined || val === null) return;
+                                const text = `${val}%`;
+                                ctx.fillStyle = '#475569';
+                                ctx.font = 'bold 9px Inter, sans-serif';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                ctx.fillText(text, element.x, element.y - 4);
+                            });
+                        });
+                        ctx.restore();
+                    }
+                };
 
                 const chartConfig = {
                     type: type,
                     data: {
-                        labels: config.labels,
+                        labels: rawLabels,
                         datasets: [{
-                            label: 'Frequency',
-                            data: config.data,
-                            backgroundColor: isMultipleColors ? colors.slice(0, config.data.length) : brandColor,
+                            label: 'Percentage (%)',
+                            data: percentageData,
+                            backgroundColor: isMultipleColors ? ['#4f46e5', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff', '#6366f1', '#4338ca', '#3730a3', '#312e81', '#1e1b4b', '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9'].slice(0, config.data.length) : brandColor,
                             borderColor: type === 'line' || type === 'radar' ? brandColor : 'transparent',
                             borderWidth: type === 'line' || type === 'radar' ? 2 : 0,
                             pointBackgroundColor: brandColor,
-                            borderRadius: type === 'bar' ? 8 : 0,
-                            barThickness: type === 'bar' ? 32 : null,
+                            borderRadius: type === 'bar' ? 6 : 0,
+                            maxBarThickness: 45,
                             fill: type === 'line' ? true : false,
-                            backgroundColor: type === 'line' ? 'rgba(79, 70, 229, 0.1)' : (isMultipleColors ? colors.slice(0, config.data.length) : brandColor),
                         }]
                     },
                     options: {
@@ -472,22 +507,50 @@
                                 padding: 12,
                                 titleFont: { family: "'Inter', sans-serif", weight: 'bold' },
                                 bodyFont: { family: "'Inter', sans-serif" },
-                                cornerRadius: 12
+                                cornerRadius: 12,
+                                callbacks: {
+                                    label: function(context) {
+                                        const rawCount = config.data[context.dataIndex] || 0;
+                                        return ` ${rawCount} responses (${context.raw}%)`;
+                                    }
+                                }
                             }
                         }
                     }
                 };
+
+                if (type === 'bar' || type === 'line') {
+                    chartConfig.plugins = [datalabelsPlugin];
+                }
 
                 // Custom scales based on type
                 if (['bar', 'line'].includes(type)) {
                     chartConfig.options.scales = {
                         y: {
                             beginAtZero: true,
-                            ticks: { precision: 0, font: { weight: '600', size: 10 } },
+                            suggestedMax: ySuggestedMax,
+                            title: {
+                                display: true,
+                                text: 'Percentage (%)',
+                                font: { weight: '800', size: 10, family: "'Inter', sans-serif" },
+                                color: '#6b7280'
+                            },
+                            ticks: {
+                                font: { weight: '600', size: 10 },
+                                callback: function(value) { return value + '%'; }
+                            },
                             grid: { color: '#f1f5f9' },
                             border: { display: false }
                         },
                         x: {
+                            title: {
+                                display: true,
+                                text: 'Response Options',
+                                font: { weight: '800', size: 10, family: "'Inter', sans-serif" },
+                                color: '#6b7280'
+                            },
+                            categoryPercentage: 0.6,
+                            barPercentage: 0.7,
                             grid: { display: false },
                             ticks: { font: { weight: '600', size: 10 } },
                             border: { display: false }
@@ -529,4 +592,19 @@
             };
         </script>
     @endpush
+
+    <!-- Floating Scroll Control Stack (Positioned at bottom-24 to avoid KDA button conflict) -->
+    <div x-data="{ showTop: false, showBottom: true }"
+        @scroll.window="showTop = (window.pageYOffset > 300); showBottom = ((window.innerHeight + window.pageYOffset) < document.body.offsetHeight - 300);"
+        class="fixed bottom-24 right-6 z-[999] flex flex-col gap-2">
+        <button x-show="showTop" x-transition @click="window.scrollTo({top: 0, behavior: 'smooth'})"
+            class="w-10 h-10 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-full shadow-xl flex items-center justify-center transition-all cursor-pointer border border-white/20">
+            <i class="fa-solid fa-arrow-up text-sm"></i>
+        </button>
+        <button x-show="showBottom" x-transition
+            @click="window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'})"
+            class="w-10 h-10 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-full shadow-xl flex items-center justify-center transition-all cursor-pointer border border-white/20">
+            <i class="fa-solid fa-arrow-down text-sm"></i>
+        </button>
+    </div>
 @endsection

@@ -1,4 +1,4 @@
-@props(['questionId', 'questionTitle', 'surveyId', 'index' => 0])
+@props(['questionId', 'questionTitle', 'surveyId', 'index' => 0, 'readOnly' => false])
 
 <div x-data="{
     loading: false,
@@ -101,7 +101,7 @@
                 <i class="fa fa-triangle-exclamation text-2xl"></i>
             </div>
             <div class="text-center">
-                <p class="font-black uppercase tracking-[0.2em] text-[10px] text-rose-400 mb-2">
+                <p class="font-black  tracking-[0.2em] text-[10px] text-rose-400 mb-2">
                     {{ __('Technical Insight Error') }}
                 </p>
                 <span x-text="error" class="font-bold text-lg leading-tight"></span>
@@ -242,21 +242,23 @@
         </div>
     </template>
 
-    <!-- Further Analysis Button (Premium Enticement) - Visible when loaded or error occurs -->
-    <div x-show="!loading && (insight || error)"
-        class="mt-8 pt-8 border-t border-gray-100 w-full flex justify-center animate-in fade-in slide-in-from-bottom-4 duration-700">
-        @if(auth()->user() && auth()->user()->canUseAiAnalysis())
-            <button @click="generate()"
-                class="flex items-center gap-3 px-8 py-3 bg-[#2271b1] text-white font-bold rounded-2xl hover:bg-[#135e96] transition-all shadow-lg shadow-zinc-200/50 tracking-tight text-xs group">
-                <i class="fa-solid fa-rotate-right group-hover:rotate-180 transition-transform"></i>
-                {{ __('Regenerate Deep Analysis') }}
-            </button>
-        @else
-            <button @click="window.location.href='{{ route('subscriptions.index') }}'"
-                class="flex items-center gap-3 px-8 py-3 bg-gray-50 text-gray-400 font-bold rounded-2xl border border-gray-100 tracking-tight text-xs group relative overflow-hidden hover:bg-white hover:text-[#2271b1] transition-all">
-                <i class="fa-solid fa-lock text-gray-300 group-hover:text-zinc-500 transition-colors"></i>
-                {{ __('Deep Analysis (Premium Only)') }}
-            </button>
-        @endif
-    </div>
+    @if(!$readOnly)
+        <!-- Further Analysis Button (Premium Enticement) - Visible when loaded or error occurs -->
+        <div x-show="!loading && (insight || error)"
+            class="mt-8 pt-8 border-t border-gray-100 w-full flex justify-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+            @if(auth()->user() && auth()->user()->canUseAiAnalysis())
+                <button @click="generate()"
+                    class="flex items-center gap-3 px-8 py-3 bg-[#2271b1] text-white font-bold rounded-2xl hover:bg-[#135e96] transition-all shadow-lg shadow-zinc-200/50 tracking-tight text-xs group">
+                    <i class="fa-solid fa-rotate-right group-hover:rotate-180 transition-transform"></i>
+                    {{ __('Regenerate Deep Analysis') }}
+                </button>
+            @else
+                <button @click="window.location.href='{{ route('subscriptions.index') }}'"
+                    class="flex items-center gap-3 px-8 py-3 bg-gray-50 text-gray-400 font-bold rounded-2xl border border-gray-100 tracking-tight text-xs group relative overflow-hidden hover:bg-white hover:text-[#2271b1] transition-all">
+                    <i class="fa-solid fa-lock text-gray-300 group-hover:text-zinc-500 transition-colors"></i>
+                    {{ __('Deep Analysis (Premium Only)') }}
+                </button>
+            @endif
+        </div>
+    @endif
 </div>

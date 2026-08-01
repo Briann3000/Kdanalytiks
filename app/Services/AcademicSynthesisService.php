@@ -70,10 +70,12 @@ class AcademicSynthesisService
             "- DO NOT append '(linked to objectives)' to any headings in 4.5.\n" .
             "DATA:\n{$groupContext}";
 
-        $ch5RefPrompt = "Write Chapter 5 AND References for '{$survey->title}'.\n" .
-            "Use markers: [SECTION: 5.1 Summary of Findings], [SECTION: 5.2 Conclusions], [SECTION: 5.3 Limitations of the Study], [SECTION: 5.4 Recommendations], [SECTION: REFERENCES].\n" .
-            "For REFERENCES, list 10-15 academic sources in {$style} style.\n" .
-            "Manual references to include: {$referencePrompt}\n" .
+        $ch5RefPrompt = "Write Chapter 5: Conclusions and Recommendations for '{$survey->title}'.\n" .
+            "Use markers: [SECTION: 5.1 Summary of Findings], [SECTION: 5.2 Conclusions], [SECTION: 5.3 Limitations of the Study], [SECTION: 5.4 Recommendations]\n" .
+            "CRITICAL CONSTRAINTS:\n" .
+            "- Do NOT write or generate a [SECTION: REFERENCES] or Bibliography block at the end.\n" .
+            "- All citations within the text MUST use standard parenthetical style (e.g., Author, Year).\n" .
+            "- Keep the tone formal, academic, and concise.\n\n" .
             "DATA:\n{$dataSummary}";
 
         // ── EXECUTE TURBO PARALLEL WAVES ──
@@ -516,6 +518,7 @@ class AcademicSynthesisService
         }
 
         $brandColor = $branding['brandColor'] ?? '#4f46e5';
+
         $chartConfig = [
             'type' => 'bar',
             'data' => [
@@ -531,8 +534,10 @@ class AcademicSynthesisService
                 ]
             ],
             'options' => [
-                'title' => ['display' => true, 'text' => $label],
-                'legend' => ['display' => false]
+                'responsive' => true,
+                'plugins' => [
+                    'title' => ['display' => true, 'text' => $label]
+                ]
             ]
         ];
 
