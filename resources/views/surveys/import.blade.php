@@ -16,7 +16,7 @@
             </div>
             <h2 class="text-2xl font-black text-gray-900 tracking-tight">{{ __('Import Survey Data') }}</h2>
             <p class="mt-1 text-sm text-gray-500 font-medium">
-                {{ __('Upload an SPSS, Excel, or CSV file to create a fully analysable survey project.') }}
+                {{ __('Upload an Excel or CSV file to create a fully analysable survey project.') }}
             </p>
         </div>
 
@@ -61,7 +61,7 @@
                     <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">
                         {{ __('Step 1 — Upload Your Data File') }}</h3>
                     <p class="text-xs text-gray-400 font-medium mt-1">
-                        {{ __('Supported formats: SPSS (.sav), Excel (.xlsx, .xls), CSV (.csv), ZIP bundle (.zip)') }}
+                        {{ __('Supported formats: Excel (.xlsx, .xls), CSV (.csv)') }}
                     </p>
                 </div>
 
@@ -74,6 +74,52 @@
                         </label>
                         <input type="text" x-model="surveyTitle" id="import-survey-title"
                             class="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-[#2271b1]/20 focus:border-[#2271b1] transition-all">
+                    </div>
+
+                    {{-- Codebook File (Advanced — hidden by default) --}}
+                    <div class="mb-6" x-data="{ showAdvanced: false }">
+                        <button type="button" @click="showAdvanced = !showAdvanced"
+                            class="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">
+                            <i class="fa-solid fa-sliders text-[10px]"></i>
+                            {{ __('Advanced Options') }}
+                            <i class="fa-solid text-[8px] transition-transform duration-200"
+                                :class="showAdvanced ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                        </button>
+
+                        <div x-show="showAdvanced" x-collapse class="mt-3 space-y-2">
+                            <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">
+                                {{ __('Codebook / Label Mapping (optional)') }}
+                            </label>
+                            <p class="text-[10px] text-gray-400 mb-2">
+                                {{ __('Upload a 2-column Excel/CSV: Column A = VAR code · Column B = Human label. Only needed if your headers are coded (e.g. Q1, Q2) with no readable labels.') }}
+                            </p>
+                            <div x-data="{ cbDrag: false }"
+                                @dragover.prevent="cbDrag = true"
+                                @dragleave.prevent="cbDrag = false"
+                                @drop.prevent="cbDrag = false; codebookFile = $event.dataTransfer.files[0]"
+                                @click="$refs.codebookInput.click()"
+                                :class="codebookFile ? 'border-green-400 bg-green-50/30' : 'border-gray-200 hover:border-[#2271b1] hover:bg-gray-50/50'"
+                                class="border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200">
+                                <input type="file" x-ref="codebookInput" class="hidden" accept=".xlsx,.xls,.csv"
+                                    @change="codebookFile = $event.target.files[0]">
+                                <template x-if="!codebookFile">
+                                    <div class="flex items-center justify-center gap-2">
+                                        <i class="fa-solid fa-file-lines text-gray-300 text-sm"></i>
+                                        <span class="text-xs text-gray-400 font-medium">{{ __('Click or drop codebook file') }}</span>
+                                    </div>
+                                </template>
+                                <template x-if="codebookFile">
+                                    <div class="flex items-center justify-center gap-3">
+                                        <i class="fa-solid fa-file-lines text-green-600 text-sm"></i>
+                                        <span class="text-xs font-bold text-green-700" x-text="codebookFile.name"></span>
+                                        <button type="button" @click.stop="codebookFile = null"
+                                            class="text-[10px] font-black text-red-400 hover:text-red-600 uppercase tracking-widest">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
                     </div>
 
                     {{-- Drag & Drop Zone --}}
@@ -96,7 +142,7 @@
                                 <p class="text-sm font-bold text-gray-700 mb-2">
                                     {{ __('Drop your file here or click to browse') }}</p>
                                 <p class="text-xs text-gray-400">
-                                    {{ __('SPSS .sav · Excel .xlsx · CSV · ZIP bundle') }}</p>
+                                    {{ __(' Excel .xlsx · CSV ') }}</p>
                                 <p class="text-[10px] text-gray-300 mt-2 font-medium">{{ __('Maximum file size: 50 MB') }}
                                 </p>
                             </div>
@@ -106,16 +152,12 @@
                             <div>
                                 <div class="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center shadow-lg"
                                     :class="{
-                                         'bg-green-100': fileExtension === 'sav',
                                          'bg-emerald-100': ['xlsx','xls'].includes(fileExtension),
                                          'bg-amber-100': fileExtension === 'csv',
-                                         'bg-indigo-100': fileExtension === 'kmsurvey' || fileExtension === 'zip',
                                      }">
                                     <i class="text-3xl" :class="{
-                                           'fa-solid fa-chart-bar text-green-600': fileExtension === 'sav',
                                            'fa-solid fa-file-excel text-emerald-600': ['xlsx','xls'].includes(fileExtension),
                                            'fa-solid fa-file-csv text-amber-600': fileExtension === 'csv',
-                                           'fa-solid fa-box-archive text-indigo-600': fileExtension === 'kmsurvey' || fileExtension === 'zip',
                                        }"></i>
                                 </div>
                                 <p class="text-sm font-black text-gray-900 mb-1" x-text="uploadedFile.name"></p>
@@ -164,6 +206,11 @@
                     <div class="text-right">
                         <span class="text-xs font-black text-[#2271b1]" x-text="rowCount.toLocaleString()"></span>
                         <span class="text-xs text-gray-400 font-medium"> {{ __('rows detected') }}</span>
+                        <div x-show="codebookApplied" class="mt-1">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-[9px] font-black uppercase">
+                                <i class="fa-solid fa-check-circle text-[8px]"></i> {{ __('Codebook applied') }}
+                            </span>
+                        </div>
                     </div>
                 </div>
 
@@ -186,7 +233,7 @@
                                     {{ __('Type') }}</th>
                                 <th
                                     class="px-6 py-4 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest">
-                                    {{ __('Options / Values') }}</th>
+                                    {{ __('Values') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-50">
@@ -199,8 +246,15 @@
                                     </td>
                                     {{-- Variable name --}}
                                     <td class="px-6 py-4">
-                                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest"
-                                            x-text="col.name"></span>
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest"
+                                                x-text="col.name"></span>
+                                            <span x-show="col.looks_like_spss_code"
+                                                class="inline-flex items-center px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[8px] font-black uppercase"
+                                                title="{{ __('This column header looks like an SPSS VAR code. Consider uploading a codebook for automatic labelling.') }}">
+                                                <i class="fa-solid fa-triangle-exclamation text-[7px] mr-0.5"></i>VAR
+                                            </span>
+                                        </div>
                                     </td>
                                     {{-- Editable label --}}
                                     <td class="px-6 py-4">
@@ -352,6 +406,7 @@
                     surveyTitle: '{{ $appendTo ? addslashes($appendTo->title) : '' }}',
                     uploadedFile: null,
                     fileExtension: '',
+                    codebookFile: null,
                     dragOver: false,
                     loading: false,
                     uploadError: null,
@@ -382,9 +437,9 @@
                     setFile(file) {
                         this.uploadError = null;
                         const ext = file.name.split('.').pop().toLowerCase();
-                        const allowed = ['sav', 'xlsx', 'xls', 'csv', 'zip', 'kmsurvey'];
+                        const allowed = [ 'xlsx', 'xls', 'csv'];
                         if (!allowed.includes(ext)) {
-                            this.uploadError = '{{ __("Unsupported file type. Please upload a .sav, .xlsx, .xls, .csv, or .kmsurvey file.") }}';
+                            this.uploadError = '{{ __("Unsupported file type. Please upload a .xlsx, .xls or .csv file.") }}';
                             return;
                         }
                         if (file.size > 52428800) { // 50 MB
@@ -415,6 +470,9 @@
                         const fd = new FormData();
                         fd.append('file', this.uploadedFile);
                         fd.append('_token', '{{ csrf_token() }}');
+                        if (this.codebookFile) {
+                            fd.append('codebook', this.codebookFile);
+                        }
 
                         try {
                             const res = await fetch('{{ route('surveys.import.preview') }}', {
@@ -451,10 +509,12 @@
                                 type: v.inferred_type || 'radio',
                                 value_labels: v.value_labels || {},
                                 options: v.inferred_options || [],
+                                looks_like_spss_code: v.looks_like_spss_code || false,
                                 include: true,
                             }));
                             this.previewRows = data.preview_rows || [];
                             this.rowCount = data.row_count || 0;
+                            this.codebookApplied = data.codebook_applied || false;
 
                             this.currentStep = 2;
                         } catch (err) {
@@ -505,37 +565,7 @@
                             this.loading = false;
                         }
                     },
-
-                    async runPackageImport() {
-                        const fd = new FormData();
-                        fd.append('file', this.uploadedFile);
-                        fd.append('_token', '{{ csrf_token() }}');
-
-                        try {
-                            const res = await fetch('{{ route('surveys.import.package') }}', {
-                                method: 'POST',
-                                headers: { 'Accept': 'application/json' },
-                                body: fd,
-                            });
-
-                            if (!res.ok) {
-                                let errMsg = '{{ __("Package import failed.") }}';
-                                try { const e = await res.json(); errMsg = e.error || e.message || errMsg; } catch (_) { errMsg = `Server error (${res.status})`; }
-                                this.uploadError = errMsg;
-                                return;
-                            }
-
-                            const data = await res.json();
-                            if (data.error) { this.uploadError = data.error; return; }
-
-                            this.resultLinks = data.links || {};
-                            this.currentStep = 3;
-                        } catch (err) {
-                            this.uploadError = err.message || '{{ __("Package import failed.") }}';
-                        } finally {
-                            this.loading = false;
-                        }
-                    },
+                
                 };
             }
         </script>

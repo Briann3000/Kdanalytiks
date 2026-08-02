@@ -3,17 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\Survey;
-use App\Services\Import\SpssImportParser;
 use App\Services\Import\ExcelImportParser;
 use App\Services\Import\SurveyImportBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Concerns\ToArray;
 
 class SurveyImportController extends Controller
 {
     public function __construct(
-        protected SpssImportParser $spssParser,
         protected ExcelImportParser $excelParser,
         protected SurveyImportBuilder $builder
     ) {
@@ -42,30 +42,33 @@ class SurveyImportController extends Controller
     {
         $request->validate([
             'file' => ['required', 'file', 'max:51200'],
+            'codebook' => ['nullable', 'file', 'max:10240'],
         ]);
 
         $file = $request->file('file');
         $extension = strtolower($file->getClientOriginalExtension());
-        $allowed = ['sav', 'xlsx', 'xls', 'csv', 'kmsurvey'];
+        $allowed = ['xlsx', 'xls', 'csv'];
         if (!in_array($extension, $allowed)) {
-            return response()->json(['error' => __('Unsupported file type. Please upload a .sav, .xlsx, .xls, .csv, or .kmsurvey file.')], 422);
+            return response()->json(['error' => __('Unsupported file type. Please upload a .xlsx, .xls or .csv.')], 422);
         }
 
         // Use the PHP-uploaded temp path directly — no storage write needed for parsing
         $realPath = $file->getRealPath();
 
         try {
-            if ($extension === 'sav') {
-                $parsed = $this->spssParser->parse($realPath);
-                $source = 'spss';
-            } elseif (in_array($extension, ['xlsx', 'xls'])) {
+            $codebookApplied = false;
+
+            if (in_array($extension, ['xlsx', 'xls'])) {
+                // For Excel, inject codebook to resolve headers during parse
+                $this->excelParser->setCodebook($this->parseCodebook($request->file('codebook')));
                 $parsed = $this->excelParser->parse($realPath);
                 $source = 'excel';
+                $codebookApplied = $request->hasFile('codebook');
             } elseif ($extension === 'csv') {
+                $this->excelParser->setCodebook($this->parseCodebook($request->file('codebook')));
                 $parsed = $this->excelParser->parse($realPath);
                 $source = 'csv';
-            } elseif ($extension === 'kmsurvey') {
-                return $this->previewKmsurvey($realPath);
+                $codebookApplied = $request->hasFile('codebook');
             } else {
                 return response()->json(['error' => __('Unsupported file type.')], 422);
             }
@@ -79,7 +82,6 @@ class SurveyImportController extends Controller
             unset($var);
 
             // Persist rows in session for the confirmation step.
-            // Also persist the file for confirmation (move it to a permanent temp location now).
             $storagePath = $file->storeAs('imports/tmp', Str::uuid() . '.' . $extension, 'local');
 
             session([
@@ -94,6 +96,7 @@ class SurveyImportController extends Controller
                 'row_count' => $parsed['count'],
                 'source' => $source,
                 'preview_rows' => array_slice($parsed['rows'], 0, 5),
+                'codebook_applied' => $codebookApplied,
             ]);
 
         } catch (\Throwable $e) {
@@ -144,27 +147,20 @@ class SurveyImportController extends Controller
 
         try {
             $survey = $this->builder->build(
-                title: $request->title,
-                importSource: $source,
-                mapping: $mapping,
-                rows: $rows,
-                appendToSurvey: $appendTo,
+                $request->title,
+                $source,
+                $mapping,
+                $rows,
+                $appendTo
             );
 
-            // Clean up tmp file
-            if (session('import_tmp_path')) {
-                Storage::disk('local')->delete(session('import_tmp_path'));
-                session()->forget(['import_tmp_path', 'import_source', 'import_parsed_rows', 'import_row_count']);
-            }
+            session()->forget(['import_tmp_path', 'import_source', 'import_parsed_rows', 'import_row_count']);
 
             return response()->json([
                 'success' => true,
                 'survey_id' => $survey->id,
-                'survey_title' => $survey->title,
                 'links' => [
                     'builder' => route('surveys.edit', $survey),
-                    'reports' => route('surveys.reports', $survey),
-                    'settings' => route('surveys.settings', $survey),
                     'hub' => route('surveys.summary', $survey),
                 ],
             ]);
@@ -173,124 +169,83 @@ class SurveyImportController extends Controller
         }
     }
 
+
     // ─────────────────────────────────────────────────────────────────────
-    // Import a .kmsurvey ZIP bundle (re-import on another site)
+    // Internal: parse an uploaded codebook file (Excel/CSV) into a
+    // [VAR_code => human_label] mapping.
     // ─────────────────────────────────────────────────────────────────────
 
-    public function importPackage(Request $request)
+    protected function parseCodebook(?\Illuminate\Http\UploadedFile $file): ?array
     {
-        $request->validate([
-            'file' => ['required', 'file', 'max:102400'],
-        ]);
-
-        $file = $request->file('file');
-        $tmpPath = storage_path('app/imports/tmp/' . Str::uuid() . '.zip');
-
-        $file->move(dirname($tmpPath), basename($tmpPath));
+        if (!$file) {
+            return null;
+        }
 
         try {
-            $zip = new \ZipArchive();
-            if ($zip->open($tmpPath) !== true) {
-                throw new \Exception('Could not open ZIP archive.');
-            }
+            $ext = strtolower($file->getClientOriginalExtension());
+            $rows = [];
 
-            $surveyJson = json_decode($zip->getFromName('survey.json'), true);
-            $questionsJson = json_decode($zip->getFromName('questions.json'), true);
-            $responsesJson = json_decode($zip->getFromName('responses.json'), true);
-            $zip->close();
-
-            if (!$surveyJson || !$questionsJson) {
-                throw new \Exception('Invalid .kmsurvey bundle — missing required files.');
-            }
-
-            $survey = \App\Models\Survey::create([
-                'title' => ($surveyJson['title'] ?? 'Imported Survey') . ' (Restored)',
-                'description' => $surveyJson['description'] ?? '',
-                'status' => \App\Enums\SurveyStatus::Active,
-                'type' => \App\Enums\SurveyType::Private ,
-                'category' => \App\Enums\SurveyCategory::Academic,
-                'import_source' => 'package',
-                'created_by' => \Illuminate\Support\Facades\Auth::id(),
-                'json_schema' => json_encode($surveyJson['json_schema'] ?? []),
-                'share_token' => \Illuminate\Support\Str::random(32),
-            ]);
-
-            // Restore questions
-            $questionIdMap = [];
-            foreach ($questionsJson as $q) {
-                $newQ = \App\Models\Question::create([
-                    'survey_id' => $survey->id,
-                    'text' => $q['text'],
-                    'type' => $q['type'],
-                    'options' => $q['options'] ?? [],
-                    'required' => $q['required'] ?? false,
-                    'position' => $q['position'],
-                ]);
-                $questionIdMap[$q['id']] = $newQ->id;
-            }
-
-            // Restore responses + answers
-            if ($responsesJson) {
-                foreach ($responsesJson as $r) {
-                    $response = \App\Models\Response::create([
-                        'survey_id' => $survey->id,
-                        'respondent_id' => null,
-                        'guest_name' => $r['guest_name'] ?? 'Restored Respondent',
-                        'ai_metadata' => null,
-                    ]);
-
-                    foreach ($r['answers'] ?? [] as $a) {
-                        $newQId = $questionIdMap[$a['question_id']] ?? null;
-                        if (!$newQId)
-                            continue;
-                        \App\Models\Answer::create([
-                            'response_id' => $response->id,
-                            'question_id' => $newQId,
-                            'value' => $a['value'],
-                        ]);
+            if ($ext === 'csv') {
+                $handle = fopen($file->getRealPath(), 'r');
+                if (!$handle) {
+                    return null;
+                }
+                while (($line = fgetcsv($handle)) !== false) {
+                    $rows[] = $line;
+                }
+                fclose($handle);
+            } else {
+                // Excel codebook: inline ToArray parser
+                $parser = new class implements ToArray {
+                    public array $rows = [];
+                    public function array(array $array): void
+                    {
+                        $this->rows = $array;
                     }
+                };
+                Excel::import($parser, $file->getRealPath());
+                $rows = $parser->rows;
+            }
+
+            if (empty($rows)) {
+                return null;
+            }
+
+            $map = [];
+            foreach ($rows as $row) {
+                $code = trim((string) ($row[0] ?? ''));
+                $label = trim((string) ($row[1] ?? ''));
+                if ($code !== '' && $label !== '') {
+                    $map[$code] = $label;
                 }
             }
 
-            @unlink($tmpPath);
-
-            return response()->json([
-                'success' => true,
-                'survey_id' => $survey->id,
-                'links' => [
-                    'hub' => route('surveys.summary', $survey),
-                    'builder' => route('surveys.edit', $survey),
-                    'reports' => route('surveys.reports', $survey),
-                ],
-            ]);
-        } catch (\Throwable $e) {
-            @unlink($tmpPath);
-            return response()->json(['error' => __('Package import failed: ') . $e->getMessage()], 500);
+            return !empty($map) ? $map : null;
+        } catch (\Throwable) {
+            return null;
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // Internal: preview a .kmsurvey ZIP without committing
-    // ─────────────────────────────────────────────────────────────────────
-
-    protected function previewKmsurvey(string $filePath)
+    /**
+     * Apply a codebook mapping to already-parsed variables (e.g. SPSS).
+     */
+    protected function applyCodebookLabels(array &$variables, ?array $codebookMap): bool
     {
-        $zip = new \ZipArchive();
-        if ($zip->open($filePath) !== true) {
-            return response()->json(['error' => __('Invalid .kmsurvey file.')], 422);
+        if (!$codebookMap) {
+            return false;
         }
 
-        $surveyJson = json_decode($zip->getFromName('survey.json'), true);
-        $questionsJson = json_decode($zip->getFromName('questions.json'), true);
-        $responsesJson = json_decode($zip->getFromName('responses.json'), true);
-        $zip->close();
+        $applied = false;
+        foreach ($variables as &$var) {
+            $name = $var['name'] ?? '';
+            if (isset($codebookMap[$name])) {
+                $var['label'] = $codebookMap[$name];
+                $var['looks_like_spss_code'] = false;
+                $applied = true;
+            }
+        }
+        unset($var);
 
-        return response()->json([
-            'source' => 'package',
-            'survey' => $surveyJson,
-            'questions' => $questionsJson,
-            'row_count' => count($responsesJson ?? []),
-            'is_package' => true,
-        ]);
+        return $applied;
     }
 }

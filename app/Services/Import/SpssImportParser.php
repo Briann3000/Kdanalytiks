@@ -3,9 +3,12 @@
 namespace App\Services\Import;
 
 use SPSS\Sav\Reader;
+use Illuminate\Support\Facades\Log;
 
 class SpssImportParser
 {
+    use CleansImportValues;
+
     /**
      * Parse an SPSS .sav file and return structured metadata + rows.
      *
@@ -22,6 +25,20 @@ class SpssImportParser
     public function parse(string $filePath): array
     {
         $reader = Reader::fromFile($filePath)->read();
+
+        $varNames = [];
+        foreach ($reader->variables as $idx => $v) {
+            $varNames[$idx] = $v->name ?? 'UNKNOWN';
+        }
+
+        $firstRowKeys = [];
+        $firstRowVals = [];
+        foreach ($reader->data as $case) {
+            $firstRowKeys = array_keys((array) $case);
+            // Only grab the first 10 values to keep the log clean
+            $firstRowVals = array_slice(array_values((array) $case), 0, 10);
+            break;
+        }
 
         // ── Build a map: variable realPosition → value labels ────────────────
         // ValueLabel records contain an $indexes list (1-based positions in the
@@ -52,26 +69,36 @@ class SpssImportParser
             $realPos = $variable->realPosition ?? $varIndex;
             $valueLabels = $valueLabelsByVarIndex[$realPos] ?? [];
 
+            // Detect if label looks like an untranslated VAR code
+            $looksLikeSpssCode = (bool) preg_match('/^VAR\d+$|^[A-Z_]+[0-9]+$/', $name);
+
             $variables[] = [
                 'name' => $name,
                 'label' => $label,
                 'value_labels' => $valueLabels,
                 'measure' => 0,
                 'var_index' => $varIndex,
+                'real_pos' => $realPos,
+                'looks_like_spss_code' => $looksLikeSpssCode,
             ];
         }
 
         // ── Build raw rows ────────────────────────────────────────────────────
-        // $reader->data is an array of arrays: each sub-array is one case,
-        // indexed by variable realPosition (same order as $reader->variables)
+        // The tiamo/spss Data::readCaseData() fills each case row with sequential
+        // integer keys [0, 1, 2, ...] that directly match the sequential foreach
+        // index of $reader->variables (which is already a filtered list — hidden/blank
+        // width=-1 tempVars have been excluded). So $varIndex from the variable
+        // metadata loop is exactly the right key to use for case data lookup.
         $rows = [];
+
         foreach ($reader->data as $case) {
+            $caseValues = (array) $case; // [0 => val, 1 => val, ...] sequential
             $row = [];
-            foreach (array_values((array) $case) as $val) {
-                if (is_float($val) && $val <= -1e300) {
-                    $val = null;
-                }
-                $row[] = $val;
+
+            foreach ($variables as $var) {
+                $varIndex = $var['var_index']; // sequential index in $reader->variables
+                $val = $this->cleanValue($caseValues[$varIndex] ?? null);
+                $row[$varIndex] = $val;
             }
             $rows[] = $row;
         }

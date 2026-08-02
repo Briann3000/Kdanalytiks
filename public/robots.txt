@@ -1,6 +1,5 @@
 User-agent: *
 Allow: /
-Allow: /humanizer
 Allow: /docs
 Allow: /surveys/public
 Allow: /privacy-policy
@@ -9,4 +8,4 @@ Disallow: /admin/
 Disallow: /my-wallet/
 Disallow: /surveys/*/reports
 
-Sitemap: https://kdanalytiks.com/sitemap.xml
+Sitemap: https://www.kdanalytiks.com/sitemap.xml

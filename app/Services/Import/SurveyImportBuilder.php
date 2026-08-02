@@ -12,9 +12,12 @@ use App\Enums\SurveyType;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class SurveyImportBuilder
 {
+    use CleansImportValues;
+
     /**
      * Infer the question type from a variable definition.
      *
@@ -48,6 +51,22 @@ class SurveyImportBuilder
         }
 
         return 'select_one';
+    }
+
+    /**
+     * Format raw cell values, converting Excel serial numbers for dates
+     */
+    public function formatCellValue(mixed $value, string $inferredType): mixed
+    {
+        if (is_numeric($value) && $inferredType === 'date') {
+            try {
+                return ExcelDate::excelToDateTimeObject($value)->format('Y-m-d');
+            } catch (\Exception $e) {
+                return $value;
+            }
+        }
+
+        return $value;
     }
 
     /**
@@ -108,6 +127,8 @@ class SurveyImportBuilder
             $questionMap = []; // var_index => Question model
 
             if (!$appendToSurvey) {
+                $survey->questions()->delete(); // Ensure no pre-existing questions
+
                 $position = 1;
                 foreach ($includedColumns as $col) {
                     // Map visual type options
@@ -144,11 +165,11 @@ class SurveyImportBuilder
                 $survey->update(['json_schema' => json_encode($schemaQuestions)]);
             } else {
                 // Map var_index to existing question by position
-                $existingQuestions = $survey->questions()->orderBy('position')->get();
+                $existingQuestions = $survey->questions()->get();
                 foreach ($includedColumns as $col) {
-                    $idx = $col['var_index'];
-                    if (isset($existingQuestions[$idx])) {
-                        $questionMap[$idx] = $existingQuestions[$idx];
+                    $matchedQuestion = $existingQuestions->firstWhere('text', $col['label']);
+                    if ($matchedQuestion) {
+                        $questionMap[$col['var_index']] = $matchedQuestion;
                     }
                 }
             }
@@ -174,22 +195,17 @@ class SurveyImportBuilder
 
                     $rawValue = $rowData[$varIndex] ?? null;
 
-                    // Filter out SPSS SYSMIS float/string markers
-                    if ($rawValue !== null) {
-                        if (is_float($rawValue) && $rawValue <= -1e300) {
-                            $rawValue = null;
-                        } elseif (is_string($rawValue) && (str_contains($rawValue, '-1.797693') || str_contains($rawValue, 'E+308'))) {
-                            $rawValue = null;
-                        }
-                    }
+                    // Clean SPSS/Excel artifacts including #NULL!, SYSMIS markers, whitespace
+                    $rawValue = $this->cleanValue($rawValue);
 
                     // Resolve value label if available, else use raw value
                     $valueLabels = $col['value_labels'] ?? [];
                     if ($rawValue === null || $rawValue === '') {
                         $value = '';
                     } else {
-                        $value = isset($valueLabels[(string) $rawValue])
-                            ? $valueLabels[(string) $rawValue]
+                        $lookupKey = is_numeric($rawValue) ? (string) (int) $rawValue : (string) $rawValue;
+                        $value = isset($valueLabels[$lookupKey])
+                            ? $valueLabels[$lookupKey]
                             : (string) $rawValue;
                     }
 
@@ -197,6 +213,15 @@ class SurveyImportBuilder
                     $answersJson[] = [
                         'name' => 'question_' . $question->id,
                         'userData' => $value,
+                    ];
+
+                }
+                // Format as key-value JSON array or legacy list depending on report decoder
+                $formattedAnswers = [];
+                foreach ($answersJson as $qKey => $qVal) {
+                    $formattedAnswers[] = [
+                        'name' => $qKey,
+                        'userData' => $qVal,
                     ];
                 }
 
