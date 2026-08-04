@@ -304,6 +304,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/humanizer/process', [\App\Http\Controllers\HumanizerController::class, 'process'])->name('humanizer.process');
     Route::post('/humanizer/upload', [\App\Http\Controllers\HumanizerController::class, 'upload'])->name('humanizer.upload');
     Route::post('/humanizer/download', [\App\Http\Controllers\HumanizerController::class, 'downloadDocx'])->name('humanizer.download');
+
+    // Standalone AI Media Transcription Routes
+    Route::get('/transcription', [\App\Http\Controllers\TranscriptionController::class, 'index'])->name('transcription.index');
+    Route::post('/transcription/transcribe', [\App\Http\Controllers\TranscriptionController::class, 'transcribe'])->name('transcription.transcribe');
+    Route::resource('transcription', \App\Http\Controllers\TranscriptionController::class)->only(['index', 'store']);
     Route::get('/research-proposal/preview/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'preview'])->name('research-proposal.preview');
     Route::post('/research-proposal/translate/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'translate'])->name('research-proposal.translate');
     Route::post('/research-proposal/export/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'export'])->name('research-proposal.export');

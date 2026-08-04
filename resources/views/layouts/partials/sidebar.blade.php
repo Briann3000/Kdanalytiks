@@ -532,6 +532,16 @@
         </a>
     </div>
 
+    <!-- AI Transcription Link -->
+    <div class="sidebar-item relative" @mouseenter="hoverItem = 'transcription'" @mouseleave="hoverItem = null">
+        <a href="{{ route('transcription.index') }}"
+            class="flex items-center px-3 py-2 text-sm font-bold tracking-wider {{ request()->routeIs('transcription.index') ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors">
+            <i
+                class="fa-solid fa-microphone-lines mr-3 {{ request()->routeIs('transcription.index') ? 'text-[#f0f0f1]' : 'text-zinc-200 group-hover:text-[#f0f0f1]' }}"></i>
+            {{ __('AI Transcription') }}
+        </a>
+    </div>
+
     <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'studio')" @mouseleave="clearFlyout()">
         <div @click="expandedItem = (expandedItem === 'studio' ? null : 'studio')"
             class="flex items-center justify-between px-3 py-2 text-sm font-bold {{ (request()->routeIs('research-proposal.*') || request()->routeIs('research-studio.*')) ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors cursor-pointer">
