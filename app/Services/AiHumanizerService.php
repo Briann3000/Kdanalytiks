@@ -66,7 +66,7 @@ class AiHumanizerService
         // 1. Perplexity (Unique Word Ratio)
         $uniqueWords = array_unique($words);
         $uniqueRatio = count($uniqueWords) / $totalWordsCount;
-        $perplexityScore = min(100, max(0, round($uniqueRatio * 130)));
+        $perplexityScore = min(100, max(0, round($uniqueRatio * 125)));
 
         // 2. Burstiness (Sentence Length Variance)
         $sentences = preg_split('/[.!?]+/', $text);
@@ -87,13 +87,18 @@ class AiHumanizerService
                 $varianceSum += pow($len - $avgLength, 2);
             }
             $stdDev = sqrt($varianceSum / ($sentenceCount - 1));
-            // Map standard deviation to burstiness score (0 - 100)
-            $burstinessScore = min(100, max(0, round($stdDev * 8)));
+            // Map standard deviation to burstiness score (0 - 100) with realistic human threshold
+            $burstinessScore = min(100, max(0, round($stdDev * 14)));
         } else {
-            $burstinessScore = 10;
+            $burstinessScore = 30;
         }
 
-        // 3. Flagged Words
+        // 3. Contraction Ratio (Human Signal)
+        preg_match_all("/\b[a-z]+'(?:t|ll|re|ve|d|m|s)\b/i", $text, $contractions);
+        $contractionCount = count($contractions[0]);
+        $contractionBonus = min(15, $contractionCount * 4);
+
+        // 4. Flagged Words
         $foundFlags = [];
         foreach (self::FLAGGED_WORDS as $flag) {
             $pattern = '/\b' . preg_quote($flag, '/') . '\b/i';
@@ -105,18 +110,20 @@ class AiHumanizerService
             }
         }
 
-        // 4. AI Probability Estimate
-        $aiWeight = 100 - (($perplexityScore * 0.4) + ($burstinessScore * 0.4));
-        $aiWeight += count($foundFlags) * 12;
+        // 5. AI Probability Estimate (Rebalanced)
+        $aiWeight = 100 - (($perplexityScore * 0.45) + ($burstinessScore * 0.45));
+        $aiWeight -= $contractionBonus;
+        // Cap flagged word penalty at 20 points max
+        $aiWeight += min(20, count($foundFlags) * 5);
         $aiProbability = min(100, max(0, round($aiWeight)));
 
-        // 5. Recommendations
+        // 6. Recommendations
         $recs = [];
         if ($burstinessScore < 45) {
-            $recs[] = 'Sentence lengths are highly uniform. Mix short sentences with longer ones to improve natural burstiness.';
+            $recs[] = 'Sentence lengths are uniform. Mix short sentences with longer ones to improve natural burstiness.';
         }
         if ($perplexityScore < 45) {
-            $recs[] = 'Vocabulary choice is highly predictable. Try using more varied descriptive words and natural phrasing.';
+            $recs[] = 'Vocabulary choice is predictable. Try using more varied descriptive words and natural phrasing.';
         }
         if (count($foundFlags) > 0) {
             $flagList = collect($foundFlags)->pluck('word')->implode(', ');
@@ -183,42 +190,46 @@ class AiHumanizerService
      */
     private function processParagraphChunk(string $chunk, string $mode, string $intensity, ?string $customInstructions = null): string
     {
-        $systemPrompt = "You are an expert editor specializing in humanizing text and refining writing style. Your goal is to rewrite the input text paragraph-by-paragraph to emulate natural, dynamic, and engaging human writing profiles.
 
-CORE HUMANIZATION RULES:
+        if ($mode === 'academic') {
+            $systemPrompt = "You are a senior academic researcher refining a draft for a peer-reviewed journal. 
+Your objective is to rewrite the text with high academic rigor and clinical precision. 
 
-1. PARAGRAPH RHYTHM & OPENER DIVERSIFICATION:
-- Vary sentence structures wildly. Include periodic single-sentence emphasis statements next to sprawling, clause-heavy compound paragraphs.
-- Banish predictable topic-sentence formulations (e.g., 'The study of...', 'This analysis represents...', 'Agroecology represents...'). Force openers to begin with localized conditions, direct rhetorical framing, or mid-thought narrative shifts.
+CORE RULES FOR ACADEMIC HUMANIZATION:
 
-2. EXTREME BURSTINESS & RHYTHM SHOCK:
-- Enforce strict length contrast: pair micro-sentences (4 to 6 words) directly adjacent to sprawling, multi-clause compound sentences (35+ words).
-- Force clusters of 2 or 3 extremely short sentences in a row (e.g., 'The numbers were clear. No one was surprised. People are just tired.').
-- Eliminate the uniform 15-to-25-word sentence rhythm entirely.
+1. ACADEMIC RESTRAINT & CAUTION: 
+- Avoid absolute claims. Frame observations objectively (e.g., framing findings as indications, alignments, or observations rather than absolute proofs).
+- DO NOT force awkward phrasing. The text must remain highly readable, logical, and grammatically flawless.
 
-3. BREAK SYNTACTIC PARALLELISM:
-- Mix nouns, verbs, and clauses unevenly inside lists rather than using parallel grammatical structures.
+2. COHESIVE, COMPLEX SENTENCE STRUCTURES (CRITICAL):
+- DO NOT write in a choppy, staccato manner. You are strictly forbidden from generating sequences of short, isolated, simple sentences.
+- You MUST combine related concepts into fluid, complex sentences using subordinating conjunctions (e.g., 'While...', 'Although...', 'Given that...') and relative clauses (e.g., '...which in turn...').
+- Intentionally vary your sentence lengths. Anchor a sprawling, multi-clause analytical thought with a concise, impactful summary sentence.
 
-4. ABSOLUTE BUZZWORD & TRANSITION BLACKLIST:
-- Do not use standard AI transitional words (furthermore, moreover, consequently, in addition, subsequently, thus, therefore, in conclusion). Use organic, conversational conjunctions (e.g., 'And yet,', 'So,', 'But,', 'Look,', 'Actually,').
-- Completely ban flowery, corporate, or academic AI buzzwords: plethora, myriad, paramount, underscore, stark, realm, fostering, navigating, transformative, leverage, catalyst, paradigm, landscape, foster, resonate, seamlessly, elevate, streamline, empower, holistic, robust. Replace them with simpler, grounded verbs and nouns.
+3. BAN SYNTHETIC TRANSITIONS:
+- Completely ban robotic AI transition markers (e.g., 'Furthermore,' 'Moreover,' 'In conclusion,' 'Crucially,' 'Significantly,' 'Thus,' 'Therefore'). 
+- Ensure ideas flow smoothly into one another based on logic, not filler words.
 
-5. Maintain point of view in original text (first-person, second-person, third-person) and preserve the original facts, data points, and core meaning. Do not summarize or omit key analytical information.
+4. CLINICAL PRECISION (NO BUZZWORDS):
+- Strip all flowery, hyperbolic AI adjectives. 
+- Ban the following words entirely: transformative, robust, holistic, paramount, myriad, plethora, tapestry, delve, underscore, stark, realm. 
+- Use dry, precise, domain-specific terminology.
 
-6. HEDGING, CONFIDENCE, & CONVERSATIONAL FILLERS:
-- Introduce direct assertions and localized modifiers (e.g., 'clearly', 'frankly', 'largely', 'to be honest') to inject human conviction
+5. PRESERVE DATA & MEANING:
+- Maintain all original facts, variables, and analytical meaning. Do not summarize or dilute the core arguments.
+- Preserve the exact number of paragraphs.";
 
-7. GRAMMAR FLOW MICRO-VARIATIONS:
-- Write with a academic-lite voice, allowing for sentence-ending prepositions and colloquial contractions.
+        } elseif ($mode === 'creative') {
+            $systemPrompt = "You are an expressive, creative writer. Focus on vivid imagery, varied sentence lengths, and an engaging narrative flow. Avoid typical AI buzzwords and robotic transition structures. Preserve the original meaning.";
 
-8. STATISTICAL REDIRECT:
-- Convert dry statistical list sequences into conversational summaries (e.g., changing '20% agree, 20% neutral' to 'roughly a fifth agreed, while another fifth stayed neutral').
-
-9. PRESERVE STRUCTURE:
-- You MUST rewrite the input text paragraph-by-paragraph.
-- Preserve the exact number of paragraphs in the input. Do not merge, summarize, shorten, or omit paragraphs.
-- Maintain the exact original facts, data points, and core meaning. Do not summarize or omit key analytical information.
-Never combine comma and 'and' if finalizing a list. (eg., 'apples, oranges, and bananas' is incorrect; use 'apples, oranges and bananas').";
+        } else {
+            // Default 'standard' mode
+            $systemPrompt = "You are a busy domain expert quickly dictating notes to a colleague. You do not care about perfect academic flow or sounding like a copywriter. 
+Your goal is to convey the input information in a highly conversational, slightly unpolished, and direct manner. 
+Use a 'train of thought' structure. Sometimes use very short, blunt sentences. Sometimes ramble slightly before making your point. 
+Do not use standard essay formatting. Break grammatical rules if it makes the text sound more like a spoken conversation. 
+Never use transition words like 'Look,', 'And yet,', 'Furthermore', or 'Moreover'.";
+        }
 
         if (!empty($customInstructions)) {
             $systemPrompt .= "\n\n10. USER'S PERSONAL VOICE & STYLISTIC INSTRUCTIONS:\n";
@@ -236,7 +247,7 @@ Never combine comma and 'and' if finalizing a list. (eg., 'apples, oranges, and 
             $messages,
             fn($delta) => null,
             'llama-3.3-70b-versatile',
-            0.9
+            0.95
         );
 
         return $result['content'] ?? $chunk;
@@ -247,12 +258,13 @@ Never combine comma and 'and' if finalizing a list. (eg., 'apples, oranges, and 
      */
     private function runRefinementPass(string $text, ?string $customInstructions = null): string
     {
-        $systemPrompt = "You are an expert copywriter. Your task is to perform an aggressive, secondary humanization pass over a draft that still carries some mechanical AI patterns. 
-You must break up the sentence structures even more dramatically:
-- Split any remaining long sentences into two or three short sentences.
-- If academic tone selected don't use casual tone.
-- Replace any remaining corporate, academic, or complex words (like plethora, myriad, paramount, underscore, stark, realm, fostering) with simple, direct vocabulary.
-- Ensure the result has high sentence length variation (burstiness) but not too much.";
+        $systemPrompt = "You are an expert copywriter and AI-detection bypass specialist. Your task is to perform an aggressive, secondary humanization pass over a draft that still carries mechanical AI patterns.
+
+You must apply these exact formatting corrections:
+1. FORCE BURSTINESS: Find the longest sentence in the text and ensure it is immediately preceded or followed by a sentence under 7 words. Split medium sentences to create this contrast.
+2. PURGE CRUTCHES: Ruthlessly delete any conversational crutch words at the start of sentences (e.g., 'Look,', 'So,', 'Well,', 'And yet,', 'Ultimately,'). 
+3. STRIP JARGON: Replace any remaining corporate or academic buzzwords (plethora, myriad, paramount, underscore, stark, realm) with simple, direct vocabulary.
+4. TONE ALIGNMENT: If an academic tone is required, maintain professionalism but do not revert to a robotic formula. Do not use casual slang if the context is formal, but keep the sentence length varied.";
 
         if (!empty($customInstructions)) {
             $systemPrompt .= "\n- Strictly incorporate the user's personal style instructions: \"{$customInstructions}\"";
