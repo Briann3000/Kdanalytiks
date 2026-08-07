@@ -4,20 +4,20 @@
 
 @section('sub_sidebar')
     <!-- Professional Collapsible Sidebar for Proposal Navigation -->
-    <div class="bg-white border-r border-gray-100 flex-shrink-0 flex flex-col z-30 shadow-sm transition-all duration-300 overflow-hidden"
-        :class="sidebarOpen ? 'w-60' : 'w-12'">
+    <div class="bg-white border-r border-gray-100 flex-shrink-0 flex flex-col z-30 shadow-sm transition-all duration-300 relative"
+        :class="sidebarOpen ? 'w-60' : 'w-14'">
 
-        <div class="p-6 border-b border-gray-100 bg-gray-50/30 flex items-center"
-            :class="sidebarOpen ? '' : 'justify-center px-0'">
-            <i class="fa-solid fa-file-invoice text-zinc-2000" :class="sidebarOpen ? 'mr-3' : ''"></i>
-            <h3 x-show="sidebarOpen" x-transition:enter="transition ease-out duration-200"
-                x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-                class="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate flex-1">
-                Proposal Draft
-            </h3>
+        <div class="p-4 border-b border-gray-100 bg-gray-50/30 flex items-center justify-between"
+            :class="sidebarOpen ? '' : 'px-2 justify-center'">
+            <div class="flex items-center truncate">
+                <i class="fa-solid fa-file-invoice text-[#2271b1]" :class="sidebarOpen ? 'mr-2' : ''"></i>
+                <h3 x-show="sidebarOpen" x-transition
+                    class="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate">
+                    Proposal Draft
+                </h3>
+            </div>
             <button @click="sidebarOpen = !sidebarOpen"
-                class="w-6 h-6 flex items-center justify-center rounded-lg bg-white border border-gray-100 text-gray-400 hover:text-[#2271b1] hover:border-zinc-200 transition-all"
-                :class="sidebarOpen ? 'ml-2' : 'absolute -right-3 top-7 z-50 shadow-md'">
+                class="w-6 h-6 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-400 hover:text-[#2271b1] transition-all shrink-0">
                 <i class="fa-solid fa-chevron-left text-[10px] transition-transform duration-300"
                     :class="sidebarOpen ? '' : 'rotate-180'"></i>
             </button>
@@ -26,6 +26,7 @@
         <nav class="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
             @foreach($proposal->content ?? [] as $title => $content)
                 <a href="#section-{{ $loop->iteration }}" title="{{ $title }}"
+                    @click.prevent="document.getElementById('section-{{ $loop->iteration }}')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
                     class="flex items-center rounded-xl text-xs font-bold text-gray-600 hover:bg-zinc-100 hover:text-[#135e96] transition-all group border border-transparent hover:border-zinc-200"
                     :class="sidebarOpen ? 'px-4 py-3' : 'p-2 justify-center'">
                     <span
@@ -43,11 +44,16 @@
 @endsection
 
 @section('content')
-    <div class="flex flex-col bg-gray-50/50" style="height: calc(100vh - 4.1rem);">
+    <div class="flex flex-col bg-gray-50/50" x-data="{ showRefineModal: false }" style="min-h-screen;">
         <!-- Condensed Sticky Toolbar matching Preview -->
         <div
             class="sticky top-0 z-40 px-4 py-3 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm flex items-center justify-between">
             <div class="flex items-center space-x-3">
+                <button type="button" @click="sidebarOpen = !sidebarOpen"
+                    class="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-50 text-[#2271b1] hover:bg-blue-100 transition-all border border-blue-100"
+                    title="{{ __('Toggle Table of Contents Sidebar') }}">
+                    <i class="fa-solid fa-bars-staggered text-xs"></i>
+                </button>
                 <div class="flex items-center space-x-2">
                     <a href="{{ route('research-proposal.history') }}"
                         class="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-50 text-gray-400 hover:bg-gray-100 transition-all border border-gray-100">
@@ -72,13 +78,59 @@
                     <span class="text-[9px] font-black text-[#2271b1] uppercase">{{ strtoupper($proposal->style) }}</span>
                 </div>
 
-                <div class="h-5 w-[1px] bg-gray-200"></div>
+                <button type="button" @click="showRefineModal = true"
+                    class="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-600"></i>
+                    <span>{{ __('Refine Generation') }}</span>
+                </button>
 
                 <a href="{{ route('research-proposal.export-proposal', ['id' => $proposal->id]) }}"
                     class="px-5 py-2 bg-[#2271b1] text-white rounded-xl font-black text-[9px] uppercase tracking-wider shadow-lg shadow-zinc-200/50 hover:bg-[#135e96] transition-all flex items-center group">
                     <i class="fa-solid fa-file-word mr-2 text-[11px]"></i>
                     <span>Export (DOCX)</span>
                 </a>
+            </div>
+        </div>
+
+        <!-- Refine Modal -->
+        <div x-show="showRefineModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4" style="display: none;">
+            <div class="bg-white rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base font-black text-gray-900 flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles text-[#2271b1]"></i>
+                        {{ __('Refine Proposal with AI') }}
+                    </h3>
+                    <button @click="showRefineModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <form action="{{ route('research-proposal.refine', $proposal->id) }}" method="POST" class="space-y-4">
+                    @csrf
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-gray-700">{{ __('Select Target Chapter / Section to Refine:') }}</label>
+                        <select name="target_section" class="w-full text-xs font-bold p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#2271b1]">
+                            <option value="all">{{ __('-- Entire Proposal (All Sections) --') }}</option>
+                            <option value="preliminaries">{{ __('Preliminaries & Abstract') }}</option>
+                            <option value="ch1">{{ __('Chapter 1: Introduction & Background') }}</option>
+                            <option value="ch2">{{ __('Chapter 2: Literature & Theoretical Framework') }}</option>
+                            <option value="ch3">{{ __('Chapter 3: Research Methodology & Sampling') }}</option>
+                            <option value="budget">{{ __('Proposed Budget & Work Plan') }}</option>
+                        </select>
+                        <p class="text-[10px] text-gray-400 font-medium">{{ __('Refining chapter-by-chapter keeps AI focus razor-sharp and prevents memory loss.') }}</p>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-gray-700">{{ __('Refinement Instructions:') }}</label>
+                        <textarea name="refinement_instructions" rows="4" required
+                            placeholder="{{ __('e.g. Deepen Chapter 2 literature review, expand Chapter 3 sampling formula, or rewrite specific sections...') }}"
+                            class="w-full text-xs p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#2271b1]"></textarea>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" @click="showRefineModal = false" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold">{{ __('Cancel') }}</button>
+                        <button type="submit" class="px-6 py-2 bg-[#2271b1] text-white rounded-xl text-xs font-bold shadow-md hover:bg-[#135e96] transition-all">
+                            {{ __('Regenerate Target Chapter') }}
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 

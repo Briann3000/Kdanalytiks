@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CompiledReport;
+use App\Models\ResearchProposal;
 use App\Models\Survey;
 use App\Models\SurveyInferentialAnalysis;
 use App\Services\AiService;
@@ -26,7 +27,8 @@ class ResearchStudioController extends Controller
     public function createReport()
     {
         $surveys = Survey::where('created_by', auth()->id())->latest()->get();
-        return view('research-studio.generate_report', compact('surveys'));
+        $proposals = ResearchProposal::where('user_id', auth()->id())->latest()->get();
+        return view('research-studio.generate_report', compact('surveys', 'proposals'));
     }
 
     public function getInferentialTests(Survey $survey)
@@ -100,9 +102,28 @@ class ResearchStudioController extends Controller
         return response()->download($absolutePath, \Illuminate\Support\Str::slug($report->title ?? 'thesis') . '.docx');
     }
 
-    public function createProofread()
+    public function createProofread(Request $request)
     {
-        return view('research-studio.proofread');
+        $proofread = null;
+        if ($request->has('id')) {
+            $proofread = \App\Models\Proofread::where('user_id', auth()->id())->find($request->id);
+        }
+        return view('research-studio.proofread', compact('proofread'));
+    }
+
+    public function proofreadHistory()
+    {
+        $proofreads = \App\Models\Proofread::where('user_id', auth()->id())->latest()->get();
+        return view('research-studio.proofread_history', compact('proofreads'));
+    }
+
+    public function destroyProofread(\App\Models\Proofread $proofread)
+    {
+        if ($proofread->user_id !== auth()->id()) {
+            abort(403);
+        }
+        $proofread->delete();
+        return redirect()->back()->with('success', __('Proofread history entry deleted.'));
     }
 
     public function processProofread(Request $request)
@@ -111,22 +132,48 @@ class ResearchStudioController extends Controller
 
         $user = $request->user();
         if ($user && !$user->canProofread()) {
-            return redirect()->back()->with('error', __('Upgrade Required: Your document proofreading limit has been reached for your current plan (Free: 1, Pro: 10/mo, Enterprise: Unlimited). Please upgrade your subscription.'));
+            return response()->json([
+                'success' => false,
+                'error' => __('Upgrade Required: Your document proofreading limit has been reached for your current plan (Free: 1, Pro: 10/mo, Enterprise: Unlimited). Please upgrade your subscription.')
+            ], 403);
         }
 
-        $request->validate([
-            'file' => 'required|file|max:20480|mimes:docx,doc,txt',
-        ]);
+        $text = '';
+        $docTitle = 'Proofread Document';
 
-        $file = $request->file('file');
-        $uuid = Str::uuid();
-        $tempPath = 'temp/' . $uuid . '.' . $file->getClientOriginalExtension();
-        Storage::disk('local')->put($tempPath, file_get_contents($file->getRealPath()));
+        if ($request->hasFile('file')) {
+            $request->validate([
+                'file' => 'required|file|max:20480|mimes:docx,doc,txt',
+            ]);
+
+            $file = $request->file('file');
+            $docTitle = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $uuid = Str::uuid();
+            $tempPath = 'temp/' . $uuid . '.' . $file->getClientOriginalExtension();
+            Storage::disk('local')->put($tempPath, file_get_contents($file->getRealPath()));
+
+            try {
+                $text = $this->extractionService->extractText($file, $tempPath);
+                Storage::disk('local')->delete($tempPath);
+            } catch (\Exception $e) {
+                if (Storage::disk('local')->exists($tempPath)) {
+                    Storage::disk('local')->delete($tempPath);
+                }
+                return response()->json(['error' => $e->getMessage()], 500);
+            }
+        } elseif ($request->filled('text')) {
+            $text = trim($request->input('text'));
+            $firstLine = Str::limit($text, 40);
+            $docTitle = 'Pasted Draft: ' . $firstLine;
+        } else {
+            return response()->json(['error' => __('Please upload a file or paste text to proofread.')], 422);
+        }
+
+        if (empty($text)) {
+            return response()->json(['error' => __('No readable text found in document.')], 422);
+        }
 
         try {
-            $text = $this->extractionService->extractText($file, $tempPath);
-            Storage::disk('local')->delete($tempPath);
-
             if ($user && !$user->isAdmin()) {
                 $user->increment('proofread_count');
             }
@@ -171,14 +218,22 @@ class ResearchStudioController extends Controller
                 ];
             }
 
+            $savedRecord = null;
+            if ($user) {
+                $savedRecord = \App\Models\Proofread::create([
+                    'user_id' => $user->id,
+                    'title' => $docTitle,
+                    'paragraphs' => $processed,
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
+                'proofread_id' => $savedRecord?->id,
+                'title' => $docTitle,
                 'paragraphs' => $processed
             ]);
         } catch (\Exception $e) {
-            if (Storage::disk('local')->exists($tempPath)) {
-                Storage::disk('local')->delete($tempPath);
-            }
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -342,6 +397,71 @@ class ResearchStudioController extends Controller
         $isTruncated = !$user->hasActiveSubscription();
 
         return view('research-studio.preview_report', compact('report', 'isTruncated'));
+    }
+
+    public function refineReport(Request $request, CompiledReport $report)
+    {
+        if ($report->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $request->validate([
+            'refinement_instructions' => 'required|string|max:4000',
+            'target_section' => 'nullable|string',
+        ]);
+
+        $userFeedback = $request->input('refinement_instructions');
+        $targetSection = $request->input('target_section', 'all');
+        $ch4to5 = $report->chapter5_content ?? [];
+
+        $sectionScopeText = $targetSection !== 'all' ? "FOCUS EXCLUSIVELY ON REFINING TARGET CHAPTER: {$targetSection}. Do not rewrite unrelated chapters." : "Refine thesis report chapters.";
+        $prompt = "Refine the research thesis report '{$report->title}' based on user feedback: {$userFeedback}\nTarget Scope: {$sectionScopeText}\n";
+        $systemPrompt = "You are a senior thesis supervisor refining an academic research report titled '{$report->title}'.\n" .
+            "STRUCTURAL FREEDOM DIRECTIVE: You HAVE FULL FREEDOM to rewrite, rename headings, change section titles, format into bullet lists or numbered items, add new subsections, or reorganize content as instructed by the user.\n" .
+            "Use markers [SECTION: Section Name] before each section.";
+
+        $refinedContent = [];
+        $response = $this->aiService->callGroq($prompt, $systemPrompt);
+        if ($response) {
+            $parts = preg_split('/\[SECTION:\s*([^\]]+)\]/i', $response, -1, PREG_SPLIT_DELIM_CAPTURE);
+            for ($i = 1; $i < count($parts); $i += 2) {
+                $title = trim($parts[$i]);
+                $body = trim($parts[$i + 1] ?? '');
+                if ($title && $body) {
+                    $refinedContent[$title] = trim($body);
+                }
+            }
+        }
+
+        if (!empty($refinedContent)) {
+            if ($targetSection !== 'all') {
+                $matchedKey = null;
+                foreach ($ch4to5 as $key => $val) {
+                    if (
+                        stripos($key, $targetSection) !== false ||
+                        ($targetSection === 'ch1' && (stripos($key, 'ch1') !== false || stripos($key, 'chapter 1') !== false || stripos($key, 'introduction') !== false)) ||
+                        ($targetSection === 'ch2' && (stripos($key, 'ch2') !== false || stripos($key, 'chapter 2') !== false || stripos($key, 'literature') !== false)) ||
+                        ($targetSection === 'ch3' && (stripos($key, 'ch3') !== false || stripos($key, 'chapter 3') !== false || stripos($key, 'methodology') !== false)) ||
+                        ($targetSection === 'ch4' && (stripos($key, 'ch4') !== false || stripos($key, 'chapter 4') !== false || stripos($key, 'finding') !== false || stripos($key, 'analysis') !== false)) ||
+                        ($targetSection === 'ch5' && (stripos($key, 'ch5') !== false || stripos($key, 'chapter 5') !== false || stripos($key, 'conclusion') !== false || stripos($key, 'discussion') !== false))
+                    ) {
+                        $matchedKey = $key;
+                        break;
+                    }
+                }
+
+                if ($matchedKey) {
+                    $ch4to5[$matchedKey] = implode("\n\n", $refinedContent);
+                } else {
+                    $ch4to5 = array_merge($ch4to5, $refinedContent);
+                }
+            } else {
+                $ch4to5 = array_merge($ch4to5, $refinedContent);
+            }
+            $report->update(['chapter5_content' => $ch4to5]);
+        }
+
+        return redirect()->back()->with('success', __('Research report refined successfully based on your feedback!'));
     }
 
     private function generateDiffHtml(string $old, string $new): string

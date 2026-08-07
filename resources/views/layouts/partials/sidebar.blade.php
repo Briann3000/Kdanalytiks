@@ -571,12 +571,8 @@
                 style="display: none;" @mouseenter="hoverItem = 'studio'" @mouseleave="clearFlyout()">
                 <a href="{{ route('research-proposal.create') }}"
                     class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-proposal.create') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Generate Proposal') }}</a>
-                <a href="{{ route('research-proposal.history') }}"
-                    class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-proposal.history') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Proposal History') }}</a>
                 <a href="{{ route('research-studio.report.create') }}"
                     class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-studio.report.create') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Generate Report') }}</a>
-                <a href="{{ route('research-studio.report.history') }}"
-                    class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-studio.report.history') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Report History') }}</a>
                 <a href="{{ route('research-studio.proofread.create') }}"
                     class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-studio.proofread.create') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Proofread Report') }}</a>
             </div>

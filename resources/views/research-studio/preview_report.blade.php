@@ -29,7 +29,8 @@
 @endphp
 
 @section('content')
-    <div class="container-fluid px-4 md:px-8 py-8" x-data="{ activeSection: 'ch1' }">
+    <div class="container-fluid px-4 md:px-8 py-8"
+        x-data="{ activeSection: 'ch1', showRefineModal: false, sidebarOpen: true }">
         <div class="max-w-7xl mx-auto space-y-6">
             <!-- Action Header -->
             <header
@@ -48,57 +49,129 @@
                 </div>
 
                 <div class="flex items-center gap-3 shrink-0">
+                    <button type="button" @click="sidebarOpen = !sidebarOpen"
+                        class="px-3.5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5">
+                        <i class="fa-solid fa-list-ul"></i>
+                        <span x-text="sidebarOpen ? 'Hide TOC' : 'Show TOC'"></span>
+                    </button>
+
+                    <button type="button" @click="showRefineModal = true"
+                        class="px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5">
+                        <i class="fa-solid fa-wand-magic-sparkles text-amber-600"></i>
+                        <span>{{ __('Refine Generation') }}</span>
+                    </button>
+                    <!-- Remaining buttons -->
                     <a href="{{ route('research-studio.report.history') }}"
                         class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-all">
                         <i class="fa-solid fa-clock-rotate-left mr-1.5"></i> {{ __('Report History') }}
                     </a>
                     <a href="{{ route('research-studio.report.download', $report) }}"
-                        class="px-6 py-2.5 bg-[#2271b1] hover:bg-[#2271b1] text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-2">
+                        class="px-6 py-2.5 bg-[#2271b1] hover:bg-[#135e96] text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-2">
                         <i class="fa-solid fa-file-export"></i> {{ __('Download DOCX') }}
                     </a>
                 </div>
             </header>
 
+            <!-- Refine Modal -->
+            <div x-show="showRefineModal"
+                class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+                style="display: none;">
+                <div class="bg-white rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-base font-black text-gray-900 flex items-center gap-2">
+                            <i class="fa-solid fa-wand-magic-sparkles text-[#2271b1]"></i>
+                            {{ __('Refine Report with AI') }}
+                        </h3>
+                        <button @click="showRefineModal = false" class="text-gray-400 hover:text-gray-600"><i
+                                class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <form action="{{ route('research-studio.report.refine', $report->id) }}" method="POST"
+                        class="space-y-4">
+                        @csrf
+                        <div class="space-y-1">
+                            <label
+                                class="block text-xs font-bold text-gray-700">{{ __('Select Target Chapter to Refine:') }}</label>
+                            <select name="target_section"
+                                class="w-full text-xs font-bold p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#2271b1]">
+                                <option value="all">{{ __('-- Entire Report (All Chapters) --') }}</option>
+                                <option value="ch1">{{ __('Chapter 1: Introduction & Problem Statement') }}</option>
+                                <option value="ch2">{{ __('Chapter 2: Literature & Theoretical Review') }}</option>
+                                <option value="ch3">{{ __('Chapter 3: Methodology & Sampling') }}</option>
+                                <option value="ch4">{{ __('Chapter 4: Empirical Findings & Analysis') }}</option>
+                                <option value="ch5">{{ __('Chapter 5: Discussion & Recommendations') }}</option>
+                            </select>
+                            <p class="text-[10px] text-gray-400 font-medium">
+                                {{ __('Refining chapter-by-chapter keeps AI focus razor-sharp and prevents memory loss.') }}
+                            </p>
+                        </div>
+
+                        <div class="space-y-1">
+                            <label
+                                class="block text-xs font-bold text-gray-700">{{ __('Enter instructions for AI refinement:') }}</label>
+                            <textarea name="refinement_instructions" rows="4" required
+                                placeholder="{{ __('e.g. Expand Chapter 4 discussion, add policy recommendations to Chapter 5, or deepen empirical analysis...') }}"
+                                class="w-full text-xs p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#2271b1]"></textarea>
+                        </div>
+
+                        <div class="flex justify-end gap-2 pt-2">
+                            <button type="button" @click="showRefineModal = false"
+                                class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold">{{ __('Cancel') }}</button>
+                            <button type="submit"
+                                class="px-6 py-2 bg-[#2271b1] text-white rounded-xl text-xs font-bold shadow-md hover:bg-[#135e96] transition-all">
+                                {{ __('Regenerate Target Chapter') }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <!-- Preview Document Container -->
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 <!-- Sidebar Table of Contents -->
-                <aside class="lg:col-span-1 space-y-3">
+                <aside class="lg:col-span-1 space-y-3" x-show="sidebarOpen" x-transition>
                     <div class="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm sticky top-6">
                         <h4 class="text-xs font-black text-gray-400 uppercase tracking-wider mb-4">
                             {{ __('Table of Contents') }}
                         </h4>
                         <nav class="space-y-1">
-                            <a href="#front-matter" @click="activeSection = 'front'"
+                            <a href="#front-matter"
+                                @click.prevent="activeSection = 'front'; document.getElementById('front-matter')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
                                 :class="activeSection === 'front' ? 'bg-indigo-50 text-indigo-700 font-extrabold' : 'text-gray-600 hover:bg-gray-50 font-semibold'"
                                 class="block px-3.5 py-2.5 rounded-xl text-xs transition-all">
                                 {{ __('Preliminaries') }}
                             </a>
-                            <a href="#chapter-1" @click="activeSection = 'ch1'"
+                            <a href="#chapter-1"
+                                @click.prevent="activeSection = 'ch1'; document.getElementById('chapter-1')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
                                 :class="activeSection === 'ch1' ? 'bg-indigo-50 text-indigo-700 font-extrabold' : 'text-gray-600 hover:bg-gray-50 font-semibold'"
                                 class="block px-3.5 py-2.5 rounded-xl text-xs transition-all">
                                 {{ __('Chapter 1: Introduction') }}
                             </a>
-                            <a href="#chapter-2" @click="activeSection = 'ch2'"
+                            <a href="#chapter-2"
+                                @click.prevent="activeSection = 'ch2'; document.getElementById('chapter-2')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
                                 :class="activeSection === 'ch2' ? 'bg-indigo-50 text-indigo-700 font-extrabold' : 'text-gray-600 hover:bg-gray-50 font-semibold'"
                                 class="block px-3.5 py-2.5 rounded-xl text-xs transition-all">
                                 {{ __('Chapter 2: Literature Review') }}
                             </a>
-                            <a href="#chapter-3" @click="activeSection = 'ch3'"
+                            <a href="#chapter-3"
+                                @click.prevent="activeSection = 'ch3'; document.getElementById('chapter-3')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
                                 :class="activeSection === 'ch3' ? 'bg-indigo-50 text-indigo-700 font-extrabold' : 'text-gray-600 hover:bg-gray-50 font-semibold'"
                                 class="block px-3.5 py-2.5 rounded-xl text-xs transition-all">
                                 {{ __('Chapter 3: Methodology') }}
                             </a>
-                            <a href="#chapter-4" @click="activeSection = 'ch4'"
+                            <a href="#chapter-4"
+                                @click.prevent="activeSection = 'ch4'; document.getElementById('chapter-4')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
                                 :class="activeSection === 'ch4' ? 'bg-indigo-50 text-indigo-700 font-extrabold' : 'text-gray-600 hover:bg-gray-50 font-semibold'"
                                 class="block px-3.5 py-2.5 rounded-xl text-xs transition-all">
                                 {{ __('Chapter 4: Data Findings') }}
                             </a>
-                            <a href="#chapter-5" @click="activeSection = 'ch5'"
+                            <a href="#chapter-5"
+                                @click.prevent="activeSection = 'ch5'; document.getElementById('chapter-5')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
                                 :class="activeSection === 'ch5' ? 'bg-indigo-50 text-indigo-700 font-extrabold' : 'text-gray-600 hover:bg-gray-50 font-semibold'"
                                 class="block px-3.5 py-2.5 rounded-xl text-xs transition-all">
                                 {{ __('Chapter 5: Conclusions') }}
                             </a>
-                            <a href="#references-appendices" @click="activeSection = 'ref'"
+                            <a href="#references-appendices"
+                                @click.prevent="activeSection = 'ref'; document.getElementById('references-appendices')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
                                 :class="activeSection === 'ref' ? 'bg-indigo-50 text-indigo-700 font-extrabold' : 'text-gray-600 hover:bg-gray-50 font-semibold'"
                                 class="block px-3.5 py-2.5 rounded-xl text-xs transition-all">
                                 {{ __('References & Appendices') }}
@@ -117,7 +190,7 @@
                     if (is_array($report->proofread_chapters)) {
                         foreach ($report->proofread_chapters as $idx => $p) {
                             $rawText = is_array($p)
-                                ? ($p['status'] === 'rejected' ? ($p['original'] ?? '') : ($p['corrected'] ?? $p['original'] ?? ''))
+                                ? (($p['status'] ?? 'accepted') === 'rejected' ? ($p['original'] ?? '') : ($p['corrected'] ?? $p['original'] ?? ''))
                                 : $p;
                             $textStr = trim(safe_str($rawText));
 
@@ -153,7 +226,8 @@
                 @endphp
 
                 <!-- Main Document Viewer -->
-                <main class="lg:col-span-3 space-y-8">
+                <main class="space-y-8 transition-all duration-300"
+                    :class="sidebarOpen ? 'lg:col-span-3' : 'lg:col-span-4'">
                     <!-- Proofread Chapters (1-3) -->
                     <section id="front-matter"
                         class="bg-white rounded-3xl p-8 sm:p-12 border border-gray-100 shadow-sm space-y-6">
@@ -161,6 +235,7 @@
                             <h2 class="text-xl font-black text-gray-900 tracking-tight mt-1">{{ __('Chapters 1–3') }}</h2>
                         </div>
 
+                        <div id="chapter-1" class="scroll-mt-24"></div>
                         <div class="space-y-4 leading-relaxed text-gray-800 text-sm font-normal relative">
                             @if(!empty($ch1to3Paragraphs))
                                 @php $paraCount = 0; @endphp
@@ -169,14 +244,28 @@
                                         $paraCount++;
                                         if (!empty($isTruncated) && $paraCount > 8)
                                             break;
-                                        $rawText = is_array($p) ? ($p['status'] === 'rejected' ? ($p['original'] ?? '') : ($p['corrected'] ?? $p['original'] ?? '')) : $p;
+                                        $rawText = is_array($p) ? (($p['status'] ?? 'accepted') === 'rejected' ? ($p['original'] ?? '') : ($p['corrected'] ?? $p['original'] ?? '')) : $p;
                                         $text = safe_str($rawText);
                                         $isHeading = !empty($p['isHeading']) || preg_match('/^(CHAPTER\s+\d+|[1-5]\.\d+)/i', $text);
+
+                                        $headingAnchor = '';
+                                        if (preg_match('/chapter\s*1/i', $text) || preg_match('/1\.\s*introduction/i', $text)) {
+                                            $headingAnchor = 'id="chapter-1"';
+                                        } elseif (preg_match('/chapter\s*2/i', $text) || preg_match('/2\.\s*literature/i', $text)) {
+                                            $headingAnchor = 'id="chapter-2"';
+                                        } elseif (preg_match('/chapter\s*3/i', $text) || preg_match('/3\.\s*methodology/i', $text)) {
+                                            $headingAnchor = 'id="chapter-3"';
+                                        }
                                     @endphp
                                     @if(!empty($text))
                                         @if($isHeading)
-                                            <h3
-                                                class="text-base font-extrabold text-gray-900 pt-4 pb-1 uppercase tracking-tight border-b border-gray-100">
+                                            @if($headingAnchor && strpos($headingAnchor, 'chapter-2') !== false)
+                                                <div id="chapter-2" class="scroll-mt-24"></div>
+                                            @elseif($headingAnchor && strpos($headingAnchor, 'chapter-3') !== false)
+                                                <div id="chapter-3" class="scroll-mt-24"></div>
+                                            @endif
+                                            <h3 {!! $headingAnchor !!}
+                                                class="text-base font-extrabold text-gray-900 pt-4 pb-1 uppercase tracking-tight border-b border-gray-100 scroll-mt-24">
                                                 {{ $text }}
                                             </h3>
                                         @else
@@ -198,7 +287,8 @@
                                             <i class="fa-solid fa-lock text-2xl"></i>
                                         </div>
                                         <h5 class="text-2xl font-black text-gray-900 mb-3 tracking-tight">
-                                            {{ __('Full Report Preview Locked') }}</h5>
+                                            {{ __('Full Report Preview Locked') }}
+                                        </h5>
                                         <p class="text-gray-500 text-sm mb-6 leading-relaxed font-medium">
                                             {{ __('Upgrade to Pro or Enterprise to unlock complete Chapters 1–5, full statistical contingency tables, and unlimited report exports.') }}
                                         </p>
@@ -616,35 +706,35 @@
         <!-- Floating Scroll Control Stack -->
         <!-- Floating Scroll Control Stack -->
         <div x-data="{ 
-                        showTop: false, 
-                        showBottom: true,
-                        getScrollContainer() {
-                            return document.getElementById('main-viewport') || document.querySelector('.content-pane') || document.documentElement;
-                        },
-                        checkScroll() {
-                            const p = this.getScrollContainer();
-                            const scrollTop = p.scrollTop || window.pageYOffset || 0;
-                            const scrollHeight = p.scrollHeight || document.documentElement.scrollHeight || 0;
-                            const clientHeight = p.clientHeight || window.innerHeight || 0;
+                            showTop: false, 
+                            showBottom: true,
+                            getScrollContainer() {
+                                return document.getElementById('main-viewport') || document.querySelector('.content-pane') || document.documentElement;
+                            },
+                            checkScroll() {
+                                const p = this.getScrollContainer();
+                                const scrollTop = p.scrollTop || window.pageYOffset || 0;
+                                const scrollHeight = p.scrollHeight || document.documentElement.scrollHeight || 0;
+                                const clientHeight = p.clientHeight || window.innerHeight || 0;
 
-                            this.showTop = scrollTop > 150;
-                            this.showBottom = (scrollTop + clientHeight) < (scrollHeight - 150);
-                        },
-                        scrollToTop() {
-                            const p = this.getScrollContainer();
-                            p.scrollTo({ top: 0, behavior: 'smooth' });
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                        },
-                        scrollToBottom() {
-                            const p = this.getScrollContainer();
-                            p.scrollTo({ top: p.scrollHeight, behavior: 'smooth' });
-                            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-                        }
-                    }" x-init="$nextTick(() => {
-                        checkScroll();
-                        const p = getScrollContainer();
-                        if (p) p.addEventListener('scroll', () => checkScroll(), { passive: true });
-                    })" @scroll.window.throttle.50ms="checkScroll()"
+                                this.showTop = scrollTop > 150;
+                                this.showBottom = (scrollTop + clientHeight) < (scrollHeight - 150);
+                            },
+                            scrollToTop() {
+                                const p = this.getScrollContainer();
+                                p.scrollTo({ top: 0, behavior: 'smooth' });
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                            },
+                            scrollToBottom() {
+                                const p = this.getScrollContainer();
+                                p.scrollTo({ top: p.scrollHeight, behavior: 'smooth' });
+                                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                            }
+                        }" x-init="$nextTick(() => {
+                            checkScroll();
+                            const p = getScrollContainer();
+                            if (p) p.addEventListener('scroll', () => checkScroll(), { passive: true });
+                        })" @scroll.window.throttle.50ms="checkScroll()"
             class="fixed bottom-12 right-6 z-[999] flex flex-col gap-2">
 
             <button x-show="showTop" x-transition @click="scrollToTop()"

@@ -18,12 +18,15 @@ class ResearchProposal extends Model
         'scope',
         'style',
         'content',
+        'budget',
+        'custom_instructions',
         'status'
     ];
 
     protected $casts = [
         'user_id' => 'integer',
-        'content' => 'array'
+        'content' => 'array',
+        'budget' => 'array',
     ];
 
     public function user()

@@ -89,6 +89,7 @@
                 @if($isChapter)
                     <div class="mt-3 mb-1">
                         <a href="#section-{{ $loop->iteration }}" data-nav-target="section-{{ $loop->iteration }}"
+                            @click.prevent="document.getElementById('section-{{ $loop->iteration }}')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
                             class="nav-link nav-chapter flex items-center rounded-xl text-[10px] font-black text-[#135e96] bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 transition-all group"
                             :class="sidebarOpen ? 'px-4 py-2.5' : 'p-2 justify-center'">
                             <span class="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded bg-[#2271b1] text-white text-[8px]"
@@ -100,6 +101,7 @@
                     </div>
                 @elseif($isPrelim)
                     <a href="#section-{{ $loop->iteration }}" data-nav-target="section-{{ $loop->iteration }}"
+                        @click.prevent="document.getElementById('section-{{ $loop->iteration }}')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
                         class="nav-link nav-prelim flex items-center rounded-xl text-[10px] font-bold text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all border border-transparent hover:border-gray-100 italic"
                         :class="sidebarOpen ? 'px-4 py-2' : 'p-2 justify-center'">
                         <span class="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded bg-gray-50 text-[8px] text-gray-400"
@@ -110,6 +112,7 @@
                     </a>
                 @else
                     <a href="#section-{{ $loop->iteration }}" data-nav-target="section-{{ $loop->iteration }}"
+                        @click.prevent="document.getElementById('section-{{ $loop->iteration }}')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
                         class="nav-link nav-section flex items-center rounded-xl text-xs font-bold text-gray-600 hover:bg-zinc-100 hover:text-[#135e96] transition-all border border-transparent hover:border-zinc-200 group"
                         :class="sidebarOpen ? 'px-4 py-2.5' : 'p-2 justify-center'">
                         <span
@@ -126,7 +129,7 @@
 @endsection
 
 @section('content')
-    <div class="flex flex-col bg-gray-50/50">
+    <div class="flex flex-col bg-gray-50/50" x-data="{ showRefineModal: false }">
         <!-- Condensed Sticky Export Configuration Top Bar -->
         <div
             class="sticky top-0 z-40 px-4 py-3 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm flex items-center justify-between">
@@ -205,6 +208,12 @@
                         </button>
                     </div>
 
+                    <button type="button" @click="showRefineModal = true"
+                        class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all">
+                        <i class="fa-solid fa-wand-magic-sparkles text-amber-600"></i>
+                        <span>{{ __('Refine Generation') }}</span>
+                    </button>
+
                     <button type="submit"
                         class="px-4 py-1.5 bg-[#2271b1] text-white rounded-xl font-black text-[8px] uppercase tracking-wider shadow-lg shadow-zinc-200/50 hover:bg-[#135e96] transition-all flex items-center group">
                         <i class="fa-solid fa-download mr-2 text-[10px]"></i>
@@ -212,6 +221,48 @@
                     </button>
                 </form>
             @endif
+        </div>
+
+        <!-- Refine Proposal Modal with Target Chapter Selector -->
+        <div x-show="showRefineModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4" style="display: none;">
+            <div class="bg-white rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base font-black text-gray-900 flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles text-[#2271b1]"></i>
+                        {{ __('Refine Proposal with AI') }}
+                    </h3>
+                    <button @click="showRefineModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <form action="{{ route('research-proposal.refine', $reportId) }}" method="POST" class="space-y-4">
+                    @csrf
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-gray-700">{{ __('Select Target Chapter / Section to Refine:') }}</label>
+                        <select name="target_section" class="w-full text-xs font-bold p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#2271b1]">
+                            <option value="all">{{ __('-- Entire Proposal (All Sections) --') }}</option>
+                            <option value="preliminaries">{{ __('Preliminaries & Abstract') }}</option>
+                            <option value="ch1">{{ __('Chapter 1: Introduction & Background') }}</option>
+                            <option value="ch2">{{ __('Chapter 2: Literature & Theoretical Framework') }}</option>
+                            <option value="ch3">{{ __('Chapter 3: Research Methodology & Sampling') }}</option>
+                            <option value="budget">{{ __('Proposed Budget & Work Plan') }}</option>
+                        </select>
+                        <p class="text-[10px] text-gray-400 font-medium">{{ __('Refining chapter-by-chapter keeps AI focus razor-sharp and prevents memory loss.') }}</p>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-gray-700">{{ __('Refinement Instructions:') }}</label>
+                        <textarea name="refinement_instructions" rows="4" required
+                            placeholder="{{ __('e.g. Deepen Chapter 2 literature review, expand Chapter 3 sampling formula, or rewrite specific sections...') }}"
+                            class="w-full text-xs p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#2271b1]"></textarea>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" @click="showRefineModal = false" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold">{{ __('Cancel') }}</button>
+                        <button type="submit" class="px-6 py-2 bg-[#2271b1] text-white rounded-xl text-xs font-bold shadow-md hover:bg-[#135e96] transition-all">
+                            {{ __('Regenerate Target Chapter') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 

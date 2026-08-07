@@ -18,6 +18,7 @@ class CompiledReport extends Model
         'chapter4_content',
         'chapter5_content',
         'final_docx_path',
+        'custom_instructions',
         'status',
     ];
 

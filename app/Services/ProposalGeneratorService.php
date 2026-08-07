@@ -47,6 +47,10 @@ class ProposalGeneratorService
             "Do NOT translate the names inside the [SECTION: ...] markers, even if you are writing the content in another language. " .
             "IMPORTANT: You MUST write the entire CONTENT of the sections in {$language}.";
 
+        if (!empty($proposal->custom_instructions)) {
+            $systemPrompt .= "\n\nCUSTOM USER PRESET INSTRUCTIONS & TONE/VOICE GUIDELINES:\n{$proposal->custom_instructions}\nStrictly follow these custom tone, structure, and content directives.";
+        }
+
         // ── 1. PRELIMINARIES ──
         $p0 = "Draft PRELIMINARY PAGES (Front Matter) for a research proposal titled '{$proposal->title}':\n" .
             "Use markers [SECTION: Name] for:\n" .
@@ -108,7 +112,23 @@ class ProposalGeneratorService
         Log::info("Drafting Ch 3 for ID: {$proposal->id}");
         $this->batchProcess($p3, $generatedContent, $systemPrompt);
 
-        // ── 5. REFERENCES & APPENDIX ──
+        // ── 5. PROPOSED BUDGET (If user entered budget) ──
+        if (!empty($proposal->budget) && is_array($proposal->budget)) {
+            $budgetSummary = "";
+            foreach ($proposal->budget as $b) {
+                if (is_array($b) && !empty($b['item'])) {
+                    $budgetSummary .= "- " . $b['item'] . ": KES " . ($b['cost'] ?? '0') . "\n";
+                }
+            }
+            if (!empty($budgetSummary)) {
+                $pBudget = "Draft SECTION: Proposed Budget & Work Plan for '{$proposal->title}':\n" .
+                    "Specified Budget Items:\n{$budgetSummary}\n" .
+                    "Use marker [SECTION: Proposed Budget & Work Plan] to format a clean breakdown table and justification.";
+                $this->batchProcess($pBudget, $generatedContent, $systemPrompt);
+            }
+        }
+
+        // ── 6. REFERENCES & APPENDIX ──
         sleep(1);
         $p6 = "Draft REFERENCES and APPENDIX for '{$proposal->title}':\n" .
             "Style: {$style}\n\n" .
@@ -122,6 +142,66 @@ class ProposalGeneratorService
             'content' => $generatedContent,
             'status' => 'generated'
         ]);
+
+        return $proposal;
+    }
+
+    /**
+     * Refine/Regenerate an existing proposal using user feedback (supports target chapter selection).
+     */
+    public function refineProposal(ResearchProposal $proposal, string $userFeedback, string $targetSection = 'all')
+    {
+        set_time_limit(600);
+        $existingContent = $proposal->content ?? [];
+        $style = $proposal->style ?? 'APA 7th';
+
+        $sectionFilterText = $targetSection !== 'all' ? "FOCUS EXCLUSIVELY ON REFINING TARGET SECTION: {$targetSection}. Do not modify unrelated sections." : "Refine document sections as requested.";
+
+        $systemPrompt = "You are a professional academic research consultant refining a research proposal titled '{$proposal->title}'.\n" .
+            "Academic style: {$style}.\n" .
+            "TARGET CHAPTER SCOPE: {$sectionFilterText}\n" .
+            "USER REFINEMENT INSTRUCTIONS: {$userFeedback}\n" .
+            "STRUCTURAL FREEDOM DIRECTIVE: You HAVE FULL FREEDOM to rewrite, rename headings, change section titles, format into bullet lists or numbered items, add new subsections, or reorganize content as instructed by the user.\n" .
+            "You MUST use English markers [SECTION: Section Name] before every section you write or update so they can be parsed.";
+
+        $prompt = "Refine the research proposal '{$proposal->title}' based on user feedback: {$userFeedback}\n" .
+            "Existing proposal sections:\n";
+        foreach ($existingContent as $title => $body) {
+            if ($targetSection === 'all' || stripos($title, $targetSection) !== false || stripos($targetSection, 'ch') !== false) {
+                $prompt .= "[SECTION: {$title}]\n" . \Illuminate\Support\Str::limit($body, 500) . "\n\n";
+            }
+        }
+
+        $refinedContent = [];
+        $this->batchProcess($prompt, $refinedContent, $systemPrompt);
+
+        if (!empty($refinedContent)) {
+            if ($targetSection !== 'all') {
+                $matchedKey = null;
+                foreach ($existingContent as $key => $val) {
+                    if (
+                        stripos($key, $targetSection) !== false ||
+                        ($targetSection === 'preliminaries' && (stripos($key, 'abstract') !== false || stripos($key, 'term') !== false || stripos($key, 'prelim') !== false)) ||
+                        ($targetSection === 'ch1' && (stripos($key, 'ch1') !== false || stripos($key, 'chapter 1') !== false || stripos($key, 'introduction') !== false)) ||
+                        ($targetSection === 'ch2' && (stripos($key, 'ch2') !== false || stripos($key, 'chapter 2') !== false || stripos($key, 'literature') !== false)) ||
+                        ($targetSection === 'ch3' && (stripos($key, 'ch3') !== false || stripos($key, 'chapter 3') !== false || stripos($key, 'methodology') !== false)) ||
+                        ($targetSection === 'budget' && (stripos($key, 'budget') !== false || stripos($key, 'cost') !== false))
+                    ) {
+                        $matchedKey = $key;
+                        break;
+                    }
+                }
+
+                if ($matchedKey) {
+                    $existingContent[$matchedKey] = implode("\n\n", $refinedContent);
+                } else {
+                    $existingContent = array_merge($existingContent, $refinedContent);
+                }
+            } else {
+                $existingContent = array_merge($existingContent, $refinedContent);
+            }
+            $proposal->update(['content' => $existingContent]);
+        }
 
         return $proposal;
     }

@@ -66,7 +66,27 @@ class ResearchProposalController extends Controller
             'methodology_type' => 'required|string|in:survey,qualitative,mixed',
             'scope' => 'nullable|string',
             'style' => 'required|string|in:apa7,mla9,harvard,chicago,ieee,vancouver,oscola',
+            'custom_instructions' => 'nullable|string',
+            'budget' => 'nullable|array',
         ]);
+
+        $cleanBudget = [];
+        if (!empty($validated['budget']) && is_array($validated['budget'])) {
+            foreach ($validated['budget'] as $b) {
+                if (is_array($b) && !empty($b['item'])) {
+                    $cleanBudget[] = [
+                        'item' => trim($b['item']),
+                        'cost' => (float) ($b['cost'] ?? 0)
+                    ];
+                }
+            }
+        }
+
+        $user = auth()->user();
+        $customInstructions = null;
+        if (!empty($validated['custom_instructions']) && $user && ($user->hasProAccess() || $user->isAdmin())) {
+            $customInstructions = $validated['custom_instructions'];
+        }
 
         $proposal = ResearchProposal::create([
             'user_id' => auth()->id(),
@@ -76,6 +96,8 @@ class ResearchProposalController extends Controller
             'methodology_type' => $validated['methodology_type'],
             'scope' => $validated['scope'],
             'style' => $validated['style'],
+            'custom_instructions' => $customInstructions,
+            'budget' => !empty($cleanBudget) ? $cleanBudget : null,
             'status' => 'draft'
         ]);
 
@@ -83,7 +105,26 @@ class ResearchProposalController extends Controller
         $this->proposalService->generateProposal($proposal);
 
         return redirect()->route('research-proposal.show', $proposal->id)
-            ->with('success', 'Your formal research proposal has been drafted!');
+            ->with('success', __('Your formal research proposal has been drafted!'));
+    }
+
+    /**
+     * Handle user feedback and refine an existing proposal.
+     */
+    public function refineProposal(Request $request, ResearchProposal $research_proposal)
+    {
+        $this->authorizeOwner($research_proposal);
+
+        $request->validate([
+            'refinement_instructions' => 'required|string|max:4000',
+            'target_section' => 'nullable|string',
+        ]);
+
+        $userFeedback = $request->input('refinement_instructions');
+        $targetSection = $request->input('target_section', 'all');
+        $this->proposalService->refineProposal($research_proposal, $userFeedback, $targetSection);
+
+        return redirect()->back()->with('success', __('Research proposal refined successfully based on your feedback!'));
     }
 
     /**

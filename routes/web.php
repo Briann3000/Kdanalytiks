@@ -307,11 +307,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/research-studio/report/history', [\App\Http\Controllers\ResearchStudioController::class, 'reportHistory'])->name('research-studio.report.history');
     Route::get('/research-studio/report/download/{report}', [\App\Http\Controllers\ResearchStudioController::class, 'downloadReport'])->name('research-studio.report.download');
     Route::get('/research-studio/report/preview/{report}', [\App\Http\Controllers\ResearchStudioController::class, 'previewReport'])->name('research-studio.report.preview');
+    Route::post('/research-studio/report/refine/{report}', [\App\Http\Controllers\ResearchStudioController::class, 'refineReport'])->name('research-studio.report.refine');
     Route::delete('/research-studio/report/destroy/{report}', [\App\Http\Controllers\ResearchStudioController::class, 'destroyReport'])->name('research-studio.report.destroy');
     Route::get('/research-studio/report/inferential-tests/{survey}', [\App\Http\Controllers\ResearchStudioController::class, 'getInferentialTests'])->name('research-studio.report.inferential-tests');
     Route::get('/research-studio/proofread', [\App\Http\Controllers\ResearchStudioController::class, 'createProofread'])->name('research-studio.proofread.create');
+    Route::get('/research-studio/proofread/history', [\App\Http\Controllers\ResearchStudioController::class, 'proofreadHistory'])->name('research-studio.proofread.history');
     Route::post('/research-studio/proofread/process', [\App\Http\Controllers\ResearchStudioController::class, 'processProofread'])->name('research-studio.proofread.process');
     Route::post('/research-studio/proofread/download', [\App\Http\Controllers\ResearchStudioController::class, 'downloadProofread'])->name('research-studio.proofread.download');
+    Route::delete('/research-studio/proofread/destroy/{proofread}', [\App\Http\Controllers\ResearchStudioController::class, 'destroyProofread'])->name('research-studio.proofread.destroy');
 
     // Standalone Humanizer Routes
     Route::get('/humanizer', [\App\Http\Controllers\HumanizerController::class, 'index'])->name('humanizer.index');
@@ -325,6 +328,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/transcription/analyze-with-socius', [\App\Http\Controllers\TranscriptionController::class, 'analyzeWithSocius'])->name('transcription.analyze-with-socius');
     Route::resource('transcription', \App\Http\Controllers\TranscriptionController::class)->only(['index', 'store']);
     Route::get('/research-proposal/preview/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'preview'])->name('research-proposal.preview');
+    Route::post('/research-proposal/refine/{research_proposal}', [\App\Http\Controllers\ResearchProposalController::class, 'refineProposal'])->name('research-proposal.refine');
     Route::post('/research-proposal/translate/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'translate'])->name('research-proposal.translate');
     Route::post('/research-proposal/export/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'export'])->name('research-proposal.export');
 
