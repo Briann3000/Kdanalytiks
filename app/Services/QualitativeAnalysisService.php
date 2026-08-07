@@ -152,6 +152,19 @@ RULES:
             $statsText .= "Choice: " . $stat['value'] . " | Count: " . $stat['count'] . " | Percentage: " . $stat['percentage'] . "%\n";
         }
 
+        //fetch KB rules
+        $kbPromptSection = "";
+        if (auth()->check()) {
+            $kbRules = auth()->user()->sociusKnowledgeBases()
+                ->where('is_active', true)
+                ->pluck('content')
+                ->filter()
+                ->implode("\n- ");
+
+            if (!empty($kbRules)) {
+                $kbPromptSection = "\n\nCUSTOM USER INSTRUCTIONS:\n- " . $kbRules;
+            }
+        }
         // Style-specific tone descriptors — tone only, length and format are enforced globally below
         $styleTones = [
             'apa' => 'Write in a formal academic tone consistent with APA 7th edition conventions.',

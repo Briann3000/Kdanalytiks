@@ -12,6 +12,13 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
+        #kda-btn,
+        #kda-box,
+        #chatbot-widget,
+        .kda-agent-fab {
+            display: none !important;
+        }
+
         [x-cloak] {
             display: none !important;
         }
@@ -241,35 +248,54 @@
             text-align: center !important;
         }
 
-        /* Form Render Header Styling */
-        .fb-render h1 {
-            font-size: 1.875rem !important;
+        /* Form Render Header & Typography Hierarchy Overrides */
+        .fb-render h1,
+        #previewRenderArea h1,
+        #previewRenderArea .field-header h1 {
+            font-size: 2.25rem !important;
+            line-height: 2.5rem !important;
             font-weight: 900 !important;
-            color: #111827 !important;
-            padding-left: 2.5rem !important;
-            border-left: 6px solid #6366f1 !important;
-            margin-top: 3.5rem !important;
-            margin-bottom: 2rem !important;
-            line-height: 1.2 !important;
-        }
-
-        .fb-render h2 {
-            font-size: 1.5rem !important;
-            font-weight: 800 !important;
-            color: #1f2937 !important;
-            padding-left: 1.5rem !important;
-            margin-top: 2.5rem !important;
-            margin-bottom: 1.5rem !important;
-            line-height: 1.3 !important;
-        }
-
-        .fb-render h3 {
-            font-size: 1.125rem !important;
-            font-weight: 800 !important;
-            color: #1f2937 !important;
-            padding-left: 1rem !important;
+            color: #0f172a !important;
+            letter-spacing: -0.025em !important;
             margin-top: 2rem !important;
-            margin-bottom: 1rem !important;
+            margin-bottom: 0.75rem !important;
+            border-bottom: 2px solid #e2e8f0 !important;
+            padding-bottom: 0.5rem !important;
+        }
+
+        .fb-render h2,
+        #previewRenderArea h2,
+        #previewRenderArea .field-header h2 {
+            font-size: 1.65rem !important;
+            line-height: 2.1rem !important;
+            font-weight: 800 !important;
+            color: #1e293b !important;
+            letter-spacing: -0.02em !important;
+            margin-top: 1.5rem !important;
+            margin-bottom: 0.5rem !important;
+        }
+
+        .fb-render h3,
+        #previewRenderArea h3,
+        #previewRenderArea .field-header h3 {
+            font-size: 1.25rem !important;
+            line-height: 1.65rem !important;
+            font-weight: 700 !important;
+            color: #334155 !important;
+            margin-top: 1.25rem !important;
+            margin-bottom: 0.5rem !important;
+        }
+
+        .fb-render p,
+        #previewRenderArea p,
+        #previewRenderArea .field-paragraph,
+        #previewRenderArea .field-note,
+        #previewRenderArea .field-description {
+            font-size: 1rem !important;
+            line-height: 1.65 !important;
+            font-weight: 400 !important;
+            color: #475569 !important;
+            margin-bottom: 1.25rem !important;
         }
 
         .recorder-status {
@@ -921,27 +947,27 @@
 
                         <div class="p-4 sm:p-8 space-y-4 sm:space-y-6 min-h-[500px] bg-slate-50/20 w-full overflow-x-hidden"
                             id="questions-list" x-init="
-                                                                    new Sortable($el, {
-                                                                        handle: '.drag-handle',
-                                                                        animation: 150,
-                                                                        ghostClass: 'sortable-ghost',
-                                                                        delay: 150,
-                                                                        delayOnTouchOnly: true,
-                                                                        onEnd: (evt) => {
-                                                                            const newQs = [...questions];
-                                                                            const [movedItem] = newQs.splice(evt.oldIndex, 1);
-                                                                            newQs.splice(evt.newIndex, 0, movedItem);
-                                                                            questions = newQs;
-                                                                            syncToJson();
-                                                                        }
-                                                                    })
-                                                                ">
+                                                                                new Sortable($el, {
+                                                                                    handle: '.drag-handle',
+                                                                                    animation: 150,
+                                                                                    ghostClass: 'sortable-ghost',
+                                                                                    delay: 150,
+                                                                                    delayOnTouchOnly: true,
+                                                                                    onEnd: (evt) => {
+                                                                                        const newQs = [...questions];
+                                                                                        const [movedItem] = newQs.splice(evt.oldIndex, 1);
+                                                                                        newQs.splice(evt.newIndex, 0, movedItem);
+                                                                                        questions = newQs;
+                                                                                        syncToJson();
+                                                                                    }
+                                                                                })
+                                                                            ">
                             <template x-for="(q, index) in questions" :key="q.id || index">
                                 <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6 mb-4 relative hover:border-zinc-300 hover:shadow-md transition-all"
                                     :class="[
-                                                        q.type === 'group' ? 'border-l-4 border-l-rose-400' : '',
-                                                        selectedQuestions.includes(index) ? 'ring-2 ring-[#2271b1] bg-zinc-50/50' : ''
-                                                    ]">
+                                                                    q.type === 'group' ? 'border-l-4 border-l-rose-400' : '',
+                                                                    selectedQuestions.includes(index) ? 'ring-2 ring-[#2271b1] bg-zinc-50/50' : ''
+                                                                ]">
 
                                     <!-- Unified Question Card Top Header Bar -->
                                     <div class="flex items-center justify-between pb-3 mb-4 border-b border-gray-100 gap-3">
@@ -1053,8 +1079,15 @@
                                     <div class="space-y-3 mb-4">
                                         <div>
                                             <input type="text" x-model="q.label" @input="syncToJson()"
-                                                placeholder="{{ __('Enter your question here...') }}"
-                                                class="w-full text-base sm:text-lg font-bold text-gray-900 placeholder-gray-300 border border-gray-200 rounded-xl px-4 py-3 sm:px-5 sm:py-3.5 focus:ring-2 focus:ring-[#2271b1]/20 focus:border-[#2271b1] bg-white transition-all shadow-sm">
+                                                :placeholder="['header'].includes(q.type) ? '{{ __('Enter section title / header...') }}' : (['note', 'description'].includes(q.type) ? '{{ __('Enter description text or instructions...') }}' : '{{ __('Enter your question here...') }}')"
+                                                class="w-full border border-gray-200 rounded-xl px-4 py-3 sm:px-5 sm:py-3.5 focus:ring-2 focus:ring-[#2271b1]/20 focus:border-[#2271b1] bg-white transition-all shadow-sm"
+                                                :class="{
+                                                        'text-2xl sm:text-3xl font-black text-slate-900': q.type === 'header' && q.subtype === 'h1',
+                                                        'text-xl sm:text-2xl font-extrabold text-slate-800': q.type === 'header' && (q.subtype === 'h2' || !q.subtype),
+                                                        'text-lg sm:text-xl font-bold text-slate-700': q.type === 'header' && q.subtype === 'h3',
+                                                        'text-sm sm:text-base font-normal text-slate-600 italic': ['note', 'description'].includes(q.type),
+                                                        'text-base sm:text-lg font-bold text-gray-900': !['header', 'note', 'description'].includes(q.type)
+                                                    }">
                                         </div>
 
                                         <div class="flex items-center">
@@ -1072,6 +1105,7 @@
                                                     <option value="date">{{ __('Date') }}</option>
                                                     <option value="datetime">{{ __('Date & Time') }}</option>
                                                     <option value="decimal">{{ __('Decimal') }}</option>
+                                                    <option value="description">{{ __('Description') }}</option>
                                                     <option value="file">{{ __('File Upload') }}</option>
                                                     <option value="location">{{ __('GPS Location') }}</option>
                                                     <option value="header">{{ __('Header') }}</option>
@@ -1315,7 +1349,7 @@
                                                     </button>
 
                                                     <div
-                                                        x-show="!['header', 'group', 'note', 'hidden', 'acknowledge'].includes(q.type)">
+                                                        x-show="!['header', 'group', 'note', 'description', 'hidden', 'acknowledge'].includes(q.type)">
                                                         <button type="button" @click="q.showConstraint = !q.showConstraint"
                                                             class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center border"
                                                             :class="q.constraint || q.showConstraint ? 'bg-[#2271b1] text-white border-blue-500 shadow-sm' : 'bg-white text-gray-700 hover:bg-blue-50 border-gray-200'">
@@ -2121,6 +2155,9 @@
                         newQ.subtype = 'h3';
                         newQ.label = 'New Section';
                     }
+                    if (type === 'description' || type === 'note') {
+                        newQ.label = 'Enter survey description or instructions here...';
+                    }
                     if (type === 'likert_matrix') {
                         newQ.rows = [{ label: 'Item 1', value: 'item-1' }, { label: 'Item 2', value: 'item-2' }];
                         newQ.columns = [{ label: 'Strongly Disagree', value: '1' }, { label: 'Disagree', value: '2' }, { label: 'Neutral', value: '3' }, { label: 'Agree', value: '4' }, { label: 'Strongly Agree', value: '5' }];
@@ -2184,12 +2221,12 @@
                 clipboardQuestion: null,
 
                 getQuestionNumber(index) {
-                    if (this.questions[index] && ['header', 'group', 'section_break', 'note'].includes(this.questions[index].type)) {
+                    if (this.questions[index] && ['header', 'group', 'section_break', 'note', 'description'].includes(this.questions[index].type)) {
                         return null;
                     }
                     let count = 0;
                     for (let i = 0; i <= index; i++) {
-                        if (this.questions[i] && !['header', 'group', 'section_break', 'note'].includes(this.questions[i].type)) {
+                        if (this.questions[i] && !['header', 'group', 'section_break', 'note', 'description'].includes(this.questions[i].type)) {
                             count++;
                         }
                     }
@@ -2461,7 +2498,7 @@
                                         window.location.href = "{{ route('surveys.index') }}";
                                     });
                             @endif
-                                                        }
+                                                                    }
                     });
                 },
 
@@ -2838,6 +2875,7 @@
                     'range': 'number',
                     'photo': 'file',
                     'note': 'paragraph',
+                    'description': 'paragraph',
                     'time': 'text',
                     'audio': 'audio_recorder',
                     'video': 'video_recorder',
@@ -2864,7 +2902,7 @@
                         const fieldClone = { ...field, type: finalType };
 
                         // Numbering
-                        if (!['header', 'paragraph', 'hidden', 'note', 'group'].includes(field.type) && field.label) {
+                        if (!['header', 'paragraph', 'hidden', 'note', 'description', 'group'].includes(field.type) && field.label) {
                             fieldClone.label = `${qNum}. ${field.label}`;
                             qNum++;
                         }
@@ -2930,12 +2968,12 @@
                             const id = fieldData.name;
                             return {
                                 field: `
-                                                                                                                                                                                                    <div class="rating-wrapper bg-white py-6 px-4 rounded-2xl mb-4 border border-gray-100 shadow-sm">
-                                                                                                                                                                                                        <div class="likert-container" id="likert_${id}" style="display: flex !important; justify-content: space-between !important; gap: 8px !important;">
-                                                                                                                                                                                                            ${[1, 2, 3, 4, 5].map(i => `<div class="likert-item" data-value="${i}" onclick="setLikertValue('${id}', ${i})" style="flex:1; text-align:center; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; font-weight:700;">${i}</div>`).join('')}
-                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                        <input type="hidden" name="${id}" id="input_${id}" value="" onchange="updatePreviewVisibility()">
-                                                                                                                                                                                                    </div>`
+                                                                                                                                                                                                                <div class="rating-wrapper bg-white py-6 px-4 rounded-2xl mb-4 border border-gray-100 shadow-sm">
+                                                                                                                                                                                                                    <div class="likert-container" id="likert_${id}" style="display: flex !important; justify-content: space-between !important; gap: 8px !important;">
+                                                                                                                                                                                                                        ${[1, 2, 3, 4, 5].map(i => `<div class="likert-item" data-value="${i}" onclick="setLikertValue('${id}', ${i})" style="flex:1; text-align:center; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; font-weight:700;">${i}</div>`).join('')}
+                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                    <input type="hidden" name="${id}" id="input_${id}" value="" onchange="updatePreviewVisibility()">
+                                                                                                                                                                                                                </div>`
                             };
                         },
                         'ranking_list': function (fieldData) {
@@ -2943,25 +2981,25 @@
                             const options = fieldData.values || [];
                             return {
                                 field: `
-                                                                                                                                                                                                    <div class="ranking-wrapper bg-white p-6 rounded-2xl mb-4 border border-gray-100 shadow-sm">
-                                                                                                                                                                                                        <div class="grid grid-cols-2 gap-4">
-                                                                                                                                                                                                            <div>
-                                                                                                                                                                                                                <span class="text-[10px] font-black text-zinc-2000 uppercase tracking-widest block mb-2">Choices</span>
-                                                                                                                                                                                                                <div id="pool_${id}" class="rank-pool" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;">
-                                                                                                                                                                                                                    ${options.map(opt => `
-                                                                                                                                                                                                                        <div class="rank-item" data-value="${opt.value}" onclick="toggleRankItem('${id}', this)">
-                                                                                                                                                                                                                            ${opt.label}
+                                                                                                                                                                                                                <div class="ranking-wrapper bg-white p-6 rounded-2xl mb-4 border border-gray-100 shadow-sm">
+                                                                                                                                                                                                                    <div class="grid grid-cols-2 gap-4">
+                                                                                                                                                                                                                        <div>
+                                                                                                                                                                                                                            <span class="text-[10px] font-black text-zinc-2000 uppercase tracking-widest block mb-2">Choices</span>
+                                                                                                                                                                                                                            <div id="pool_${id}" class="rank-pool" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;">
+                                                                                                                                                                                                                                ${options.map(opt => `
+                                                                                                                                                                                                                                    <div class="rank-item" data-value="${opt.value}" onclick="toggleRankItem('${id}', this)">
+                                                                                                                                                                                                                                        ${opt.label}
+                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                `).join('')}
+                                                                                                                                                                                                                            </div>
                                                                                                                                                                                                                         </div>
-                                                                                                                                                                                                                    `).join('')}
-                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                            <div>
-                                                                                                                                                                                                                <span class="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2">Your Order</span>
-                                                                                                                                                                                                                <div id="ranked_${id}" class="rank-ordered" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;"></div>
-                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                        <input type="hidden" name="${id}" id="input_${id}" value="">
-                                                                                                                                                                                                    </div>`,
+                                                                                                                                                                                                                        <div>
+                                                                                                                                                                                                                            <span class="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-2">Your Order</span>
+                                                                                                                                                                                                                            <div id="ranked_${id}" class="rank-ordered" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;"></div>
+                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                    <input type="hidden" name="${id}" id="input_${id}" value="">
+                                                                                                                                                                                                                </div>`,
                                 onRender: () => setupRankingUI(id)
                             };
                         },
@@ -2969,38 +3007,38 @@
                             const id = fieldData.name + '_preview';
                             return {
                                 field: `
-                                                                                                                                      <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
-                                                                                                                                        <span class="kobo-status-badge" id="status_${id}">Voice Response</span>
+                                                                                                                                                  <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
+                                                                                                                                                    <span class="kobo-status-badge" id="status_${id}">Voice Response</span>
 
-                                                                                                                                        <div class="kobo-media-row mt-2">
-                                                                                                                                            <button type="button" id="start_${id}" class="kobo-record-btn">
-                                                                                                                                                <i class="fa-solid fa-microphone"></i>
-                                                                                                                                                <span>Start Recording</span>
-                                                                                                                                            </button>
+                                                                                                                                                    <div class="kobo-media-row mt-2">
+                                                                                                                                                        <button type="button" id="start_${id}" class="kobo-record-btn">
+                                                                                                                                                            <i class="fa-solid fa-microphone"></i>
+                                                                                                                                                            <span>Start Recording</span>
+                                                                                                                                                        </button>
 
-                                                                                                                                            <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
-                                                                                                                                                <i class="fa-solid fa-square"></i>
-                                                                                                                                                <span>Stop</span>
-                                                                                                                                                <span class="kobo-timer" id="timer_${id}">00:00</span>
-                                                                                                                                            </button>
+                                                                                                                                                        <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
+                                                                                                                                                            <i class="fa-solid fa-square"></i>
+                                                                                                                                                            <span>Stop</span>
+                                                                                                                                                            <span class="kobo-timer" id="timer_${id}">00:00</span>
+                                                                                                                                                        </button>
 
-                                                                                                                                            <div id="upload_container_${id}">
-                                                                                                                                                <label for="file_${id}" class="kobo-upload-btn">
-                                                                                                                                                    <i class="fa-solid fa-upload"></i>
-                                                                                                                                                    <span>Upload audio File</span>
-                                                                                                                                                    <input type="file" id="file_${id}" accept="audio/*" class="hidden" style="display:none;">
-                                                                                                                                                </label>
-                                                                                                                                            </div>
+                                                                                                                                                        <div id="upload_container_${id}">
+                                                                                                                                                            <label for="file_${id}" class="kobo-upload-btn">
+                                                                                                                                                                <i class="fa-solid fa-upload"></i>
+                                                                                                                                                                <span>Upload audio File</span>
+                                                                                                                                                                <input type="file" id="file_${id}" accept="audio/*" class="hidden" style="display:none;">
+                                                                                                                                                            </label>
+                                                                                                                                                        </div>
 
-                                                                                                                                            <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
-                                                                                                                                                <i class="fa-solid fa-trash-can mr-1"></i> Discard
-                                                                                                                                            </button>
-                                                                                                                                        </div>
+                                                                                                                                                        <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
+                                                                                                                                                            <i class="fa-solid fa-trash-can mr-1"></i> Discard
+                                                                                                                                                        </button>
+                                                                                                                                                    </div>
 
-                                                                                                                                        <div class="mt-4">
-                                                                                                                                            <audio id="player_${id}" controls class="hidden w-full" style="display:none;"></audio>
-                                                                                                                                        </div>
-                                                                                                                                    </div>`,
+                                                                                                                                                    <div class="mt-4">
+                                                                                                                                                        <audio id="player_${id}" controls class="hidden w-full" style="display:none;"></audio>
+                                                                                                                                                    </div>
+                                                                                                                                                </div>`,
                                 onRender: () => setupPreviewRecorder(id, 'audio')
                             };
                         },
@@ -3008,39 +3046,39 @@
                             const id = fieldData.name + '_preview';
                             return {
                                 field: `
-                                                                                                                                      <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
-                                                                                                                                        <span class="kobo-status-badge" id="status_${id}">Video Response</span>
+                                                                                                                                                  <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
+                                                                                                                                                    <span class="kobo-status-badge" id="status_${id}">Video Response</span>
 
-                                                                                                                                        <div class="relative aspect-video bg-black rounded-xl overflow-hidden mb-4" style="background:black; aspect-ratio:16/9; position:relative;">
-                                                                                                                                            <video id="preview_${id}" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; opacity:0.8;"></video>
-                                                                                                                                            <video id="player_${id}" controls style="display:none; width:100%; height:100%; object-fit:contain;"></video>
-                                                                                                                                        </div>
+                                                                                                                                                    <div class="relative aspect-video bg-black rounded-xl overflow-hidden mb-4" style="background:black; aspect-ratio:16/9; position:relative;">
+                                                                                                                                                        <video id="preview_${id}" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; opacity:0.8;"></video>
+                                                                                                                                                        <video id="player_${id}" controls style="display:none; width:100%; height:100%; object-fit:contain;"></video>
+                                                                                                                                                    </div>
 
-                                                                                                                                        <div class="kobo-media-row">
-                                                                                                                                            <button type="button" id="start_${id}" class="kobo-record-btn">
-                                                                                                                                                <i class="fa-solid fa-video"></i>
-                                                                                                                                                <span>Start Recording</span>
-                                                                                                                                            </button>
+                                                                                                                                                    <div class="kobo-media-row">
+                                                                                                                                                        <button type="button" id="start_${id}" class="kobo-record-btn">
+                                                                                                                                                            <i class="fa-solid fa-video"></i>
+                                                                                                                                                            <span>Start Recording</span>
+                                                                                                                                                        </button>
 
-                                                                                                                                            <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
-                                                                                                                                                <i class="fa-solid fa-square"></i>
-                                                                                                                                                <span>Stop</span>
-                                                                                                                                                <span class="kobo-timer" id="timer_${id}">00:00</span>
-                                                                                                                                            </button>
+                                                                                                                                                        <button type="button" id="stop_${id}" class="kobo-record-btn recording hidden" style="display:none;">
+                                                                                                                                                            <i class="fa-solid fa-square"></i>
+                                                                                                                                                            <span>Stop</span>
+                                                                                                                                                            <span class="kobo-timer" id="timer_${id}">00:00</span>
+                                                                                                                                                        </button>
 
-                                                                                                                                            <div id="upload_container_${id}">
-                                                                                                                                                <label for="file_${id}" class="kobo-upload-btn">
-                                                                                                                                                    <i class="fa-solid fa-upload"></i>
-                                                                                                                                                    <span>Upload video File</span>
-                                                                                                                                                    <input type="file" id="file_${id}" accept="video/*" class="hidden" style="display:none;">
-                                                                                                                                                </label>
-                                                                                                                                            </div>
+                                                                                                                                                        <div id="upload_container_${id}">
+                                                                                                                                                            <label for="file_${id}" class="kobo-upload-btn">
+                                                                                                                                                                <i class="fa-solid fa-upload"></i>
+                                                                                                                                                                <span>Upload video File</span>
+                                                                                                                                                                <input type="file" id="file_${id}" accept="video/*" class="hidden" style="display:none;">
+                                                                                                                                                            </label>
+                                                                                                                                                        </div>
 
-                                                                                                                                            <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
-                                                                                                                                                <i class="fa-solid fa-trash-can mr-1"></i> Discard
-                                                                                                                                            </button>
-                                                                                                                                        </div>
-                                                                                                                                    </div>`,
+                                                                                                                                                        <button type="button" id="retake_${id}" class="text-[10px] font-black uppercase text-red-500 hover:text-red-700 hidden" style="display:none; background:none; border:none; cursor:pointer;">
+                                                                                                                                                            <i class="fa-solid fa-trash-can mr-1"></i> Discard
+                                                                                                                                                        </button>
+                                                                                                                                                    </div>
+                                                                                                                                                </div>`,
                                 onRender: () => setupPreviewRecorder(id, 'video')
                             };
                         },

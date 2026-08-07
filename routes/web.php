@@ -274,6 +274,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/socius/knowledge-base/{knowledgeBase}', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'update'])->name('socius.knowledge-base.update');
     Route::delete('/socius/knowledge-base/{knowledgeBase}', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'destroy'])->name('socius.knowledge-base.destroy');
 
+    // ── Standalone Socius AI Chat (no survey required) ──────────────────────
+    Route::middleware(['throttle:60,1'])->prefix('socius/chat')->name('socius.chat.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\StandaloneSociusController::class, 'index'])->name('index');
+        Route::get('/threads', [\App\Http\Controllers\StandaloneSociusController::class, 'threads'])->name('threads');
+        Route::post('/threads', [\App\Http\Controllers\StandaloneSociusController::class, 'storeThread'])->name('threads.store');
+        Route::get('/threads/{thread}', [\App\Http\Controllers\StandaloneSociusController::class, 'showThread'])->name('threads.show');
+        Route::post('/threads/{thread}/messages/stream', [\App\Http\Controllers\StandaloneSociusController::class, 'streamThread'])->name('threads.stream');
+        Route::patch('/threads/{thread}', [\App\Http\Controllers\StandaloneSociusController::class, 'updateThread'])->name('threads.update');
+        Route::post('/threads/{thread}/pin-toggle', [\App\Http\Controllers\StandaloneSociusController::class, 'togglePinThread'])->name('threads.pin_toggle');
+        Route::delete('/threads/{thread}', [\App\Http\Controllers\StandaloneSociusController::class, 'destroyThread'])->name('threads.destroy');
+        Route::get('/threads/{thread}/export', [\App\Http\Controllers\StandaloneSociusController::class, 'exportThread'])->name('threads.export');
+    });
+
 
     Route::prefix('library')->name('library.')->group(function () {
         Route::get('/templates', [SurveyController::class, 'templatesIndex'])->name('templates');
@@ -294,6 +307,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/research-studio/report/history', [\App\Http\Controllers\ResearchStudioController::class, 'reportHistory'])->name('research-studio.report.history');
     Route::get('/research-studio/report/download/{report}', [\App\Http\Controllers\ResearchStudioController::class, 'downloadReport'])->name('research-studio.report.download');
     Route::get('/research-studio/report/preview/{report}', [\App\Http\Controllers\ResearchStudioController::class, 'previewReport'])->name('research-studio.report.preview');
+    Route::delete('/research-studio/report/destroy/{report}', [\App\Http\Controllers\ResearchStudioController::class, 'destroyReport'])->name('research-studio.report.destroy');
     Route::get('/research-studio/report/inferential-tests/{survey}', [\App\Http\Controllers\ResearchStudioController::class, 'getInferentialTests'])->name('research-studio.report.inferential-tests');
     Route::get('/research-studio/proofread', [\App\Http\Controllers\ResearchStudioController::class, 'createProofread'])->name('research-studio.proofread.create');
     Route::post('/research-studio/proofread/process', [\App\Http\Controllers\ResearchStudioController::class, 'processProofread'])->name('research-studio.proofread.process');
@@ -308,6 +322,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Standalone AI Media Transcription Routes
     Route::get('/transcription', [\App\Http\Controllers\TranscriptionController::class, 'index'])->name('transcription.index');
     Route::post('/transcription/transcribe', [\App\Http\Controllers\TranscriptionController::class, 'transcribe'])->name('transcription.transcribe');
+    Route::post('/transcription/analyze-with-socius', [\App\Http\Controllers\TranscriptionController::class, 'analyzeWithSocius'])->name('transcription.analyze-with-socius');
     Route::resource('transcription', \App\Http\Controllers\TranscriptionController::class)->only(['index', 'store']);
     Route::get('/research-proposal/preview/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'preview'])->name('research-proposal.preview');
     Route::post('/research-proposal/translate/{reportId}', [\App\Http\Controllers\ResearchProposalController::class, 'translate'])->name('research-proposal.translate');

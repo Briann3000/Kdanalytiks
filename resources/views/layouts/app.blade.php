@@ -88,6 +88,7 @@
             margin: 0;
             padding: 0;
             font-family: 'Inter', sans-serif;
+            overscroll-behaviour-y: none;
         }
 
         /* Fluid Layout Helpers */
@@ -200,8 +201,21 @@
                 z-index: 999;
             }
 
-            .workspace-layout {
+            .workspace-layout:not(.socius-workspace-full) {
                 height: auto;
+            }
+
+            .workspace-layout.socius-workspace-full {
+                height: calc(100dvh - 4.1rem) !important;
+                overflow: hidden !important;
+            }
+
+            main.socius-full-viewport {
+                padding: 0 !important;
+                margin: 0 !important;
+                padding-bottom: 0 !important;
+                overflow: hidden !important;
+                height: 100% !important;
             }
         }
 
@@ -310,41 +324,14 @@
             padding-bottom: env(safe-area-inset-bottom, 16px);
         }
 
-        /* Pull-to-Refresh Visuals - Premium Glassmorphism */
-        #ptr-indicator {
-            position: fixed;
-            top: -70px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            color: #4f46e5;
-            z-index: 9999;
-            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        #ptr-indicator .refresh-text {
-            display: none;
-            /* Hide text for a cleaner icon-only look */
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom, 16px);
         }
     </style>
 </head>
 
 <body class="font-sans antialiased bg-gray-50 text-gray-900 overflow-x-hidden" x-data="{ mobileMenuOpen: false }"
     :class="Capacitor.isNativePlatform() ? 'is-native-app' : ''">
-    <!-- Pull to Refresh Indicator -->
-    <div id="ptr-indicator">
-        <i class="fa-solid fa-arrows-rotate animate-spin-slow"></i>
-    </div>
     <div class="min-h-screen flex flex-col"
         x-data="{ mobileNavOpen: false, sidebarOpen: true, desktopSidebarOpen: window.innerWidth > 1024 && !{{ request()->routeIs('surveys.create', 'surveys.edit') ? 'true' : 'false' }} }"
         @close-sidebar.window="desktopSidebarOpen = false" @open-sidebar.window="desktopSidebarOpen = true">
@@ -644,8 +631,16 @@
             $isWorkspace = auth()->check() && auth()->user()->hasVerifiedEmail() && !request()->routeIs($excludedRoutes);
         @endphp
 
+        @php
+            $isSociusFullHeight = request()->routeIs('socius.chat.*')
+                || request()->routeIs('transcription.*')
+                || request('reportTab') === 'analyse'
+                || (request()->routeIs('surveys.reports') && request('reportTab') === 'analyse')
+                || request()->routeIs('docs*');
+        @endphp
+
         @if($isWorkspace || View::hasSection('sidebar'))
-            <div class="workspace-layout">
+            <div class="workspace-layout {{ $isSociusFullHeight ? 'socius-workspace-full' : '' }}">
                 <!-- Sidebar Overlay (Mobile Only) -->
                 <div class="sidebar-overlay flex xl:hidden" id="sidebar-overlay" x-show="desktopSidebarOpen" x-cloak
                     @click="desktopSidebarOpen = false" x-transition.opacity
@@ -667,10 +662,10 @@
                 <!-- Sub Sidebar (Contextual) -->
                 @yield('sub_sidebar')
 
-                <main id="main-viewport" class="content-pane custom-scrollbar pb-24 md:pb-0 flex-1 overflow-x-hidden"
-                    style="{{ (request()->routeIs('docs*') || request('reportTab') === 'analyse') ? 'overflow: hidden !important; padding: 0 !important;' : '' }}">
-                    <div
-                        class="{{ (request()->routeIs('docs*') || request('reportTab') === 'analyse') ? 'h-full flex flex-col' : 'flex-grow' }}">
+                <main id="main-viewport"
+                    class="content-pane custom-scrollbar flex-1 overflow-x-hidden {{ $isSociusFullHeight ? 'socius-full-viewport' : '' }}"
+                    style="{{ $isSociusFullHeight ? 'overflow: hidden !important; padding: 0 !important; margin: 0 !important;' : '' }}">
+                    <div class="{{ $isSociusFullHeight ? 'h-full flex flex-col p-0 m-0' : 'flex-grow' }}">
                         <!-- Global Session Alerts -->
                         @if(session('success') || session('error'))
                             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
@@ -700,42 +695,44 @@
 
                         @yield('content')
                     </div>
-                    @if(request('reportTab') !== 'analyse')
+                    @if(!$isSociusFullHeight)
                         @include('layouts.partials.footer')
                     @endif
                 </main>
 
-                <!-- Mobile Bottom Navigation (Visible only on small screens) -->
+                <!-- Mobile Bottom Navigation (Visible only on small screens for normal non-Socius pages) -->
                 @auth
-                    @php
-                        $roleValNav = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
-                    @endphp
-                    <nav
-                        class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 sm:hidden {{ request('reportTab') === 'analyse' ? 'hidden' : 'flex' }} items-center justify-around py-2 z-40">
+                    @if(!$isSociusFullHeight)
+                        @php
+                            $roleValNav = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
+                        @endphp
                         <nav
-                            class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 flex justify-around items-center h-16 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe pt-2">
-                            <a href="{{ route($roleValNav . '.dashboard') }}"
-                                class="flex flex-col items-center justify-center w-full text-zinc-500 hover:text-[#2271b1] {{ request()->routeIs($roleValNav . '.dashboard') ? 'text-[#2271b1]' : '' }} transition-colors">
-                                <i class="fa-solid fa-house mb-1 text-lg"></i>
-                                <span class="text-[10px] font-bold">{{ __('Home') }}</span>
-                            </a>
-                            <a href="{{ route('surveys.index', ['status' => 'active']) }}"
-                                class="flex flex-col items-center justify-center w-full text-zinc-500 hover:text-[#2271b1] {{ (request()->routeIs('surveys.index') && request('status') === 'active') ? 'text-[#2271b1]' : '' }} transition-colors">
-                                <i class="fa-solid fa-layer-group mb-1 text-lg"></i>
-                                <span class="text-[10px] font-bold">{{ __('Projects') }}</span>
-                            </a>
-                            <a href="{{ route('surveys.create') }}"
-                                class="flex flex-col items-center justify-center w-full text-zinc-500 hover:text-[#2271b1] {{ request()->routeIs('surveys.create') ? 'text-[#2271b1]' : '' }} transition-colors">
-                                <i class="fa-solid fa-plus mb-1 text-lg"></i>
-                                <span class="text-[10px] font-bold">{{ __('Create') }}</span>
-                            </a>
-                            <a href="{{ route('research-proposal.index') }}"
-                                class="flex flex-col items-center justify-center w-full text-zinc-500 hover:text-[#2271b1] {{ request()->routeIs('research-proposal.*') ? 'text-[#2271b1]' : '' }} transition-colors">
-                                <i class="fa-solid fa-file-signature mb-1 text-lg"></i>
-                                <span class="text-[10px] font-bold">{{ __('Report') }}</span>
-                            </a>
+                            class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 sm:hidden flex items-center justify-around py-2 z-40">
+                            <nav
+                                class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 flex justify-around items-center h-16 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe pt-2">
+                                <a href="{{ route($roleValNav . '.dashboard') }}"
+                                    class="flex flex-col items-center justify-center w-full text-zinc-500 hover:text-[#2271b1] {{ request()->routeIs($roleValNav . '.dashboard') ? 'text-[#2271b1]' : '' }} transition-colors">
+                                    <i class="fa-solid fa-house mb-1 text-lg"></i>
+                                    <span class="text-[10px] font-bold">{{ __('Home') }}</span>
+                                </a>
+                                <a href="{{ route('surveys.index', ['status' => 'active']) }}"
+                                    class="flex flex-col items-center justify-center w-full text-zinc-500 hover:text-[#2271b1] {{ (request()->routeIs('surveys.index') && request('status') === 'active') ? 'text-[#2271b1]' : '' }} transition-colors">
+                                    <i class="fa-solid fa-layer-group mb-1 text-lg"></i>
+                                    <span class="text-[10px] font-bold">{{ __('Projects') }}</span>
+                                </a>
+                                <a href="{{ route('surveys.create') }}"
+                                    class="flex flex-col items-center justify-center w-full text-zinc-500 hover:text-[#2271b1] {{ request()->routeIs('surveys.create') ? 'text-[#2271b1]' : '' }} transition-colors">
+                                    <i class="fa-solid fa-plus mb-1 text-lg"></i>
+                                    <span class="text-[10px] font-bold">{{ __('Create') }}</span>
+                                </a>
+                                <a href="{{ route('research-proposal.index') }}"
+                                    class="flex flex-col items-center justify-center w-full text-zinc-500 hover:text-[#2271b1] {{ request()->routeIs('research-proposal.*') ? 'text-[#2271b1]' : '' }} transition-colors">
+                                    <i class="fa-solid fa-file-signature mb-1 text-lg"></i>
+                                    <span class="text-[10px] font-bold">{{ __('Report') }}</span>
+                                </a>
+                            </nav>
                         </nav>
-                    </nav>
+                    @endif
                 @endauth
             </div>
         @else
@@ -860,40 +857,7 @@
             });
         }
 
-        // 2. Pull-to-Refresh (Standard Implementation)
-        let touchStart = 0;
-        let pullDelta = 0;
-        const ptr = document.getElementById('ptr-indicator');
-
-        window.addEventListener('touchstart', (e) => {
-            if (window.scrollY === 0) {
-                touchStart = e.touches[0].pageY;
-            } else {
-                touchStart = 0;
-            }
-        }, { passive: true });
-
-        window.addEventListener('touchmove', (e) => {
-            if (touchStart > 0) {
-                const currentY = e.touches[0].pageY;
-                pullDelta = Math.min(60, currentY - touchStart);
-                if (pullDelta > 0) {
-                    ptr.style.transform = `translateY(${pullDelta}px)`;
-                }
-            }
-        }, { passive: true });
-
-        window.addEventListener('touchend', () => {
-            if (pullDelta >= 60) {
-                ptr.style.transform = `translateY(60px)`;
-                window.location.reload();
-            } else {
-                ptr.style.transform = `translateY(0)`;
-            }
-            pullDelta = 0;
-            touchStart = 0;
-        });
-
+        // 2. Pull-to-Refresh Disabled for smooth scrolling
     </script>
 
     <!-- PWA Service Worker Registration -->
@@ -910,25 +874,6 @@
         }
     </script>
     <script src="/js/tours.js" defer></script>
-
-    <div x-show="activeTab !== 'analyse'"
-        class="fixed bottom-24 sm:bottom-28 right-4 sm:right-6 z-[999999] flex flex-col gap-2">
-        <!-- Global Floating Scroll Stack (Top / Bottom) -->
-        <div class="fixed bottom-24 sm:bottom-28 right-4 sm:right-6 z-[999999] flex flex-col gap-2 pointer-events-auto">
-            <button type="button"
-                onclick="const p = document.querySelector('.content-pane') || document.documentElement; p.scrollTo({ top: 0, behavior: 'smooth' }); window.scrollTo({ top: 0, behavior: 'smooth' });"
-                title="{{ __('Scroll to Top') }}"
-                class="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xl flex items-center justify-center transition-all hover:scale-110 border-2 border-white cursor-pointer">
-                <i class="fa-solid fa-chevron-up text-xs font-black"></i>
-            </button>
-            <button type="button"
-                onclick="const p = document.querySelector('.content-pane') || document.documentElement; p.scrollTo({ top: p.scrollHeight, behavior: 'smooth' }); window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });"
-                title="{{ __('Scroll to Bottom') }}"
-                class="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xl flex items-center justify-center transition-all hover:scale-110 border-2 border-white cursor-pointer">
-                <i class="fa-solid fa-chevron-down text-xs font-black"></i>
-            </button>
-        </div>
-    </div>
 </body>
 
 </html>

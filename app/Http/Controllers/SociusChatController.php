@@ -645,7 +645,6 @@ class SociusChatController extends Controller
         return match ($format) {
             'pdf' => $this->exportToPdf($thread, $messages, (bool) $messageId),
             'docx' => $this->exportToDocx($thread, $messages, (bool) $messageId),
-            'excel' => $this->exportToExcel($thread, $messages, (bool) $messageId),
             'markdown', 'md' => $this->exportToMarkdown($thread, $messages, (bool) $messageId),
             default => abort(404),
         };
@@ -677,13 +676,6 @@ class SociusChatController extends Controller
         return $pdf->download($filename);
     }
 
-    /**
-     * Convert raw markdown message content into export-ready HTML.
-     * - chartjs blocks ? QuickChart.io PNG image tags
-     * - mermaid blocks ? mermaid.ink PNG image tags
-     * - pollinations blocks ? rendered image tags when available
-     * - remaining text ? parsed through league/commonmark (GFM tables, headings, etc.)
-     */
     private function renderSociusMarkdownHtml(string $content): string
     {
         $content = preg_replace_callback(
@@ -691,12 +683,25 @@ class SociusChatController extends Controller
             function ($matches) {
                 $json = trim($matches[1]);
                 try {
-                    json_decode($json, true, 512, JSON_THROW_ON_ERROR);
-                    $url = 'https://quickchart.io/chart?c=' . urlencode($json) . '&width=600&height=350&backgroundColor=white';
+                    $chartConfig = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+                    if (isset($chartConfig['options']['scales']['y']['title']['text'])) {
+                        $yTitle = strtolower($chartConfig['options']['scales']['y']['title']['text']);
+                        if ($yTitle === 'frequency' || $yTitle === 'count' || $yTitle === 'freq') {
+                            $chartConfig['options']['scales']['y']['title']['text'] = 'Percentage (%)';
+                        }
+                    }
+                    if (isset($chartConfig['options']['scales']['x']['title']['text'])) {
+                        $xTitle = strtolower($chartConfig['options']['scales']['x']['title']['text']);
+                        if ($xTitle === 'frequency' || $xTitle === 'count' || $xTitle === 'freq') {
+                            $chartConfig['options']['scales']['x']['title']['text'] = 'Percentage (%)';
+                        }
+                    }
+                    $json = json_encode($chartConfig);
+                    $url = 'https://quickchart.io/chart?c=' . urlencode($json) . '&w=550&h=300&bkg=white';
                     $imageData = @file_get_contents($url);
                     if ($imageData) {
                         $base64 = base64_encode($imageData);
-                        return '<div class="chart-img"><img src="data:image/png;base64,' . $base64 . '" style="max-width:100%;height:auto;display:block;margin:12px auto;border-radius:8px;" /></div>';
+                        return '<div class="chart-img" style="text-align: center; margin: 16px 0;"><img src="data:image/png;base64,' . $base64 . '" style="max-width:520px; width:520px; height:auto; display:block; margin:0 auto; border-radius:8px;" width="520" /></div>';
                     }
                 } catch (\Throwable $e) {
                     // fallback below
@@ -716,7 +721,7 @@ class SociusChatController extends Controller
                     $imageData = @file_get_contents($url);
                     if ($imageData) {
                         $base64 = base64_encode($imageData);
-                        return '<div class="mermaid-img"><img src="data:image/png;base64,' . $base64 . '" style="max-width:100%;height:auto;display:block;margin:12px auto;" /></div>';
+                        return '<div class="mermaid-img" style="text-align: center; margin: 16px 0;"><img src="data:image/png;base64,' . $base64 . '" style="max-width:520px; width:520px; height:auto; display:block; margin:0 auto;" width="520" /></div>';
                     }
                 } catch (\Throwable $e) {
                     // fallback below
@@ -735,11 +740,13 @@ class SociusChatController extends Controller
                 }
 
                 try {
-                    $url = 'https://image.pollinations.ai/prompt/' . urlencode($prompt) . '?nologo=true&seed=' . rand(1, 999999);
+                    $url = 'https://image.pollinations.ai/prompt/' . urlencode($prompt)
+                        . '?nologo=true&width=500&height=280&seed=' . rand(1, 999999);
+
                     $imageData = @file_get_contents($url);
                     if ($imageData) {
                         $base64 = base64_encode($imageData);
-                        return '<div class="chart-img"><img src="data:image/png;base64,' . $base64 . '" style="max-width:100%;height:auto;display:block;margin:12px auto;border-radius:8px;" /></div>';
+                        return '<div class="chart-img" style="text-align: center; margin: 16px 0;"><img src="data:image/png;base64,' . $base64 . '" style="max-width:500px; width:500px; height:auto; display:block; margin:0 auto; border-radius:8px;" width="500" /></div>';
                     }
                 } catch (\Throwable $e) {
                     // fallback below
@@ -775,6 +782,9 @@ class SociusChatController extends Controller
         $html = preg_replace('/<th([^>]*)>/i', '<td$1 style="font-weight: bold; background-color: #f1f5f9;">', $html);
         $html = str_ireplace('</th>', '</td>', $html);
 
+        // Explicitly constrain image sizes for Word DOCX so images fit page width
+        $html = preg_replace('/<img([^>]+)>/i', '<img$1 width="500" style="width:500px; max-width:100%; height:auto;" />', $html);
+
         return $html;
     }
 
@@ -785,9 +795,6 @@ class SociusChatController extends Controller
 
         if ($isSingleMessage) {
             $message = $messages->first();
-            $section->addTitle($thread->title ?: 'Socius Report', 1);
-            $section->addText('Date: ' . now()->toDayDateTimeString());
-            $section->addTextBreak(2);
 
             if ($message->role === 'assistant') {
                 $html = $this->cleanHtmlForDocx($this->renderSociusMarkdownHtml($message->content));
@@ -801,25 +808,18 @@ class SociusChatController extends Controller
                 $section->addText($message->content);
             }
         } else {
-            $section->addTitle($thread->title ?: 'Socius Chat Export', 1);
-            $section->addText('Date: ' . now()->toDayDateTimeString());
-            $section->addTextBreak(2);
 
             foreach ($messages as $message) {
-                $role = ucfirst($message->role);
-                $section->addText($role . ' (' . $message->created_at->format('Y-m-d H:i') . ')', ['bold' => true]);
-
-                $html = $message->role === 'assistant'
-                    ? $this->renderSociusMarkdownHtml($message->content)
-                    : '<p>' . nl2br(e($message->content)) . '</p>';
-
-                $html = $this->cleanHtmlForDocx($html);
-
-                try {
-                    \PhpOffice\PhpWord\Shared\Html::addHtml($section, $html, false, true);
-                } catch (\Throwable $e) {
-                    \Illuminate\Support\Facades\Log::warning('Socius DOCX HTML render failed.', ['message' => $e->getMessage()]);
-                    $section->addText(strip_tags($message->content));
+                if ($message->role === 'assistant') {
+                    $html = $this->cleanHtmlForDocx($this->renderSociusMarkdownHtml($message->content));
+                    try {
+                        \PhpOffice\PhpWord\Shared\Html::addHtml($section, $html, false, true);
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::warning('Socius DOCX HTML render failed.', ['message' => $e->getMessage()]);
+                        $section->addText(strip_tags($message->content));
+                    }
+                } else {
+                    $section->addText("User: " . $message->content, ['bold' => true]);
                 }
 
                 $section->addTextBreak(1);
@@ -838,40 +838,6 @@ class SociusChatController extends Controller
             ob_end_clean();
         }
         return response()->download($tempFile, $filename)->deleteFileAfterSend(true);
-    }
-
-    private function exportToExcel(SurveyAiThread $thread, $messages, bool $isSingleMessage = false)
-    {
-        $data = [
-            ['Role', 'Timestamp', 'Message Content']
-        ];
-
-        foreach ($messages as $message) {
-            $data[] = [
-                ucfirst($message->role),
-                $message->created_at->toDateTimeString(),
-                $message->content
-            ];
-        }
-
-        $filename = $isSingleMessage
-            ? 'socius-report-' . $messages->first()->id . '.xlsx'
-            : Str::slug($thread->title ?: 'socius-chat') . '.xlsx';
-
-        if (ob_get_length()) {
-            ob_end_clean();
-        }
-
-        return \Maatwebsite\Excel\Facades\Excel::download(
-            new class ($data) implements \Maatwebsite\Excel\Concerns\FromCollection {
-            public function __construct(private array $data)
-            {}
-            public function collection()
-            {
-                return collect($this->data); }
-            },
-            $filename
-        );
     }
 
     private function exportToMarkdown(SurveyAiThread $thread, $messages, bool $isSingleMessage = false)

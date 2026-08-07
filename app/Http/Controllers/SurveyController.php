@@ -2868,12 +2868,12 @@ class SurveyController extends Controller
                 'guest_name' => 'required|string|max:255',
                 'guest_phone' => 'nullable|string|max:25',
                 'terms_and_conditions' => 'required|accepted',
-                'json_data' => 'nullable|string|max:65535'
+                'json_data' => 'nullable|string'
             ]);
         } else {
             $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
                 'terms_and_conditions' => 'required|accepted',
-                'json_data' => 'nullable|string|max:65535'
+                'json_data' => 'nullable|string'
             ]);
         }
 
@@ -2881,7 +2881,8 @@ class SurveyController extends Controller
             if ($request->has('is_json_submission')) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'You must agree to the Terms and Conditions to proceed.'
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
                 ], 422);
             }
             return redirect()->back()->withErrors($validator)->withInput();

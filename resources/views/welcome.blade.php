@@ -6,21 +6,21 @@
 @section('content')
     <!-- Structured Data JSON-LD Schema for Google -->
     <script type="application/ld+json">
-                                    {
-                                      "@context": "https://schema.org",
-                                      "@type": "WebApplication",
-                                      "name": "KDAnalytiks",
-                                      "url": "{{ url('/') }}",
-                                      "applicationCategory": "BusinessApplication",
-                                      "operatingSystem": "All",
-                                      "description": "KDAnalytiks is an AI-powered research platform that helps users collect data,run statistical analysis and compile automated reports.",
-                                      "offers": {
-                                        "@type": "Offer",
-                                        "price": "0",
-                                        "priceCurrency": "USD"
-                                      }
-                                    }
-                                    </script>
+                                        {
+                                          "@context": "https://schema.org",
+                                          "@type": "WebApplication",
+                                          "name": "KDAnalytiks",
+                                          "url": "{{ url('/') }}",
+                                          "applicationCategory": "BusinessApplication",
+                                          "operatingSystem": "All",
+                                          "description": "KDAnalytiks is an AI-powered research platform that helps users collect data,run statistical analysis and compile automated reports.",
+                                          "offers": {
+                                            "@type": "Offer",
+                                            "price": "0",
+                                            "priceCurrency": "USD"
+                                          }
+                                        }
+                                        </script>
     <div class="relative bg-white overflow-hidden">
         <div class="max-w-7xl mx-auto">
             <div class="relative z-10 pb-8 bg-white sm:pb-16 md:pb-20 lg:max-w-2xl lg:w-full lg:pb-28 xl:pb-32">
@@ -51,10 +51,6 @@
                                 <li class="flex items-center space-x-2">
                                     <span class="h-1.5 w-1.5 rounded-full bg-[#2271b1]"></span>
                                     <span>{{ __('Compile Report') }}</span>
-                                </li>
-                                <li class="flex items-center space-x-2">
-                                    <span class="h-1.5 w-1.5 rounded-full bg-[#2271b1]"></span>
-                                    <span>{{ __('Report Findings') }}</span>
                                 </li>
 
                             </ul>

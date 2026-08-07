@@ -230,7 +230,7 @@
     <div class="flex-1 py-6 px-4 sm:px-10 overflow-y-auto custom-scrollbar relative"
         :class="sidebarOpen ? '' : 'flex flex-col items-center'">
         <div
-            class="max-w-4xl w-full mx-auto bg-white shadow-2xl shadow-gray-200/50 rounded-lg border border-gray-100 p-8 sm:p-12 min-h-screen mb-12 relative overflow-hidden">
+            class="max-w-4xl w-full mx-auto bg-white shadow-2xl shadow-gray-200/50 rounded-lg border border-gray-100 p-4 sm:p-8 md:p-12 min-h-screen mb-12 relative overflow-hidden">
 
             @if($isTruncated)
                 <div
@@ -488,16 +488,43 @@
         </script>
     @endpush
 
-    <!-- Floating Scroll Control Stack (Positioned at bottom-24 to avoid KDA button conflict) -->
-    <div x-data="{ showTop: false, showBottom: true }"
-        @scroll.window="showTop = (window.pageYOffset > 300); showBottom = ((window.innerHeight + window.pageYOffset) < document.body.offsetHeight - 300);"
-        class="fixed bottom-24 right-6 z-[999] flex flex-col gap-2">
-        <button x-show="showTop" x-transition @click="window.scrollTo({top: 0, behavior: 'smooth'})"
+    <!-- Floating Scroll Control Stack -->
+    <div x-data="{ 
+            showTop: false, 
+            showBottom: true,
+            getScrollContainer() {
+                return document.getElementById('main-viewport') || document.querySelector('.content-pane') || document.documentElement;
+            },
+            checkScroll() {
+                const p = this.getScrollContainer();
+                const scrollTop = p.scrollTop || window.pageYOffset || 0;
+                const scrollHeight = p.scrollHeight || document.documentElement.scrollHeight || 0;
+                const clientHeight = p.clientHeight || window.innerHeight || 0;
+
+                this.showTop = scrollTop > 150;
+                this.showBottom = (scrollTop + clientHeight) < (scrollHeight - 150);
+            },
+            scrollToTop() {
+                const p = this.getScrollContainer();
+                p.scrollTo({ top: 0, behavior: 'smooth' });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            },
+            scrollToBottom() {
+                const p = this.getScrollContainer();
+                p.scrollTo({ top: p.scrollHeight, behavior: 'smooth' });
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }
+        }" x-init="$nextTick(() => {
+            checkScroll();
+            const p = getScrollContainer();
+            if (p) p.addEventListener('scroll', () => checkScroll(), { passive: true });
+        })"
+        @scroll.window.throttle.50ms="checkScroll()" class="fixed bottom-12 right-6 z-[999] flex flex-col gap-2">
+        <button x-show="showTop" x-transition @click="scrollToTop()"
             class="w-10 h-10 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-full shadow-xl flex items-center justify-center transition-all cursor-pointer border border-white/20">
             <i class="fa-solid fa-arrow-up text-sm"></i>
         </button>
-        <button x-show="showBottom" x-transition
-            @click="window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'})"
+        <button x-show="showBottom" x-transition @click="scrollToBottom()"
             class="w-10 h-10 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-full shadow-xl flex items-center justify-center transition-all cursor-pointer border border-white/20">
             <i class="fa-solid fa-arrow-down text-sm"></i>
         </button>

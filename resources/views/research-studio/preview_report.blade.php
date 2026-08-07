@@ -587,27 +587,45 @@
         </div>
 
         <!-- Floating Scroll Control Stack -->
+        <!-- Floating Scroll Control Stack -->
         <div x-data="{ 
-                            showTop: false, 
-                            showBottom: false,
-                            checkScroll() {
-                                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                                const scrollHeight = document.documentElement.scrollHeight;
-                                const clientHeight = window.innerHeight || document.documentElement.clientHeight;
+                    showTop: false, 
+                    showBottom: true,
+                    getScrollContainer() {
+                        return document.getElementById('main-viewport') || document.querySelector('.content-pane') || document.documentElement;
+                    },
+                    checkScroll() {
+                        const p = this.getScrollContainer();
+                        const scrollTop = p.scrollTop || window.pageYOffset || 0;
+                        const scrollHeight = p.scrollHeight || document.documentElement.scrollHeight || 0;
+                        const clientHeight = p.clientHeight || window.innerHeight || 0;
 
-                                this.showTop = scrollTop > 300;
-                                this.showBottom = (clientHeight + scrollTop) < (scrollHeight - 300);
-                            }
-                        }" x-init="checkScroll()" @scroll.window.throttle.50ms="checkScroll()"
-            class="fixed bottom-40 left-6 z-[999] flex flex-col gap-2">
+                        this.showTop = scrollTop > 150;
+                        this.showBottom = (scrollTop + clientHeight) < (scrollHeight - 150);
+                    },
+                    scrollToTop() {
+                        const p = this.getScrollContainer();
+                        p.scrollTo({ top: 0, behavior: 'smooth' });
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    },
+                    scrollToBottom() {
+                        const p = this.getScrollContainer();
+                        p.scrollTo({ top: p.scrollHeight, behavior: 'smooth' });
+                        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                    }
+                }" x-init="$nextTick(() => {
+                    checkScroll();
+                    const p = getScrollContainer();
+                    if (p) p.addEventListener('scroll', () => checkScroll(), { passive: true });
+                })" @scroll.window.throttle.50ms="checkScroll()"
+            class="fixed bottom-12 right-6 z-[999] flex flex-col gap-2">
 
-            <button x-show="showTop" x-transition @click="window.scrollTo({top: 0, behavior: 'smooth'})"
+            <button x-show="showTop" x-transition @click="scrollToTop()"
                 class="w-10 h-10 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-full shadow-xl flex items-center justify-center transition-all cursor-pointer border border-white/20">
                 <i class="fa-solid fa-arrow-up text-sm"></i>
             </button>
 
-            <button x-show="showBottom" x-transition
-                @click="window.scrollTo({top: document.documentElement.scrollHeight, behavior: 'smooth'})"
+            <button x-show="showBottom" x-transition @click="scrollToBottom()"
                 class="w-10 h-10 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-full shadow-xl flex items-center justify-center transition-all cursor-pointer border border-white/20">
                 <i class="fa-solid fa-arrow-down text-sm"></i>
             </button>

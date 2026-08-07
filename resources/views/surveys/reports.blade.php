@@ -25,201 +25,182 @@
         $initialReportTab = in_array($requestedReportTab, $allowedReportTabs, true) ? $requestedReportTab : 'quantitative';
     @endphp
 
-    <div :class="(reportTab === 'analyse' || reportTab === 'humanizer') ? '' : 'space-y-12'" x-data="{
-                                                                        reportTab: @js($initialReportTab) === 'crosstab' ? 'inferential' : @js($initialReportTab),
-                                                                        humanizerOriginal: '',
-                                                                        humanizerResult: '',
-                                                                        isHumanizing: false,
-                                                                        reportingStyle: @js($survey->reporting_style ?? 'apa'),
-                                                                        isPremium: @js(auth()->user() ? auth()->user()->hasActiveSubscription() : false),
-                                                                        globalFeedback: '',
-                                                                        globalRefining: false,
-                                                                        globalRefineProgress: '',
-                                                                        quantQuestionIds: @js(collect($analysis)->where('isChartable', true)->where('isLikertLike', false)->pluck('id')),
-                                                                        init() {
-                                                                            window.currentReportingStyle = this.reportingStyle;
-                                                                            this.$watch('reportingStyle', (val) => {
-                                                                                window.currentReportingStyle = val;
-                                                                                // Persist reporting style to database via fetch
-                                                                                fetch(`{{ route('surveys.reporting-style', $survey->id) }}`, {
-                                                                                    method: 'POST',
-                                                                                    headers: {
-                                                                                        'Content-Type': 'application/json',
-                                                                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-                                                                                    },
-                                                                                    body: JSON.stringify({ reporting_style: val })
-                                                                                }).then(res => {
-                                                                                    if (!res.ok) {
-                                                                                        console.error('Failed to update reporting style');
-                                                                                    } else {
-                                                                                        // If style changed, regenerate the visible cards
-                                                                                        for (const qId of this.quantQuestionIds) {
-                                                                                            const card = window.quantInsightInstances && window.quantInsightInstances[qId];
-                                                                                            if (card) {
-                                                                                                card.generate(true); // Force refresh
-                                                                                            }
-                                                                                        }
-                                                                                    }
-                                                                                });
-                                                                            });
+    <div :class="(reportTab === 'analyse' || reportTab === 'humanizer') ? '' : 'space-y-12'"
+        x-data="{
+                                                                                                                                            reportTab: @js($initialReportTab) === 'crosstab' ? 'inferential' : @js($initialReportTab),
+                                                                                                                                            humanizerOriginal: '',
+                                                                                                                                            humanizerResult: '',
+                                                                                                                                            isHumanizing: false,
+                                                                                                                                            isAnalyzing: false,
+                                                                                                                                            humanizerMode: 'standard',
+                                                                                                                                            humanizerIntensity: 'medium',
+                                                                                                                                            customInstructions: '',
+                                                                                                                                            originalAnalysis: null,
+                                                                                                                                            humanizedAnalysis: null,
+                                                                                                                                            reportingStyle: @js($survey->reporting_style ?? 'apa'),
+                                                                                                                                            isPremium: @js(auth()->user() ? auth()->user()->hasActiveSubscription() : false),
+                                                                                                                                            globalFeedback: '',
+                                                                                                                                            globalRefining: false,
+                                                                                                                                            globalRefineProgress: '',
+                                                                                                                                            quantQuestionIds: @js(collect($analysis)->where('isChartable', true)->where('isLikertLike', false)->pluck('id')),
+                                                                                                                                            init() {
+                                                                                                                                                window.currentReportingStyle = this.reportingStyle;
+                                                                                                                                                this.$watch('reportingStyle', (val) => {
+                                                                                                                                                    window.currentReportingStyle = val;
+                                                                                                                                                    // Persist reporting style to database via fetch
+                                                                                                                                                    fetch(`{{ route('surveys.reporting-style', $survey->id) }}`, {
+                                                                                                                                                        method: 'POST',
+                                                                                                                                                        headers: {
+                                                                                                                                                            'Content-Type': 'application/json',
+                                                                                                                                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                                                                                                                                                        },
+                                                                                                                                                        body: JSON.stringify({ reporting_style: val })
+                                                                                                                                                    }).then(res => {
+                                                                                                                                                        if (!res.ok) {
+                                                                                                                                                            console.error('Failed to update reporting style');
+                                                                                                                                                        } else {
+                                                                                                                                                            // If style changed, regenerate the visible cards
+                                                                                                                                                            for (const qId of this.quantQuestionIds) {
+                                                                                                                                                                const card = window.quantInsightInstances && window.quantInsightInstances[qId];
+                                                                                                                                                                if (card) {
+                                                                                                                                                                    card.generate(true); // Force refresh
+                                                                                                                                                                }
+                                                                                                                                                            }
+                                                                                                                                                        }
+                                                                                                                                                    });
+                                                                                                                                                });
 
-                                                                            this.$watch('reportTab', (tab) => {
-                                                                                if (tab === 'analyse') {
-                                                                                    this.$nextTick(() => {
-                                                                                        const inputEl = document.getElementById('socius-prompt-input');
-                                                                                        if (inputEl) {
-                                                                                            inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                                                                            inputEl.focus();
-                                                                                        }
-                                                                                    });
-                                                                                }
-                                                                            });
-                                                                            if (this.reportTab === 'analyse') {
-                                                                                this.$nextTick(() => {
-                                                                                    const inputEl = document.getElementById('socius-prompt-input');
-                                                                                    if (inputEl) {
-                                                                                        inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                                                                        inputEl.focus();
-                                                                                    }
-                                                                                });
-                                                                            }
-                                                                        },
-                                                                        async globalRefineAll() {
-                                                                            if (!this.isPremium) {
-                                                                                alert('Premium subscription required for bulk refinement.');
-                                                                                return;
-                                                                            }
-                                                                            if (!this.globalFeedback.trim()) return;
-                                                                            this.globalRefining = true;
-                                                                            this.globalRefineProgress = '';
-                                                                            const total = this.quantQuestionIds.length;
-                                                                            let count = 0;
+                                                                                                                                                this.$watch('reportTab', (tab) => {
+                                                                                                                                                    if (tab === 'analyse') {
+                                                                                                                                                        this.$nextTick(() => {
+                                                                                                                                                            const inputEl = document.getElementById('socius-prompt-input');
+                                                                                                                                                            if (inputEl) {
+                                                                                                                                                                inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                                                                                                                                inputEl.focus();
+                                                                                                                                                            }
+                                                                                                                                                        });
+                                                                                                                                                    }
+                                                                                                                                                });
+                                                                                                                                                if (this.reportTab === 'analyse') {
+                                                                                                                                                    this.$nextTick(() => {
+                                                                                                                                                        const inputEl = document.getElementById('socius-prompt-input');
+                                                                                                                                                        if (inputEl) {
+                                                                                                                                                            inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                                                                                                                            inputEl.focus();
+                                                                                                                                                        }
+                                                                                                                                                    });
+                                                                                                                                                }
+                                                                                                                                            },
+                                                                                                                                            async globalRefineAll() {
+                                                                                                                                                if (!this.isPremium) {
+                                                                                                                                                    alert('Premium subscription required for bulk refinement.');
+                                                                                                                                                    return;
+                                                                                                                                                }
+                                                                                                                                                if (!this.globalFeedback.trim()) return;
+                                                                                                                                                this.globalRefining = true;
+                                                                                                                                                this.globalRefineProgress = '';
+                                                                                                                                                const total = this.quantQuestionIds.length;
+                                                                                                                                                let count = 0;
 
-                                                                            for (const qId of this.quantQuestionIds) {
-                                                                                count++;
-                                                                                this.globalRefineProgress = `Refining question ${count} of ${total}...`;
-                                                                                const card = window.quantInsightInstances && window.quantInsightInstances[qId];
-                                                                                if (card) {
-                                                                                    try {
-                                                                                        await card.refineFromGlobal(this.globalFeedback, this.reportingStyle);
-                                                                                    } catch (e) {
-                                                                                        console.error(`Refinement failed for question ${qId}:`, e);
-                                                                                    }
-                                                                                    // Introduce 1000ms delay to prevent rate limits
-                                                                                    await new Promise(resolve => setTimeout(resolve, 1000));
-                                                                                }
-                                                                            }
-                                                                            this.globalFeedback = '';
-                                                                            this.globalRefining = false;
-                                                                            this.globalRefineProgress = '';
-                                                                        },
-                                                                        switchReportTab(tab) {
-                                                                            this.reportTab = tab;
-                                                                            const url = new URL(window.location.href);
-                                                                            url.searchParams.set('reportTab', tab);
-                                                                            if (tab !== 'analyse') {
-                                                                                url.searchParams.delete('thread');
-                                                                            }
-                                                                            window.history.replaceState({}, '', url);
-                                                                        },
-                                                                        goToHumanizer(text) {
-                                                                            this.humanizerOriginal = text;
-                                                                            this.humanizerResult = '';
-                                                                            this.customInstructions = '';
-                                                                            this.originalAnalysis = null;
-                                                                            this.humanizedAnalysis = null;
-                                                                            this.switchReportTab('humanizer');
-                                                                            this.$nextTick(() => {
-                                                                                this.analyzeHumanizerText();
-                                                                            });
-                                                                        },
-                                                                        async analyzeHumanizerText() {
-                                                                            if (!this.humanizerOriginal.trim()) return;
-                                                                            this.isAnalyzing = true;
-                                                                            try {
-                                                                                const response = await fetch(`{{ route('surveys.analyse.humanize', $survey->id) }}`, {
-                                                                                    method: 'POST',
-                                                                                    headers: {
-                                                                                        'Content-Type': 'application/json',
-                                                                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-                                                                                    },
-                                                                                    body: JSON.stringify({
-                                                                                        text: this.humanizerOriginal,
-                                                                                        analyze_only: true
-                                                                                    })
-                                                                                });
-                                                                                const data = await response.json();
-                                                                                this.originalAnalysis = data.analysis;
-                                                                            } catch (e) {
-                                                                                console.error(e);
-                                                                            } finally {
-                                                                                this.isAnalyzing = false;
-                                                                            }
-                                                                        },
-                                                                        async uploadFile(event) {
-                                                                            const file = event.target.files[0];
-                                                                            if (!file) return;
-
-                                                                            const formData = new FormData();
-                                                                            formData.append('file', file);
-                                                                            formData.append('_token', '{{ csrf_token() }}');
-
-                                                                            this.isAnalyzing = true;
-                                                                            try {
-                                                                                const response = await fetch('{{ route('humanizer.upload') }}', {
-                                                                                    method: 'POST',
-                                                                                    headers: {
-                                                                                        'Accept': 'application/json',
-                                                                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-                                                                                    },
-                                                                                    body: formData
-                                                                                });
-                                                                                const data = await response.json();
-                                                                                if (!response.ok || data.error) {
-                                                                                    const errorMsg = data.message || (data.errors ? Object.values(data.errors).flat().join('\n') : 'Extraction failed');
-                                                                                    alert('Extraction error: ' + errorMsg);
-                                                                                    return;
-                                                                                }
-                                                                                this.humanizerOriginal = data.text || '';
-                                                                                this.$nextTick(() => {
-                                                                                    this.analyzeHumanizerText();
-                                                                                });
-                                                                            } catch (e) {
-                                                                                alert('Upload error: ' + e.message);
-                                                                            } finally {
-                                                                                this.isAnalyzing = false;
-                                                                                event.target.value = '';
-                                                                            }
-                                                                        },
-                                                                        async humanizeAction() {
-                                                                            if (!this.humanizerOriginal.trim()) return;
-                                                                            this.isHumanizing = true;
-                                                                            this.humanizerResult = '';
-                                                                            try {
-                                                                                const response = await fetch(`{{ route('surveys.analyse.humanize', $survey->id) }}`, {
-                                                                                    method: 'POST',
-                                                                                    headers: {
-                                                                                        'Content-Type': 'application/json',
-                                                                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-                                                                                    },
-                                                                                    body: JSON.stringify({
-                                                                                        text: this.humanizerOriginal,
-                                                                                        mode: this.humanizerMode,
-                                                                                        intensity: this.humanizerIntensity,
-                                                                                        custom_instructions: this.customInstructions
-                                                                                    })
-                                                                                });
-                                                                                const data = await response.json();
-                                                                                this.humanizerResult = data.humanized_text;
-                                                                                this.originalAnalysis = data.original_analysis;
-                                                                                this.humanizedAnalysis = data.humanized_analysis;
-                                                                            } catch (e) {
-                                                                                alert('Humanizer error: ' + e.message);
-                                                                            } finally {
-                                                                                this.isHumanizing = false;
-                                                                            }
-                                                                        }
-                                                                    }">
+                                                                                                                                                for (const qId of this.quantQuestionIds) {
+                                                                                                                                                    count++;
+                                                                                                                                                    this.globalRefineProgress = `Refining question ${count} of ${total}...`;
+                                                                                                                                                    const card = window.quantInsightInstances && window.quantInsightInstances[qId];
+                                                                                                                                                    if (card) {
+                                                                                                                                                        try {
+                                                                                                                                                            await card.refineFromGlobal(this.globalFeedback, this.reportingStyle);
+                                                                                                                                                        } catch (e) {
+                                                                                                                                                            console.error(`Refinement failed for question ${qId}:`, e);
+                                                                                                                                                        }
+                                                                                                                                                        // Introduce 1000ms delay to prevent rate limits
+                                                                                                                                                        await new Promise(resolve => setTimeout(resolve, 1000));
+                                                                                                                                                    }
+                                                                                                                                                }
+                                                                                                                                                this.globalFeedback = '';
+                                                                                                                                                this.globalRefining = false;
+                                                                                                                                                this.globalRefineProgress = '';
+                                                                                                                                            },
+                                                                                                                                            switchReportTab(tab) {
+                                                                                                                                                this.reportTab = tab;
+                                                                                                                                                const url = new URL(window.location.href);
+                                                                                                                                                url.searchParams.set('reportTab', tab);
+                                                                                                                                                if (tab !== 'analyse') {
+                                                                                                                                                    url.searchParams.delete('thread');
+                                                                                                                                                }
+                                                                                                                                                window.history.replaceState({}, '', url);
+                                                                                                                                            },
+                                                                                                                                            goToHumanizer(text) {
+                                                                                                                                                this.humanizerOriginal = text;
+                                                                                                                                                this.humanizerResult = '';
+                                                                                                                                                this.customInstructions = '';
+                                                                                                                                                this.originalAnalysis = null;
+                                                                                                                                                this.humanizedAnalysis = null;
+                                                                                                                                                this.switchReportTab('humanizer');
+                                                                                                                                                this.$nextTick(() => {
+                                                                                                                                                    this.analyzeHumanizerText();
+                                                                                                                                                });
+                                                                                                                                            },
+                                                                                                                                            async analyzeHumanizerText() {
+                                                                                                                                                if (!this.humanizerOriginal.trim()) return;
+                                                                                                                                                this.isAnalyzing = true;
+                                                                                                                                                try {
+                                                                                                                                                    const response = await fetch(`{{ route('surveys.analyse.humanize', $survey->id) }}`, {
+                                                                                                                                                        method: 'POST',
+                                                                                                                                                        headers: {
+                                                                                                                                                            'Content-Type': 'application/json',
+                                                                                                                                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                                                                                                                                                        },
+                                                                                                                                                        body: JSON.stringify({
+                                                                                                                                                            text: this.humanizerOriginal,
+                                                                                                                                                            analyze_only: true
+                                                                                                                                                        })
+                                                                                                                                                    });
+                                                                                                                                                    const data = await response.json();
+                                                                                                                                                    this.originalAnalysis = data.analysis;
+                                                                                                                                                } catch (e) {
+                                                                                                                                                    console.error(e);
+                                                                                                                                                } finally {
+                                                                                                                                                    this.isAnalyzing = false;
+                                                                                                                                                }
+                                                                                                                                            },
+                                                                                                                                            transferBack() {
+                                                                                                                                                if (!this.humanizerResult.trim()) return;
+                                                                                                                                                this.humanizerOriginal = this.humanizerResult;
+                                                                                                                                                this.humanizerResult = '';
+                                                                                                                                                this.humanizedAnalysis = null;
+                                                                                                                                                this.originalAnalysis = null;
+                                                                                                                                                this.$nextTick(() => { this.analyzeHumanizerText(); });
+                                                                                                                                            },
+                                                                                                                                            async humanizeAction() {
+                                                                                                                                                if (!this.humanizerOriginal.trim()) return;
+                                                                                                                                                this.isHumanizing = true;
+                                                                                                                                                this.humanizerResult = '';
+                                                                                                                                                this.humanizedAnalysis = null;
+                                                                                                                                                try {
+                                                                                                                                                    const response = await fetch(`{{ route('surveys.analyse.humanize', $survey->id) }}`, {
+                                                                                                                                                        method: 'POST',
+                                                                                                                                                        headers: {
+                                                                                                                                                            'Content-Type': 'application/json',
+                                                                                                                                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                                                                                                                                                        },
+                                                                                                                                                        body: JSON.stringify({
+                                                                                                                                                            text: this.humanizerOriginal,
+                                                                                                                                                            mode: this.humanizerMode,
+                                                                                                                                                            intensity: this.humanizerIntensity,
+                                                                                                                                                            custom_instructions: this.customInstructions
+                                                                                                                                                        })
+                                                                                                                                                    });
+                                                                                                                                                    const data = await response.json();
+                                                                                                                                                    this.humanizerResult = data.humanized_text;
+                                                                                                                                                    this.originalAnalysis = data.original_analysis;
+                                                                                                                                                    this.humanizedAnalysis = data.humanized_analysis;
+                                                                                                                                                } catch (e) {
+                                                                                                                                                    alert('Humanizer error: ' + e.message);
+                                                                                                                                                } finally {
+                                                                                                                                                    this.isHumanizing = false;
+                                                                                                                                                }
+                                                                                                                                            }
+                                                                                                                                        }">
         <!-- Sub Navigation -->
         <div x-show="reportTab !== 'analyse'"
             class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 border-b border-gray-100 pb-6">
@@ -346,6 +327,7 @@
                         x-text="globalRefining ? globalRefineProgress : '{{ __('Review the entire report') }}'"></p>
                 </div>
             </div>
+
 
             <div class="flex flex-1 items-center gap-2 sm:gap-3 w-full relative">
                 <textarea x-model="globalFeedback" :disabled="globalRefining"
@@ -581,7 +563,7 @@
                                             </thead>
                                             <tbody class="divide-y divide-gray-200">
                                                 @php 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            $totalFreq = 0;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    $totalFreq = 0;
                                                     $validFreq = 0;
                                                     // First pass to get valid total
                                                     foreach ($item['stats'] as $s) {
@@ -676,9 +658,9 @@
         <div x-show="reportTab === 'qualitative'" class="space-y-12 animate-in fade-in duration-500" style="display: none;">
             @foreach($analysis as $item)
                 @if(!$item['isChartable'])
-                    <div class="bg-white rounded-3xl p-10 shadow-sm border border-gray-100">
-                        <div class="mb-8 flex justify-between items-center border-b border-gray-50 pb-6">
-                            <h4 class="text-2xl font-black text-gray-900 tracking-tight">
+                    <div class="bg-white rounded-3xl p-4 sm:p-8 md:p-10 shadow-sm border border-gray-100">
+                        <div class="mb-6 sm:mb-8 flex justify-between items-center border-b border-gray-50 pb-4 sm:pb-6">
+                            <h4 class="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
                                 <span class="text-indigo-600 mr-2 opacity-30 text-base font-black">#{{ $loop->iteration }}</span>
                                 {{ $item['label'] }}
                             </h4>
@@ -713,10 +695,10 @@
                                                 <tr class="text-xs font-bold text-zinc-700 tracking-tight">
                                                     <th class="py-3 px-4 font-bold border-r border-gray-200">{{ __('Option') }}</th>
                                                     <th class="py-3 px-4 text-right font-bold border-r border-gray-200">
-                                                        {{ __('Count') }}
+                                                        {{ __('Frequency') }}
                                                     </th>
                                                     <th class="py-3 px-4 text-right font-bold border-r border-gray-200">
-                                                        {{ __('Percentage') }}
+                                                        {{ __('Percentage(%)') }}
                                                     </th>
                                                 </tr>
                                             </thead>
@@ -751,15 +733,16 @@
 
                         <div class="mt-6 bg-gray-50 rounded-3xl overflow-hidden border border-gray-100"
                             id="qual-wrapper-{{ $loop->index }}">
-                            <div class="px-8 py-6 border-b border-gray-100 bg-white flex justify-between items-center">
+                            <div
+                                class="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-100 bg-white flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
                                 <h5 class="text-xs font-bold text-zinc-500 tracking-tight">
                                     {{ __('Detailed Responses') }}
                                 </h5>
-                                <div class="flex items-center gap-3">
+                                <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
                                     <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
                                         {{ count($item['answers'] ?? []) }} {{ __('Total Entries') }}
                                     </span>
-                                    <div class="flex gap-2" data-html2canvas-ignore>
+                                    <div class="flex gap-2 flex-wrap" data-html2canvas-ignore>
                                         <button onclick="window.copyTableToClipboard('qual-table-{{ $loop->index }}')"
                                             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 border border-gray-200 text-gray-600 rounded-xl text-[10px] font-bold tracking-tight transition-all shadow-sm">
                                             <i class="fa-solid fa-copy"></i>
@@ -780,22 +763,22 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="max-h-[350px] overflow-y-auto custom-scrollbar">
-                                <table class="w-full text-left border-collapse" id="qual-table-{{ $loop->index }}">
+                            <div class="max-h-[350px] overflow-y-auto custom-scrollbar overflow-x-auto">
+                                <table class="w-full text-left border-collapse min-w-full" id="qual-table-{{ $loop->index }}">
                                     <thead>
                                         <tr
                                             class="bg-gray-50/50 text-xs font-bold text-zinc-500 tracking-tight sticky top-0 bg-white border-b border-gray-100 z-10">
-                                            <th class="py-4 px-8 w-16 text-center font-bold">#</th>
-                                            <th class="py-4 px-8 font-bold">{{ __('Response Content') }}</th>
+                                            <th class="py-3 sm:py-4 px-3 sm:px-6 w-12 sm:w-16 text-center font-bold">#</th>
+                                            <th class="py-3 sm:py-4 px-3 sm:px-6 font-bold">{{ __('Response Content') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-gray-100 bg-white">
                                         @forelse($item['answers'] ?? [] as $answer)
                                             <tr class="hover:bg-indigo-50/20 transition-colors">
-                                                <td class="py-6 px-8 text-center text-[10px] font-black text-gray-300">
+                                                <td class="py-4 sm:py-6 px-3 sm:px-6 text-center text-[10px] font-black text-gray-300">
                                                     {{ $loop->iteration }}
                                                 </td>
-                                                <td class="py-6 px-8">
+                                                <td class="py-4 sm:py-6 px-3 sm:px-6">
                                                     <div
                                                         class="text-[13px] font-medium text-gray-700 leading-relaxed italic border-l-4 border-indigo-500 pl-4">
                                                         @php
@@ -807,16 +790,16 @@
                                                         @if($isSignature)
                                                             <button
                                                                 onclick="Swal.fire({
-                                                                                                                                                                                                                                                                                                                                                                            title: '{{ __("Signature Preview") }}',
-                                                                                                                                                                                                                                                                                                                                                                            imageUrl: '{{ $answer }}',
-                                                                                                                                                                                                                                                                                                                                                                            imageAlt: 'Signature',
-                                                                                                                                                                                                                                                                                                                                                                            customClass: {
-                                                                                                                                                                                                                                                                                                                                                                                popup: 'rounded-[3rem] border-none shadow-2xl',
-                                                                                                                                                                                                                                                                                                                                                                                image: 'rounded-2xl border border-gray-100 shadow-sm max-h-[400px] w-auto'
-                                                                                                                                                                                                                                                                                                                                                                            },
-                                                                                                                                                                                                                                                                                                                                                                            confirmButtonText: '{{ __("Close") }}',
-                                                                                                                                                                                                                                                                                                                                                                            confirmButtonColor: '#4f46e5'
-                                                                                                                                                                                                                                                                                                                                                                        })"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                title: '{{ __("Signature Preview") }}',
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                imageUrl: '{{ $answer }}',
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                imageAlt: 'Signature',
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                customClass: {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    popup: 'rounded-[3rem] border-none shadow-2xl',
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    image: 'rounded-2xl border border-gray-100 shadow-sm max-h-[400px] w-auto'
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                },
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                confirmButtonText: '{{ __("Close") }}',
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                confirmButtonColor: '#4f46e5'
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            })"
                                                                 class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl font-black text-[10px]  tracking-widest hover:bg-indigo-100 transition-all">
                                                                 <i class="fa-solid fa-signature text-sm"></i>
                                                                 {{ __('View Captured Signature') }}
@@ -852,14 +835,16 @@
             @endforeach
         </div>
 
+
         @if(!isset($isSharedView) || !$isSharedView)
-            <div x-show="reportTab === 'analyse'">
+            <div x-show="reportTab === 'analyse'" class="w-full max-w-full overflow-x-hidden bg-[#252525] p0 m-0">
                 @include('surveys.partials.report_analyse')
             </div>
             <div x-show="reportTab === 'humanizer'" style="display: none;">
                 @include('surveys.partials.report_humanizer')
             </div>
         @endif
+
 
         <!-- Compiled Unified Report Content -->
         <div x-show="reportTab === 'compiled'" class="space-y-8 animate-in fade-in duration-500" style="display: none;">
@@ -1006,7 +991,7 @@
                                             </thead>
                                             <tbody class="divide-y divide-gray-200">
                                                 @php 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    $totalFreq = 0;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            $totalFreq = 0;
                                                     $validFreq = 0;
                                                     foreach ($item['stats'] as $s) {
                                                         if (!isset($s['is_missing']) || !$s['is_missing']) {
@@ -1146,9 +1131,7 @@
                         <p class="text-xs font-bold text-gray-500">
                             {{ __('No inferential tests have been saved for this survey yet.') }}
                         </p>
-                        <p class="text-[11px] text-gray-400 mt-1.5">
-                            {{ __('Run and save Chi-Square, t-Tests, or Regression under the "Analyze" tab to include them here.') }}
-                        </p>
+
                     </div>
                 @endif
             </div>
@@ -2609,8 +2592,8 @@
                                                         :class="msg.role === 'user' ? 'items-end' : 'items-start'">
                                                         <div class="max-w-[85%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed font-medium"
                                                             :class="msg.role === 'user' 
-                                                                                                                         ? 'bg-indigo-600 text-white rounded-br-none shadow-sm' 
-                                                                                                                         : 'bg-white/90 text-gray-800 rounded-bl-none border border-gray-200/50 shadow-sm'">
+                                                                                                                                                                                             ? 'bg-indigo-600 text-white rounded-br-none shadow-sm' 
+                                                                                                                                                                                             : 'bg-white/90 text-gray-800 rounded-bl-none border border-gray-200/50 shadow-sm'">
                                                             <p class="whitespace-pre-wrap" x-text="msg.content"></p>
                                                         </div>
                                                     </div>
@@ -2757,9 +2740,9 @@
 
                                 if (areas.length > 0) {
                                     htmlContent = `<img src="${dataUrl}" usemap="#${mapName}" style="max-width:100%;height:auto;" />
-                                                                                                                                <map name="${mapName}">
-                                                                                                                                  ${areas.join('\n  ')}
-                                                                                                                                </map>`;
+                                                                                                                                                                                                                                                                        <map name="${mapName}">
+                                                                                                                                                                                                                                                                          ${areas.join('\n  ')}
+                                                                                                                                                                                                                                                                        </map>`;
                                 }
                             }
 
@@ -2939,7 +2922,7 @@
                             const table = document.getElementById(tableId);
                             if (!table) return;
 
-                            let text = '';
+                            let plainText = '';
                             const rows = table.querySelectorAll('tr');
                             rows.forEach((row) => {
                                 const cols = row.querySelectorAll('th, td');
@@ -2947,20 +2930,63 @@
                                 cols.forEach(col => {
                                     rowData.push(col.innerText.trim());
                                 });
-                                text += rowData.join('\t') + '\n';
+                                plainText += rowData.join('\t') + '\n';
                             });
 
-                            navigator.clipboard.writeText(text).then(() => {
-                                if (btn) {
-                                    const originalHtml = btn.innerHTML;
-                                    btn.innerHTML = '<i class="fa-solid fa-check text-[10px] text-green-400"></i> Copied!';
-                                    setTimeout(() => {
-                                        btn.innerHTML = originalHtml;
-                                    }, 2000);
-                                }
-                            }).catch(err => {
-                                console.error('Failed to copy table: ', err);
+                            let htmlContent = `<table style="border-collapse: collapse; width: 100%; font-family: Calibri, Arial, sans-serif; font-size: 13px; color: #1e293b; border: 1px solid #cbd5e1;">`;
+                            const headerRows = table.querySelectorAll('thead tr');
+                            if (headerRows.length > 0) {
+                                htmlContent += `<thead>`;
+                                headerRows.forEach(row => {
+                                    htmlContent += `<tr>`;
+                                    row.querySelectorAll('th').forEach(th => {
+                                        htmlContent += `<th style="border: 1px solid #cbd5e1; background-color: #f1f5f9; padding: 8px 12px; font-weight: bold; text-align: left; color: #0f172a;">${th.innerHTML.trim()}</th>`;
+                                    });
+                                    htmlContent += `</tr>`;
+                                });
+                                htmlContent += `</thead>`;
+                            }
+
+                            const bodyRows = table.querySelectorAll('tbody tr');
+                            htmlContent += `<tbody>`;
+                            bodyRows.forEach((row, idx) => {
+                                const isTotal = row.innerText.toLowerCase().includes('total');
+                                const bg = isTotal ? 'background-color: #f8fafc; font-weight: bold;' : (idx % 2 === 0 ? 'background-color: #ffffff;' : 'background-color: #f8fafc;');
+                                htmlContent += `<tr style="${bg}">`;
+                                row.querySelectorAll('td').forEach(td => {
+                                    const fontWeight = isTotal ? 'font-weight: bold; color: #0f172a;' : 'color: #334155;';
+                                    htmlContent += `<td style="border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; ${fontWeight}">${td.innerHTML.trim()}</td>`;
+                                });
+                                htmlContent += `</tr>`;
                             });
+                            htmlContent += `</tbody></table>`;
+
+                            try {
+                                const blobHtml = new Blob([htmlContent], { type: 'text/html' });
+                                const blobText = new Blob([plainText], { type: 'text/plain' });
+                                const item = new ClipboardItem({
+                                    'text/html': blobHtml,
+                                    'text/plain': blobText
+                                });
+
+                                navigator.clipboard.write([item]).then(() => {
+                                    if (btn) {
+                                        const originalHtml = btn.innerHTML;
+                                        btn.innerHTML = '<i class="fa-solid fa-check text-[10px] text-green-400"></i> Copied!';
+                                        setTimeout(() => { btn.innerHTML = originalHtml; }, 2000);
+                                    }
+                                }).catch(err => {
+                                    navigator.clipboard.writeText(plainText).then(() => {
+                                        if (btn) {
+                                            const originalHtml = btn.innerHTML;
+                                            btn.innerHTML = '<i class="fa-solid fa-check text-[10px] text-green-400"></i> Copied!';
+                                            setTimeout(() => { btn.innerHTML = originalHtml; }, 2000);
+                                        }
+                                    });
+                                });
+                            } catch (e) {
+                                navigator.clipboard.writeText(plainText);
+                            }
                         };
 
                         window.exportTableToPng = function (containerId, title) {
@@ -3892,7 +3918,15 @@
                                 loadingMessages: false,
                                 creatingThread: false,
                                 sending: false,
-                                error: null,
+                                activeAbortController: null,
+
+                                stopGeneration() {
+                                    if (this.activeAbortController) {
+                                        this.activeAbortController.abort();
+                                        this.activeAbortController = null;
+                                    }
+                                    this.sending = false;
+                                },
                                 streamingUserId: null,
                                 streamingAssistantId: null,
                                 renamingThreadId: null,
@@ -4538,6 +4572,7 @@
 
                                     this.error = null;
                                     this.sending = true;
+                                    this.activeAbortController = new AbortController();
 
                                     const tempUserId = `temp-user-${Date.now()}`;
                                     const tempAssistantId = `temp-assistant-${Date.now()}`;
@@ -4579,6 +4614,7 @@
                                     try {
                                         const response = await fetch(this.threadUrl('streamTemplate', threadId), {
                                             method: 'POST',
+                                            signal: this.activeAbortController.signal,
                                             headers: {
                                                 'Accept': 'text/event-stream',
                                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
@@ -4598,17 +4634,22 @@
                                         await this.loadThread(threadId);
                                         await this.reloadThreadList();
                                     } catch (error) {
-                                        this.error = error.message;
-                                        const failedAssistantId = this.streamingAssistantId || tempAssistantId;
-                                        this.replaceMessage(failedAssistantId, {
-                                            id: failedAssistantId,
-                                            role: 'assistant',
-                                            content: error.message,
-                                            attachments: [],
-                                            created_at: new Date().toISOString()
-                                        });
-                                        this.pendingFiles = usedFiles;
+                                        if (error.name === 'AbortError') {
+                                            this.error = null;
+                                        } else {
+                                            this.error = error.message;
+                                            const failedAssistantId = this.streamingAssistantId || tempAssistantId;
+                                            this.replaceMessage(failedAssistantId, {
+                                                id: failedAssistantId,
+                                                role: 'assistant',
+                                                content: error.message,
+                                                attachments: [],
+                                                created_at: new Date().toISOString()
+                                            });
+                                            this.pendingFiles = usedFiles;
+                                        }
                                     } finally {
+                                        this.activeAbortController = null;
                                         this.streamingUserId = null;
                                         this.streamingAssistantId = null;
                                         this.sending = false;
@@ -4838,27 +4879,27 @@
                                                 const type = codeBlockType === 'chart.js' ? 'chartjs' : codeBlockType;
                                                 const isImage = type === 'pollinations';
                                                 blocks.push(`
-                                                                                                                                                                        <div class="socius-visual my-6 bg-white/5 rounded-2xl border border-white/10 overflow-hidden" 
-                                                                                                                                                                             data-visual-type="${type}" 
-                                                                                                                                                                             data-visual-id="${id}">
-                                                                                                                                                                            <div class="visual-header flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/5">
-                                                                                                                                                                                <div class="flex gap-2 ml-auto">
-                                                                                                                                                                                    <button onclick="window.sociusVisuals.copy('${id}', this)" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
-                                                                                                                                                                                        <i class="fa-solid fa-copy mr-1"></i> {{ __('Copy') }}
-                                                                                                                                                                                    </button>
-                                                                                                                                                                                    <button onclick="window.sociusVisuals.download('${id}', 'png')" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
-                                                                                                                                                                                        <i class="fa-solid fa-download mr-1"></i> {{ __('PNG') }}
-                                                                                                                                                                                    </button>
-                                                                                                                                                                                </div>
-                                                                                                                                                                            </div>
-                                                                                                                                                                            <div id="${id}" class="visual-body p-6 flex justify-center overflow-x-auto min-h-[100px] relative">
-                                                                                                                                                                                <textarea class="visual-source hidden">${this.escapeHtml(content)}</textarea>
-                                                                                                                                                                                <div class="visual-target w-full flex justify-center">
-                                                                                                                                                                                    ${isImage ? '<div class="animate-pulse flex flex-col items-center gap-3 p-8"><i class="fa-solid fa-wand-magic-sparkles text-[#3894dc] text-2xl"></i><span class="text-[10px] text-slate-500 font-bold">{{ __('Generating Image...') }}</span></div>' : ''}
-                                                                                                                                                                                </div>
-                                                                                                                                                                            </div>
-                                                                                                                                                                        </div>
-                                                                                                                                                                    `);
+                                                                                                                                                                                                                                                                                                                <div class="socius-visual my-6 bg-white/5 rounded-2xl border border-white/10 overflow-hidden" 
+                                                                                                                                                                                                                                                                                                                     data-visual-type="${type}" 
+                                                                                                                                                                                                                                                                                                                     data-visual-id="${id}">
+                                                                                                                                                                                                                                                                                                                    <div class="visual-header flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/5">
+                                                                                                                                                                                                                                                                                                                        <div class="flex gap-2 ml-auto">
+                                                                                                                                                                                                                                                                                                                            <button onclick="window.sociusVisuals.copy('${id}', this)" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
+                                                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-copy mr-1"></i> {{ __('Copy') }}
+                                                                                                                                                                                                                                                                                                                            </button>
+                                                                                                                                                                                                                                                                                                                            <button onclick="window.sociusVisuals.download('${id}', 'png')" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
+                                                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-download mr-1"></i> {{ __('PNG') }}
+                                                                                                                                                                                                                                                                                                                            </button>
+                                                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                                                                    <div id="${id}" class="visual-body p-6 flex justify-center overflow-x-auto min-h-[100px] relative">
+                                                                                                                                                                                                                                                                                                                        <textarea class="visual-source hidden">${this.escapeHtml(content)}</textarea>
+                                                                                                                                                                                                                                                                                                                        <div class="visual-target w-full flex justify-center">
+                                                                                                                                                                                                                                                                                                                            ${isImage ? '<div class="animate-pulse flex flex-col items-center gap-3 p-8"><i class="fa-solid fa-wand-magic-sparkles text-[#3894dc] text-2xl"></i><span class="text-[10px] text-slate-500 font-bold">{{ __('Generating Image...') }}</span></div>' : ''}
+                                                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                                                            `);
                                             } else {
                                                 blocks.push(`<pre class="bg-black/30 p-4 rounded-xl overflow-x-auto text-xs my-4 border border-white/5"><code>${this.escapeHtml(content)}</code></pre>`);
                                             }
@@ -4941,11 +4982,11 @@
                                             const type = codeBlockType === 'chart.js' ? 'chartjs' : codeBlockType;
                                             const isImage = type === 'pollinations';
                                             blocks.push(`
-                                                                                                                                                                    <div class="socius-visual-loading my-6 bg-white/5 rounded-2xl border border-white/10 border-dashed p-8 text-center animate-pulse">
-                                                                                                                                                                        <i class="fa-solid ${isImage ? 'fa-wand-magic-sparkles' : 'fa-chart-simple'} text-[#3894dc]/50 text-2xl mb-3"></i>
-                                                                                                                                                                        <p class="text-[10px] text-slate-500 font-bold">{{ __('Socius is generating an image...') }}</p>
-                                                                                                                                                                    </div>
-                                                                                                                                                                `);
+                                                                                                                                                                                                                                                                                                            <div class="socius-visual-loading my-6 bg-white/5 rounded-2xl border border-white/10 border-dashed p-8 text-center animate-pulse">
+                                                                                                                                                                                                                                                                                                                <i class="fa-solid ${isImage ? 'fa-wand-magic-sparkles' : 'fa-chart-simple'} text-[#3894dc]/50 text-2xl mb-3"></i>
+                                                                                                                                                                                                                                                                                                                <p class="text-[10px] text-slate-500 font-bold">{{ __('Socius is generating an image...') }}</p>
+                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                        `);
                                         } else {
                                             flushCodeBlock();
                                         }
@@ -4983,38 +5024,77 @@
                                         return `<pre>${lines.join('\n')}</pre>`;
                                     }
 
-                                    const header = rows[0];
-                                    const body = rows.slice(2);
+                                    const header = rows[0].map(h => {
+                                        let cleanH = h;
+                                        if (cleanH.toLowerCase() === 'frequency') cleanH = 'Frequency';
+                                        if (cleanH.toLowerCase() === 'percentage' || cleanH.toLowerCase() === 'percent') cleanH = 'Percentage (%)';
+                                        return cleanH;
+                                    });
+                                    const body = [...rows.slice(2)];
+
+                                    // Auto-check if Total row is present; if not, calculate and append
+                                    const hasTotalRow = body.some(row => row[0] && row[0].toLowerCase().includes('total'));
+                                    if (!hasTotalRow && body.length > 0) {
+                                        const totalRow = [];
+                                        header.forEach((colName, colIdx) => {
+                                            if (colIdx === 0) {
+                                                totalRow.push('Total');
+                                            } else {
+                                                let sum = 0;
+                                                let isPercent = colName.includes('%') || colName.toLowerCase().includes('percentage');
+                                                let isCount = colName.toLowerCase().includes('freq') || colName.toLowerCase().includes('(n)') || colName.toLowerCase().includes('count');
+
+                                                body.forEach(r => {
+                                                    const valStr = (r[colIdx] || '').replace(/[^0-9.]/g, '');
+                                                    const val = parseFloat(valStr);
+                                                    if (!isNaN(val)) sum += val;
+                                                });
+
+                                                if (isPercent) {
+                                                    totalRow.push('100%');
+                                                } else if (isCount) {
+                                                    totalRow.push(`${Math.round(sum)}`);
+                                                } else {
+                                                    totalRow.push(sum > 0 ? (sum % 1 === 0 ? sum.toFixed(0) : sum.toFixed(1)) : '-');
+                                                }
+                                            }
+                                        });
+                                        body.push(totalRow);
+                                    }
 
                                     const tableId = `socius-table-${Math.random().toString(36).slice(2, 10)}`;
 
                                     return `
-                                                                                                                                                            <div class="my-4 rounded-2xl border border-white/10 overflow-hidden bg-white/[0.02]">
-                                                                                                                                                                <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-white/[0.05] border-b border-white/10">
-                                                                                                                                                                    <span class="text-[10px] font-semibold text-slate-400 tracking-normal">{{ __('Table') }}</span>
-                                                                                                                                                                    <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 border border-white/10 text-[10px] font-semibold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
-                                                                                                                                                                        <i class="fa-regular fa-copy text-[10px]"></i>
-                                                                                                                                                                        {{ __('Copy Table') }}
-                                                                                                                                                                    </button>
-                                                                                                                                                                </div>
-                                                                                                                                                                <div class="overflow-x-auto">
-                                                                                                                                                                    <table id="${tableId}" class="min-w-full text-left text-sm border-separate border-spacing-0">
-                                                                                                                                                                        <thead>
-                                                                                                                                                                            <tr>
-                                                                                                                                                                                ${header.map(cell => `<th class="px-4 py-3 text-[11px] font-bold text-blue-300 border-b border-white/10 bg-transparent">${this.inlineFormat(cell)}</th>`).join('')}
-                                                                                                                                                                            </tr>
-                                                                                                                                                                        </thead>
-                                                                                                                                                                        <tbody>
-                                                                                                                                                                            ${body.map(row => `
-                                                                                                                                                                                <tr>
-                                                                                                                                                                                    ${row.map(cell => `<td class="px-4 py-3 border-b border-white/5 text-slate-100 bg-transparent">${this.inlineFormat(cell)}</td>`).join('')}
-                                                                                                                                                                                </tr>
-                                                                                                                                                                            `).join('')}
-                                                                                                                                                                        </tbody>
-                                                                                                                                                                    </table>
-                                                                                                                                                                </div>
-                                                                                                                                                            </div>
-                                                                                                                                                        `;
+                                                                                <div class="my-4 rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e2d]/60 shadow-xl">
+                                                                                    <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-white/[0.05] border-b border-white/10">
+
+                                                                                        <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-[10px] font-bold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
+                                                                                            <i class="fa-regular fa-copy text-[10px]"></i>
+                                                                                            {{ __('Copy Table') }}
+                                                                                        </button>
+                                                                                    </div>
+                                                                                    <div class="overflow-x-auto">
+                                                                                        <table id="${tableId}" class="min-w-full text-left text-xs border-collapse">
+                                                                                            <thead>
+                                                                                                <tr class="bg-white/[0.04] border-b border-white/10">
+                                                                                                    ${header.map(cell => `<th class="px-4 py-3 text-[11px] font-bold text-blue-300 border-b border-white/10 bg-white/[0.03]">${this.inlineFormat(cell)}</th>`).join('')}
+                                                                                                </tr>
+                                                                                            </thead>
+                                                                                            <tbody>
+                                                                                                ${body.map((row, rIdx) => {
+                                        const isTotal = row[0] && row[0].toLowerCase().includes('total');
+                                        const rowBg = isTotal ? 'bg-white/[0.08] font-bold text-blue-200' : (rIdx % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]');
+                                        return `
+                                                                                                        <tr class="${rowBg}">
+                                                                                                            ${row.map(cell => `<td class="px-4 py-2.5 border-b border-white/5 ${isTotal ? 'font-bold text-blue-200 border-t border-white/10' : 'text-slate-200'}">${this.inlineFormat(cell)}</td>`).join('')}
+                                                                                                        </tr>
+                                                                                                    `;
+                                    }).join('')}
+                                                                                            </tbody>
+                                                                                        </table>
+                                                                                    </div>
+                                                                                </div>
+                                                                            `;
                                 },
 
                                 async renderVisuals() {
@@ -5070,12 +5150,19 @@
                                                         const rawData = Array.isArray(dataset.data) ? dataset.data : [];
                                                         const totalResponses = rawData.reduce((sum, val) => sum + Number(val || 0), 0);
                                                         const percentageData = rawData.map(val =>
-                                                            totalResponses > 0 ? parseFloat(((Number(val || 0) / totalResponses) * 100).toFixed(1)) : 0
+                                                            totalResponses > 0 ? parseFloat(((Number(val || 0) / totalResponses) * 100).toFixed(1)) : (typeof val === 'number' ? val : parseFloat(String(val || 0).replace('%', '')) || 0)
                                                         );
 
                                                         // Apply percentage dataset values
                                                         dataset.data = percentageData;
-                                                        if (!dataset.label) dataset.label = 'Responses (%)';
+                                                        if (!dataset.label) dataset.label = 'Percentage (%)';
+                                                        if (!dataset.backgroundColor) {
+                                                            dataset.backgroundColor = ['#2271b1', '#3894dc', '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
+                                                        }
+
+                                                        if (!config.options) config.options = {};
+                                                        if (!config.options.plugins) config.options.plugins = {};
+                                                        config.options.plugins.legend = { display: false };
                                                     }
 
                                                     const chartType = config.type || 'bar';
@@ -5122,6 +5209,11 @@
                                                         if (!config.options) config.options = {};
                                                         const isHorizontal = config.options.indexAxis === 'y';
 
+                                                        let valAxisTitle = (config.options?.scales?.[isHorizontal ? 'x' : 'y']?.title?.text) || 'Percentage (%)';
+                                                        if (valAxisTitle.toLowerCase() === 'frequency' || valAxisTitle.toLowerCase() === 'count' || valAxisTitle.toLowerCase() === 'freq') {
+                                                            valAxisTitle = 'Percentage (%)';
+                                                        }
+
                                                         const valueAxisConfig = {
                                                             beginAtZero: true,
                                                             grace: '12%',
@@ -5134,7 +5226,7 @@
                                                             },
                                                             title: {
                                                                 display: true,
-                                                                text: (config.options?.scales?.[isHorizontal ? 'x' : 'y']?.title?.text) || 'Percentage of Responses (%)',
+                                                                text: valAxisTitle,
                                                                 color: '#94a3b8',
                                                                 font: { weight: '600', size: 10 }
                                                             }
@@ -5221,9 +5313,9 @@
                                         } catch (e) {
                                             console.error(`Socius Visual Error [${type}]:`, e);
                                             target.innerHTML = `<div class="text-red-400/60 text-[10px] font-bold p-4 bg-red-500/10 rounded-xl border border-red-500/20">
-                                                                                                                                                                    <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
-                                                                                                                                                                    {{ __('Invalid visual syntax.') }}
-                                                                                                                                                                </div>`;
+                                                                                                                                                                                                                                                                                                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
+                                                                                                                                                                                                                                                                                                            {{ __('Invalid visual syntax.') }}
+                                                                                                                                                                                                                                                                                                        </div>`;
                                             el.classList.add('rendered');
                                         }
                                     }
@@ -5249,9 +5341,9 @@
                                         const { prompt, target, el } = window._sociusImageQueue.shift();
 
                                         target.innerHTML = `<div class="animate-pulse flex flex-col items-center gap-3 p-8">
-                                                                                                                                                                <i class="fa-solid fa-wand-magic-sparkles fa-bounce text-indigo-400 text-2xl"></i>
-                                                                                                                                                                <span class="text-[10px] text-slate-500  tracking-widest font-bold">{{ __('Visualizing Analysis...') }}</span>
-                                                                                                                                                            </div>`;
+                                                                                                                                                                                                                                                                                                        <i class="fa-solid fa-wand-magic-sparkles fa-bounce text-indigo-400 text-2xl"></i>
+                                                                                                                                                                                                                                                                                                        <span class="text-[10px] text-slate-500  tracking-widest font-bold">{{ __('Visualizing Analysis...') }}</span>
+                                                                                                                                                                                                                                                                                                    </div>`;
 
                                         await this.loadSingleImage(prompt, target, el);
                                         await new Promise(r => setTimeout(r, 1000));
@@ -5298,17 +5390,17 @@
                                                 };
                                                 img.onerror = () => {
                                                     target.innerHTML = `<div class="p-6 text-center bg-slate-800/40 rounded-xl border border-slate-700/30">
-                                                                                                                                                                            <i class="fa-solid fa-triangle-exclamation text-amber-500/50 text-xl mb-2"></i>
-                                                                                                                                                                            <p class="text-[10px] text-slate-400  font-bold tracking-widest">{{ __('Image Source Unreachable') }}</p>
-                                                                                                                                                                        </div>`;
+                                                                                                                                                                                                                                                                                                                    <i class="fa-solid fa-triangle-exclamation text-amber-500/50 text-xl mb-2"></i>
+                                                                                                                                                                                                                                                                                                                    <p class="text-[10px] text-slate-400  font-bold tracking-widest">{{ __('Image Source Unreachable') }}</p>
+                                                                                                                                                                                                                                                                                                                </div>`;
                                                     resolve();
                                                 };
                                             }
                                         } catch (e) {
                                             console.error('Image load failed:', e);
                                             target.innerHTML = `<div class="p-6 text-center bg-slate-800/40 rounded-xl">
-                                                                                                                                                                    <p class="text-[9px] text-slate-500">{{ __('Visualization failed to render') }}</p>
-                                                                                                                                                                </div>`;
+                                                                                                                                                                                                                                                                                                            <p class="text-[9px] text-slate-500">{{ __('Visualization failed to render') }}</p>
+                                                                                                                                                                                                                                                                                                        </div>`;
                                             resolve();
                                         }
                                     });
@@ -5343,18 +5435,32 @@
                                             body: JSON.stringify({ content: this.newKbRuleContent.trim() })
                                         });
                                         const data = await this.parseJsonResponse(response);
-                                        if (data.rule) {
-                                            this.kbRules = [data.rule, ...this.kbRules];
+
+                                        if (response.ok) {
                                             this.newKbRuleContent = '';
+
+                                            if (typeof this.loadKbRules === 'function') {
+                                                await this.loadKbRules();//pull stored rules
+                                            } else if (data.rules) {
+                                                this.kbRules = data.rules;
+                                            } else if (data.rule) {
+                                                this.kbRules = [data.rule, ...this.kbRules];//fallback
+                                            }
+
                                             Swal.fire({
-                                                title: @js(__('Added!')),
-                                                text: data.message || @js(__('Preference added.')),
+                                                title: @js(__('Memory Updated!')),
+                                                text: data.message || @js(__('Instruction added.')),
                                                 icon: 'success',
                                                 toast: true,
                                                 position: 'top-end',
                                                 showConfirmButton: false,
-                                                timer: 2000,
-                                                customClass: { popup: 'rounded-2xl shadow-xl border-none' }
+                                                timer: 3500,
+                                                timerProgressBar: true,
+                                                customClass: {
+                                                    popup: 'rounded-2xl shadow-xl border-none',
+                                                    title: 'test-sm font-bold text-emerald-800 dark:text-emerald-400',
+                                                    htmlContainer: 'text-xs text-gray-800 dark:text-gray-300',
+                                                }
                                             });
                                         }
                                     } catch (error) {
@@ -5680,34 +5786,48 @@
                 @endpush
 
                 <!-- Floating Scroll Control Stack -->
-                <div x-data="{ 
-                showTop: false, 
-                showBottom: true,
-                check() {
-                    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                    const scrollHeight = document.documentElement.scrollHeight;
-                    const clientHeight = window.innerHeight || document.documentElement.clientHeight;
+                <div x-show="reportTab !== 'analyse'" x-data="{ 
+                            showTop: false, 
+                            showBottom: true,
+                            getScrollContainer() {
+                                return document.getElementById('main-viewport') || document.querySelector('.content-pane') || document.documentElement;
+                            },
+                            check() {
+                                const p = this.getScrollContainer();
+                                const scrollTop = p.scrollTop || window.pageYOffset || 0;
+                                const scrollHeight = p.scrollHeight || document.documentElement.scrollHeight || 0;
+                                const clientHeight = p.clientHeight || window.innerHeight || 0;
 
-                    // Show top button if scrolled down more than 50px
-                    this.showTop = scrollTop > 50; 
-
-                    // Show bottom button if there is MORE than 100px of scrollable content below current position
-                    this.showBottom = (scrollTop + clientHeight) < (scrollHeight - 100);
-                }
-            }" x-init="$nextTick(() => check())" @scroll.window.throttle.50ms="check()"
-                    class="fixed bottom-12 right-6 z-[9999] flex flex-col gap-2">
+                                this.showTop = scrollTop > 50; 
+                                this.showBottom = (scrollTop + clientHeight) < (scrollHeight - 100);
+                            },
+                            scrollToTop() {
+                                const p = this.getScrollContainer();
+                                p.scrollTo({ top: 0, behavior: 'smooth' });
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                            },
+                            scrollToBottom() {
+                                const p = this.getScrollContainer();
+                                p.scrollTo({ top: p.scrollHeight, behavior: 'smooth' });
+                                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                            }
+                        }" x-init="$nextTick(() => {
+                            check();
+                            const p = getScrollContainer();
+                            if (p) p.addEventListener('scroll', () => check(), { passive: true });
+                        })" @scroll.window.throttle.50ms="check()"
+                    class="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2">
 
                     <!-- TOP BUTTON -->
-                    <button x-show="showTop" x-transition @click="window.scrollTo({top: 0, behavior: 'smooth'})"
-                        class="w-12 h-12 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-full shadow-2xl flex items-center justify-center transition-all cursor-pointer border-2 border-white">
-                        <i class="fa-solid fa-arrow-up text-base"></i>
+                    <button x-show="showTop" x-transition @click="scrollToTop()"
+                        class="w-11 h-11 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-full shadow-2xl flex items-center justify-center transition-all cursor-pointer border-2 border-white">
+                        <i class="fa-solid fa-arrow-up text-sm"></i>
                     </button>
 
                     <!-- BOTTOM BUTTON -->
-                    <button x-show="showBottom" x-transition
-                        @click="window.scrollTo({top: document.documentElement.scrollHeight, behavior: 'smooth'})"
-                        class="w-12 h-12 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-full shadow-2xl flex items-center justify-center transition-all cursor-pointer border-2 border-white">
-                        <i class="fa-solid fa-arrow-down text-base"></i>
+                    <button x-show="showBottom" x-transition @click="scrollToBottom()"
+                        class="w-11 h-11 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-full shadow-2xl flex items-center justify-center transition-all cursor-pointer border-2 border-white">
+                        <i class="fa-solid fa-arrow-down text-sm"></i>
                     </button>
                 </div>
 @endsection

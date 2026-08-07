@@ -542,6 +542,16 @@
         </a>
     </div>
 
+    <!-- Socius AI Standalone Chat -->
+    <div class="sidebar-item relative" @mouseenter="hoverItem = 'socius-chat'" @mouseleave="hoverItem = null">
+        <a href="{{ route('socius.chat.index') }}"
+            class="flex items-center px-3 py-2 text-sm font-bold tracking-wider {{ request()->routeIs('socius.chat.*') ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors">
+            <i
+                class="fa-solid fa-comment-dots mr-3 {{ request()->routeIs('socius.chat.*') ? 'text-[#f0f0f1]' : 'text-zinc-200 group-hover:text-[#f0f0f1]' }}"></i>
+            {{ __('Socius AI') }}
+        </a>
+    </div>
+
     <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'studio')" @mouseleave="clearFlyout()">
         <div @click="expandedItem = (expandedItem === 'studio' ? null : 'studio')"
             class="flex items-center justify-between px-3 py-2 text-sm font-bold {{ (request()->routeIs('research-proposal.*') || request()->routeIs('research-studio.*')) ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors cursor-pointer">
@@ -568,7 +578,7 @@
                 <a href="{{ route('research-studio.report.history') }}"
                     class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-studio.report.history') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Report History') }}</a>
                 <a href="{{ route('research-studio.proofread.create') }}"
-                    class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-studio.proofread.create') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Proofread Thesis') }}</a>
+                    class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-studio.proofread.create') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Proofread Report') }}</a>
             </div>
         </template>
 
@@ -582,7 +592,7 @@
             <a href="{{ route('research-studio.report.history') }}"
                 class="block py-1 text-xs font-bold {{ request()->routeIs('research-studio.report.history') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Report History') }}</a>
             <a href="{{ route('research-studio.proofread.create') }}"
-                class="block py-1 text-xs font-bold {{ request()->routeIs('research-studio.proofread.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Proofread Thesis') }}</a>
+                class="block py-1 text-xs font-bold {{ request()->routeIs('research-studio.proofread.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Proofread Report') }}</a>
         </div>
     </div>
 

@@ -5,291 +5,320 @@
 
 @section('content')
     <div x-data="{
-                                activeTab: 'upload', // 'upload' or 'record'
-                                recordMode: 'audio', // 'audio' or 'video'
+                                                activeTab: 'upload', // 'upload' or 'record'
+                                                recordMode: 'audio', // 'audio' or 'video'
 
-                                // File Upload state
-                                selectedFile: null,
-                                filePreviewUrl: null,
-                                isDragOver: false,
+                                                // File Upload state
+                                                selectedFile: null,
+                                                filePreviewUrl: null,
+                                                isDragOver: false,
 
-                                // Live Recording state
-                                isRecording: false,
-                                isPaused: false,
-                                recordTimer: 0,
-                                timerInterval: null,
-                                mediaRecorder: null,
-                                recordedChunks: [],
-                                recordedBlob: null,
-                                recordedMediaUrl: null,
-                                recordingStream: null,
+                                                // Live Recording state
+                                                isRecording: false,
+                                                isPaused: false,
+                                                recordTimer: 0,
+                                                timerInterval: null,
+                                                mediaRecorder: null,
+                                                recordedChunks: [],
+                                                recordedBlob: null,
+                                                recordedMediaUrl: null,
+                                                recordingStream: null,
 
-                                // Processing & Results
-                                isProcessing: false,
-                                transcriptionText: '',
-                                wordCount: 0,
-                                charCount: 0,
-                                searchQuery: '',
+                                                // Processing & Results
+                                                isProcessing: false,
+                                                transcriptionText: '',
+                                                wordCount: 0,
+                                                charCount: 0,
+                                                searchQuery: '',
 
-                                init() {
-                                    this.$watch('activeTab', (val) => {
-                                        if (val !== 'record' && this.recordingStream) {
-                                            this.stopStream();
-                                        }
-                                    });
-                                },
+                                                init() {
+                                                    this.$watch('activeTab', (val) => {
+                                                        if (val !== 'record' && this.recordingStream) {
+                                                            this.stopStream();
+                                                        }
+                                                    });
+                                                },
 
-                                handleFileDrop(e) {
-                                    this.isDragOver = false;
-                                    const files = e.dataTransfer?.files;
-                                    if (files && files.length > 0) {
-                                        this.processSelectedFile(files[0]);
-                                    }
-                                },
+                                                handleFileDrop(e) {
+                                                    this.isDragOver = false;
+                                                    const files = e.dataTransfer?.files;
+                                                    if (files && files.length > 0) {
+                                                        this.processSelectedFile(files[0]);
+                                                    }
+                                                },
 
-                                handleFileSelect(e) {
-                                    const files = e.target.files;
-                                    if (files && files.length > 0) {
-                                        this.processSelectedFile(files[0]);
-                                    }
-                                },
+                                                handleFileSelect(e) {
+                                                    const files = e.target.files;
+                                                    if (files && files.length > 0) {
+                                                        this.processSelectedFile(files[0]);
+                                                    }
+                                                },
 
-                                processSelectedFile(file) {
-                                    const validTypes = ['audio/', 'video/', 'application/ogg'];
-                                    const isValid = validTypes.some(t => file.type.startsWith(t)) || 
-                                        /\.(mp3|mp4|wav|webm|m4a|ogg|mpeg|aac|flac|mov)$/i.test(file.name);
+                                                processSelectedFile(file) {
+                                                    const validTypes = ['audio/', 'video/', 'application/ogg'];
+                                                    const isValid = validTypes.some(t => file.type.startsWith(t)) || 
+                                                        /\.(mp3|mp4|wav|webm|m4a|ogg|mpeg|aac|flac|mov)$/i.test(file.name);
 
-                                    if (!isValid) {
-                                        Swal.fire({
-                                            title: 'Invalid File Type',
-                                            text: 'Please upload a valid audio or video file (MP3, MP4, WAV, WEBM, M4A, OGG, FLAC, MOV).',
-                                            icon: 'warning',
-                                            customClass: { popup: 'rounded-3xl' }
-                                        });
-                                        return;
-                                    }
+                                                    if (!isValid) {
+                                                        Swal.fire({
+                                                            title: 'Invalid File Type',
+                                                            text: 'Please upload a valid audio or video file (MP3, MP4, WAV, WEBM, M4A, OGG, FLAC, MOV).',
+                                                            icon: 'warning',
+                                                            customClass: { popup: 'rounded-3xl' }
+                                                        });
+                                                        return;
+                                                    }
 
-                                    if (file.size > 52428800) { // 50MB
-                                        Swal.fire({
-                                            title: 'File Too Large',
-                                            text: 'Maximum file size allowed is 50MB.',
-                                            icon: 'warning',
-                                            customClass: { popup: 'rounded-3xl' }
-                                        });
-                                        return;
-                                    }
+                                                    if (file.size > 52428800) { // 50MB
+                                                        Swal.fire({
+                                                            title: 'File Too Large',
+                                                            text: 'Maximum file size allowed is 50MB.',
+                                                            icon: 'warning',
+                                                            customClass: { popup: 'rounded-3xl' }
+                                                        });
+                                                        return;
+                                                    }
 
-                                    this.selectedFile = file;
-                                    if (this.filePreviewUrl) URL.revokeObjectURL(this.filePreviewUrl);
-                                    this.filePreviewUrl = URL.createObjectURL(file);
-                                },
+                                                    this.selectedFile = file;
+                                                    if (this.filePreviewUrl) URL.revokeObjectURL(this.filePreviewUrl);
+                                                    this.filePreviewUrl = URL.createObjectURL(file);
+                                                },
 
-                                clearSelectedFile() {
-                                    this.selectedFile = null;
-                                    if (this.filePreviewUrl) {
-                                        URL.revokeObjectURL(this.filePreviewUrl);
-                                        this.filePreviewUrl = null;
-                                    }
-                                    if (this.$refs.fileInput) {
-                                        this.$refs.fileInput.value = '';
-                                    }
-                                },
+                                                clearSelectedFile() {
+                                                    this.selectedFile = null;
+                                                    if (this.filePreviewUrl) {
+                                                        URL.revokeObjectURL(this.filePreviewUrl);
+                                                        this.filePreviewUrl = null;
+                                                    }
+                                                    if (this.$refs.fileInput) {
+                                                        this.$refs.fileInput.value = '';
+                                                    }
+                                                },
 
-                                // Live Recording methods
-                                async startRecording() {
-                                    this.recordedChunks = [];
-                                    this.recordedBlob = null;
-                                    if (this.recordedMediaUrl) {
-                                        URL.revokeObjectURL(this.recordedMediaUrl);
-                                        this.recordedMediaUrl = null;
-                                    }
+                                                // Live Recording methods
+                                                async startRecording() {
+                                                    this.recordedChunks = [];
+                                                    this.recordedBlob = null;
+                                                    if (this.recordedMediaUrl) {
+                                                        URL.revokeObjectURL(this.recordedMediaUrl);
+                                                        this.recordedMediaUrl = null;
+                                                    }
 
-                                    try {
-                                        const constraints = this.recordMode === 'video' 
-                                            ? { audio: true, video: { width: { ideal: 1280 }, height: { ideal: 720 } } }
-                                            : { audio: true, video: false };
+                                                    try {
+                                                        const constraints = this.recordMode === 'video' 
+                                                            ? { audio: true, video: { width: { ideal: 1280 }, height: { ideal: 720 } } }
+                                                            : { audio: true, video: false };
 
-                                        this.recordingStream = await navigator.mediaDevices.getUserMedia(constraints);
+                                                        this.recordingStream = await navigator.mediaDevices.getUserMedia(constraints);
 
-                                        if (this.recordMode === 'video' && this.$refs.livePreview) {
-                                            this.$refs.livePreview.srcObject = this.recordingStream;
-                                            this.$refs.livePreview.play();
-                                        }
+                                                        if (this.recordMode === 'video' && this.$refs.livePreview) {
+                                                            this.$refs.livePreview.srcObject = this.recordingStream;
+                                                            this.$refs.livePreview.play();
+                                                        }
 
-                                        let mimeType = 'audio/webm';
-                                        if (this.recordMode === 'video') {
-                                            mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
-                                        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-                                            mimeType = 'audio/webm';
-                                        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-                                            mimeType = 'audio/mp4';
-                                        }
+                                                        let mimeType = 'audio/webm';
+                                                        if (this.recordMode === 'video') {
+                                                            mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
+                                                        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+                                                            mimeType = 'audio/webm';
+                                                        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                                                            mimeType = 'audio/mp4';
+                                                        }
 
-                                        this.mediaRecorder = new MediaRecorder(this.recordingStream, { mimeType });
+                                                        this.mediaRecorder = new MediaRecorder(this.recordingStream, { mimeType });
 
-                                        this.mediaRecorder.ondataavailable = (e) => {
-                                            if (e.data && e.data.size > 0) {
-                                                this.recordedChunks.push(e.data);
-                                            }
-                                        };
+                                                        this.mediaRecorder.ondataavailable = (e) => {
+                                                            if (e.data && e.data.size > 0) {
+                                                                this.recordedChunks.push(e.data);
+                                                            }
+                                                        };
 
-                                        this.mediaRecorder.onstop = () => {
-                                            this.recordedBlob = new Blob(this.recordedChunks, { type: mimeType });
-                                            this.recordedMediaUrl = URL.createObjectURL(this.recordedBlob);
-                                            this.stopStream();
-                                        };
+                                                        this.mediaRecorder.onstop = () => {
+                                                            this.recordedBlob = new Blob(this.recordedChunks, { type: mimeType });
+                                                            this.recordedMediaUrl = URL.createObjectURL(this.recordedBlob);
+                                                            this.stopStream();
+                                                        };
 
-                                        this.mediaRecorder.start(1000);
-                                        this.isRecording = true;
-                                        this.isPaused = false;
-                                        this.startTimer();
-                                    } catch (err) {
-                                        console.error(err);
-                                        Swal.fire({
-                                            title: 'Permission Required',
-                                            text: 'Could not access ' + (this.recordMode === 'video' ? 'camera and microphone' : 'microphone') + '. Please grant browser permissions.',
-                                            icon: 'error',
-                                            customClass: { popup: 'rounded-3xl' }
-                                        });
-                                    }
-                                },
+                                                        this.mediaRecorder.start(1000);
+                                                        this.isRecording = true;
+                                                        this.isPaused = false;
+                                                        this.startTimer();
+                                                    } catch (err) {
+                                                        console.error(err);
+                                                        Swal.fire({
+                                                            title: 'Permission Required',
+                                                            text: 'Could not access ' + (this.recordMode === 'video' ? 'camera and microphone' : 'microphone') + '. Please grant browser permissions.',
+                                                            icon: 'error',
+                                                            customClass: { popup: 'rounded-3xl' }
+                                                        });
+                                                    }
+                                                },
 
-                                pauseRecording() {
-                                    if (this.mediaRecorder && this.isRecording) {
-                                        if (this.isPaused) {
-                                            this.mediaRecorder.resume();
-                                            this.isPaused = false;
-                                        } else {
-                                            this.mediaRecorder.pause();
-                                            this.isPaused = true;
-                                        }
-                                    }
-                                },
+                                                pauseRecording() {
+                                                    if (this.mediaRecorder && this.isRecording) {
+                                                        if (this.isPaused) {
+                                                            this.mediaRecorder.resume();
+                                                            this.isPaused = false;
+                                                        } else {
+                                                            this.mediaRecorder.pause();
+                                                            this.isPaused = true;
+                                                        }
+                                                    }
+                                                },
 
-                                stopRecording() {
-                                    if (this.mediaRecorder && this.isRecording) {
-                                        this.mediaRecorder.stop();
-                                        this.isRecording = false;
-                                        this.isPaused = false;
-                                        this.stopTimer();
-                                    }
-                                },
+                                                stopRecording() {
+                                                    if (this.mediaRecorder && this.isRecording) {
+                                                        this.mediaRecorder.stop();
+                                                        this.isRecording = false;
+                                                        this.isPaused = false;
+                                                        this.stopTimer();
+                                                    }
+                                                },
 
-                                stopStream() {
-                                    if (this.recordingStream) {
-                                        this.recordingStream.getTracks().forEach(track => track.stop());
-                                        this.recordingStream = null;
-                                    }
-                                    if (this.$refs.livePreview) {
-                                        this.$refs.livePreview.srcObject = null;
-                                    }
-                                },
+                                                stopStream() {
+                                                    if (this.recordingStream) {
+                                                        this.recordingStream.getTracks().forEach(track => track.stop());
+                                                        this.recordingStream = null;
+                                                    }
+                                                    if (this.$refs.livePreview) {
+                                                        this.$refs.livePreview.srcObject = null;
+                                                    }
+                                                },
 
-                                discardRecording() {
-                                    this.stopRecording();
-                                    this.recordedChunks = [];
-                                    this.recordedBlob = null;
-                                    if (this.recordedMediaUrl) {
-                                        URL.revokeObjectURL(this.recordedMediaUrl);
-                                        this.recordedMediaUrl = null;
-                                    }
-                                    this.recordTimer = 0;
-                                },
+                                                discardRecording() {
+                                                    this.stopRecording();
+                                                    this.recordedChunks = [];
+                                                    this.recordedBlob = null;
+                                                    if (this.recordedMediaUrl) {
+                                                        URL.revokeObjectURL(this.recordedMediaUrl);
+                                                        this.recordedMediaUrl = null;
+                                                    }
+                                                    this.recordTimer = 0;
+                                                },
 
-                                startTimer() {
-                                    this.recordTimer = 0;
-                                    clearInterval(this.timerInterval);
-                                    this.timerInterval = setInterval(() => {
-                                        if (!this.isPaused) {
-                                            this.recordTimer++;
-                                        }
-                                    }, 1000);
-                                },
+                                                saveRecordingToDevice() {
+                                                    if (!this.recordedBlob) return;
+                                                    const isVideo = this.recordMode === 'video';
+                                                    const mime = this.recordedBlob.type || '';
+                                                    let ext = isVideo ? 'webm' : 'webm';
+                                                    if (mime.includes('mp4')) ext = isVideo ? 'mp4' : 'm4a';
+                                                    else if (mime.includes('wav')) ext = 'wav';
+                                                    else if (mime.includes('ogg')) ext = 'ogg';
 
-                                stopTimer() {
-                                    clearInterval(this.timerInterval);
-                                },
+                                                    const fileName = `recording_${new Date().toISOString().slice(0, 10)}_${Date.now()}.${ext}`;
+                                                    const url = this.recordedMediaUrl || URL.createObjectURL(this.recordedBlob);
+                                                    const a = document.createElement('a');
+                                                    a.href = url;
+                                                    a.download = fileName;
+                                                    document.body.appendChild(a);
+                                                    a.click();
+                                                    document.body.removeChild(a);
 
-                                formatTime(seconds) {
-                                    const mins = Math.floor(seconds / 60);
-                                    const secs = seconds % 60;
-                                    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-                                },
+                                                    Swal.fire({
+                                                        title: @js(__('Recording Saved!')),
+                                                        text: @js(__('File downloaded to your device.')),
+                                                        icon: 'success',
+                                                        toast: true,
+                                                        position: 'top-end',
+                                                        showConfirmButton: false,
+                                                        timer: 2000
+                                                    });
+                                                },
 
-                                // Submission & API Call
-                                async submitForTranscription(sourceType) {
-                                    let fileToSend = null;
-                                    if (sourceType === 'file') {
-                                        fileToSend = this.selectedFile;
-                                    } else if (sourceType === 'record') {
-                                        if (!this.recordedBlob) return;
-                                        const ext = this.recordMode === 'video' ? 'webm' : 'webm';
-                                        fileToSend = new File([this.recordedBlob], `recording_${Date.now()}.${ext}`, { type: this.recordedBlob.type });
-                                    }
+                                                startTimer() {
+                                                    this.recordTimer = 0;
+                                                    clearInterval(this.timerInterval);
+                                                    this.timerInterval = setInterval(() => {
+                                                        if (!this.isPaused) {
+                                                            this.recordTimer++;
+                                                        }
+                                                    }, 1000);
+                                                },
 
-                                    if (!fileToSend) {
-                                        Swal.fire({ title: 'No Media Found', text: 'Please select a file or record audio/video first.', icon: 'warning' });
-                                        return;
-                                    }
+                                                stopTimer() {
+                                                    clearInterval(this.timerInterval);
+                                                },
 
-                                    this.isProcessing = true;
-                                    const formData = new FormData();
-                                    formData.append('file', fileToSend);
+                                                formatTime(seconds) {
+                                                    const mins = Math.floor(seconds / 60);
+                                                    const secs = seconds % 60;
+                                                    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                                                },
 
-                                    try {
-                                        const response = await fetch('{{ route('transcription.transcribe') }}', {
-                                            method: 'POST',
-                                            headers: {
-                                                'Accept': 'application/json',
-                                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-                                            },
-                                            body: formData
-                                        });
+                                                // Submission & API Call
+                                                async submitForTranscription(sourceType) {
+                                                    let fileToSend = null;
+                                                    if (sourceType === 'file') {
+                                                        fileToSend = this.selectedFile;
+                                                    } else if (sourceType === 'record') {
+                                                        if (!this.recordedBlob) return;
+                                                        const ext = this.recordMode === 'video' ? 'webm' : 'webm';
+                                                        fileToSend = new File([this.recordedBlob], `recording_${Date.now()}.${ext}`, { type: this.recordedBlob.type });
+                                                    }
 
-                                        const data = await response.json();
+                                                    if (!fileToSend) {
+                                                        Swal.fire({ title: 'No Media Found', text: 'Please select a file or record audio/video first.', icon: 'warning' });
+                                                        return;
+                                                    }
 
-                                        if (!response.ok || !data.success) {
-                                            throw new Error(data.message || 'Transcription failed.');
-                                        }
+                                                    this.isProcessing = true;
+                                                    const formData = new FormData();
+                                                    formData.append('file', fileToSend);
 
-                                        this.transcriptionText = data.transcription;
-                                        this.wordCount = data.word_count || (data.transcription.trim().match(/\s+/g) || []).length + 1;
-                                        this.charCount = data.char_count || data.transcription.length;
+                                                    try {
+                                                        const response = await fetch('{{ route('transcription.transcribe') }}', {
+                                                            method: 'POST',
+                                                            headers: {
+                                                                'Accept': 'application/json',
+                                                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                                                            },
+                                                            body: formData
+                                                        });
 
-                                        Swal.fire({
-                                            title: 'Transcription Complete!',
-                                            text: 'Text extracted successfully.',
-                                            icon: 'success',
-                                            toast: true,
-                                            position: 'top-end',
-                                            showConfirmButton: false,
-                                            timer: 3000
-                                        });
-                                    } catch (err) {
-                                        console.error(err);
-                                        Swal.fire({
-                                            title: 'Transcription Error',
-                                            text: err.message || 'Failed to process media file. Please try again.',
-                                            icon: 'error',
-                                            customClass: { popup: 'rounded-3xl' }
-                                        });
-                                    } finally {
-                                        this.isProcessing = false;
-                                    }
-                                },
+                                                        const data = await response.json();
 
-                                downloadTxt() {
-                                    if (!this.transcriptionText) return;
-                                    const blob = new Blob([this.transcriptionText], { type: 'text/plain;charset=utf-8' });
-                                    const url = URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = `transcription_${Date.now()}.txt`;
-                                    a.click();
-                                    URL.revokeObjectURL(url);
-                                }
-                            }"
-        class="min-h-screen bg-[#1d2327] text-slate-100 border border-white/5 shadow-2xl flex flex-col font-sans">
+                                                        if (!response.ok || !data.success) {
+                                                            throw new Error(data.message || 'Transcription failed.');
+                                                        }
+
+                                                        this.transcriptionText = data.transcription;
+                                                        this.wordCount = data.word_count || (data.transcription.trim().match(/\s+/g) || []).length + 1;
+                                                        this.charCount = data.char_count || data.transcription.length;
+
+                                                        Swal.fire({
+                                                            title: 'Transcription Complete!',
+                                                            text: 'Text extracted successfully.',
+                                                            icon: 'success',
+                                                            toast: true,
+                                                            position: 'top-end',
+                                                            showConfirmButton: false,
+                                                            timer: 3000
+                                                        });
+                                                    } catch (err) {
+                                                        console.error(err);
+                                                        Swal.fire({
+                                                            title: 'Transcription Error',
+                                                            text: err.message || 'Failed to process media file. Please try again.',
+                                                            icon: 'error',
+                                                            customClass: { popup: 'rounded-3xl' }
+                                                        });
+                                                    } finally {
+                                                        this.isProcessing = false;
+                                                    }
+                                                },
+
+                                                downloadTxt() {
+                                                    if (!this.transcriptionText) return;
+                                                    const blob = new Blob([this.transcriptionText], { type: 'text/plain;charset=utf-8' });
+                                                    const url = URL.createObjectURL(blob);
+                                                    const a = document.createElement('a');
+                                                    a.href = url;
+                                                    a.download = `transcription_${Date.now()}.txt`;
+                                                    a.click();
+                                                    URL.revokeObjectURL(url);
+                                                }
+                                            }"
+        class="flex-1 h-full overflow-y-auto bg-[#1d2327] text-slate-100 border border-white/5 shadow-2xl flex flex-col font-sans">
 
         <!-- Header -->
         <div
@@ -427,7 +456,7 @@
 
                     <!-- Live Video Viewfinder / Recording Interface -->
                     <div
-                        class="relative bg-black/50 rounded-2xl border border-white/5 overflow-hidden min-h-[220px] flex flex-col items-center justify-center p-4">
+                        class="relative bg-black/50 rounded-2xl border border-white/5 min-h-[220px] flex flex-col items-center justify-center p-4">
 
                         <!-- Webcam Feed when recording video -->
                         <video x-ref="livePreview" x-show="recordMode === 'video' && isRecording" autoplay muted playsinline
@@ -499,6 +528,13 @@
                             {{ __('Stop Recording') }}
                         </button>
 
+                        <!-- Save Recording to Device Button -->
+                        <button x-show="!isRecording && recordedBlob" @click="saveRecordingToDevice()"
+                            class="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-lg shadow-emerald-600/20">
+                            <i class="fa-solid fa-download"></i>
+                            {{ __('Save to Device') }}
+                        </button>
+
                         <!-- Re-record / Discard Button -->
                         <button x-show="!isRecording && recordedBlob" @click="discardRecording()"
                             class="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
@@ -547,6 +583,29 @@
                                 {{ __('Download') }}
                             </button>
 
+                            <!-- Analyze with Socius -->
+                            <button x-data="{ analyzing: false }" @click="
+                                                    if (!transcriptionText || analyzing) return;
+                                                    analyzing = true;
+                                                    fetch('{{ route('transcription.analyze-with-socius') }}', {
+                                                        method: 'POST',
+                                                        headers: {
+                                                            'Content-Type': 'application/json',
+                                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content'),
+                                                            'Accept': 'application/json'
+                                                        },
+                                                        body: JSON.stringify({ transcription_text: transcriptionText, label: 'AI Transcription' })
+                                                    })
+                                                    .then(r => r.json())
+                                                    .then(data => { if (data.redirect) window.location.href = data.redirect; })
+                                                    .catch(() => { analyzing = false; });
+                                                "
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2271b1] hover:bg-[#135e96] text-[10px] font-bold text-white transition-colors shadow-sm"
+                                title="{{ __('Analyze with Socius AI') }}">
+                                <i class="fa-solid fa-sparkles text-[10px]"></i>
+                                {{ __('Analyze') }}
+                            </button>
+
                             <!-- Clear -->
                             <button @click="transcriptionText = ''; wordCount = 0; charCount = 0;"
                                 class="text-[10px] text-slate-500 hover:text-white font-bold px-2 py-1 transition-colors">
@@ -559,7 +618,7 @@
                     <div class="relative">
                         <!-- Loading Overlay -->
                         <div x-show="isProcessing"
-                            class="absolute inset-0 bg-[#1d2327]/95 flex flex-col items-center justify-center gap-3 z-30 animate-in fade-in duration-150 rounded-xl">
+                            class=" bg-[#1d2327]/95 flex flex-col items-center justify-center gap-3 z-30 animate-in fade-in duration-150 rounded-xl">
                             <div class="relative w-12 h-12 flex items-center justify-center">
                                 <span class="absolute w-full h-full border-2 border-[#2271b1]/20 rounded-full"></span>
                                 <span

@@ -13,9 +13,10 @@ class SurveyAiThread extends Model
     use HasFactory;
 
     protected $fillable = [
-        'survey_id',
+        'survey_id',        // nullable for standalone Socius threads
         'user_id',
         'survey_group_id',
+        'context_type',     // 'general' | 'transcription' | null (survey-linked)
         'title',
         'is_pinned',
         'last_activity_at',

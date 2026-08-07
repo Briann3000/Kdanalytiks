@@ -56,12 +56,32 @@
                                     </p>
                                 </div>
                             </div>
-                            <div class="mt-6 pt-4 border-t border-gray-50 flex items-center justify-between">
-                                <a href="{{ route('research-studio.report.download', $report->id) }}"
-                                    class="flex items-center gap-2 text-xs font-bold text-[#2271b1] hover:text-blue-500 transition-colors">
-                                    <i class="fa-solid fa-download"></i>
-                                    {{ __('Download DOCX') }}
-                                </a>
+                            <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap">
+                                <div class="flex items-center gap-3">
+                                    <a href="{{ route('research-studio.report.preview', $report->id) }}"
+                                        class="flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
+                                        <i class="fa-solid fa-eye text-xs"></i>
+                                        {{ __('Preview') }}
+                                    </a>
+                                    <a href="{{ route('research-studio.report.download', $report->id) }}"
+                                        class="flex items-center gap-1.5 text-xs font-bold text-[#2271b1] hover:text-blue-500 transition-colors">
+                                        <i class="fa-solid fa-download text-xs"></i>
+                                        {{ __('DOCX') }}
+                                    </a>
+                                </div>
+
+                                <form id="delete-report-{{ $report->id }}"
+                                    action="{{ route('research-studio.report.destroy', $report->id) }}" method="POST"
+                                    class="inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="button"
+                                        onclick="if(confirm('{{ __('Delete this compiled report?') }}')) { document.getElementById('delete-report-{{ $report->id }}').submit(); }"
+                                        class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-600 hover:text-white transition-all flex items-center justify-center border border-red-100"
+                                        title="{{ __('Delete Report') }}">
+                                        <i class="fa-solid fa-trash-can text-xs"></i>
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     @endforeach

@@ -63,7 +63,7 @@ class TranscriptionController extends Controller
             if (empty($transcription)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Could not extract transcription text from the provided media file. Please check audio quality or API configuration.'
+                    'message' => 'Could not extract transcription text from the provided media file. Please check audio quality or try again.'
                 ], 422);
             }
 
@@ -85,5 +85,28 @@ class TranscriptionController extends Controller
                 'message' => 'An error occurred during transcription processing: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Flash transcription context to the session and return a redirect URL
+     * so the client can navigate to the standalone Socius page with context.
+     */
+    public function analyzeWithSocius(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'transcription_text' => ['required', 'string', 'max:50000'],
+            'label' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        // Flash the context so StandaloneSociusController::index() can pick it up
+        session()->flash('socius_standalone_context', [
+            'type' => 'transcription',
+            'text' => $validated['transcription_text'],
+            'label' => $validated['label'] ?? __('AI Transcription'),
+        ]);
+
+        return response()->json([
+            'redirect' => route('socius.chat.index'),
+        ]);
     }
 }

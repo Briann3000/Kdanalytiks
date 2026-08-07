@@ -6,6 +6,14 @@
     .kda-agent-fab {
         display: none !important;
     }
+
+
+    /* Lock viewport, prevent scrolling bounce & horizontal leaks on mobile */
+    .socius-root-container {
+        overscroll-behavior-y: none;
+        overscroll-behavior-x: none;
+        overflow-x: hidden;
+        background-color: #1e1e1e !important;
 </style>
 <div x-data="sociusManager({
         canAnalyze: @js($canAnalyze),
@@ -27,10 +35,10 @@
             kbDestroyTemplate: @js(route('socius.knowledge-base.destroy', ['knowledgeBase' => '__KB__']))
         }
     })" x-init="init()" class="animate-in fade-in duration-500">
-    <div class="relative flex gap-4" style="height: calc(100vh - 4.1rem); overflow: hidden;">
+    <div class="relative flex gap-4 w-full bg-[#1e1e1e]" style="height: calc(100dvh - 4.1rem); overflow: hidden;">
         {{-- Sidebar History --}}
-        <aside :class="historyOpen ? 'w-64 md:w-72 opacity-100' : 'w-0 opacity-0 -ml-4'"
-            class="bg-[#2b2b2b] text-white rounded-[2rem] border border-white/5 overflow-hidden flex flex-col h-full transition-all duration-300 ease-in-out flex-shrink-0">
+        <aside :class="historyOpen ? 'w-64 md:w-72 opacity-100 z-40' : 'w-0 opacity-0 -ml-4 pointer-events-none'"
+            class="bg-[#2b2b2b] text-white border border-white/5 overflow-hidden flex flex-col h-full transition-all duration-300 ease-in-out flex-shrink-0 absolute xl:relative inset-y-o left-0">
             <div class="px-4 py-3 border-b border-white/10 flex items-center justify-between gap-2">
                 <p class="text-[10px] font-bold text-slate-400">
                     {{ __('Conversation History') }}
@@ -39,6 +47,13 @@
                     class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#2271b1] text-white text-[9px] font-bold disabled:opacity-40 disabled:cursor-not-allowed">
                     <i class="fa-solid fa-plus text-[9px]" :class="{ 'fa-spin': creatingThread }"></i>
                     {{ __('New') }}
+                </button>
+
+                {{-- Mobile Explicit "X" Close Button --}}
+                <button @click="historyOpen = false"
+                    class="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-all xl:hidden"
+                    title="{{ __('Close Sidebar') }}">
+                    <i class="fa-solid fa-xmark"></i>
                 </button>
 
                 <template x-if="tokenUsage">
@@ -178,8 +193,13 @@
             </div>
         </aside>
 
-        <section
-            class="w-full min-h-[calc(100vh-140px)] sm:min-h-[calc(100vh-100px)] bg-[#252525] rounded-3xl flex flex-col justify-between overflow-hidden shadow-2xl">
+        <section class="w-full h-full bg-[#1e1e1e] flex flex-col justify-between overflow-hidden relative">
+            {{-- Mobile Backdrop Overlay (only visible on screens below 1280px / xl breakpoint) --}}
+            <div x-show="historyOpen" x-cloak @click="historyOpen = false"
+                x-transition:enter="transition-opacity ease-out duration-200" x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-in duration-150"
+                x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                class="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 xl:hidden"></div>
 
             {{-- Toggle Button when Sidebar is hidden --}}
             <template x-if="!historyOpen">
@@ -223,38 +243,41 @@
                 </div>
             </div>
 
-            <div class="px-5 py-2 border-b border-white/10 flex items-center justify-between gap-4 shrink-0">
-                <div class="flex items-center gap-3">
+            <div
+                class="px-3 sm:px-5 py-2 border-b border-white/10 flex items-center justify-between gap-2 sm:gap-4 shrink-0">
+                <div class="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-1">
                     <button @click="historyOpen = !historyOpen"
-                        class="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-all"
+                        class="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-all shrink-0"
                         title="{{ __('Toggle History') }}">
-                        <i class="fa-solid fa-bars-staggered"></i>
+                        <i class="fa-solid fa-bars-staggered text-xs"></i>
                     </button>
                     <a href="{{ route('surveys.reports', $survey) }}?reportTab=quantitative"
-                        class="p-2 rounded-xl bg-white/5 border border-white/10 text-[#2271b1] hover:text-blue hover:bg-white/10 transition-all font-bold text-[15px] flex items-center gap-1.5 tracking-tight"
+                        class="p-2 rounded-xl bg-white/5 border border-white/10 text-[#2271b1] hover:text-blue hover:bg-white/10 transition-all font-bold text-[13px] sm:text-[15px] flex items-center gap-1 tracking-tight shrink-0"
                         title="{{ __('Back to Dashboard Reports') }}">
                         <i class="fa-solid fa-arrow-left text-[9px]"></i>
                         <span class="hidden sm:inline">{{ __('Back') }}</span>
                     </a>
-                    <h3 class="text-sm text-white font-semibold tracking-tight truncate max-w-[200px] md:max-w-md"
+                    <h3 class="text-xs sm:text-sm text-white font-semibold tracking-tight truncate max-w-[100px] xs:max-w-[140px] sm:max-w-[220px] md:max-w-md"
                         x-text="currentThread ? currentThread.title : '{{ __('Socius') }}'"></h3>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
                     {{-- Knowledge Base Button --}}
                     <button @click="kbModalOpen = true"
-                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 text-xs font-bold text-slate-300 hover:text-white transition-all"
+                        class="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 text-xs font-bold text-slate-300 hover:text-white transition-all shrink-0"
                         title="{{ __('Manage persistent formatting rules and styles') }}">
+                        <i class="fa-solid fa-brain text-[10px]"></i>
                         <span class="hidden sm:inline">{{ __('Knowledge Base') }}</span>
                     </button>
 
                     {{-- Export Dropdown --}}
                     <template x-if="currentThreadId">
-                        <div class="relative" x-data="{ exportMenuOpen: false }" @click.away="exportMenuOpen = false">
+                        <div class="relative shrink-0" x-data="{ exportMenuOpen: false }"
+                            @click.away="exportMenuOpen = false">
                             <button @click="exportMenuOpen = !exportMenuOpen"
-                                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 text-xs font-bold text-slate-300 hover:text-white transition-all">
+                                class="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 text-xs font-bold text-slate-300 hover:text-white transition-all">
                                 <i class="fa-solid fa-download text-[10px]"></i>
-                                {{ __('Export') }}
+                                <span class="hidden xs:inline">{{ __('Export') }}</span>
                                 <i class="fa-solid fa-chevron-down text-[10px] opacity-50"></i>
                             </button>
 
@@ -269,10 +292,6 @@
                                 <a :href="`{{ route('surveys.analyse.threads.export', [$survey, ':thread']) }}`.replace(':thread', currentThreadId) + '?format=docx'"
                                     class="flex items-center gap-3 px-4 py-2.5 text-xs text-slate-300 hover:bg-white/10 hover:text-white transition-colors">
                                     <i class="fa-solid fa-file-word text-blue-400"></i> {{ __('Word Document') }}
-                                </a>
-                                <a :href="`{{ route('surveys.analyse.threads.export', [$survey, ':thread']) }}`.replace(':thread', currentThreadId) + '?format=excel'"
-                                    class="flex items-center gap-3 px-4 py-2.5 text-xs text-slate-300 hover:bg-white/10 hover:text-white transition-colors">
-                                    <i class="fa-solid fa-file-excel text-green-400"></i> {{ __('Excel Spreadsheet') }}
                                 </a>
                                 <a :href="`{{ route('surveys.analyse.threads.export', [$survey, ':thread']) }}`.replace(':thread', currentThreadId) + '?format=md'"
                                     class="flex items-center gap-3 px-4 py-2.5 text-xs text-slate-300 hover:bg-white/10 hover:text-white transition-colors">
@@ -603,17 +622,25 @@
                                 <p class="text-xs text-red-400 max-w-[180px] truncate" x-text="error"></p>
                             </template>
 
-                            <button type="button" @click="sendMessage()"
-                                :disabled="sending || !canAnalyze || (!draft.trim() && pendingFiles.length === 0)"
-                                class="w-8 h-8 rounded-full bg-white/10 border border-white/10 text-white flex items-center justify-center hover:bg-[#2271b1] hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-                                <i class="fa-solid text-xs"
-                                    :class="sending ? 'fa-circle-notch fa-spin' : 'fa-arrow-up'"></i>
-                            </button>
+                            <template x-if="sending">
+                                <button type="button" @click="stopGeneration()"
+                                    class="w-8 h-8 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 flex items-center justify-center hover:bg-red-500/40 hover:text-white transition-all shadow-sm"
+                                    title="{{ __('Stop Generating') }}">
+                                    <i class="fa-solid fa-stop text-[10px]"></i>
+                                </button>
+                            </template>
+                            <template x-if="!sending">
+                                <button type="button" @click="sendMessage()"
+                                    :disabled="!canAnalyze || (!draft.trim() && pendingFiles.length === 0)"
+                                    class="w-8 h-8 rounded-full bg-white/10 border border-white/10 text-white flex items-center justify-center hover:bg-[#2271b1] hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                                    <i class="fa-solid fa-arrow-up text-xs"></i>
+                                </button>
+                            </template>
                         </div>
                     </div>
                 </div>
                 <p class="text-[9px] text-slate-500 text-center mt-1">
-                    {{ __('Socius AI can make mistakes. Please verify important survey statistics and formulas.') }}
+                    {{ __('Socius AI can make mistakes. Please verify important survey statistics and literature.') }}
                 </p>
             </div>
         </section>

@@ -132,8 +132,8 @@
             @if($statusVal !== 'archived')
             <div class="relative" x-data="{ open: false }" @click.outside="open = false">
                 <button @click="open = !open" 
-                        class="inline-flex items-center gap-2 px-6 py-3 bg-[#2271b1] text-white rounded-xl font-black text-[10px] tracking-widest shadow-lg shadow-zinc-200/50 hover:bg-[#135e96] transition-all">
-                    <i class="fa-solid fa-plus"></i> {{ __('Create Survey') }}
+                        class="inline-flex items-center px-3 py-3 bg-[#2271b1] text-white rounded-2xl font-black text-[10px] shadow-lg shadow-zinc-200/50 hover:bg-[#135e96] transition-all">
+                    </i> {{ __('Create Survey') }}
                     <i class="fa-solid fa-chevron-down text-[8px] ml-1"></i>
                 </button>
                 <div x-show="open" 

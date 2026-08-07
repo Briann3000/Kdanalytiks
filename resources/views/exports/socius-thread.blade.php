@@ -54,7 +54,6 @@
 
         .message-socius {
             background-color: #f8fafc;
-            border-left: 4px solid #6366f1;
         }
 
         .role-label {
@@ -164,12 +163,12 @@
         }
 
         .content table th {
-            background-color: #6366f1;
+            background-color: #1e293b;
             color: #fff;
             font-weight: 700;
             padding: 8px 10px;
             text-align: left;
-            border: 1px solid #4f46e5;
+            border: 1px solid #38373d;
         }
 
         .content table td {
@@ -211,10 +210,6 @@
 </head>
 
 <body>
-    <div class="export-header">
-        <h1>{{ $thread->title ?: ($isSingleMessage ? 'Socius Report' : 'Socius Chat Export') }}</h1>
-        <p>Exported on {{ now()->toDayDateTimeString() }} &nbsp;|&nbsp; User: {{ Auth::user()->name }}</p>
-    </div>
 
     @foreach($processedMessages as $msg)
         @if(!$isSingleMessage || $msg['role'] === 'assistant')

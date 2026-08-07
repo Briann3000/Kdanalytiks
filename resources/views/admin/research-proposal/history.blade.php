@@ -62,17 +62,26 @@
                                     </div>
                                 </a>
 
-                                <!-- Delete Action -->
-                                <form id="delete-proposal-{{ $prop->id }}"
-                                    action="{{ route('research-proposal.destroy', $prop->id) }}" method="POST" class="inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="button"
-                                        onclick="if(confirm('{{ __('CRITICAL: This will permanently delete this proposal draft. Continue?') }}')) { document.getElementById('delete-proposal-{{ $prop->id }}').submit(); }"
-                                        class="absolute top-5 right-5 m-0 w-8 h-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover:opacity-100 shadow-sm border border-red-100">
-                                        <i class="fa-solid fa-trash-can text-[10px]"></i>
-                                    </button>
-                                </form>
+                                <!-- Delete Action & Quick Actions -->
+                                <div class="absolute top-4 right-4 flex items-center gap-1.5">
+                                    <a href="{{ route('research-proposal.preview', $prop->id) }}"
+                                        class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-indigo-100"
+                                        title="{{ __('Preview Proposal') }}">
+                                        <i class="fa-solid fa-eye text-[10px]"></i>
+                                    </a>
+                                    <form id="delete-proposal-{{ $prop->id }}"
+                                        action="{{ route('research-proposal.destroy', $prop->id) }}" method="POST"
+                                        class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="button"
+                                            onclick="if(confirm('{{ __('CRITICAL: This will permanently delete this proposal draft. Continue?') }}')) { document.getElementById('delete-proposal-{{ $prop->id }}').submit(); }"
+                                            class="w-8 h-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100"
+                                            title="{{ __('Delete Proposal') }}">
+                                            <i class="fa-solid fa-trash-can text-[10px]"></i>
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
                         @empty
                             <div class="col-span-2 bg-white border border-gray-100 rounded-2xl p-12 text-center shadow-sm">

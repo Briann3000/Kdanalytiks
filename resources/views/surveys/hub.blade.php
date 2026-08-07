@@ -6,7 +6,26 @@
 @section('meta_robots', 'noindex, nofollow')
 
 @section('content')
-    <div class="container-fluid {{ request('reportTab') === 'analyse' ? 'p-0 overflow-hidden' : 'px-4 py-6' }}">
+    @if(request('reportTab') === 'analyse')
+        <style>
+            .container-fluid {
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                padding-top: 0 !important;
+                padding-bottom: 0 !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                margin: 0 !important;
+            }
+
+            .content-pane {
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+        </style>
+    @endif
+    <div
+        class="{{ request('reportTab') === 'analyse' ? 'w-full h-full p-0 m-0 overflow-hidden' : 'container-fluid px-4 py-6' }}">
         @if((!isset($isSharedView) || !$isSharedView) && request('reportTab') !== 'analyse')
             <!-- Survey Header -->
             <header class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">

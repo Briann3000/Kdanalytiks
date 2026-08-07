@@ -83,9 +83,9 @@
         </div>
 
         <!-- Scrollable Draft Content Area -->
-        <div class="flex-1 p-10 overflow-y-auto custom-scrollbar bg-gray-50/50">
+        <div class="flex-1 p-3 sm:p-8 overflow-y-auto custom-scrollbar bg-gray-50/50">
             <div
-                class="max-w-4xl mx-auto bg-white shadow-2xl shadow-gray-200/50 rounded-lg border border-gray-100 p-16 min-h-screen mb-12">
+                class="max-w-4xl mx-auto bg-white shadow-2xl shadow-gray-200/50 rounded-lg border border-gray-100 p-4 sm:p-10 md:p-16 min-h-screen mb-12">
                 <!-- Cover Section -->
                 <div class="text-center py-12 mb-16 border-b-2 border-gray-50">
                     <span

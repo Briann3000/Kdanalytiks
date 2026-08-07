@@ -48,6 +48,17 @@ class ResearchStudioController extends Controller
         return view('research-studio.report_history', compact('reports'));
     }
 
+    public function destroyReport(CompiledReport $report)
+    {
+        if ($report->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $report->delete();
+
+        return redirect()->back()->with('success', __('Report deleted successfully.'));
+    }
+
     public function downloadReport(CompiledReport $report, \App\Services\ThesisCompilationService $compiler)
     {
         if ($report->user_id !== auth()->id()) {

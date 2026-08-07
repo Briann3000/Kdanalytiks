@@ -196,7 +196,7 @@ class ResponseQualityService
         if (empty($choiceQuestionNames)) {
             $choiceQuestionNames = $survey->questions()
                 ->whereIn('type', ['radio', 'checkbox', 'select', 'rating'])
-                ->pluck('name')
+                ->pluck('id')->map(fn($id) => 'question_' . $id)
                 ->toArray();
         }
 
