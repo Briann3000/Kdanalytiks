@@ -36,6 +36,14 @@ class TranscriptionController extends Controller
             'file' => 'required|file|max:51200', // 50MB max limit
         ]);
 
+        $user = $request->user();
+        if ($user && !$user->canTranscribe()) {
+            return response()->json([
+                'success' => false,
+                'message' => __('Upgrade Required: Your transcription limit has been reached for your current plan (Free: 1, Pro: 10/mo, Enterprise: Unlimited). Please upgrade to transcribe more media.')
+            ], 403);
+        }
+
         $file = $request->file('file');
         $extension = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'webm');
         $allowedExtensions = ['mp3', 'mp4', 'mpeg', 'mpga', 'm4a', 'wav', 'webm', 'ogg', 'mov', 'aac', 'flac'];
@@ -55,6 +63,10 @@ class TranscriptionController extends Controller
             $absolutePath = Storage::disk('local')->path($tempPath);
 
             $transcription = $this->aiService->transcribeMedia($absolutePath);
+
+            if ($user && !$user->isAdmin()) {
+                $user->increment('transcription_count');
+            }
 
             if (Storage::disk('local')->exists($tempPath)) {
                 Storage::disk('local')->delete($tempPath);

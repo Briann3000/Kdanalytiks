@@ -161,10 +161,14 @@
                             <h2 class="text-xl font-black text-gray-900 tracking-tight mt-1">{{ __('Chapters 1–3') }}</h2>
                         </div>
 
-                        <div class="space-y-4 leading-relaxed text-gray-800 text-sm font-normal">
+                        <div class="space-y-4 leading-relaxed text-gray-800 text-sm font-normal relative">
                             @if(!empty($ch1to3Paragraphs))
+                                @php $paraCount = 0; @endphp
                                 @foreach($ch1to3Paragraphs as $p)
                                     @php
+                                        $paraCount++;
+                                        if (!empty($isTruncated) && $paraCount > 8)
+                                            break;
                                         $rawText = is_array($p) ? ($p['status'] === 'rejected' ? ($p['original'] ?? '') : ($p['corrected'] ?? $p['original'] ?? '')) : $p;
                                         $text = safe_str($rawText);
                                         $isHeading = !empty($p['isHeading']) || preg_match('/^(CHAPTER\s+\d+|[1-5]\.\d+)/i', $text);
@@ -182,6 +186,29 @@
                                 @endforeach
                             @else
                                 <p class="text-gray-500 italic">{{ __('No text paragraphs found.') }}</p>
+                            @endif
+
+                            @if(!empty($isTruncated))
+                                <div
+                                    class="absolute inset-x-0 bottom-0 h-96 bg-gradient-to-t from-white via-white/95 to-transparent flex flex-col items-center justify-end pb-8 px-6 text-center z-30">
+                                    <div
+                                        class="bg-white p-8 sm:p-10 rounded-[2.5rem] shadow-2xl border border-gray-100 max-w-lg transform scale-105">
+                                        <div
+                                            class="w-16 h-16 bg-[#2271b1] rounded-2xl flex items-center justify-center text-white mx-auto mb-6 shadow-xl">
+                                            <i class="fa-solid fa-lock text-2xl"></i>
+                                        </div>
+                                        <h5 class="text-2xl font-black text-gray-900 mb-3 tracking-tight">
+                                            {{ __('Full Report Preview Locked') }}</h5>
+                                        <p class="text-gray-500 text-sm mb-6 leading-relaxed font-medium">
+                                            {{ __('Upgrade to Pro or Enterprise to unlock complete Chapters 1–5, full statistical contingency tables, and unlimited report exports.') }}
+                                        </p>
+                                        <a href="{{ route('subscriptions.index') }}"
+                                            class="inline-flex items-center justify-center w-full px-8 py-4 bg-[#2271b1] text-white font-black rounded-2xl hover:bg-[#135e96] transition-all shadow-lg hover:scale-[1.02]">
+                                            {{ __('Unlock Complete Report') }}
+                                            <i class="fa-solid fa-arrow-right ml-2 text-xs"></i>
+                                        </a>
+                                    </div>
+                                </div>
                             @endif
                         </div>
                     </section>
@@ -589,35 +616,35 @@
         <!-- Floating Scroll Control Stack -->
         <!-- Floating Scroll Control Stack -->
         <div x-data="{ 
-                    showTop: false, 
-                    showBottom: true,
-                    getScrollContainer() {
-                        return document.getElementById('main-viewport') || document.querySelector('.content-pane') || document.documentElement;
-                    },
-                    checkScroll() {
-                        const p = this.getScrollContainer();
-                        const scrollTop = p.scrollTop || window.pageYOffset || 0;
-                        const scrollHeight = p.scrollHeight || document.documentElement.scrollHeight || 0;
-                        const clientHeight = p.clientHeight || window.innerHeight || 0;
+                        showTop: false, 
+                        showBottom: true,
+                        getScrollContainer() {
+                            return document.getElementById('main-viewport') || document.querySelector('.content-pane') || document.documentElement;
+                        },
+                        checkScroll() {
+                            const p = this.getScrollContainer();
+                            const scrollTop = p.scrollTop || window.pageYOffset || 0;
+                            const scrollHeight = p.scrollHeight || document.documentElement.scrollHeight || 0;
+                            const clientHeight = p.clientHeight || window.innerHeight || 0;
 
-                        this.showTop = scrollTop > 150;
-                        this.showBottom = (scrollTop + clientHeight) < (scrollHeight - 150);
-                    },
-                    scrollToTop() {
-                        const p = this.getScrollContainer();
-                        p.scrollTo({ top: 0, behavior: 'smooth' });
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                    },
-                    scrollToBottom() {
-                        const p = this.getScrollContainer();
-                        p.scrollTo({ top: p.scrollHeight, behavior: 'smooth' });
-                        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-                    }
-                }" x-init="$nextTick(() => {
-                    checkScroll();
-                    const p = getScrollContainer();
-                    if (p) p.addEventListener('scroll', () => checkScroll(), { passive: true });
-                })" @scroll.window.throttle.50ms="checkScroll()"
+                            this.showTop = scrollTop > 150;
+                            this.showBottom = (scrollTop + clientHeight) < (scrollHeight - 150);
+                        },
+                        scrollToTop() {
+                            const p = this.getScrollContainer();
+                            p.scrollTo({ top: 0, behavior: 'smooth' });
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                        },
+                        scrollToBottom() {
+                            const p = this.getScrollContainer();
+                            p.scrollTo({ top: p.scrollHeight, behavior: 'smooth' });
+                            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                        }
+                    }" x-init="$nextTick(() => {
+                        checkScroll();
+                        const p = getScrollContainer();
+                        if (p) p.addEventListener('scroll', () => checkScroll(), { passive: true });
+                    })" @scroll.window.throttle.50ms="checkScroll()"
             class="fixed bottom-12 right-6 z-[999] flex flex-col gap-2">
 
             <button x-show="showTop" x-transition @click="scrollToTop()"

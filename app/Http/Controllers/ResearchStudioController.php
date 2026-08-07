@@ -61,8 +61,13 @@ class ResearchStudioController extends Controller
 
     public function downloadReport(CompiledReport $report, \App\Services\ThesisCompilationService $compiler)
     {
-        if ($report->user_id !== auth()->id()) {
+        $user = auth()->user();
+        if ($report->user_id !== $user->id) {
             abort(403);
+        }
+
+        if (!$user->hasActiveSubscription() && ($user->free_report_export_count ?? 0) >= 2) {
+            return redirect()->route('subscriptions.index')->with('error', __('Upgrade Required: Free accounts are limited to 2 free report DOCX exports. Please upgrade to Pro or Enterprise for unlimited exports.'));
         }
 
         // 1. Get the compiled PHPWord object
@@ -86,6 +91,10 @@ class ResearchStudioController extends Controller
         $objWriter = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'Word2007');
         $objWriter->save($absolutePath);
 
+        if (!$user->hasActiveSubscription() && !$user->isAdmin()) {
+            $user->increment('free_report_export_count');
+        }
+
         \Illuminate\Support\Facades\Log::info("Fresh Thesis DOCX compiled at: " . $absolutePath);
 
         return response()->download($absolutePath, \Illuminate\Support\Str::slug($report->title ?? 'thesis') . '.docx');
@@ -99,6 +108,12 @@ class ResearchStudioController extends Controller
     public function processProofread(Request $request)
     {
         @set_time_limit(600);
+
+        $user = $request->user();
+        if ($user && !$user->canProofread()) {
+            return redirect()->back()->with('error', __('Upgrade Required: Your document proofreading limit has been reached for your current plan (Free: 1, Pro: 10/mo, Enterprise: Unlimited). Please upgrade your subscription.'));
+        }
+
         $request->validate([
             'file' => 'required|file|max:20480|mimes:docx,doc,txt',
         ]);
@@ -111,6 +126,10 @@ class ResearchStudioController extends Controller
         try {
             $text = $this->extractionService->extractText($file, $tempPath);
             Storage::disk('local')->delete($tempPath);
+
+            if ($user && !$user->isAdmin()) {
+                $user->increment('proofread_count');
+            }
 
             $rawParagraphs = preg_split('/\n+/', $text);
             $processed = [];
@@ -315,11 +334,14 @@ class ResearchStudioController extends Controller
 
     public function previewReport(CompiledReport $report)
     {
-        if ($report->user_id !== auth()->id()) {
+        $user = auth()->user();
+        if ($report->user_id !== $user->id) {
             abort(403);
         }
 
-        return view('research-studio.preview_report', compact('report'));
+        $isTruncated = !$user->hasActiveSubscription();
+
+        return view('research-studio.preview_report', compact('report', 'isTruncated'));
     }
 
     private function generateDiffHtml(string $old, string $new): string

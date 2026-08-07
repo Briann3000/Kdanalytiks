@@ -29,6 +29,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'export_logo_url',
         'export_org_name',
         'free_export_count',
+        'free_report_export_count',
+        'transcription_count',
+        'proofread_count',
         'ai_analysis_count',
         'locale',
     ];
@@ -190,6 +193,64 @@ class User extends Authenticatable implements MustVerifyEmail
         if (!$this->hasProAccess()) {
             $this->increment('ai_analysis_count');
         }
+    }
+
+    /**
+     * Check if user can transcribe media (Free: 1, Pro: 10, Enterprise: Unlimited)
+     */
+    public function canTranscribe(): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        $tierSlug = $this->effectiveTierSlug();
+
+        if (str_contains($tierSlug, 'enterprise')) {
+            return true;
+        }
+
+        if (str_contains($tierSlug, 'pro')) {
+            return ($this->transcription_count ?? 0) < 10;
+        }
+
+        // Free tier: 1 max
+        return ($this->transcription_count ?? 0) < 1;
+    }
+
+    /**
+     * Check if user can proofread document (Free: 1, Pro: 10, Enterprise: Unlimited)
+     */
+    public function canProofread(): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        $tierSlug = $this->effectiveTierSlug();
+
+        if (str_contains($tierSlug, 'enterprise')) {
+            return true;
+        }
+
+        if (str_contains($tierSlug, 'pro')) {
+            return ($this->proofread_count ?? 0) < 10;
+        }
+
+        // Free tier: 1 max
+        return ($this->proofread_count ?? 0) < 1;
+    }
+
+    /**
+     * Check if user can export compiled report DOCX (Free: 2 max, Pro/Enterprise: Unlimited)
+     */
+    public function canExportReport(): bool
+    {
+        if ($this->hasActiveSubscription()) {
+            return true;
+        }
+
+        return ($this->free_report_export_count ?? 0) < 2;
     }
 
     /**
