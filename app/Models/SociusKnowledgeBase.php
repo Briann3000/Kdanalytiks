@@ -12,16 +12,25 @@ class SociusKnowledgeBase extends Model
 
     protected $fillable = [
         'user_id',
+        'organization_id',
+        'title',
+        'is_org_shared',
         'content',
         'is_active',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_org_shared' => 'boolean',
     ];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
     }
 }

@@ -273,6 +273,15 @@ class SociusChatController extends Controller
                 // Auto-extract long-term memory
                 $this->memoryExtractionService->extractAndStore($thread);
 
+                // Auto-feed into Organization Ecosystem Memory
+                if (isset($survey) && $survey && $survey->organization_id && !empty($assistantContent)) {
+                    try {
+                        \App\Jobs\GenerateOrgSociusContextJob::dispatchSync($survey, $assistantContent, $user->id);
+                    } catch (\Throwable $ex) {
+                        Log::error('Failed to dispatch GenerateOrgSociusContextJob: ' . $ex->getMessage());
+                    }
+                }
+
                 $this->emitStreamEvent('done', [
                     'thread_id' => $thread->id,
                     'assistant_message_id' => $assistantMessage->id,
