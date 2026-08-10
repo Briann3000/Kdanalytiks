@@ -12,24 +12,54 @@ class AiService
     /**
      * Check if an organization or independent user has reached its AI limit.
      */
-    public function checkUsageLimit($org): bool
+    public function checkUsageLimit($entity): bool
     {
-        $tier = $org->subscriptionTier ?? \App\Models\SubscriptionTier::where('slug', 'free')->first();
+        if ($entity instanceof \App\Models\Organization) {
+            $pool = $entity->resourcePool;
+            if ($pool) {
+                return $pool->canUseAiAnalysis();
+            }
+        }
+
+        if (is_object($entity) && method_exists($entity, 'activeOrganization')) {
+            $org = $entity->activeOrganization();
+            if ($org && $org->resourcePool) {
+                return $org->resourcePool->canUseAiAnalysis();
+            }
+        }
+
+        $tier = $entity->subscriptionTier ?? \App\Models\SubscriptionTier::where('slug', 'free')->first();
         $limit = $tier ? (int) $tier->ai_limit_per_month : 5;
 
         if ($limit === -1) {
             return true; // Unlimited
         }
 
-        return (int) $org->ai_usage_monthly < $limit;
+        return (int) ($entity->ai_usage_monthly ?? $entity->ai_analysis_count ?? 0) < $limit;
     }
 
-    /**
-     * Increment AI usage for an organization or independent user.
-     */
-    public function incrementUsage($org): void
+    public function incrementUsage($entity): void
     {
-        $org->increment('ai_usage_monthly');
+        if ($entity instanceof \App\Models\Organization && $entity->resourcePool) {
+            $entity->resourcePool->increment('ai_analyses_used');
+            return;
+        }
+
+        if (is_object($entity) && method_exists($entity, 'activeOrganization')) {
+            $org = $entity->activeOrganization();
+            if ($org && $org->resourcePool) {
+                $org->resourcePool->increment('ai_analyses_used');
+                return;
+            }
+        }
+
+        if (is_object($entity) && method_exists($entity, 'increment')) {
+            if (isset($entity->ai_usage_monthly)) {
+                $entity->increment('ai_usage_monthly');
+            } elseif (isset($entity->ai_analysis_count)) {
+                $entity->increment('ai_analysis_count');
+            }
+        }
     }
 
     /**
@@ -157,6 +187,11 @@ class AiService
             return $this->callGemini($prompt, $systemPrompt, $isJson, $maxTokens, $temperature);
         }
         return $this->callGroq($prompt, $systemPrompt, $isJson, $maxTokens, $temperature);
+    }
+
+    public function quickComplete($prompt, $systemPrompt = null)
+    {
+        return $this->callAi($prompt, $systemPrompt);
     }
 
     /**

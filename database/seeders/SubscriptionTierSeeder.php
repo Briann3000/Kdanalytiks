@@ -25,6 +25,7 @@ class SubscriptionTierSeeder extends Seeder
                 'ai_limit_per_month' => 5,
                 'has_custom_branding' => false,
                 'has_data_export' => false,
+                'org_max_seats' => 5,
             ],
             [
                 'name' => 'Pro',
@@ -38,6 +39,7 @@ class SubscriptionTierSeeder extends Seeder
                 'ai_limit_per_month' => 50,
                 'has_custom_branding' => true,
                 'has_data_export' => true,
+                'org_max_seats' => 10,
             ],
             [
                 'name' => 'Enterprise',
@@ -52,6 +54,7 @@ class SubscriptionTierSeeder extends Seeder
                 'has_custom_branding' => true,
                 'has_data_export' => true,
                 'has_advanced_analytics' => true,
+                'org_max_seats' => -1,
             ],
             [
                 'name' => 'Respondent Pro',
