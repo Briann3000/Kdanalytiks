@@ -34,11 +34,53 @@ class LoginController extends Controller
             'password' => 'required',
         ]);
 
-        $user = User::where('email', $request->email)->where('role', $role)->first();
+        $user = User::where('email', $request->email)
+            ->where(function ($q) use ($role) {
+                $q->where('role', $role)
+                    ->orWhereHas('orgMemberships', function ($q2) {
+                        $q2->where('status', 'active');
+                    });
+            })
+            ->first();
 
         if ($user && Hash::check($request->password, $user->password)) {
             if ($user->status === \App\Enums\UserStatus::Active) {
                 Auth::login($user, $request->has('remember'));
+
+                // Multi-Org Workspace session handling & backward compatibility seeding
+                $roleVal = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+                if ($role === 'organization' || $roleVal === 'organization' || $user->orgMemberships()->where('status', 'active')->exists()) {
+                    $orgMemberships = $user->orgMemberships()
+                        ->where('status', 'active')
+                        ->with('organization')
+                        ->get();
+
+                    if ($orgMemberships->isEmpty() && $roleVal === 'organization') {
+                        $org = $user->organization;
+                        if ($org) {
+                            \App\Models\OrgMember::firstOrCreate(
+                                ['organization_id' => $org->id, 'user_id' => $user->id],
+                                ['org_workspace_role' => 'owner', 'status' => 'active', 'joined_at' => now()]
+                            );
+                            $orgMemberships = $user->orgMemberships()->with('organization')->get();
+                        }
+                    }
+
+                    if ($orgMemberships->count() === 1) {
+                        \App\Models\ActiveOrgSession::updateOrCreate(
+                            ['user_id' => $user->id],
+                            ['active_organization_id' => $orgMemberships->first()->organization_id]
+                        );
+                    } elseif ($orgMemberships->count() > 1) {
+                        $firstOrg = $orgMemberships->first();
+                        \App\Models\ActiveOrgSession::updateOrCreate(
+                            ['user_id' => $user->id],
+                            ['active_organization_id' => $firstOrg->organization_id]
+                        );
+                        $redirect = $request->input('redirect') ?: route('organization.switcher');
+                        return redirect($redirect);
+                    }
+                }
 
                 // Handle post-login reward claiming
                 if (session()->has('pending_claim_response_id')) {

@@ -55,6 +55,31 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(Organization::class);
     }
 
+    public function orgMemberships(): HasMany
+    {
+        return $this->hasMany(OrgMember::class);
+    }
+
+    public function activeOrgSession(): HasOne
+    {
+        return $this->hasOne(ActiveOrgSession::class);
+    }
+
+    public function activeOrganization(): ?Organization
+    {
+        $session = $this->activeOrgSession;
+        if ($session) {
+            return Organization::find($session->active_organization_id);
+        }
+        $membership = $this->orgMemberships()->where('status', 'active')->first();
+        return $membership?->organization ?? $this->organization;
+    }
+
+    public function orgRole(Organization $org): ?OrgMember
+    {
+        return $this->orgMemberships()->where('organization_id', $org->id)->first();
+    }
+
     public function independent(): HasOne
     {
         return $this->hasOne(Independent::class);
@@ -102,6 +127,14 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
 
+        $activeOrg = $this->activeOrganization();
+        if ($activeOrg && $activeOrg->subscriptionTier) {
+            $tier = $activeOrg->subscriptionTier;
+            if (!str_contains(strtolower($tier->slug), 'free')) {
+                return true;
+            }
+        }
+
         $entity = null;
         $roleVal = $this->role instanceof \UnitEnum ? $this->role->value : $this->role;
         if ($roleVal === 'organization') {
@@ -139,6 +172,11 @@ class User extends Authenticatable implements MustVerifyEmail
             return 'enterprise';
         }
 
+        $activeOrg = $this->activeOrganization();
+        if ($activeOrg && $activeOrg->subscriptionTier) {
+            return strtolower($activeOrg->subscriptionTier->slug);
+        }
+
         if (!$this->hasActiveSubscription()) {
             return 'free';
         }
@@ -153,8 +191,17 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function hasProAccess(): bool
     {
-        if ($this->isAdmin())
+        if ($this->isAdmin()) {
             return true;
+        }
+
+        $activeOrg = $this->activeOrganization();
+        if ($activeOrg && $activeOrg->subscriptionTier) {
+            $tierSlug = strtolower($activeOrg->subscriptionTier->slug);
+            if (str_contains($tierSlug, 'pro') || str_contains($tierSlug, 'enterprise')) {
+                return true;
+            }
+        }
 
         if (!$this->hasActiveSubscription()) {
             return false;
@@ -162,12 +209,14 @@ class User extends Authenticatable implements MustVerifyEmail
 
         $roleVal = $this->role instanceof \UnitEnum ? $this->role->value : $this->role;
         $entity = ($roleVal === 'organization') ? $this->organization : (($roleVal === 'independent') ? $this->independent : $this);
-        if (!$entity)
+        if (!$entity) {
             return false;
+        }
 
         $tier = $entity->subscriptionTier;
-        if (!$tier)
+        if (!$tier) {
             return false;
+        }
 
         $tierSlug = strtolower($tier->slug);
         return str_contains($tierSlug, 'pro') || str_contains($tierSlug, 'enterprise');
@@ -178,8 +227,22 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function canUseAiAnalysis(): bool
     {
-        if ($this->hasProAccess())
+        if ($this->isAdmin()) {
             return true;
+        }
+
+        $activeOrg = $this->activeOrganization();
+        if ($activeOrg) {
+            $pool = $activeOrg->resourcePool;
+            if ($pool) {
+                return $pool->canUseAiAnalysis();
+            }
+            return true;
+        }
+
+        if ($this->hasProAccess()) {
+            return true;
+        }
 
         // Free users get 2 trials
         return ($this->ai_analysis_count ?? 0) < 2;
@@ -190,6 +253,12 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function recordAiUsage(): void
     {
+        $activeOrg = $this->activeOrganization();
+        if ($activeOrg && $activeOrg->resourcePool) {
+            $activeOrg->resourcePool->increment('ai_analyses_used');
+            return;
+        }
+
         if (!$this->hasProAccess()) {
             $this->increment('ai_analysis_count');
         }
@@ -202,6 +271,11 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         if ($this->isAdmin()) {
             return true;
+        }
+
+        $activeOrg = $this->activeOrganization();
+        if ($activeOrg && $activeOrg->resourcePool) {
+            return $activeOrg->resourcePool->canTranscribe();
         }
 
         $tierSlug = $this->effectiveTierSlug();
@@ -246,6 +320,10 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function canExportReport(): bool
     {
+        if ($this->activeOrganization()) {
+            return true;
+        }
+
         if ($this->hasActiveSubscription()) {
             return true;
         }
