@@ -534,7 +534,9 @@
                     </template>
 
                     <textarea id="socius-prompt-input" x-model="draft" x-ref="textarea" rows="1"
+                        @input="adjustTextareaHeight($event.target)"
                         @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); sendMessage(); }"
+                        style="min-height: 36px; max-height: 100px; overflow-y: auto;"
                         class="w-full bg-transparent border-0 focus:ring-0 resize-none text-sm text-white placeholder:text-slate-500"
                         :placeholder="reviewModeEnabled ? '{{ __('Describe supervisor corrections or ask Socius to fix them...') }}' : '{{ __('Ask Socius...') }}'"
                         :disabled="sending || !canAnalyze"></textarea>
@@ -702,6 +704,36 @@
                                 <i class="fa-solid fa-plus text-[10px]" :class="{ 'fa-spin': savingKb }"></i>
                                 {{ __('Add Instruction') }}
                             </button>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Document Upload Section --}}
+                <div class="space-y-3 pt-2 border-t border-white/10">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                            {{ __('Upload Knowledge Base File') }}
+                        </h4>
+                        <span class="text-[10px] text-slate-500 font-mono">PDF, DOCX, TXT (Max 20MB)</span>
+                    </div>
+                    <div
+                        class="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-4 text-center hover:bg-white/[0.04] transition-all">
+                        <input type="file" x-ref="kbFileInput" @change="uploadKbDocument($event)"
+                            accept=".pdf,.docx,.doc,.txt,.md" class="hidden">
+                        <div class="flex flex-col items-center gap-2 cursor-pointer" @click="$refs.kbFileInput.click()">
+                            <div
+                                class="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
+                                <i class="fa-solid"
+                                    :class="uploadingKbDoc ? 'fa-spinner fa-spin text-base' : 'fa-cloud-arrow-up text-base'"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-200"
+                                    x-text="uploadingKbDoc ? '{{ __('Reading & Extracting Document...') }}' : '{{ __('Click to upload Research Guidebook or Reference Manual') }}'">
+                                </p>
+                                <p class="text-[11px] text-slate-400 mt-0.5">
+                                    {{ __('Socius will automatically parse and integrate full document knowledge.') }}
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>

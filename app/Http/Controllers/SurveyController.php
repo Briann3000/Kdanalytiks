@@ -1109,27 +1109,9 @@ class SurveyController extends Controller
 
             $expandedSchema = [];
             foreach ($schema as $field) {
-                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'group']))
+                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'group', 'note', 'description']))
                     continue;
-
-                if (in_array($field['type'], ['likert_matrix_grid', 'likert_matrix'])) {
-                    $rows = $field['rows'] ?? [];
-                    foreach ($rows as $r) {
-                        $rowVal = $r['value'] ?? '';
-                        $rowLabel = $r['label'] ?? $rowVal;
-                        $expandedSchema[] = [
-                            'name' => $field['name'] . '___' . $rowVal,
-                            'label' => ($field['label'] ?? $field['name']) . ' - ' . $rowLabel,
-                            'type' => 'radio',
-                            'values' => $field['columns'] ?? [],
-                            'is_virtual_likert' => true,
-                            'parent_likert_name' => $field['name'],
-                            'likert_row_value' => $rowVal,
-                        ];
-                    }
-                } else {
-                    $expandedSchema[] = $field;
-                }
+                $expandedSchema[] = $field;
             }
 
             // Pre-parse response answers ONCE for O(N) performance boost instead of O(M*N*K)
@@ -1152,125 +1134,240 @@ class SurveyController extends Controller
 
             foreach ($expandedSchema as $field) {
                 $fieldId = $field['name'];
-                $label = $field['label'] ?? $fieldId;
+                $rawLabel = !empty($field['label']) ? $field['label'] : (!empty($field['title']) ? $field['title'] : (!empty($field['question']) ? $field['question'] : ($field['name'] ?? $fieldId)));
+                $label = (preg_match('/^field-\d+$/i', trim($rawLabel)) || preg_match('/^question[-_\d]+$/i', trim($rawLabel))) ? 'Survey Question' : $rawLabel;
                 $type = $field['type'] ?? 'text';
 
                 $answersList = [];
                 $frequencyCount = [];
                 $answeredCount = 0;
+                $likertMatrixRows = [];
 
-                foreach ($responses as $response) {
-                    $found = false;
-                    $fieldMap = $parsedResponseMap[$response->id] ?? null;
-                    $matchName = isset($field['is_virtual_likert']) ? $field['parent_likert_name'] : $fieldId;
+                if (in_array($type, ['likert_matrix', 'likert_matrix_grid'])) {
+                    $isLikertLike = true;
+                    $isChartable = true;
+                    $isAnalyzable = false;
 
-                    if ($fieldMap && array_key_exists($matchName, $fieldMap)) {
-                        $val = $fieldMap[$matchName];
+                    $rows = $field['rows'] ?? [];
+                    $columns = $field['columns'] ?? [];
 
-                        if (isset($field['is_virtual_likert'])) {
-                            $matrixAnswers = is_string($val) ? json_decode($val, true) : $val;
-                            if (is_array($matrixAnswers)) {
-                                if (isset($matrixAnswers[0])) {
-                                    if (is_string($matrixAnswers[0])) {
-                                        $decoded = json_decode($matrixAnswers[0], true);
-                                        if (is_array($decoded)) {
-                                            $matrixAnswers = $decoded;
+                    $colList = [];
+                    foreach ($columns as $c) {
+                        if (is_array($c)) {
+                            $cVal = (string) ($c['value'] ?? $c['label'] ?? '');
+                            $cLbl = (string) ($c['label'] ?? $cVal);
+                        } else {
+                            $cVal = (string) $c;
+                            $cLbl = (string) $c;
+                        }
+                        if ($cVal !== '') {
+                            $colList[] = ['value' => $cLbl, 'key' => $cVal];
+                        }
+                    }
+
+                    if (empty($colList)) {
+                        $colList = [
+                            ['value' => 'SD', 'key' => 'SD'],
+                            ['value' => 'D', 'key' => 'D'],
+                            ['value' => 'A', 'key' => 'A'],
+                            ['value' => 'SA', 'key' => 'SA'],
+                        ];
+                    }
+
+                    $stats = [];
+                    $overallColCounts = [];
+                    foreach ($colList as $col) {
+                        $overallColCounts[$col['key']] = 0;
+                    }
+
+                    $answeredCount = 0;
+
+                    foreach ($rows as $r) {
+                        $rVal = is_array($r) ? (string) ($r['value'] ?? '') : (string) $r;
+                        $rLbl = is_array($r) ? (string) ($r['label'] ?? $rVal) : (string) $r;
+
+                        $rowColCounts = [];
+                        foreach ($colList as $col) {
+                            $rowColCounts[$col['key']] = 0;
+                        }
+
+                        $rowAnswered = 0;
+
+                        foreach ($responses as $response) {
+                            $fieldMap = $parsedResponseMap[$response->id] ?? null;
+                            if ($fieldMap && array_key_exists($fieldId, $fieldMap)) {
+                                $rawVal = $fieldMap[$fieldId];
+                                $matrixAnswers = is_string($rawVal) ? json_decode($rawVal, true) : $rawVal;
+                                if (is_array($matrixAnswers)) {
+                                    if (isset($matrixAnswers[0])) {
+                                        if (is_string($matrixAnswers[0])) {
+                                            $decoded = json_decode($matrixAnswers[0], true);
+                                            if (is_array($decoded))
+                                                $matrixAnswers = $decoded;
+                                        } elseif (is_array($matrixAnswers[0])) {
+                                            $matrixAnswers = $matrixAnswers[0];
                                         }
-                                    } elseif (is_array($matrixAnswers[0])) {
-                                        $matrixAnswers = $matrixAnswers[0];
+                                    }
+                                    $selected = $matrixAnswers[$rVal] ?? null;
+                                    if ($selected !== null && $selected !== '') {
+                                        $selectedStr = (string) $selected;
+                                        foreach ($colList as $col) {
+                                            if (strcasecmp($col['key'], $selectedStr) === 0 || strcasecmp($col['value'], $selectedStr) === 0) {
+                                                $rowColCounts[$col['key']]++;
+                                                $overallColCounts[$col['key']]++;
+                                                $rowAnswered++;
+                                                break;
+                                            }
+                                        }
                                     }
                                 }
-                                $rowKey = $field['likert_row_value'];
-                                $val = $matrixAnswers[$rowKey] ?? null;
-                            } else {
-                                $val = null;
                             }
                         }
 
-                        // Format complex structures like repeating containers or select groups
-                        $val = self::formatResponseValue($val, $field);
-
-                        if ($val !== null && $val !== '') {
+                        if ($rowAnswered > 0) {
                             $answeredCount++;
-                            $answersList[] = is_array($val) ? implode(', ', $val) : $val;
-                            $found = true;
                         }
-                    }
 
-                    if (!$found) {
-                        $answersList[] = null;
-                    }
-                }
-
-                $missingCount = $totalResponses - $answeredCount;
-                $isChartable = !in_array($field['type'], ['text', 'textarea', 'multimedia', 'signature', 'gps', 'qr', 'file', 'image', 'signature-pad', 'file-upload', 'header', 'paragraph', 'group', 'note', 'date', 'time', 'audio', 'video', 'photo', 'email']);
-                $isAnalyzable = in_array($field['type'], ['textarea', 'text', 'radio', 'checkbox', 'select', 'select-one', 'select-multiple', 'radio-group', 'checkbox-group', 'likert_matrix', 'likert_matrix_grid']);
-                $canvasId = 'chart-' . $fieldId;
-
-                $stats = [];
-                $uniqueAnswers = [];
-                if ($isChartable) {
-                    foreach ($answersList as $ans) {
-                        if ($ans !== null && $ans !== '') {
-                            $frequencyCount[$ans] = ($frequencyCount[$ans] ?? 0) + 1;
-                            if (!in_array($ans, $uniqueAnswers))
-                                $uniqueAnswers[] = $ans;
+                        $rowStats = [];
+                        $rowDenominator = $rowAnswered > 0 ? $rowAnswered : $totalResponses;
+                        foreach ($colList as $col) {
+                            $cCount = $rowColCounts[$col['key']];
+                            $rowStats[] = [
+                                'value' => $col['value'],
+                                'count' => $cCount,
+                                'percentage' => $rowDenominator > 0 ? round(($cCount / $rowDenominator) * 100, 1) : 0
+                            ];
                         }
-                    }
-                    foreach ($frequencyCount as $val => $count) {
-                        $stats[] = [
-                            'value' => $val,
-                            'count' => $count,
-                            'percentage' => $totalResponses > 0 ? round(($count / $totalResponses) * 100, 1) : 0
+
+                        $likertMatrixRows[] = [
+                            'value' => $rVal,
+                            'label' => $rLbl,
+                            'stats' => $rowStats,
+                            'answered_count' => $rowAnswered,
                         ];
                     }
-                    $stats[] = [
-                        'value' => '[Missing / Skipped]',
-                        'count' => $missingCount,
-                        'percentage' => $totalResponses > 0 ? round(($missingCount / $totalResponses) * 100, 1) : 0,
-                        'is_missing' => true
-                    ];
-                }
 
-                $isLikertLike = false;
-                if ($isChartable && !empty($uniqueAnswers)) {
-                    $isLikertLike = self::isLikertScale($uniqueAnswers);
-                }
+                    foreach ($colList as $col) {
+                        $totCount = $overallColCounts[$col['key']];
+                        $stats[] = [
+                            'value' => $col['value'],
+                            'count' => $totCount,
+                            'percentage' => $totalResponses > 0 ? round(($totCount / $totalResponses) * 100, 1) : 0
+                        ];
+                    }
 
-                $chartUrl = null;
-                if ($isChartable && !empty($frequencyCount) && !$isLikertLike) {
-                    $qName = $field['label'] ?? $field['name'] ?? '';
-                    $shortTheme = self::formatShortCategoryTheme($qName);
-                    $chartConfigs[] = [
-                        'canvas_id' => $canvasId,
-                        'labels' => array_keys($frequencyCount),
-                        'data' => array_values($frequencyCount),
-                        'question_name' => $qName,
-                        'short_theme' => $shortTheme
-                    ];
-                    $chartConfigs[] = [
-                        'canvas_id' => 'qual-' . $canvasId,
-                        'labels' => array_keys($frequencyCount),
-                        'data' => array_values($frequencyCount),
-                        'question_name' => $qName,
-                        'short_theme' => $shortTheme
-                    ];
+                    $missingCount = $totalResponses - $answeredCount;
+                    $chartUrl = null;
+                    $canvasId = 'chart-' . $fieldId;
+                } else {
+                    foreach ($responses as $response) {
+                        $found = false;
+                        $fieldMap = $parsedResponseMap[$response->id] ?? null;
+                        $matchName = $fieldId;
 
-                    $qcConfig = [
-                        'type' => 'bar',
-                        'data' => [
+                        if ($fieldMap && array_key_exists($matchName, $fieldMap)) {
+                            $val = $fieldMap[$matchName];
+
+                            // Format complex structures like repeating containers or select groups
+                            $val = self::formatResponseValue($val, $field);
+
+                            if ($val !== null && $val !== '') {
+                                $answeredCount++;
+                                $answersList[] = is_array($val) ? implode(', ', $val) : $val;
+                                $found = true;
+                            }
+                        }
+
+                        if (!$found) {
+                            $answersList[] = null;
+                        }
+                    }
+
+                    $missingCount = $totalResponses - $answeredCount;
+                    $isChartable = !in_array($field['type'], ['text', 'textarea', 'multimedia', 'signature', 'gps', 'qr', 'file', 'image', 'signature-pad', 'file-upload', 'header', 'paragraph', 'group', 'note', 'description', 'date', 'time', 'audio', 'video', 'photo', 'email']);
+                    $isAnalyzable = in_array($field['type'], ['textarea', 'text', 'radio', 'checkbox', 'select', 'select-one', 'select-multiple', 'radio-group', 'checkbox-group']);
+                    $canvasId = 'chart-' . $fieldId;
+
+                    $stats = [];
+                    $uniqueAnswers = [];
+                    if ($isChartable) {
+                        foreach ($answersList as $ans) {
+                            if ($ans !== null && $ans !== '') {
+                                $frequencyCount[$ans] = ($frequencyCount[$ans] ?? 0) + 1;
+                                if (!in_array($ans, $uniqueAnswers))
+                                    $uniqueAnswers[] = $ans;
+                            }
+                        }
+                        foreach ($frequencyCount as $val => $count) {
+                            $stats[] = [
+                                'value' => $val,
+                                'count' => $count,
+                                'percentage' => $totalResponses > 0 ? round(($count / $totalResponses) * 100, 1) : 0
+                            ];
+                        }
+                        $stats[] = [
+                            'value' => 'Skipped',
+                            'count' => $missingCount,
+                            'percentage' => $totalResponses > 0 ? round(($missingCount / $totalResponses) * 100, 1) : 0,
+                            'is_missing' => true
+                        ];
+                    }
+
+                    $isLikertLike = false;
+                    if ($isChartable && !empty($uniqueAnswers)) {
+                        $isLikertLike = self::isLikertScale($uniqueAnswers);
+                    }
+
+                    $chartUrl = null;
+                    if ($isChartable && !empty($frequencyCount) && !$isLikertLike) {
+                        $qName = $label;
+                        $shortTheme = self::formatShortCategoryTheme($qName);
+                        $chartConfigs[] = [
+                            'canvas_id' => $canvasId,
                             'labels' => array_keys($frequencyCount),
-                            'datasets' => [['data' => array_values($frequencyCount), 'backgroundColor' => '#4f46e5']]
-                        ],
-                        'options' => ['plugins' => ['legend' => ['display' => false]]]
-                    ];
-                    $chartUrl = 'https://quickchart.io/chart?c=' . urlencode(json_encode($qcConfig)) . '&w=600&h=300';
+                            'data' => array_values($frequencyCount),
+                            'question_name' => $qName,
+                            'short_theme' => $shortTheme
+                        ];
+                        $chartConfigs[] = [
+                            'canvas_id' => 'qual-' . $canvasId,
+                            'labels' => array_keys($frequencyCount),
+                            'data' => array_values($frequencyCount),
+                            'question_name' => $qName,
+                            'short_theme' => $shortTheme
+                        ];
+
+                        $qcConfig = [
+                            'type' => 'bar',
+                            'data' => [
+                                'labels' => array_keys($frequencyCount),
+                                'datasets' => [['data' => array_values($frequencyCount), 'backgroundColor' => '#4f46e5']]
+                            ],
+                            'options' => ['plugins' => ['legend' => ['display' => false]]]
+                        ];
+                        $chartUrl = 'https://quickchart.io/chart?c=' . urlencode(json_encode($qcConfig)) . '&w=600&h=300';
+                    }
                 }
 
                 $aiInsight = null;
                 if ($includeAi) {
                     try {
-                        if ($isAnalyzable) {
+                        if (!empty($likertMatrixRows) && $canAnalyze) {
+                            $style = $survey->reporting_style ?? 'apa';
+                            $cacheKeyStyle = "likert_matrix_analysis_{$survey->id}_{$fieldId}_{$style}";
+                            $cacheKeyDefault = "likert_matrix_analysis_{$survey->id}_{$fieldId}";
+
+                            if (\Illuminate\Support\Facades\Cache::has($cacheKeyStyle)) {
+                                $aiInsight = \Illuminate\Support\Facades\Cache::get($cacheKeyStyle);
+                            } elseif (\Illuminate\Support\Facades\Cache::has($cacheKeyDefault)) {
+                                $aiInsight = \Illuminate\Support\Facades\Cache::get($cacheKeyDefault);
+                                \Illuminate\Support\Facades\Cache::put($cacheKeyStyle, $aiInsight, 86400);
+                            } else {
+                                $aiInsight = app(\App\Services\QualitativeAnalysisService::class)->analyzeLikertMatrixData($likertMatrixRows, $label, $style);
+                                \Illuminate\Support\Facades\Cache::put($cacheKeyStyle, $aiInsight, 86400);
+                                \Illuminate\Support\Facades\Cache::put($cacheKeyDefault, $aiInsight, 86400);
+                            }
+                        } elseif ($isAnalyzable) {
                             // Qualitative Analysis - FREE (Standard)
                             $aiInsight = \Illuminate\Support\Facades\Cache::remember("qualitative_analysis_{$survey->id}_{$fieldId}", 86400, function () use ($answersList, $label) {
                                 return app(\App\Services\QualitativeAnalysisService::class)->analyzeResponses($answersList, $label);
@@ -1308,6 +1405,7 @@ class SurveyController extends Controller
                     'canvasId' => $canvasId,
                     'answers' => $answersList,
                     'stats' => $stats,
+                    'likert_matrix_rows' => $likertMatrixRows,
                     'answered_count' => $answeredCount,
                     'missing_count' => $missingCount,
                     'chartUrl' => $chartUrl,
@@ -1333,7 +1431,7 @@ class SurveyController extends Controller
                 }
 
                 $missingCount = $totalResponses - $answeredCount;
-                $isChartable = !in_array($question->type, ['text', 'textarea', 'multimedia', 'signature', 'gps', 'qr', 'file', 'image', 'signature-pad', 'file-upload', 'header', 'paragraph', 'group', 'note', 'date', 'time', 'audio', 'video', 'photo', 'email']);
+                $isChartable = !in_array($question->type, ['text', 'textarea', 'multimedia', 'signature', 'gps', 'qr', 'file', 'image', 'signature-pad', 'file-upload', 'header', 'paragraph', 'group', 'note', 'description', 'date', 'time', 'audio', 'video', 'photo', 'email']);
                 $isAnalyzable = in_array($question->type, ['textarea', 'text', 'radio', 'checkbox', 'select', 'select_one', 'select_many', 'select-one', 'select-multiple', 'radio-group', 'checkbox-group', 'likert_matrix', 'likert_matrix_grid']);
                 $canvasId = 'chart-question_' . $question->id;
 
@@ -1926,7 +2024,7 @@ class SurveyController extends Controller
 
                     // Header Row 1
                     $table->addRow();
-                    $table->addCell(3000, ['vMerge' => 'restart'])->addText("Value", ['bold' => true]);
+                    $table->addCell(3000, ['vMerge' => 'restart'])->addText("Item", ['bold' => true]);
                     foreach ($item['stats'] as $stat) {
                         if (!isset($stat['is_missing']) || !$stat['is_missing']) {
                             $table->addCell(2000, ['gridSpan' => 2])->addText($stat['value'], ['bold' => true], ['alignment' => 'center']);
@@ -2354,7 +2452,7 @@ class SurveyController extends Controller
             $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
             $parsedData = json_decode($response->answers->first()->value ?? '[]', true) ?? [];
             foreach ($schema as $field) {
-                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'group']))
+                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'group', 'note', 'description']))
                     continue;
                 $val = '—';
                 foreach ($parsedData as $data) {
@@ -2404,7 +2502,7 @@ class SurveyController extends Controller
             $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
             $parsedData = json_decode($response->answers->first()->value ?? '[]', true) ?? [];
             foreach ($schema as $field) {
-                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'group']))
+                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'group', 'note', 'description']))
                     continue;
                 $val = '—';
                 foreach ($parsedData as $data) {
@@ -2547,7 +2645,7 @@ class SurveyController extends Controller
                 'metadata' => ['title' => $survey->title],
             ]);
 
-            return back()->with('success', 'Survey submitted for Workspace Admin approval. It will go live once reviewed and approved by an administrator.');
+            return redirect()->route('surveys.summary', $survey)->with('success', 'Survey submitted for Workspace Admin approval. It will go live once reviewed and approved by an administrator.');
         }
 
         $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
@@ -2560,7 +2658,7 @@ class SurveyController extends Controller
             'status' => \App\Enums\SurveyStatus::Active,
             'approval_status' => 'approved',
         ]);
-        return back()->with('success', 'Project deployed successfully and is now live!');
+        return redirect()->route('surveys.summary', $survey)->with('success', 'Project deployed successfully and is now live!');
     }
 
     public function edit(\App\Models\Survey $survey)
@@ -2579,6 +2677,12 @@ class SurveyController extends Controller
         }
 
         return view('surveys.builder', compact('survey', 'limitReached'));
+    }
+
+    public function preview(\App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+        return view('surveys.preview', compact('survey'));
     }
 
     public function sharedReport($token)
@@ -3174,7 +3278,7 @@ class SurveyController extends Controller
             $schema = is_array($schema) ? $schema : [];
 
             foreach ($schema as $field) {
-                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'group']))
+                if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'group', 'note', 'description']))
                     continue;
 
                 $analysis[] = [

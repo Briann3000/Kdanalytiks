@@ -219,6 +219,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/groups', [SurveyController::class, 'createGroup'])->name('groups.create');
         Route::delete('/groups/{group}', [SurveyController::class, 'deleteGroup'])->name('groups.destroy');
         Route::get('/group-join/{token}', [SurveyController::class, 'joinGroup'])->name('groups.join');
+        Route::get('/preview', [SurveyController::class, 'preview'])->name('preview');
         Route::post('/publish', [SurveyController::class, 'publish'])->name('publish');
         Route::post('/archive', [SurveyController::class, 'archive'])->name('archive');
         Route::post('/toggle-shared-report', [SurveyController::class, 'toggleSharedReport'])->name('reports.toggle-shared');
@@ -271,6 +272,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/socius/knowledge-base', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'index'])->name('socius.knowledge-base.index');
     Route::post('/socius/knowledge-base', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'store'])->name('socius.knowledge-base.store');
+    Route::post('/socius/knowledge-base/upload', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'uploadDocument'])->name('socius.knowledge-base.upload');
     Route::patch('/socius/knowledge-base/{knowledgeBase}', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'update'])->name('socius.knowledge-base.update');
     Route::delete('/socius/knowledge-base/{knowledgeBase}', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'destroy'])->name('socius.knowledge-base.destroy');
 

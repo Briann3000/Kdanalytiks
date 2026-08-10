@@ -141,10 +141,10 @@
 
 @section('content')
     <div x-data="standaloneSociusManager({
-                                canAnalyze: @js($canAnalyze),
-                                initialContext: @js($initialContext),
-                                urls: @js($urls)
-                            })" x-init="init()" class="socius-root-container animate-in fade-in duration-500">
+                                            canAnalyze: @js($canAnalyze),
+                                            initialContext: @js($initialContext),
+                                            urls: @js($urls)
+                                        })" x-init="init()" class="socius-root-container animate-in fade-in duration-500">
 
         <div class="relative flex gap-4 w-full bg-[#1e1e1e]" style="height: calc(100dvh - 4.1rem); overflow: hidden;">
 
@@ -208,8 +208,8 @@
                                     <button @click="selectThread(thread.id)"
                                         class="w-full text-left rounded-2xl px-3 py-3 pr-9 border transition-all"
                                         :class="currentThreadId === thread.id
-                                                                ? 'bg-white text-slate-900 border-white shadow-xl shadow-black/20'
-                                                                : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-white'">
+                                                                            ? 'bg-white text-slate-900 border-white shadow-xl shadow-black/20'
+                                                                            : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-white'">
                                         <div class="flex items-center gap-1.5 overflow-hidden">
                                             <template x-if="thread.is_pinned">
                                                 <i
@@ -227,9 +227,9 @@
                                     <button @click.stop="threadMenuOpen = (threadMenuOpen === thread.id ? null : thread.id)"
                                         class="absolute right-2 top-3 w-6 h-6 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover/thread:opacity-100 focus:opacity-100"
                                         :class="[
-                                                                threadMenuOpen === thread.id ? 'opacity-100' : '',
-                                                                currentThreadId === thread.id ? 'hover:bg-slate-200 text-slate-600' : 'hover:bg-white/15 text-slate-400'
-                                                            ]">
+                                                                            threadMenuOpen === thread.id ? 'opacity-100' : '',
+                                                                            currentThreadId === thread.id ? 'hover:bg-slate-200 text-slate-600' : 'hover:bg-white/15 text-slate-400'
+                                                                        ]">
                                         <i class="fa-solid fa-ellipsis-vertical text-[11px]"></i>
                                     </button>
 
@@ -425,8 +425,8 @@
                         <div :id="'msg-' + message.id" class="max-w-4xl mx-auto group/msg"
                             :class="message.role === 'user' ? 'flex justify-end' : 'flex justify-start'">
                             <div class="relative w-full md:w-auto md:max-w-[80%] rounded-[2rem] px-5 py-4 border" :class="message.role === 'user'
-                                                        ? 'bg-[#2271b1] text-white border-[#1d629b] shadow-lg shadow-blue-500/10'
-                                                        : 'bg-white/[0.04] text-white border-white/10'">
+                                                                    ? 'bg-[#2271b1] text-white border-[#1d629b] shadow-lg shadow-blue-500/10'
+                                                                    : 'bg-white/[0.04] text-white border-white/10'">
                                 <div class="flex items-center gap-3 mb-3">
                                     <div class="w-9 h-9 rounded-2xl flex items-center justify-center text-sm"
                                         :class="message.role === 'user' ? 'bg-white/60' : 'bg-white/10 text-blue-300'">
@@ -544,8 +544,10 @@
                         </template>
 
                         <textarea id="socius-prompt-input" x-model="draft" x-ref="textarea" rows="1"
+                            @input="adjustTextareaHeight($event.target)"
                             @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); sendMessage(); }"
-                            class="w-full bg-transparent border-0 focus:ring-0 resize-none text-sm text-white placeholder:text-slate-500"
+                            style="min-height: 36px; max-height: 100px; overflow-y: auto;"
+                            class="w-full bg-transparent border-0 focus:ring-0 resize-none text-sm text-white placeholder:text-slate-500 leading-relaxed py-1"
                             :placeholder="'{{ __('Ask Socius...') }}'" :disabled="sending || !canAnalyze"></textarea>
 
                         <div class="flex items-center justify-between gap-3 pt-2" x-data="{ toolsOpen: false }">
@@ -665,1052 +667,1117 @@
                                 </button>
                             </div>
                         </div>
-                    </div>
-                    <div class="space-y-3">
-                        <h4 class="text-xs font-bold text-slate-400">{{ __('Active Instructions') }}</h4>
-                        <template x-if="loadingKb">
-                            <div class="space-y-2">
-                                <div class="h-16 rounded-2xl bg-white/[0.03] animate-pulse"></div>
-                                <div class="h-16 rounded-2xl bg-white/[0.03] animate-pulse"></div>
+                        <div class="space-y-3 pt-2 border-t border-white/10">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                                    {{ __('Upload Knowledge Base File') }}
+                                </h4>
+                                <span class="text-[10px] text-slate-500 font-mono">PDF, DOCX, TXT (Max 20MB)</span>
                             </div>
-                        </template>
-                        <template x-if="!loadingKb && kbRules.length === 0">
                             <div
-                                class="rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.01] p-8 text-center">
-                                <p class="text-sm font-semibold text-slate-300">{{ __('No instructions yet') }}</p>
-                                <p class="text-xs text-slate-500 mt-1">
-                                    {{ __('Add formatting details or stylistic guidelines above.') }}
-                                </p>
-                            </div>
-                        </template>
-                        <template x-if="!loadingKb && kbRules.length > 0">
-                            <div class="space-y-2.5 flex flex-col">
-                                <template x-for="rule in kbRules" :key="rule.id">
-                                    <div class="group/rule flex items-start justify-between gap-4 p-4 rounded-2xl border border-white/5 transition-all"
-                                        :class="rule.is_active ? 'bg-white/[0.03] border-white/10' : 'bg-white/[0.01] border-white/[0.02] opacity-60'">
-                                        <div class="flex items-start gap-3 flex-1 min-w-0">
-                                            <button @click="toggleKbRule(rule)"
-                                                class="mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out"
-                                                :class="rule.is_active ? 'bg-[#2271b1]' : 'bg-white/10'">
-                                                <span
-                                                    class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
-                                                    :class="rule.is_active ? 'translate-x-4' : 'translate-x-0'"></span>
-                                            </button>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-sm text-slate-100 break-words whitespace-pre-wrap font-medium leading-relaxed"
-                                                    :class="{ 'line-through text-slate-500': !rule.is_active }"
-                                                    x-text="rule.content"></p>
-                                                <p class="text-[9px] text-slate-500 mt-1 font-bold"
-                                                    x-text="formatRelativeTime(rule.created_at)"></p>
-                                            </div>
-                                        </div>
-                                        <button @click="deleteKbRule(rule.id)"
-                                            class="w-7 h-7 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover/rule:opacity-100">
-                                            <i class="fa-solid fa-trash text-xs"></i>
-                                        </button>
+                                class="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-4 text-center hover:bg-white/[0.04] transition-all">
+                                <input type="file" x-ref="kbFileInput" @change="uploadKbDocument($event)"
+                                    accept=".pdf,.docx,.doc,.txt,.md" class="hidden">
+                                <div class="flex flex-col items-center gap-2 cursor-pointer"
+                                    @click="$refs.kbFileInput.click()">
+                                    <div
+                                        class="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
+                                        <i class="fa-solid"
+                                            :class="uploadingKbDoc ? 'fa-spinner fa-spin text-base' : 'fa-cloud-arrow-up text-base'"></i>
                                     </div>
-                                </template>
+                                    <div>
+                                        <p class="text-xs font-bold text-slate-200"
+                                            x-text="uploadingKbDoc ? 'Reading & Extracting Document...' : '{{ __('Click to upload Research Guidebook or Reference Manual') }}'">
+                                        </p>
+                                        <p class="text-[11px] text-slate-400 mt-0.5">
+                                            {{ __('Socius will automatically parse and integrate full document knowledge.') }}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
-                        </template>
+                        </div>
+                        <div class="space-y-3">
+                            <h4 class="text-xs font-bold text-slate-400">{{ __('Active Instructions') }}</h4>
+                            <template x-if="loadingKb">
+                                <div class="space-y-2">
+                                    <div class="h-16 rounded-2xl bg-white/[0.03] animate-pulse"></div>
+                                    <div class="h-16 rounded-2xl bg-white/[0.03] animate-pulse"></div>
+                                </div>
+                            </template>
+                            <template x-if="!loadingKb && kbRules.length === 0">
+                                <div
+                                    class="rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.01] p-8 text-center">
+                                    <p class="text-sm font-semibold text-slate-300">{{ __('No instructions yet') }}</p>
+                                    <p class="text-xs text-slate-500 mt-1">
+                                        {{ __('Add formatting details or stylistic guidelines above.') }}
+                                    </p>
+                                </div>
+                            </template>
+                            <template x-if="!loadingKb && kbRules.length > 0">
+                                <div class="space-y-2.5 flex flex-col">
+                                    <template x-for="rule in kbRules" :key="rule.id">
+                                        <div class="group/rule flex items-start justify-between gap-4 p-4 rounded-2xl border border-white/5 transition-all"
+                                            :class="rule.is_active ? 'bg-white/[0.03] border-white/10' : 'bg-white/[0.01] border-white/[0.02] opacity-60'">
+                                            <div class="flex items-start gap-3 flex-1 min-w-0">
+                                                <button @click="toggleKbRule(rule)"
+                                                    class="mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out"
+                                                    :class="rule.is_active ? 'bg-[#2271b1]' : 'bg-white/10'">
+                                                    <span
+                                                        class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                                                        :class="rule.is_active ? 'translate-x-4' : 'translate-x-0'"></span>
+                                                </button>
+                                                <div class="flex-1 min-w-0">
+                                                    <p class="text-sm text-slate-100 break-words whitespace-pre-wrap font-medium leading-relaxed"
+                                                        :class="{ 'line-through text-slate-500': !rule.is_active }"
+                                                        x-text="rule.content"></p>
+                                                    <p class="text-[9px] text-slate-500 mt-1 font-bold"
+                                                        x-text="formatRelativeTime(rule.created_at)"></p>
+                                                </div>
+                                            </div>
+                                            <button @click="deleteKbRule(rule.id)"
+                                                class="w-7 h-7 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover/rule:opacity-100">
+                                                <i class="fa-solid fa-trash text-xs"></i>
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
                     </div>
-                </div>
-                <div class="px-6 py-4 border-t border-white/10 bg-[#232323] flex justify-end">
-                    <button @click="kbModalOpen = false"
-                        class="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all">
-                        {{ __('Close') }}
-                    </button>
+                    <div class="px-6 py-4 border-t border-white/10 bg-[#232323] flex justify-end">
+                        <button @click="kbModalOpen = false"
+                            class="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all">
+                            {{ __('Close') }}
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-    </div>
+        </div>
 @endsection
 
-@push('scripts')
-    <script>
-        function wrapLabel(label, maxLen = 18) {
-            if (!label) return '';
-            const str = String(label);
-            if (str.length <= maxLen) return str;
-            const words = str.split(' ');
-            const lines = [];
-            let current = '';
-            words.forEach(word => {
-                if ((current + ' ' + word).trim().length > maxLen) {
-                    if (current) lines.push(current.trim());
-                    current = word;
-                } else {
-                    current = (current + ' ' + word).trim();
-                }
-            });
-            if (current) lines.push(current.trim());
-            return lines;
-        }
-
-        window.copyRenderedSociusTable = function (tableId, btn = null) {
-            const table = document.getElementById(tableId);
-            if (!table) return;
-
-            let plainText = '';
-            const rows = table.querySelectorAll('tr');
-            rows.forEach((row) => {
-                const cols = row.querySelectorAll('th, td');
-                const rowData = [];
-                cols.forEach(col => {
-                    rowData.push(col.innerText.trim());
+    @push('scripts')
+        <script>
+            function wrapLabel(label, maxLen = 18) {
+                if (!label) return '';
+                const str = String(label);
+                if (str.length <= maxLen) return str;
+                const words = str.split(' ');
+                const lines = [];
+                let current = '';
+                words.forEach(word => {
+                    if ((current + ' ' + word).trim().length > maxLen) {
+                        if (current) lines.push(current.trim());
+                        current = word;
+                    } else {
+                        current = (current + ' ' + word).trim();
+                    }
                 });
-                plainText += rowData.join('\t') + '\n';
-            });
+                if (current) lines.push(current.trim());
+                return lines;
+            }
 
-            let htmlContent = `<table style="border-collapse: collapse; width: 100%; font-family: Calibri, Arial, sans-serif; font-size: 13px; color: #1e293b; border: 1px solid #cbd5e1;">`;
-            const headerRows = table.querySelectorAll('thead tr');
-            if (headerRows.length > 0) {
-                htmlContent += `<thead>`;
-                headerRows.forEach(row => {
-                    htmlContent += `<tr>`;
-                    row.querySelectorAll('th').forEach(th => {
-                        htmlContent += `<th style="border: 1px solid #cbd5e1; background-color: #f1f5f9; padding: 8px 12px; font-weight: bold; text-align: left; color: #0f172a;">${th.innerHTML.trim()}</th>`;
+            window.copyRenderedSociusTable = function (tableId, btn = null) {
+                const table = document.getElementById(tableId);
+                if (!table) return;
+
+                let plainText = '';
+                const rows = table.querySelectorAll('tr');
+                rows.forEach((row) => {
+                    const cols = row.querySelectorAll('th, td');
+                    const rowData = [];
+                    cols.forEach(col => {
+                        rowData.push(col.innerText.trim());
+                    });
+                    plainText += rowData.join('\t') + '\n';
+                });
+
+                let htmlContent = `<table style="border-collapse: collapse; width: 100%; font-family: Calibri, Arial, sans-serif; font-size: 13px; color: #1e293b; border: 1px solid #cbd5e1;">`;
+                const headerRows = table.querySelectorAll('thead tr');
+                if (headerRows.length > 0) {
+                    htmlContent += `<thead>`;
+                    headerRows.forEach(row => {
+                        htmlContent += `<tr>`;
+                        row.querySelectorAll('th').forEach(th => {
+                            htmlContent += `<th style="border: 1px solid #cbd5e1; background-color: #f1f5f9; padding: 8px 12px; font-weight: bold; text-align: left; color: #0f172a;">${th.innerHTML.trim()}</th>`;
+                        });
+                        htmlContent += `</tr>`;
+                    });
+                    htmlContent += `</thead>`;
+                }
+
+                const bodyRows = table.querySelectorAll('tbody tr');
+                htmlContent += `<tbody>`;
+                bodyRows.forEach((row, idx) => {
+                    const isTotal = row.innerText.toLowerCase().includes('total');
+                    const bg = isTotal ? 'background-color: #f8fafc; font-weight: bold;' : (idx % 2 === 0 ? 'background-color: #ffffff;' : 'background-color: #f8fafc;');
+                    htmlContent += `<tr style="${bg}">`;
+                    row.querySelectorAll('td').forEach(td => {
+                        const fontWeight = isTotal ? 'font-weight: bold; color: #0f172a;' : 'color: #334155;';
+                        htmlContent += `<td style="border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; ${fontWeight}">${td.innerHTML.trim()}</td>`;
                     });
                     htmlContent += `</tr>`;
                 });
-                htmlContent += `</thead>`;
-            }
+                htmlContent += `</tbody></table>`;
 
-            const bodyRows = table.querySelectorAll('tbody tr');
-            htmlContent += `<tbody>`;
-            bodyRows.forEach((row, idx) => {
-                const isTotal = row.innerText.toLowerCase().includes('total');
-                const bg = isTotal ? 'background-color: #f8fafc; font-weight: bold;' : (idx % 2 === 0 ? 'background-color: #ffffff;' : 'background-color: #f8fafc;');
-                htmlContent += `<tr style="${bg}">`;
-                row.querySelectorAll('td').forEach(td => {
-                    const fontWeight = isTotal ? 'font-weight: bold; color: #0f172a;' : 'color: #334155;';
-                    htmlContent += `<td style="border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; ${fontWeight}">${td.innerHTML.trim()}</td>`;
-                });
-                htmlContent += `</tr>`;
-            });
-            htmlContent += `</tbody></table>`;
+                try {
+                    const blobHtml = new Blob([htmlContent], { type: 'text/html' });
+                    const blobText = new Blob([plainText], { type: 'text/plain' });
+                    const item = new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText });
 
-            try {
-                const blobHtml = new Blob([htmlContent], { type: 'text/html' });
-                const blobText = new Blob([plainText], { type: 'text/plain' });
-                const item = new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText });
-
-                navigator.clipboard.write([item]).then(() => {
-                    if (btn) {
-                        const originalHtml = btn.innerHTML;
-                        btn.innerHTML = '<i class="fa-solid fa-check text-[10px] text-green-400"></i> Copied!';
-                        setTimeout(() => { btn.innerHTML = originalHtml; }, 2000);
-                    }
-                }).catch(() => {
-                    navigator.clipboard.writeText(plainText).then(() => {
+                    navigator.clipboard.write([item]).then(() => {
                         if (btn) {
                             const originalHtml = btn.innerHTML;
                             btn.innerHTML = '<i class="fa-solid fa-check text-[10px] text-green-400"></i> Copied!';
                             setTimeout(() => { btn.innerHTML = originalHtml; }, 2000);
                         }
-                    });
-                });
-            } catch (e) {
-                navigator.clipboard.writeText(plainText);
-            }
-        };
-
-        window.standaloneSociusManager = function (config) {
-            return {
-                canAnalyze: config.canAnalyze,
-                initialContext: config.initialContext || null,
-                currentThreadId: null,
-                currentThread: null,
-                threads: [],
-                messages: [],
-                draft: '',
-                pendingFiles: [],
-                loadingThreads: false,
-                loadingMessages: false,
-                creatingThread: false,
-                sending: false,
-                error: null,
-                streamingUserId: null,
-                streamingAssistantId: null,
-                renamingThreadId: null,
-                editingTitle: '',
-                threadMenuOpen: null,
-                urls: config.urls,
-                isListening: false,
-                recognition: null,
-                editingMessageId: null,
-                editingContent: '',
-                tokenUsage: null,
-                webSearchEnabled: false,
-                historyOpen: window.innerWidth > 1280,
-                scrolledUp: false,
-                activePromptId: null,
-                showQuoteButton: false,
-                quoteButtonX: 0,
-                quoteButtonY: 0,
-                selectedText: '',
-                kbModalOpen: false,
-                kbRules: [],
-                newKbRuleContent: '',
-                loadingKb: false,
-                savingKb: false,
-                renderDebounce: null,
-                activeAbortController: null,
-
-                stopGeneration() {
-                    if (this.activeAbortController) {
-                        this.activeAbortController.abort();
-                        this.activeAbortController = null;
-                    }
-                    this.sending = false;
-                },
-
-                handleScroll() {
-                    const el = this.$refs.messageList;
-                    if (!el) return;
-                    this.scrolledUp = (el.scrollHeight - el.scrollTop - el.clientHeight) > 150;
-                    const userMsgs = this.messages.filter(m => m.role === 'user');
-                    let closestId = null, minDiff = Infinity;
-                    const containerRect = el.getBoundingClientRect();
-                    const centerY = containerRect.top + containerRect.height / 2;
-                    userMsgs.forEach(m => {
-                        const msgEl = document.getElementById(`msg-${m.id}`);
-                        if (msgEl) {
-                            const rect = msgEl.getBoundingClientRect();
-                            const diff = Math.abs(rect.top + rect.height / 2 - centerY);
-                            if (diff < minDiff) { minDiff = diff; closestId = m.id; }
-                        }
-                    });
-                    if (closestId) this.activePromptId = closestId;
-                },
-
-                scrollToBottom() {
-                    const el = this.$refs.messageList;
-                    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-                },
-
-                scrollToPrompt(msgId) {
-                    const el = document.getElementById(`msg-${msgId}`);
-                    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); this.activePromptId = msgId; }
-                },
-
-                quoteSelection() {
-                    if (!this.selectedText) return;
-                    this.draft = `> "${this.selectedText}"\n\n` + this.draft;
-                    this.showQuoteButton = false;
-                    window.getSelection().removeAllRanges();
-                    const inputEl = document.getElementById('socius-prompt-input');
-                    if (inputEl) inputEl.focus();
-                },
-
-                init() {
-                    this.loadThreads();
-                    this.loadKbRules();
-
-                    this.$watch('messages', () => {
-                        if (this.renderDebounce) clearTimeout(this.renderDebounce);
-                        this.renderDebounce = setTimeout(() => this.renderVisuals(), 100);
-                    });
-                    this.$nextTick(() => this.renderVisuals());
-
-                    document.addEventListener('selectionchange', () => {
-                        if (this.currentThreadId === null) { this.showQuoteButton = false; return; }
-                        const selection = window.getSelection();
-                        const selected = selection.toString().trim();
-                        if (!selected || selected.length < 3) { this.showQuoteButton = false; return; }
-                        let node = selection.anchorNode;
-                        let isInsideSociusProse = false;
-                        while (node) {
-                            if (node.classList && node.classList.contains('socius-prose')) { isInsideSociusProse = true; break; }
-                            node = node.parentNode;
-                        }
-                        if (!isInsideSociusProse) { this.showQuoteButton = false; return; }
-                        this.selectedText = selected;
-                        try {
-                            const range = selection.getRangeAt(0);
-                            const rect = range.getBoundingClientRect();
-                            const wrapper = document.querySelector('.socius-root-container');
-                            if (wrapper) {
-                                const wrapperRect = wrapper.getBoundingClientRect();
-                                this.quoteButtonX = rect.left - wrapperRect.left + (rect.width / 2) - 40;
-                                this.quoteButtonY = rect.top - wrapperRect.top - 40;
-                                this.showQuoteButton = true;
-                            }
-                        } catch (e) { this.showQuoteButton = false; }
-                    });
-
-                    // Seed initial context from transcription if present
-                    if (this.initialContext && this.initialContext.text) {
-                        const contextObj = { ...this.initialContext };
-                        this.initialContext = null;
-                        this.$nextTick(async () => {
-                            const thread = await this.createThreadWithContext(contextObj);
-                            if (thread) {
-                                this.currentThread = thread;
-                                this.currentThreadId = thread.id;
-                                this.messages = [];
-                                const prompt = `Analyze the following ${contextObj.label || 'transcription'}:\n\n${contextObj.text}`;
-                                await this.sendMessage(prompt, thread.id);
+                    }).catch(() => {
+                        navigator.clipboard.writeText(plainText).then(() => {
+                            if (btn) {
+                                const originalHtml = btn.innerHTML;
+                                btn.innerHTML = '<i class="fa-solid fa-check text-[10px] text-green-400"></i> Copied!';
+                                setTimeout(() => { btn.innerHTML = originalHtml; }, 2000);
                             }
                         });
-                    }
-                },
-
-                async loadThreads() {
-                    this.loadingThreads = true;
-                    this.error = null;
-                    this.currentThreadId = null;
-                    this.currentThread = null;
-                    this.messages = [];
-                    try {
-                        const response = await fetch(this.urls.list, { headers: { 'Accept': 'application/json' } });
-                        const data = await this.parseJsonResponse(response);
-                        this.threads = data.threads || [];
-                    } catch (error) {
-                        this.error = error.message;
-                    } finally {
-                        this.loadingThreads = false;
-                    }
-                },
-
-                async createThread(selectAfter = true) {
-                    if (!this.canAnalyze) return null;
-                    this.creatingThread = true;
-                    this.error = null;
-                    try {
-                        const response = await fetch(this.urls.create, {
-                            method: 'POST',
-                            headers: {
-                                'Accept': 'application/json',
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                            },
-                            body: JSON.stringify({ context_type: 'general' })
-                        });
-                        const data = await this.parseJsonResponse(response);
-                        const thread = data.thread;
-                        this.threads = [thread, ...this.threads.filter(item => item.id !== thread.id)];
-                        if (selectAfter) await this.loadThread(thread.id);
-                        return thread;
-                    } catch (error) {
-                        this.error = error.message;
-                        return null;
-                    } finally {
-                        this.creatingThread = false;
-                    }
-                },
-
-                async createThreadWithContext(context) {
-                    if (!this.canAnalyze) return null;
-                    this.creatingThread = true;
-                    this.error = null;
-                    try {
-                        const response = await fetch(this.urls.create, {
-                            method: 'POST',
-                            headers: {
-                                'Accept': 'application/json',
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                            },
-                            body: JSON.stringify({
-                                context_type: context.type || 'transcription',
-                                initial_context_text: context.text || '',
-                                initial_context_label: context.label || 'Document'
-                            })
-                        });
-                        const data = await this.parseJsonResponse(response);
-                        const thread = data.thread;
-                        this.threads = [thread, ...this.threads.filter(item => item.id !== thread.id)];
-                        return thread;
-                    } catch (error) {
-                        this.error = error.message;
-                        return null;
-                    } finally {
-                        this.creatingThread = false;
-                    }
-                },
-
-                async renameThread(threadId, newTitle) {
-                    if (!newTitle || !newTitle.trim()) return;
-                    try {
-                        const response = await fetch(this.threadUrl('updateTemplate', threadId), {
-                            method: 'PATCH',
-                            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
-                            body: JSON.stringify({ title: newTitle.trim() })
-                        });
-                        const data = await this.parseJsonResponse(response);
-                        const idx = this.threads.findIndex(t => t.id === threadId);
-                        if (idx !== -1) this.threads[idx] = data.thread;
-                        if (this.currentThread && this.currentThread.id === threadId) this.currentThread = data.thread;
-                    } catch (error) {
-                        this.error = error.message;
-                    } finally {
-                        this.renamingThreadId = null;
-                        this.editingTitle = '';
-                    }
-                },
-
-                async deleteThread(threadId) {
-                    const result = await Swal.fire({
-                        title: @js(__('Delete Conversation?')),
-                        text: @js(__('This will permanently delete this conversation and all associated attachments.')),
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#ef4444',
-                        cancelButtonColor: '#6b7280',
-                        confirmButtonText: @js(__('Yes, Delete It')),
-                        cancelButtonText: @js(__('Cancel')),
-                        customClass: { popup: 'rounded-3xl border-none shadow-2xl' }
                     });
-                    if (!result.isConfirmed) return;
-                    try {
-                        const response = await fetch(this.threadUrl('destroyTemplate', threadId), {
-                            method: 'DELETE',
-                            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
-                        });
-                        await this.parseJsonResponse(response);
-                        this.threads = this.threads.filter(t => t.id != threadId);
-                        if (this.currentThreadId == threadId) {
-                            this.currentThreadId = null;
-                            this.currentThread = null;
-                            this.messages = [];
-                        }
-                        Swal.fire({ title: @js(__('Deleted!')), icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'rounded-2xl shadow-xl border-none' } });
-                    } catch (error) {
-                        Swal.fire({ title: @js(__('Error')), text: error.message, icon: 'error', customClass: { popup: 'rounded-3xl border-none shadow-2xl' } });
-                    }
-                },
-
-                async togglePin(threadId) {
-                    try {
-                        const response = await fetch(this.threadUrl('pin_toggleTemplate', threadId), {
-                            method: 'POST',
-                            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
-                        });
-                        const data = await this.parseJsonResponse(response);
-                        const idx = this.threads.findIndex(t => t.id === threadId);
-                        if (idx !== -1) { this.threads[idx] = data.thread; this.sortThreads(); }
-                    } catch (error) { this.error = error.message; }
-                },
-
-                sortThreads() {
-                    this.threads.sort((a, b) => {
-                        if (a.is_pinned !== b.is_pinned) return b.is_pinned ? 1 : -1;
-                        return new Date(b.last_activity_at) - new Date(a.last_activity_at);
-                    });
-                },
-
-                async selectThread(threadId) {
-                    if (threadId === this.currentThreadId) return;
-                    await this.loadThread(threadId);
-                },
-
-                async loadThread(threadId) {
-                    this.loadingMessages = true;
-                    this.error = null;
-                    try {
-                        const response = await fetch(this.threadUrl('showTemplate', threadId), { headers: { 'Accept': 'application/json' } });
-                        const data = await this.parseJsonResponse(response);
-                        this.currentThread = data.thread;
-                        this.currentThreadId = data.thread.id;
-                        this.messages = data.messages || [];
-                        this.scrollMessages();
-                    } catch (error) {
-                        this.error = error.message;
-                    } finally {
-                        this.loadingMessages = false;
-                        this.$nextTick(() => {
-                            const inputEl = document.getElementById('socius-prompt-input');
-                            if (inputEl) inputEl.focus();
-                        });
-                    }
-                },
-
-                pickFiles() { this.$refs.fileInput.click(); },
-
-                handleFileSelection(event) {
-                    const selected = Array.from(event.target.files || []);
-                    selected.forEach(file => {
-                        const exists = this.pendingFiles.some(e => e.name === file.name && e.size === file.size);
-                        if (!exists) this.pendingFiles.push(file);
-                    });
-                    event.target.value = '';
-                },
-
-                removePendingFile(index) { this.pendingFiles.splice(index, 1); },
-
-                startEditing(messageId, content) {
-                    this.editingMessageId = messageId;
-                    this.editingContent = content;
-                    this.$nextTick(() => {
-                        const el = document.getElementById(`edit-textarea-${messageId}`);
-                        if (el) el.focus();
-                    });
-                },
-
-                cancelEditing() { this.editingMessageId = null; this.editingContent = ''; },
-
-                async submitEdit(messageId) {
-                    if (!this.editingContent.trim() || this.sending) return;
-                    const idx = this.messages.findIndex(m => m.id === messageId);
-                    if (idx === -1) return;
-                    const threadId = this.currentThreadId;
-                    const newContent = this.editingContent;
-                    this.cancelEditing();
-                    this.messages = this.messages.slice(0, idx);
-                    await this.sendMessage(newContent, threadId);
-                },
-
-                async regenerateResponse(messageId) {
-                    if (this.sending) return;
-                    const idx = this.messages.findIndex(m => m.id === messageId);
-                    if (idx <= 0) return;
-                    const userMessage = this.messages[idx - 1];
-                    if (userMessage.role !== 'user') return;
-                    const threadId = this.currentThreadId;
-                    const content = userMessage.content;
-                    this.messages = this.messages.slice(0, idx);
-                    await this.sendMessage(content, threadId);
-                },
-
-                async sendMessage(overrideContent = null, overrideThreadId = null) {
-                    if (this.sending || !this.canAnalyze) return;
-                    const content = (overrideContent !== null ? overrideContent : this.draft).trim();
-                    if (!content && this.pendingFiles.length === 0) return;
-
-                    let threadId = overrideThreadId || this.currentThreadId;
-                    if (!threadId) {
-                        const thread = await this.createThread(false);
-                        if (!thread) return;
-                        threadId = thread.id;
-                        this.currentThread = thread;
-                        this.currentThreadId = thread.id;
-                    }
-
-                    this.error = null;
-                    this.sending = true;
-                    this.activeAbortController = new AbortController();
-
-                    const tempUserId = `temp-user-${Date.now()}`;
-                    const tempAssistantId = `temp-assistant-${Date.now()}`;
-                    const optimisticAttachments = this.pendingFiles.map((file, index) => ({ id: `pending-${index}`, original_name: file.name, file_size: file.size }));
-
-                    this.messages.push({ id: tempUserId, role: 'user', content, attachments: optimisticAttachments, created_at: new Date().toISOString() });
-                    this.messages.push({ id: tempAssistantId, role: 'assistant', content: '', attachments: [], created_at: new Date().toISOString() });
-                    this.scrollMessages();
-
-                    const formData = new FormData();
-                    formData.append('message', content);
-                    formData.append('web_search_enabled', this.webSearchEnabled ? '1' : '0');
-                    this.pendingFiles.forEach(file => formData.append('attachments[]', file));
-
-                    const usedFiles = [...this.pendingFiles];
-                    this.draft = '';
-                    this.pendingFiles = [];
-
-                    try {
-                        const response = await fetch(this.threadUrl('streamTemplate', threadId), {
-                            method: 'POST',
-                            signal: this.activeAbortController.signal,
-                            headers: { 'Accept': 'text/event-stream', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
-                            body: formData
-                        });
-
-                        if (!response.ok || !response.body) {
-                            if (response.status === 429) throw new Error(@js(__('Rate limit exceeded. Please wait a minute and try again.')));
-                            const errorData = await this.safeReadJson(response);
-                            throw new Error(errorData?.message || @js(__('Socius could not send this message.')));
-                        }
-
-                        await this.consumeEventStream(response.body, tempUserId, tempAssistantId);
-                        await this.loadThread(threadId);
-                        await this.reloadThreadList();
-                    } catch (error) {
-                        if (error.name === 'AbortError') {
-                            this.error = null;
-                        } else {
-                            this.error = error.message;
-                            const failedAssistantId = this.streamingAssistantId || tempAssistantId;
-                            this.replaceMessage(failedAssistantId, { id: failedAssistantId, role: 'assistant', content: error.message, attachments: [], created_at: new Date().toISOString() });
-                            this.pendingFiles = usedFiles;
-                        }
-                    } finally {
-                        this.activeAbortController = null;
-                        this.streamingUserId = null;
-                        this.streamingAssistantId = null;
-                        this.sending = false;
-                        this.$nextTick(() => {
-                            const inputEl = document.getElementById('socius-prompt-input');
-                            if (inputEl) inputEl.focus();
-                        });
-                    }
-                },
-
-                async reloadThreadList() {
-                    try {
-                        const response = await fetch(this.urls.list, { headers: { 'Accept': 'application/json' } });
-                        const data = await this.parseJsonResponse(response);
-                        this.threads = data.threads || [];
-                    } catch (error) { this.error = error.message; }
-                },
-
-                async consumeEventStream(stream, tempUserId, tempAssistantId) {
-                    const reader = stream.getReader();
-                    const decoder = new TextDecoder();
-                    let buffer = '';
-                    while (true) {
-                        const { value, done } = await reader.read();
-                        if (done) break;
-                        buffer += decoder.decode(value, { stream: true });
-                        let boundaryIndex;
-                        while ((boundaryIndex = buffer.indexOf('\n\n')) !== -1) {
-                            const rawEvent = buffer.slice(0, boundaryIndex).trim();
-                            buffer = buffer.slice(boundaryIndex + 2);
-                            if (rawEvent) this.handleStreamEvent(rawEvent, tempUserId, tempAssistantId);
-                        }
-                    }
-                },
-
-                handleStreamEvent(rawEvent, tempUserId, tempAssistantId) {
-                    const lines = rawEvent.split('\n');
-                    let eventName = 'message', data = {};
-                    lines.forEach(line => {
-                        if (line.startsWith('event:')) eventName = line.replace('event:', '').trim();
-                        if (line.startsWith('data:')) {
-                            try { data = JSON.parse(line.replace('data:', '').trim()); } catch (e) { data = {}; }
-                        }
-                    });
-                    if (eventName === 'meta') {
-                        this.streamingUserId = data.user_message_id || tempUserId;
-                        this.streamingAssistantId = data.assistant_message_id || tempAssistantId;
-                        this.updateMessageId(tempUserId, data.user_message_id);
-                        this.updateMessageId(tempAssistantId, data.assistant_message_id);
-                    }
-                    if (eventName === 'delta') {
-                        const assistantMessage = this.messages.find(m => m.id === this.streamingAssistantId) || this.messages.find(m => m.id === tempAssistantId);
-                        if (assistantMessage) { assistantMessage.content = `${assistantMessage.content || ''}${data.content || ''}`; this.scrollMessages(); }
-                    }
-                    if (eventName === 'error') throw new Error(data.message || @js(__('Streaming failed.')));
-                },
-
-                updateMessageId(oldId, newId) {
-                    const target = this.messages.find(m => m.id === oldId);
-                    if (target && newId) target.id = newId;
-                },
-
-                replaceMessage(messageId, replacement) {
-                    const index = this.messages.findIndex(m => m.id === messageId);
-                    if (index !== -1) this.messages.splice(index, 1, replacement);
-                },
-
-                threadUrl(key, threadId) { return this.urls[key].replace('__THREAD__', threadId); },
-
-                scrollMessages() {
-                    this.$nextTick(() => {
-                        if (this.$refs.messageList) this.$refs.messageList.scrollTop = this.$refs.messageList.scrollHeight;
-                    });
-                },
-
-                async parseJsonResponse(response) {
-                    const data = await this.safeReadJson(response);
-                    if (!response.ok) throw new Error(data?.message || @js(__('Request failed.')));
-                    return data || {};
-                },
-
-                async safeReadJson(response) {
-                    const text = await response.text();
-                    if (!text) return null;
-                    try { return JSON.parse(text); } catch (e) { return null; }
-                },
-
-                formatRelativeTime(timestamp) {
-                    if (!timestamp) return @js(__('Just now'));
-                    const date = new Date(timestamp);
-                    if (Number.isNaN(date.getTime())) return @js(__('Just now'));
-                    const diffSeconds = Math.round((date.getTime() - Date.now()) / 1000);
-                    const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
-                    if (Math.abs(diffSeconds) < 60) return rtf.format(diffSeconds, 'second');
-                    if (Math.abs(diffSeconds) < 3600) return rtf.format(Math.round(diffSeconds / 60), 'minute');
-                    if (Math.abs(diffSeconds) < 86400) return rtf.format(Math.round(diffSeconds / 3600), 'hour');
-                    return rtf.format(Math.round(diffSeconds / 86400), 'day');
-                },
-
-                formatBytes(bytes) {
-                    if (!bytes) return '0 B';
-                    const units = ['B', 'KB', 'MB', 'GB'];
-                    let value = bytes, unitIndex = 0;
-                    while (value >= 1024 && unitIndex < units.length - 1) { value /= 1024; unitIndex++; }
-                    return `${value.toFixed(value >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
-                },
-
-                renderMessage(content, role) {
-                    if (role === 'user') return this.escapeHtml(content || '').replace(/\n/g, '<br>');
-                    return this.renderMarkdownLike(content || '');
-                },
-
-                escapeHtml(value) {
-                    return String(value)
-                        .replace(/&/g, '&amp;')
-                        .replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;')
-                        .replace(/"/g, '&quot;')
-                        .replace(/'/g, '&#039;');
-                },
-
-                renderMarkdownLike(text) {
-                    const normalized = text.replace(/\r\n/g, '\n');
-                    const lines = normalized.split('\n');
-                    const blocks = [];
-                    let paragraph = [], listItems = [], tableLines = [];
-                    let inCodeBlock = false, codeBlockType = '', codeBlockLines = [];
-
-                    const flushParagraph = () => {
-                        if (paragraph.length) { blocks.push(`<p class="mb-4">${this.inlineFormat(paragraph.join(' '))}</p>`); paragraph = []; }
-                    };
-                    const flushList = () => {
-                        if (listItems.length) {
-                            blocks.push(`<ol class="list-decimal list-inside space-y-1 mb-4">${listItems.map(item => `<li>${this.inlineFormat(item)}</li>`).join('')}</ol>`);
-                            listItems = [];
-                        }
-                    };
-                    const flushTable = () => {
-                        if (tableLines.length) { blocks.push(this.renderMarkdownTable(tableLines)); tableLines = []; }
-                    };
-                    const flushCodeBlock = () => {
-                        if (inCodeBlock) {
-                            const content = codeBlockLines.join('\n');
-                            const id = 'visual-' + Math.random().toString(36).substr(2, 9);
-                            const type = codeBlockType === 'chart.js' ? 'chartjs' : codeBlockType;
-                            const isVisual = ['mermaid', 'chartjs', 'pollinations'].includes(type);
-                            if (isVisual) {
-                                blocks.push(`<div class="socius-visual my-6 bg-white/5 rounded-2xl border border-white/10 overflow-hidden" data-visual-type="${type}" data-visual-id="${id}"><div class="visual-header flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/5"><div class="flex gap-2 ml-auto"><button onclick="window.sociusVisuals&&window.sociusVisuals.copy('${id}',this)" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors"><i class="fa-solid fa-copy mr-1"></i> Copy</button><button onclick="window.sociusVisuals&&window.sociusVisuals.download('${id}','png')" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors"><i class="fa-solid fa-download mr-1"></i> PNG</button></div></div><div id="${id}" class="visual-body p-6 flex justify-center overflow-x-auto min-h-[100px] relative"><textarea class="visual-source hidden">${this.escapeHtml(content)}</textarea><div class="visual-target w-full flex justify-center"></div></div></div>`);
-                            } else {
-                                blocks.push(`<pre class="bg-black/30 p-4 rounded-xl overflow-x-auto text-xs my-4 border border-white/5"><code>${this.escapeHtml(content)}</code></pre>`);
-                            }
-                            inCodeBlock = false; codeBlockLines = []; codeBlockType = '';
-                        }
-                    };
-
-                    for (let i = 0; i < lines.length; i++) {
-                        const rawLine = lines[i];
-                        const line = rawLine.trim();
-                        const codeBlockMatch = line.match(/^`{3,}(.*)$/);
-                        if (codeBlockMatch) {
-                            if (!inCodeBlock) {
-                                flushParagraph(); flushList(); flushTable();
-                                inCodeBlock = true; codeBlockType = codeBlockMatch[1].trim(); codeBlockLines = [];
-                            } else { flushCodeBlock(); }
-                            continue;
-                        }
-                        if (inCodeBlock) { codeBlockLines.push(rawLine); continue; }
-                        if (/^\|.+\|/.test(line)) { flushParagraph(); flushList(); tableLines.push(line); continue; }
-                        if (tableLines.length && !line.startsWith('|')) { flushTable(); }
-                        if (/^#{1,6}\s/.test(line)) {
-                            flushParagraph(); flushList(); flushTable();
-                            const level = (line.match(/^(#{1,6})\s/) || [])[1]?.length || 2;
-                            const hText = line.replace(/^#{1,6}\s/, '');
-                            const classes = ['', '', 'text-xl font-bold mb-3 mt-5 text-slate-100', 'text-lg font-bold mb-2 mt-4 text-slate-100', 'text-base font-bold mb-2 mt-3 text-slate-200', 'text-sm font-bold mb-1 mt-2 text-slate-200', 'text-xs font-bold mb-1 mt-2 text-slate-300'];
-                            blocks.push(`<h${level} class="${classes[level] || ''}">${this.inlineFormat(hText)}</h${level}>`);
-                        } else if (/^\d+\.\s/.test(line)) {
-                            flushParagraph(); flushTable();
-                            listItems.push(line.replace(/^\d+\.\s/, ''));
-                        } else if (/^[-*]\s/.test(line)) {
-                            flushParagraph(); flushList(); flushTable();
-                            blocks.push(`<ul class="list-disc list-inside mb-2 text-slate-200"><li>${this.inlineFormat(line.replace(/^[-*]\s/, ''))}</li></ul>`);
-                        } else if (/^>\s/.test(line)) {
-                            flushParagraph(); flushList(); flushTable();
-                            blocks.push(`<blockquote class="border-l-4 border-[#3894dc]/50 pl-4 py-1 text-slate-400 italic my-2 bg-[#3894dc]/5 rounded-r-xl">${this.inlineFormat(line.replace(/^>\s/, ''))}</blockquote>`);
-                        } else if (/^---+$/.test(line)) {
-                            flushParagraph(); flushList(); flushTable();
-                            blocks.push('<hr class="border-white/10 my-4">');
-                        } else if (line === '') {
-                            flushParagraph(); flushList(); flushTable();
-                        } else {
-                            listItems.length ? listItems.push(line) : paragraph.push(line);
-                        }
-                    }
-                    flushParagraph(); flushList(); flushTable(); flushCodeBlock();
-                    return blocks.join('');
-                },
-
-                renderMarkdownTable(lines) {
-                    const rows = lines
-                        .filter(line => line !== '')
-                        .map(line => line.replace(/^\|/, '').replace(/\|$/, '').split('|').map(cell => cell.trim()));
-
-                    if (rows.length < 2) {
-                        return `<pre>${lines.join('\n')}</pre>`;
-                    }
-
-                    const separatorIndex = rows.findIndex(row => row.every(cell => /^:?-{3,}:?$/.test(cell)));
-                    if (separatorIndex !== 1) {
-                        return `<pre>${lines.join('\n')}</pre>`;
-                    }
-
-                    const header = rows[0].map(h => {
-                        let cleanH = h;
-                        if (cleanH.toLowerCase() === 'frequency') cleanH = 'Frequency';
-                        if (cleanH.toLowerCase() === 'percentage' || cleanH.toLowerCase() === 'percent') cleanH = 'Percentage (%)';
-                        return cleanH;
-                    });
-                    const body = [...rows.slice(2)];
-
-                    // Auto-check if Total row is present; if not, calculate and append
-                    const hasTotalRow = body.some(row => row[0] && row[0].toLowerCase().includes('total'));
-                    if (!hasTotalRow && body.length > 0) {
-                        const totalRow = [];
-                        header.forEach((colName, colIdx) => {
-                            if (colIdx === 0) {
-                                totalRow.push('Total');
-                            } else {
-                                let sum = 0;
-                                let isPercent = colName.includes('%') || colName.toLowerCase().includes('percentage');
-                                let isCount = colName.toLowerCase().includes('freq') || colName.toLowerCase().includes('(n)') || colName.toLowerCase().includes('count');
-
-                                body.forEach(r => {
-                                    const valStr = (r[colIdx] || '').replace(/[^0-9.]/g, '');
-                                    const val = parseFloat(valStr);
-                                    if (!isNaN(val)) sum += val;
-                                });
-
-                                if (isPercent) {
-                                    totalRow.push('100%');
-                                } else if (isCount) {
-                                    totalRow.push(`${Math.round(sum)}`);
-                                } else {
-                                    totalRow.push(sum > 0 ? (sum % 1 === 0 ? sum.toFixed(0) : sum.toFixed(1)) : '-');
-                                }
-                            }
-                        });
-                        body.push(totalRow);
-                    }
-
-                    const tableId = `socius-table-${Math.random().toString(36).slice(2, 10)}`;
-
-                    return `
-                                            <div class="my-4 rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e2d]/60 shadow-xl">
-                                                <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-white/[0.05] border-b border-white/10">
-                                                    <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-[10px] font-bold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
-                                                        <i class="fa-regular fa-copy text-[10px]"></i>
-                                                        ${@js(__('Copy Table'))}
-                                                    </button>
-                                                </div>
-                                                <div class="overflow-x-auto">
-                                                    <table id="${tableId}" class="min-w-full text-left text-xs border-collapse">
-                                                        <thead>
-                                                            <tr class="bg-white/[0.04] border-b border-white/10">
-                                                                ${header.map(cell => `<th class="px-4 py-3 text-[11px] font-bold text-blue-300 border-b border-white/10 bg-white/[0.03]">${this.inlineFormat(cell)}</th>`).join('')}
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            ${body.map((row, rIdx) => {
-                        const isTotal = row[0] && row[0].toLowerCase().includes('total');
-                        const rowBg = isTotal ? 'bg-white/[0.08] font-bold text-blue-200' : (rIdx % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]');
-                        return `
-                                                                    <tr class="${rowBg}">
-                                                                        ${row.map(cell => `<td class="px-4 py-2.5 border-b border-white/5 ${isTotal ? 'font-bold text-blue-200 border-t border-white/10' : 'text-slate-200'}">${this.inlineFormat(cell)}</td>`).join('')}
-                                                                    </tr>
-                                                                `;
-                    }).join('')}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        `;
-                },
-
-                inlineFormat(text) {
-                    return text
-                        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                        .replace(/\*(.+?)\*/g, '<em>$1</em>')
-                        .replace(/`(.+?)`/g, '<code class="bg-white/10 px-1.5 py-0.5 rounded text-[11px] font-mono">$1</code>')
-                        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-[#3894dc] hover:underline">$1</a>');
-                },
-
-                copyMessage(content, messageId, btn = null) {
-                    const element = document.getElementById(`socius-message-body-${messageId}`);
-                    if (element) {
-                        const clone = element.cloneNode(true);
-                        const controls = clone.querySelectorAll('.visual-header button, .socius-visual-loading, script, style, textarea.visual-source');
-                        controls.forEach(el => el.remove());
-                        const visuals = clone.querySelectorAll('.socius-visual');
-                        visuals.forEach(visual => {
-                            const titleEl = visual.querySelector('.visual-header span');
-                            const title = titleEl ? titleEl.innerText : 'chart';
-                            const replacement = document.createElement('p');
-                            replacement.style.fontWeight = 'bold';
-                            replacement.style.color = '#3f3f46';
-                            replacement.style.fontStyle = 'italic';
-                            replacement.innerText = `[${title} — chart not available in this format]`;
-                            visual.parentNode.replaceChild(replacement, visual);
-                        });
-                        const tables = clone.querySelectorAll('table');
-                        tables.forEach(table => {
-                            table.style.width = '100%'; table.style.borderCollapse = 'collapse'; table.style.margin = '12px 0';
-                            table.querySelectorAll('th, td').forEach(cell => {
-                                cell.style.border = '1px solid #d4d4d8'; cell.style.padding = '8px 12px'; cell.style.textAlign = 'left';
-                            });
-                            table.querySelectorAll('th').forEach(th => { th.style.backgroundColor = '#f4f4f5'; th.style.fontWeight = 'bold'; });
-                        });
-                        const rawHtml = clone.innerHTML;
-                        const rawText = clone.innerText || clone.textContent;
-                        const blobHtml = new Blob([rawHtml], { type: 'text/html' });
-                        const blobText = new Blob([rawText], { type: 'text/plain' });
-                        navigator.clipboard.write([new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })]).then(() => {
-                            if (btn) { const orig = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-check text-green-400"></i>'; setTimeout(() => { btn.innerHTML = orig; }, 2000); }
-                        }).catch(() => navigator.clipboard.writeText(rawText));
-                    } else {
-                        navigator.clipboard.writeText(content);
-                    }
-                },
-
-                toggleVoiceInput() {
-                    if (this.isListening) { if (this.recognition) this.recognition.stop(); return; }
-                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                    if (!SpeechRecognition) { this.error = @js(__('Your browser does not support voice input.')); return; }
-                    if (!this.recognition) {
-                        this.recognition = new SpeechRecognition();
-                        this.recognition.continuous = true; this.recognition.interimResults = true;
-                        this.recognition.lang = document.documentElement.lang || 'en-US';
-                        this.recognition.onresult = (event) => {
-                            let transcript = '';
-                            for (let i = event.resultIndex; i < event.results.length; i++) transcript += event.results[i][0].transcript;
-                            this.draft = transcript;
-                        };
-                        this.recognition.onend = () => { this.isListening = false; };
-                        this.recognition.onerror = (event) => { if (event.error !== 'no-speech') this.error = @js(__('Voice recognition error: ')) + event.error; this.isListening = false; };
-                    }
-                    this.error = null;
-                    try { this.recognition.start(); this.isListening = true; } catch (e) { this.isListening = false; }
-                },
-
-                async renderVisuals() {
-                    const visuals = document.querySelectorAll('.socius-visual:not(.rendered)');
-                    if (visuals.length === 0) return;
-                    if (typeof mermaid !== 'undefined') {
-                        try { mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose', fontFamily: 'Inter', suppressErrorIndicators: true, logLevel: 4 }); } catch (e) { }
-                    }
-                    for (const el of Array.from(visuals)) {
-                        const type = el.dataset.visualType;
-                        const id = el.dataset.visualId;
-                        const sourceEl = el.querySelector('.visual-source');
-                        if (!sourceEl) continue;
-                        let source = (sourceEl.value || sourceEl.textContent).trim();
-                        const target = el.querySelector('.visual-target');
-                        if (!target) continue;
-                        try {
-                            if (type === 'mermaid' && typeof mermaid !== 'undefined') {
-                                if (!source.match(/^(graph|sequenceDiagram|gantt|classDiagram|stateDiagram|erDiagram|journey|pie|quadrantChart|xychart-beta|mindmap|timeline)/i)) source = 'graph TD\n' + source;
-                                const { svg } = await mermaid.render('svg-' + id, source);
-                                target.innerHTML = svg;
-                                el.classList.add('rendered');
-                            } else if (type === 'chartjs' && typeof Chart !== 'undefined') {
-                                const repairedSource = this.repairJson(source);
-                                const config = JSON.parse(repairedSource);
-                                const canvas = document.createElement('canvas');
-                                target.innerHTML = '';
-                                target.appendChild(canvas);
-                                if (config.data && Array.isArray(config.data.datasets) && config.data.datasets[0]) {
-                                    const dataset = config.data.datasets[0];
-                                    const rawData = Array.isArray(dataset.data) ? dataset.data : [];
-                                    const total = rawData.reduce((s, v) => s + Number(v || 0), 0);
-                                    dataset.data = rawData.map(v => total > 0 ? parseFloat(((Number(v || 0) / total) * 100).toFixed(1)) : parseFloat(String(v || 0).replace('%', '')) || 0);
-                                    if (!dataset.label) dataset.label = 'Percentage (%)';
-                                    if (!dataset.backgroundColor) dataset.backgroundColor = ['#2271b1', '#3894dc', '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
-                                    if (!config.options) config.options = {};
-                                    if (!config.options.plugins) config.options.plugins = {};
-                                    config.options.plugins.legend = { display: false };
-                                    const chartType = config.type || 'bar';
-                                    const isCartesian = ['bar', 'line'].includes(chartType);
-                                    if (isCartesian) {
-                                        const isHorizontal = config.options.indexAxis === 'y';
-                                        const valAxis = { beginAtZero: true, grace: '12%', grid: { color: 'rgba(255,255,255,0.08)' }, ticks: { font: { size: 10 }, callback: v => v + '%' }, title: { display: true, text: 'Percentage (%)', color: '#94a3b8', font: { size: 10 } } };
-                                        if (config.data && config.data.labels) config.data.labels = config.data.labels.map(l => wrapLabel(l, 18));
-                                        const labelAxis = { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45, autoSkip: true } };
-                                        config.options.scales = { y: isHorizontal ? labelAxis : valAxis, x: isHorizontal ? valAxis : labelAxis };
-                                    } else { if (config.options) delete config.options.scales; }
-                                }
-                                if (!config.options) config.options = {};
-                                config.options.responsive = true; config.options.maintainAspectRatio = false;
-                                new Chart(canvas, config);
-                                canvas.style.maxHeight = '400px';
-                                el.classList.add('rendered');
-                            }
-                        } catch (e) {
-                            console.error(`Socius Visual Error [${type}]:`, e);
-                            target.innerHTML = `<div class="text-red-400/60 text-[10px] font-bold p-4 bg-red-500/10 rounded-xl border border-red-500/20"><i class="fa-solid fa-triangle-exclamation mr-1"></i> {{ __('Invalid visual syntax.') }}</div>`;
-                            el.classList.add('rendered');
-                        }
-                    }
-                },
-
-                repairJson(str) {
-                    let cleaned = str;
-                    cleaned = cleaned.replace(/^```(json)?\n?/i, '').replace(/```$/i, '').trim();
-                    cleaned = cleaned.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1').replace(/,\s*([}\]])/g, '$1');
-                    return cleaned.trim();
-                },
-
-                async loadKbRules() {
-                    this.loadingKb = true;
-                    try {
-                        const response = await fetch(this.urls.kbList, { headers: { 'Accept': 'application/json' } });
-                        const data = await this.parseJsonResponse(response);
-                        this.kbRules = data.rules || [];
-                    } catch (e) { console.error('Failed to load KB rules', e); } finally { this.loadingKb = false; }
-                },
-
-                async addKbRule() {
-                    if (!this.newKbRuleContent || !this.newKbRuleContent.trim()) return;
-                    this.savingKb = true;
-                    try {
-                        const response = await fetch(this.urls.kbStore, {
-                            method: 'POST',
-                            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
-                            body: JSON.stringify({ content: this.newKbRuleContent.trim() })
-                        });
-                        const data = await this.parseJsonResponse(response);
-                        if (response.ok) {
-                            this.newKbRuleContent = '';
-                            await this.loadKbRules();
-                            Swal.fire({ title: @js(__('Memory Updated!')), text: data.message || @js(__('Instruction added.')), icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3500, timerProgressBar: true, customClass: { popup: 'rounded-2xl shadow-xl border-none' } });
-                        }
-                    } catch (e) { Swal.fire({ title: @js(__('Error')), text: e.message, icon: 'error', customClass: { popup: 'rounded-3xl border-none shadow-2xl' } }); } finally { this.savingKb = false; }
-                },
-
-                async toggleKbRule(rule) {
-                    const originalState = rule.is_active;
-                    rule.is_active = !originalState;
-                    try {
-                        const url = this.urls.kbUpdateTemplate.replace('__KB__', rule.id);
-                        const response = await fetch(url, {
-                            method: 'PATCH',
-                            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
-                            body: JSON.stringify({ is_active: rule.is_active })
-                        });
-                        const data = await this.parseJsonResponse(response);
-                        if (data.rule) rule.is_active = data.rule.is_active;
-                    } catch (e) { rule.is_active = originalState; Swal.fire({ title: @js(__('Error')), text: e.message, icon: 'error', customClass: { popup: 'rounded-3xl border-none shadow-2xl' } }); }
-                },
-
-                async deleteKbRule(ruleId) {
-                    const result = await Swal.fire({
-                        title: @js(__('Delete Preference?')),
-                        text: @js(__('This preference will no longer apply to future answers.')),
-                        icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonColor: '#6b7280',
-                        confirmButtonText: @js(__('Yes, Delete It')), cancelButtonText: @js(__('Cancel')),
-                        customClass: { popup: 'rounded-3xl border-none shadow-2xl' }
-                    });
-                    if (!result.isConfirmed) return;
-                    try {
-                        const url = this.urls.kbDestroyTemplate.replace('__KB__', ruleId);
-                        const response = await fetch(url, { method: 'DELETE', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') } });
-                        const data = await this.parseJsonResponse(response);
-                        this.kbRules = this.kbRules.filter(r => r.id !== ruleId);
-                        Swal.fire({ title: @js(__('Deleted!')), text: data.message || @js(__('Preference removed.')), icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, customClass: { popup: 'rounded-2xl shadow-xl border-none' } });
-                    } catch (e) { Swal.fire({ title: @js(__('Error')), text: e.message, icon: 'error', customClass: { popup: 'rounded-3xl border-none shadow-2xl' } }); }
+                } catch (e) {
+                    navigator.clipboard.writeText(plainText);
                 }
             };
-        };
-    </script>
-@endpush
+
+            window.standaloneSociusManager = function (config) {
+                return {
+                    canAnalyze: config.canAnalyze,
+                    initialContext: config.initialContext || null,
+                    currentThreadId: null,
+                    currentThread: null,
+                    threads: [],
+                    messages: [],
+                    draft: '',
+                    pendingFiles: [],
+                    loadingThreads: false,
+                    loadingMessages: false,
+                    creatingThread: false,
+                    sending: false,
+                    error: null,
+                    streamingUserId: null,
+                    streamingAssistantId: null,
+                    renamingThreadId: null,
+                    editingTitle: '',
+                    threadMenuOpen: null,
+                    urls: config.urls,
+                    isListening: false,
+                    recognition: null,
+                    editingMessageId: null,
+                    editingContent: '',
+                    tokenUsage: null,
+                    webSearchEnabled: false,
+                    historyOpen: window.innerWidth > 1280,
+                    scrolledUp: false,
+                    activePromptId: null,
+                    showQuoteButton: false,
+                    quoteButtonX: 0,
+                    quoteButtonY: 0,
+                    selectedText: '',
+                    kbModalOpen: false,
+                    kbRules: [],
+                    newKbRuleContent: '',
+                    loadingKb: false,
+                    savingKb: false,
+                    renderDebounce: null,
+                    activeAbortController: null,
+
+                    stopGeneration() {
+                        if (this.activeAbortController) {
+                            this.activeAbortController.abort();
+                            this.activeAbortController = null;
+                        }
+                        this.sending = false;
+                    },
+
+                    handleScroll() {
+                        const el = this.$refs.messageList;
+                        if (!el) return;
+                        this.scrolledUp = (el.scrollHeight - el.scrollTop - el.clientHeight) > 150;
+                        const userMsgs = this.messages.filter(m => m.role === 'user');
+                        let closestId = null, minDiff = Infinity;
+                        const containerRect = el.getBoundingClientRect();
+                        const centerY = containerRect.top + containerRect.height / 2;
+                        userMsgs.forEach(m => {
+                            const msgEl = document.getElementById(`msg-${m.id}`);
+                            if (msgEl) {
+                                const rect = msgEl.getBoundingClientRect();
+                                const diff = Math.abs(rect.top + rect.height / 2 - centerY);
+                                if (diff < minDiff) { minDiff = diff; closestId = m.id; }
+                            }
+                        });
+                        if (closestId) this.activePromptId = closestId;
+                    },
+
+                    scrollToBottom() {
+                        const el = this.$refs.messageList;
+                        if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+                    },
+
+                    scrollToPrompt(msgId) {
+                        const el = document.getElementById(`msg-${msgId}`);
+                        if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); this.activePromptId = msgId; }
+                    },
+
+                    quoteSelection() {
+                        if (!this.selectedText) return;
+                        this.draft = `> "${this.selectedText}"\n\n` + this.draft;
+                        this.showQuoteButton = false;
+                        window.getSelection().removeAllRanges();
+                        const inputEl = document.getElementById('socius-prompt-input');
+                        if (inputEl) inputEl.focus();
+                    },
+
+                    init() {
+                        this.loadThreads();
+                        this.loadKbRules();
+
+                        this.$watch('messages', () => {
+                            if (this.renderDebounce) clearTimeout(this.renderDebounce);
+                            this.renderDebounce = setTimeout(() => this.renderVisuals(), 100);
+                        });
+                        this.$nextTick(() => this.renderVisuals());
+
+                        document.addEventListener('selectionchange', () => {
+                            if (this.currentThreadId === null) { this.showQuoteButton = false; return; }
+                            const selection = window.getSelection();
+                            const selected = selection.toString().trim();
+                            if (!selected || selected.length < 3) { this.showQuoteButton = false; return; }
+                            let node = selection.anchorNode;
+                            let isInsideSociusProse = false;
+                            while (node) {
+                                if (node.classList && node.classList.contains('socius-prose')) { isInsideSociusProse = true; break; }
+                                node = node.parentNode;
+                            }
+                            if (!isInsideSociusProse) { this.showQuoteButton = false; return; }
+                            this.selectedText = selected;
+                            try {
+                                const range = selection.getRangeAt(0);
+                                const rect = range.getBoundingClientRect();
+                                const wrapper = document.querySelector('.socius-root-container');
+                                if (wrapper) {
+                                    const wrapperRect = wrapper.getBoundingClientRect();
+                                    this.quoteButtonX = rect.left - wrapperRect.left + (rect.width / 2) - 40;
+                                    this.quoteButtonY = rect.top - wrapperRect.top - 40;
+                                    this.showQuoteButton = true;
+                                }
+                            } catch (e) { this.showQuoteButton = false; }
+                        });
+
+                        // Seed initial context from transcription if present
+                        if (this.initialContext && this.initialContext.text) {
+                            const contextObj = { ...this.initialContext };
+                            this.initialContext = null;
+                            this.$nextTick(async () => {
+                                const thread = await this.createThreadWithContext(contextObj);
+                                if (thread) {
+                                    this.currentThread = thread;
+                                    this.currentThreadId = thread.id;
+                                    this.messages = [];
+                                    const prompt = `Analyze the following ${contextObj.label || 'transcription'}:\n\n${contextObj.text}`;
+                                    await this.sendMessage(prompt, thread.id);
+                                }
+                            });
+                        }
+                    },
+
+                    async loadThreads() {
+                        this.loadingThreads = true;
+                        this.error = null;
+                        this.currentThreadId = null;
+                        this.currentThread = null;
+                        this.messages = [];
+                        try {
+                            const response = await fetch(this.urls.list, { headers: { 'Accept': 'application/json' } });
+                            const data = await this.parseJsonResponse(response);
+                            this.threads = data.threads || [];
+                        } catch (error) {
+                            this.error = error.message;
+                        } finally {
+                            this.loadingThreads = false;
+                        }
+                    },
+
+                    async createThread(selectAfter = true) {
+                        if (!this.canAnalyze) return null;
+                        this.creatingThread = true;
+                        this.error = null;
+                        try {
+                            const response = await fetch(this.urls.create, {
+                                method: 'POST',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                },
+                                body: JSON.stringify({ context_type: 'general' })
+                            });
+                            const data = await this.parseJsonResponse(response);
+                            const thread = data.thread;
+                            this.threads = [thread, ...this.threads.filter(item => item.id !== thread.id)];
+                            if (selectAfter) await this.loadThread(thread.id);
+                            return thread;
+                        } catch (error) {
+                            this.error = error.message;
+                            return null;
+                        } finally {
+                            this.creatingThread = false;
+                        }
+                    },
+
+                    async createThreadWithContext(context) {
+                        if (!this.canAnalyze) return null;
+                        this.creatingThread = true;
+                        this.error = null;
+                        try {
+                            const response = await fetch(this.urls.create, {
+                                method: 'POST',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                },
+                                body: JSON.stringify({
+                                    context_type: context.type || 'transcription',
+                                    initial_context_text: context.text || '',
+                                    initial_context_label: context.label || 'Document'
+                                })
+                            });
+                            const data = await this.parseJsonResponse(response);
+                            const thread = data.thread;
+                            this.threads = [thread, ...this.threads.filter(item => item.id !== thread.id)];
+                            return thread;
+                        } catch (error) {
+                            this.error = error.message;
+                            return null;
+                        } finally {
+                            this.creatingThread = false;
+                        }
+                    },
+
+                    async renameThread(threadId, newTitle) {
+                        if (!newTitle || !newTitle.trim()) return;
+                        try {
+                            const response = await fetch(this.threadUrl('updateTemplate', threadId), {
+                                method: 'PATCH',
+                                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
+                                body: JSON.stringify({ title: newTitle.trim() })
+                            });
+                            const data = await this.parseJsonResponse(response);
+                            const idx = this.threads.findIndex(t => t.id === threadId);
+                            if (idx !== -1) this.threads[idx] = data.thread;
+                            if (this.currentThread && this.currentThread.id === threadId) this.currentThread = data.thread;
+                        } catch (error) {
+                            this.error = error.message;
+                        } finally {
+                            this.renamingThreadId = null;
+                            this.editingTitle = '';
+                        }
+                    },
+
+                    async deleteThread(threadId) {
+                        const result = await Swal.fire({
+                            title: @js(__('Delete Conversation?')),
+                            text: @js(__('This will permanently delete this conversation and all associated attachments.')),
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#ef4444',
+                            cancelButtonColor: '#6b7280',
+                            confirmButtonText: @js(__('Yes, Delete It')),
+                            cancelButtonText: @js(__('Cancel')),
+                            customClass: { popup: 'rounded-3xl border-none shadow-2xl' }
+                        });
+                        if (!result.isConfirmed) return;
+                        try {
+                            const response = await fetch(this.threadUrl('destroyTemplate', threadId), {
+                                method: 'DELETE',
+                                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
+                            });
+                            await this.parseJsonResponse(response);
+                            this.threads = this.threads.filter(t => t.id != threadId);
+                            if (this.currentThreadId == threadId) {
+                                this.currentThreadId = null;
+                                this.currentThread = null;
+                                this.messages = [];
+                            }
+                            Swal.fire({ title: @js(__('Deleted!')), icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'rounded-2xl shadow-xl border-none' } });
+                        } catch (error) {
+                            Swal.fire({ title: @js(__('Error')), text: error.message, icon: 'error', customClass: { popup: 'rounded-3xl border-none shadow-2xl' } });
+                        }
+                    },
+
+                    async togglePin(threadId) {
+                        try {
+                            const response = await fetch(this.threadUrl('pin_toggleTemplate', threadId), {
+                                method: 'POST',
+                                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
+                            });
+                            const data = await this.parseJsonResponse(response);
+                            const idx = this.threads.findIndex(t => t.id === threadId);
+                            if (idx !== -1) { this.threads[idx] = data.thread; this.sortThreads(); }
+                        } catch (error) { this.error = error.message; }
+                    },
+
+                    sortThreads() {
+                        this.threads.sort((a, b) => {
+                            if (a.is_pinned !== b.is_pinned) return b.is_pinned ? 1 : -1;
+                            return new Date(b.last_activity_at) - new Date(a.last_activity_at);
+                        });
+                    },
+
+                    async selectThread(threadId) {
+                        if (threadId === this.currentThreadId) return;
+                        await this.loadThread(threadId);
+                    },
+
+                    async loadThread(threadId) {
+                        this.loadingMessages = true;
+                        this.error = null;
+                        try {
+                            const response = await fetch(this.threadUrl('showTemplate', threadId), { headers: { 'Accept': 'application/json' } });
+                            const data = await this.parseJsonResponse(response);
+                            this.currentThread = data.thread;
+                            this.currentThreadId = data.thread.id;
+                            this.messages = data.messages || [];
+                            this.scrollMessages();
+                        } catch (error) {
+                            this.error = error.message;
+                        } finally {
+                            this.loadingMessages = false;
+                            this.$nextTick(() => {
+                                const inputEl = document.getElementById('socius-prompt-input');
+                                if (inputEl) inputEl.focus();
+                            });
+                        }
+                    },
+
+                    adjustTextareaHeight(target) {
+                        const el = target || document.getElementById('socius-prompt-input');
+                        if (!el) return;
+                        el.style.height = 'auto';
+                        const newHeight = Math.min(el.scrollHeight, 200);
+                        el.style.height = newHeight + 'px';
+                        el.style.overflowY = el.scrollHeight > 200 ? 'auto' : 'hidden';
+                    },
+
+                    pickFiles() { this.$refs.fileInput.click(); },
+
+                    handleFileSelection(event) {
+                        const selected = Array.from(event.target.files || []);
+                        selected.forEach(file => {
+                            const exists = this.pendingFiles.some(e => e.name === file.name && e.size === file.size);
+                            if (!exists) this.pendingFiles.push(file);
+                        });
+                        event.target.value = '';
+                    },
+
+                    removePendingFile(index) { this.pendingFiles.splice(index, 1); },
+
+                    startEditing(messageId, content) {
+                        this.editingMessageId = messageId;
+                        this.editingContent = content;
+                        this.$nextTick(() => {
+                            const el = document.getElementById(`edit-textarea-${messageId}`);
+                            if (el) el.focus();
+                        });
+                    },
+
+                    cancelEditing() { this.editingMessageId = null; this.editingContent = ''; },
+
+                    async submitEdit(messageId) {
+                        if (!this.editingContent.trim() || this.sending) return;
+                        const idx = this.messages.findIndex(m => m.id === messageId);
+                        if (idx === -1) return;
+                        const threadId = this.currentThreadId;
+                        const newContent = this.editingContent;
+                        this.cancelEditing();
+                        this.messages = this.messages.slice(0, idx);
+                        await this.sendMessage(newContent, threadId);
+                    },
+
+                    async regenerateResponse(messageId) {
+                        if (this.sending) return;
+                        const idx = this.messages.findIndex(m => m.id === messageId);
+                        if (idx <= 0) return;
+                        const userMessage = this.messages[idx - 1];
+                        if (userMessage.role !== 'user') return;
+                        const threadId = this.currentThreadId;
+                        const content = userMessage.content;
+                        this.messages = this.messages.slice(0, idx);
+                        await this.sendMessage(content, threadId);
+                    },
+
+                    async sendMessage(overrideContent = null, overrideThreadId = null) {
+                        if (this.sending || !this.canAnalyze) return;
+                        const content = (overrideContent !== null ? overrideContent : this.draft).trim();
+                        if (!content && this.pendingFiles.length === 0) return;
+
+                        let threadId = overrideThreadId || this.currentThreadId;
+                        if (!threadId) {
+                            const thread = await this.createThread(false);
+                            if (!thread) return;
+                            threadId = thread.id;
+                            this.currentThread = thread;
+                            this.currentThreadId = thread.id;
+                        }
+
+                        this.error = null;
+                        this.sending = true;
+                        this.activeAbortController = new AbortController();
+
+                        const tempUserId = `temp-user-${Date.now()}`;
+                        const tempAssistantId = `temp-assistant-${Date.now()}`;
+                        const optimisticAttachments = this.pendingFiles.map((file, index) => ({ id: `pending-${index}`, original_name: file.name, file_size: file.size }));
+
+                        this.messages.push({ id: tempUserId, role: 'user', content, attachments: optimisticAttachments, created_at: new Date().toISOString() });
+                        this.messages.push({ id: tempAssistantId, role: 'assistant', content: '', attachments: [], created_at: new Date().toISOString() });
+                        this.scrollMessages();
+
+                        const formData = new FormData();
+                        formData.append('message', content);
+                        formData.append('web_search_enabled', this.webSearchEnabled ? '1' : '0');
+                        this.pendingFiles.forEach(file => formData.append('attachments[]', file));
+
+                        const usedFiles = [...this.pendingFiles];
+                        this.draft = '';
+                        this.pendingFiles = [];
+
+                        try {
+                            const response = await fetch(this.threadUrl('streamTemplate', threadId), {
+                                method: 'POST',
+                                signal: this.activeAbortController.signal,
+                                headers: { 'Accept': 'text/event-stream', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
+                                body: formData
+                            });
+
+                            if (!response.ok || !response.body) {
+                                if (response.status === 429) throw new Error(@js(__('Rate limit exceeded. Please wait a minute and try again.')));
+                                const errorData = await this.safeReadJson(response);
+                                throw new Error(errorData?.message || @js(__('Socius could not send this message.')));
+                            }
+
+                            await this.consumeEventStream(response.body, tempUserId, tempAssistantId);
+                            await this.loadThread(threadId);
+                            await this.reloadThreadList();
+                        } catch (error) {
+                            if (error.name === 'AbortError') {
+                                this.error = null;
+                            } else {
+                                this.error = error.message;
+                                const failedAssistantId = this.streamingAssistantId || tempAssistantId;
+                                this.replaceMessage(failedAssistantId, { id: failedAssistantId, role: 'assistant', content: error.message, attachments: [], created_at: new Date().toISOString() });
+                                this.pendingFiles = usedFiles;
+                            }
+                        } finally {
+                            this.activeAbortController = null;
+                            this.streamingUserId = null;
+                            this.streamingAssistantId = null;
+                            this.sending = false;
+                            this.$nextTick(() => {
+                                const inputEl = document.getElementById('socius-prompt-input');
+                                if (inputEl) inputEl.focus();
+                            });
+                        }
+                    },
+
+                    async reloadThreadList() {
+                        try {
+                            const response = await fetch(this.urls.list, { headers: { 'Accept': 'application/json' } });
+                            const data = await this.parseJsonResponse(response);
+                            this.threads = data.threads || [];
+                        } catch (error) { this.error = error.message; }
+                    },
+
+                    async consumeEventStream(stream, tempUserId, tempAssistantId) {
+                        const reader = stream.getReader();
+                        const decoder = new TextDecoder();
+                        let buffer = '';
+                        while (true) {
+                            const { value, done } = await reader.read();
+                            if (done) break;
+                            buffer += decoder.decode(value, { stream: true });
+                            let boundaryIndex;
+                            while ((boundaryIndex = buffer.indexOf('\n\n')) !== -1) {
+                                const rawEvent = buffer.slice(0, boundaryIndex).trim();
+                                buffer = buffer.slice(boundaryIndex + 2);
+                                if (rawEvent) this.handleStreamEvent(rawEvent, tempUserId, tempAssistantId);
+                            }
+                        }
+                    },
+
+                    handleStreamEvent(rawEvent, tempUserId, tempAssistantId) {
+                        const lines = rawEvent.split('\n');
+                        let eventName = 'message', data = {};
+                        lines.forEach(line => {
+                            if (line.startsWith('event:')) eventName = line.replace('event:', '').trim();
+                            if (line.startsWith('data:')) {
+                                try { data = JSON.parse(line.replace('data:', '').trim()); } catch (e) { data = {}; }
+                            }
+                        });
+                        if (eventName === 'meta') {
+                            this.streamingUserId = data.user_message_id || tempUserId;
+                            this.streamingAssistantId = data.assistant_message_id || tempAssistantId;
+                            this.updateMessageId(tempUserId, data.user_message_id);
+                            this.updateMessageId(tempAssistantId, data.assistant_message_id);
+                        }
+                        if (eventName === 'delta') {
+                            const assistantMessage = this.messages.find(m => m.id === this.streamingAssistantId) || this.messages.find(m => m.id === tempAssistantId);
+                            if (assistantMessage) { assistantMessage.content = `${assistantMessage.content || ''}${data.content || ''}`; this.scrollMessages(); }
+                        }
+                        if (eventName === 'error') throw new Error(data.message || @js(__('Streaming failed.')));
+                    },
+
+                    updateMessageId(oldId, newId) {
+                        const target = this.messages.find(m => m.id === oldId);
+                        if (target && newId) target.id = newId;
+                    },
+
+                    replaceMessage(messageId, replacement) {
+                        const index = this.messages.findIndex(m => m.id === messageId);
+                        if (index !== -1) this.messages.splice(index, 1, replacement);
+                    },
+
+                    threadUrl(key, threadId) { return this.urls[key].replace('__THREAD__', threadId); },
+
+                    scrollMessages() {
+                        this.$nextTick(() => {
+                            if (this.$refs.messageList) this.$refs.messageList.scrollTop = this.$refs.messageList.scrollHeight;
+                        });
+                    },
+
+                    async parseJsonResponse(response) {
+                        const data = await this.safeReadJson(response);
+                        if (!response.ok) throw new Error(data?.message || @js(__('Request failed.')));
+                        return data || {};
+                    },
+
+                    async safeReadJson(response) {
+                        const text = await response.text();
+                        if (!text) return null;
+                        try { return JSON.parse(text); } catch (e) { return null; }
+                    },
+
+                    formatRelativeTime(timestamp) {
+                        if (!timestamp) return @js(__('Just now'));
+                        const date = new Date(timestamp);
+                        if (Number.isNaN(date.getTime())) return @js(__('Just now'));
+                        const diffSeconds = Math.round((date.getTime() - Date.now()) / 1000);
+                        const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+                        if (Math.abs(diffSeconds) < 60) return rtf.format(diffSeconds, 'second');
+                        if (Math.abs(diffSeconds) < 3600) return rtf.format(Math.round(diffSeconds / 60), 'minute');
+                        if (Math.abs(diffSeconds) < 86400) return rtf.format(Math.round(diffSeconds / 3600), 'hour');
+                        return rtf.format(Math.round(diffSeconds / 86400), 'day');
+                    },
+
+                    formatBytes(bytes) {
+                        if (!bytes) return '0 B';
+                        const units = ['B', 'KB', 'MB', 'GB'];
+                        let value = bytes, unitIndex = 0;
+                        while (value >= 1024 && unitIndex < units.length - 1) { value /= 1024; unitIndex++; }
+                        return `${value.toFixed(value >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+                    },
+
+                    renderMessage(content, role) {
+                        if (role === 'user') return this.escapeHtml(content || '').replace(/\n/g, '<br>');
+                        return this.renderMarkdownLike(content || '');
+                    },
+
+                    escapeHtml(value) {
+                        return String(value)
+                            .replace(/&/g, '&amp;')
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;')
+                            .replace(/"/g, '&quot;')
+                            .replace(/'/g, '&#039;');
+                    },
+
+                    renderMarkdownLike(text) {
+                        const normalized = text.replace(/\r\n/g, '\n');
+                        const lines = normalized.split('\n');
+                        const blocks = [];
+                        let paragraph = [], listItems = [], tableLines = [];
+                        let inCodeBlock = false, codeBlockType = '', codeBlockLines = [];
+
+                        const flushParagraph = () => {
+                            if (paragraph.length) { blocks.push(`<p class="mb-4">${this.inlineFormat(paragraph.join(' '))}</p>`); paragraph = []; }
+                        };
+                        const flushList = () => {
+                            if (listItems.length) {
+                                blocks.push(`<ol class="list-decimal list-inside space-y-1 mb-4">${listItems.map(item => `<li>${this.inlineFormat(item)}</li>`).join('')}</ol>`);
+                                listItems = [];
+                            }
+                        };
+                        const flushTable = () => {
+                            if (tableLines.length) { blocks.push(this.renderMarkdownTable(tableLines)); tableLines = []; }
+                        };
+                        const flushCodeBlock = () => {
+                            if (inCodeBlock) {
+                                const content = codeBlockLines.join('\n');
+                                const id = 'visual-' + Math.random().toString(36).substr(2, 9);
+                                const type = codeBlockType === 'chart.js' ? 'chartjs' : codeBlockType;
+                                const isVisual = ['mermaid', 'chartjs', 'pollinations'].includes(type);
+                                if (isVisual) {
+                                    blocks.push(`<div class="socius-visual my-6 bg-white/5 rounded-2xl border border-white/10 overflow-hidden" data-visual-type="${type}" data-visual-id="${id}"><div class="visual-header flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/5"><div class="flex gap-2 ml-auto"><button onclick="window.sociusVisuals&&window.sociusVisuals.copy('${id}',this)" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors"><i class="fa-solid fa-copy mr-1"></i> Copy</button><button onclick="window.sociusVisuals&&window.sociusVisuals.download('${id}','png')" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors"><i class="fa-solid fa-download mr-1"></i> PNG</button></div></div><div id="${id}" class="visual-body p-6 flex justify-center overflow-x-auto min-h-[100px] relative"><textarea class="visual-source hidden">${this.escapeHtml(content)}</textarea><div class="visual-target w-full flex justify-center"></div></div></div>`);
+                                } else {
+                                    blocks.push(`<pre class="bg-black/30 p-4 rounded-xl overflow-x-auto text-xs my-4 border border-white/5"><code>${this.escapeHtml(content)}</code></pre>`);
+                                }
+                                inCodeBlock = false; codeBlockLines = []; codeBlockType = '';
+                            }
+                        };
+
+                        for (let i = 0; i < lines.length; i++) {
+                            const rawLine = lines[i];
+                            const line = rawLine.trim();
+                            const codeBlockMatch = line.match(/^`{3,}(.*)$/);
+                            if (codeBlockMatch) {
+                                if (!inCodeBlock) {
+                                    flushParagraph(); flushList(); flushTable();
+                                    inCodeBlock = true; codeBlockType = codeBlockMatch[1].trim(); codeBlockLines = [];
+                                } else { flushCodeBlock(); }
+                                continue;
+                            }
+                            if (inCodeBlock) { codeBlockLines.push(rawLine); continue; }
+                            if (/^\|.+\|/.test(line)) { flushParagraph(); flushList(); tableLines.push(line); continue; }
+                            if (tableLines.length && !line.startsWith('|')) { flushTable(); }
+                            if (/^#{1,6}\s/.test(line)) {
+                                flushParagraph(); flushList(); flushTable();
+                                const level = (line.match(/^(#{1,6})\s/) || [])[1]?.length || 2;
+                                const hText = line.replace(/^#{1,6}\s/, '');
+                                const classes = ['', '', 'text-xl font-bold mb-3 mt-5 text-slate-100', 'text-lg font-bold mb-2 mt-4 text-slate-100', 'text-base font-bold mb-2 mt-3 text-slate-200', 'text-sm font-bold mb-1 mt-2 text-slate-200', 'text-xs font-bold mb-1 mt-2 text-slate-300'];
+                                blocks.push(`<h${level} class="${classes[level] || ''}">${this.inlineFormat(hText)}</h${level}>`);
+                            } else if (/^\d+\.\s/.test(line)) {
+                                flushParagraph(); flushTable();
+                                listItems.push(line.replace(/^\d+\.\s/, ''));
+                            } else if (/^[-*]\s/.test(line)) {
+                                flushParagraph(); flushList(); flushTable();
+                                blocks.push(`<ul class="list-disc list-inside mb-2 text-slate-200"><li>${this.inlineFormat(line.replace(/^[-*]\s/, ''))}</li></ul>`);
+                            } else if (/^>\s/.test(line)) {
+                                flushParagraph(); flushList(); flushTable();
+                                blocks.push(`<blockquote class="border-l-4 border-[#3894dc]/50 pl-4 py-1 text-slate-400 italic my-2 bg-[#3894dc]/5 rounded-r-xl">${this.inlineFormat(line.replace(/^>\s/, ''))}</blockquote>`);
+                            } else if (/^---+$/.test(line)) {
+                                flushParagraph(); flushList(); flushTable();
+                                blocks.push('<hr class="border-white/10 my-4">');
+                            } else if (line === '') {
+                                flushParagraph(); flushList(); flushTable();
+                            } else {
+                                listItems.length ? listItems.push(line) : paragraph.push(line);
+                            }
+                        }
+                        flushParagraph(); flushList(); flushTable(); flushCodeBlock();
+                        return blocks.join('');
+                    },
+
+                    renderMarkdownTable(lines) {
+                        const rows = lines
+                            .filter(line => line !== '')
+                            .map(line => line.replace(/^\|/, '').replace(/\|$/, '').split('|').map(cell => cell.trim()));
+
+                        if (rows.length < 2) {
+                            return `<pre>${lines.join('\n')}</pre>`;
+                        }
+
+                        const separatorIndex = rows.findIndex(row => row.every(cell => /^:?-{3,}:?$/.test(cell)));
+                        if (separatorIndex !== 1) {
+                            return `<pre>${lines.join('\n')}</pre>`;
+                        }
+
+                        const header = rows[0].map(h => {
+                            let cleanH = h;
+                            if (cleanH.toLowerCase() === 'frequency') cleanH = 'Frequency';
+                            if (cleanH.toLowerCase() === 'percentage' || cleanH.toLowerCase() === 'percent') cleanH = 'Percentage (%)';
+                            return cleanH;
+                        });
+                        const body = [...rows.slice(2)];
+
+                        // Auto-check if Total row is present; if not, calculate and append
+                        const hasTotalRow = body.some(row => row[0] && row[0].toLowerCase().includes('total'));
+                        if (!hasTotalRow && body.length > 0) {
+                            const totalRow = [];
+                            header.forEach((colName, colIdx) => {
+                                if (colIdx === 0) {
+                                    totalRow.push('Total');
+                                } else {
+                                    let sum = 0;
+                                    let isPercent = colName.includes('%') || colName.toLowerCase().includes('percentage');
+                                    let isCount = colName.toLowerCase().includes('freq') || colName.toLowerCase().includes('(n)') || colName.toLowerCase().includes('count');
+
+                                    body.forEach(r => {
+                                        const valStr = (r[colIdx] || '').replace(/[^0-9.]/g, '');
+                                        const val = parseFloat(valStr);
+                                        if (!isNaN(val)) sum += val;
+                                    });
+
+                                    if (isPercent) {
+                                        totalRow.push('100%');
+                                    } else if (isCount) {
+                                        totalRow.push(`${Math.round(sum)}`);
+                                    } else {
+                                        totalRow.push(sum > 0 ? (sum % 1 === 0 ? sum.toFixed(0) : sum.toFixed(1)) : '-');
+                                    }
+                                }
+                            });
+                            body.push(totalRow);
+                        }
+
+                        const tableId = `socius-table-${Math.random().toString(36).slice(2, 10)}`;
+
+                        return `
+                                                        <div class="my-4 rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e2d]/60 shadow-xl">
+                                                            <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-white/[0.05] border-b border-white/10">
+                                                                <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-[10px] font-bold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
+                                                                    <i class="fa-regular fa-copy text-[10px]"></i>
+                                                                    ${@js(__('Copy Table'))}
+                                                                </button>
+                                                            </div>
+                                                            <div class="overflow-x-auto">
+                                                                <table id="${tableId}" class="min-w-full text-left text-xs border-collapse">
+                                                                    <thead>
+                                                                        <tr class="bg-white/[0.04] border-b border-white/10">
+                                                                            ${header.map(cell => `<th class="px-4 py-3 text-[11px] font-bold text-blue-300 border-b border-white/10 bg-white/[0.03]">${this.inlineFormat(cell)}</th>`).join('')}
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        ${body.map((row, rIdx) => {
+                            const isTotal = row[0] && row[0].toLowerCase().includes('total');
+                            const rowBg = isTotal ? 'bg-white/[0.08] font-bold text-blue-200' : (rIdx % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]');
+                            return `
+                                                                                <tr class="${rowBg}">
+                                                                                    ${row.map(cell => `<td class="px-4 py-2.5 border-b border-white/5 ${isTotal ? 'font-bold text-blue-200 border-t border-white/10' : 'text-slate-200'}">${this.inlineFormat(cell)}</td>`).join('')}
+                                                                                </tr>
+                                                                            `;
+                        }).join('')}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    `;
+                    },
+
+                    inlineFormat(text) {
+                        return text
+                            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                            .replace(/`(.+?)`/g, '<code class="bg-white/10 px-1.5 py-0.5 rounded text-[11px] font-mono">$1</code>')
+                            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-[#3894dc] hover:underline">$1</a>');
+                    },
+
+                    copyMessage(content, messageId, btn = null) {
+                        const element = document.getElementById(`socius-message-body-${messageId}`);
+                        if (element) {
+                            const clone = element.cloneNode(true);
+                            const controls = clone.querySelectorAll('.visual-header button, .socius-visual-loading, script, style, textarea.visual-source');
+                            controls.forEach(el => el.remove());
+                            const visuals = clone.querySelectorAll('.socius-visual');
+                            visuals.forEach(visual => {
+                                const titleEl = visual.querySelector('.visual-header span');
+                                const title = titleEl ? titleEl.innerText : 'chart';
+                                const replacement = document.createElement('p');
+                                replacement.style.fontWeight = 'bold';
+                                replacement.style.color = '#3f3f46';
+                                replacement.style.fontStyle = 'italic';
+                                replacement.innerText = `[${title} — chart not available in this format]`;
+                                visual.parentNode.replaceChild(replacement, visual);
+                            });
+                            const tables = clone.querySelectorAll('table');
+                            tables.forEach(table => {
+                                table.style.width = '100%'; table.style.borderCollapse = 'collapse'; table.style.margin = '12px 0';
+                                table.querySelectorAll('th, td').forEach(cell => {
+                                    cell.style.border = '1px solid #d4d4d8'; cell.style.padding = '8px 12px'; cell.style.textAlign = 'left';
+                                });
+                                table.querySelectorAll('th').forEach(th => { th.style.backgroundColor = '#f4f4f5'; th.style.fontWeight = 'bold'; });
+                            });
+                            const rawHtml = clone.innerHTML;
+                            const rawText = clone.innerText || clone.textContent;
+                            const blobHtml = new Blob([rawHtml], { type: 'text/html' });
+                            const blobText = new Blob([rawText], { type: 'text/plain' });
+                            navigator.clipboard.write([new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })]).then(() => {
+                                if (btn) { const orig = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-check text-green-400"></i>'; setTimeout(() => { btn.innerHTML = orig; }, 2000); }
+                            }).catch(() => navigator.clipboard.writeText(rawText));
+                        } else {
+                            navigator.clipboard.writeText(content);
+                        }
+                    },
+
+                    toggleVoiceInput() {
+                        if (this.isListening) { if (this.recognition) this.recognition.stop(); return; }
+                        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                        if (!SpeechRecognition) { this.error = @js(__('Your browser does not support voice input.')); return; }
+                        if (!this.recognition) {
+                            this.recognition = new SpeechRecognition();
+                            this.recognition.continuous = true; this.recognition.interimResults = true;
+                            this.recognition.lang = document.documentElement.lang || 'en-US';
+                            this.recognition.onresult = (event) => {
+                                let transcript = '';
+                                for (let i = event.resultIndex; i < event.results.length; i++) transcript += event.results[i][0].transcript;
+                                this.draft = transcript;
+                            };
+                            this.recognition.onend = () => { this.isListening = false; };
+                            this.recognition.onerror = (event) => { if (event.error !== 'no-speech') this.error = @js(__('Voice recognition error: ')) + event.error; this.isListening = false; };
+                        }
+                        this.error = null;
+                        try { this.recognition.start(); this.isListening = true; } catch (e) { this.isListening = false; }
+                    },
+
+                    async renderVisuals() {
+                        const visuals = document.querySelectorAll('.socius-visual:not(.rendered)');
+                        if (visuals.length === 0) return;
+                        if (typeof mermaid !== 'undefined') {
+                            try { mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose', fontFamily: 'Inter', suppressErrorIndicators: true, logLevel: 4 }); } catch (e) { }
+                        }
+                        for (const el of Array.from(visuals)) {
+                            const type = el.dataset.visualType;
+                            const id = el.dataset.visualId;
+                            const sourceEl = el.querySelector('.visual-source');
+                            if (!sourceEl) continue;
+                            let source = (sourceEl.value || sourceEl.textContent).trim();
+                            const target = el.querySelector('.visual-target');
+                            if (!target) continue;
+                            try {
+                                if (type === 'mermaid' && typeof mermaid !== 'undefined') {
+                                    if (!source.match(/^(graph|sequenceDiagram|gantt|classDiagram|stateDiagram|erDiagram|journey|pie|quadrantChart|xychart-beta|mindmap|timeline)/i)) source = 'graph TD\n' + source;
+                                    const { svg } = await mermaid.render('svg-' + id, source);
+                                    target.innerHTML = svg;
+                                    el.classList.add('rendered');
+                                } else if (type === 'chartjs' && typeof Chart !== 'undefined') {
+                                    const repairedSource = this.repairJson(source);
+                                    const config = JSON.parse(repairedSource);
+                                    const canvas = document.createElement('canvas');
+                                    target.innerHTML = '';
+                                    target.appendChild(canvas);
+                                    if (config.data && Array.isArray(config.data.datasets) && config.data.datasets[0]) {
+                                        const dataset = config.data.datasets[0];
+                                        const rawData = Array.isArray(dataset.data) ? dataset.data : [];
+                                        const total = rawData.reduce((s, v) => s + Number(v || 0), 0);
+                                        dataset.data = rawData.map(v => total > 0 ? parseFloat(((Number(v || 0) / total) * 100).toFixed(1)) : parseFloat(String(v || 0).replace('%', '')) || 0);
+                                        if (!dataset.label) dataset.label = 'Percentage (%)';
+                                        if (!dataset.backgroundColor) dataset.backgroundColor = ['#2271b1', '#3894dc', '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
+                                        if (!config.options) config.options = {};
+                                        if (!config.options.plugins) config.options.plugins = {};
+                                        config.options.plugins.legend = { display: false };
+                                        const chartType = config.type || 'bar';
+                                        const isCartesian = ['bar', 'line'].includes(chartType);
+                                        if (isCartesian) {
+                                            const isHorizontal = config.options.indexAxis === 'y';
+                                            const valAxis = { beginAtZero: true, grace: '12%', grid: { color: 'rgba(255,255,255,0.08)' }, ticks: { font: { size: 10 }, callback: v => v + '%' }, title: { display: true, text: 'Percentage (%)', color: '#94a3b8', font: { size: 10 } } };
+                                            if (config.data && config.data.labels) config.data.labels = config.data.labels.map(l => wrapLabel(l, 18));
+                                            const labelAxis = { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45, autoSkip: true } };
+                                            config.options.scales = { y: isHorizontal ? labelAxis : valAxis, x: isHorizontal ? valAxis : labelAxis };
+                                        } else { if (config.options) delete config.options.scales; }
+                                    }
+                                    if (!config.options) config.options = {};
+                                    config.options.responsive = true; config.options.maintainAspectRatio = false;
+                                    new Chart(canvas, config);
+                                    canvas.style.maxHeight = '400px';
+                                    el.classList.add('rendered');
+                                }
+                            } catch (e) {
+                                console.error(`Socius Visual Error [${type}]:`, e);
+                                target.innerHTML = `<div class="text-red-400/60 text-[10px] font-bold p-4 bg-red-500/10 rounded-xl border border-red-500/20"><i class="fa-solid fa-triangle-exclamation mr-1"></i> {{ __('Invalid visual syntax.') }}</div>`;
+                                el.classList.add('rendered');
+                            }
+                        }
+                    },
+
+                    repairJson(str) {
+                        let cleaned = str;
+                        cleaned = cleaned.replace(/^```(json)?\n?/i, '').replace(/```$/i, '').trim();
+                        cleaned = cleaned.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1').replace(/,\s*([}\]])/g, '$1');
+                        return cleaned.trim();
+                    },
+
+                    async loadKbRules() {
+                        this.loadingKb = true;
+                        try {
+                            const response = await fetch(this.urls.kbList, { headers: { 'Accept': 'application/json' } });
+                            const data = await this.parseJsonResponse(response);
+                            this.kbRules = data.rules || [];
+                        } catch (e) { console.error('Failed to load KB rules', e); } finally { this.loadingKb = false; }
+                    },
+
+                    async addKbRule() {
+                        if (!this.newKbRuleContent || !this.newKbRuleContent.trim()) return;
+                        this.savingKb = true;
+                        try {
+                            const response = await fetch(this.urls.kbStore, {
+                                method: 'POST',
+                                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
+                                body: JSON.stringify({ content: this.newKbRuleContent.trim() })
+                            });
+                            const data = await this.parseJsonResponse(response);
+                            if (response.ok) {
+                                this.newKbRuleContent = '';
+                                await this.loadKbRules();
+                                Swal.fire({ title: @js(__('Memory Updated!')), text: data.message || @js(__('Instruction added.')), icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3500, timerProgressBar: true, customClass: { popup: 'rounded-2xl shadow-xl border-none' } });
+                            }
+                        } catch (e) { Swal.fire({ title: @js(__('Error')), text: e.message, icon: 'error', customClass: { popup: 'rounded-3xl border-none shadow-2xl' } }); } finally { this.savingKb = false; }
+                    },
+
+                    uploadingKbDoc: false,
+                    async uploadKbDocument(event) {
+                        const file = event.target.files[0];
+                        if (!file) return;
+                        this.uploadingKbDoc = true;
+                        const formData = new FormData();
+                        formData.append('document', file);
+                        try {
+                            const response = await fetch('/socius/knowledge-base/upload', {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                    'Accept': 'application/json'
+                                },
+                                body: formData
+                            });
+                            const data = await this.parseJsonResponse(response);
+                            if (!response.ok) throw new Error(data.message || @js(__('Upload failed')));
+                            await this.loadKbRules();
+                            Swal.fire({ title: @js(__('Knowledge Integrated!')), text: data.message || @js(__('Document loaded into Knowledge Base.')), icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 4500, timerProgressBar: true, customClass: { popup: 'rounded-2xl shadow-xl border-none' } });
+                        } catch (e) {
+                            Swal.fire({ title: @js(__('Upload Error')), text: e.message, icon: 'error', customClass: { popup: 'rounded-3xl border-none shadow-2xl' } });
+                        } finally {
+                            this.uploadingKbDoc = false;
+                            event.target.value = '';
+                        }
+                    },
+
+                    async toggleKbRule(rule) {
+                        const originalState = rule.is_active;
+                        rule.is_active = !originalState;
+                        try {
+                            const url = this.urls.kbUpdateTemplate.replace('__KB__', rule.id);
+                            const response = await fetch(url, {
+                                method: 'PATCH',
+                                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
+                                body: JSON.stringify({ is_active: rule.is_active })
+                            });
+                            const data = await this.parseJsonResponse(response);
+                            if (data.rule) rule.is_active = data.rule.is_active;
+                        } catch (e) { rule.is_active = originalState; Swal.fire({ title: @js(__('Error')), text: e.message, icon: 'error', customClass: { popup: 'rounded-3xl border-none shadow-2xl' } }); }
+                    },
+
+                    async deleteKbRule(ruleId) {
+                        const result = await Swal.fire({
+                            title: @js(__('Delete Preference?')),
+                            text: @js(__('This preference will no longer apply to future answers.')),
+                            icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonColor: '#6b7280',
+                            confirmButtonText: @js(__('Yes, Delete It')), cancelButtonText: @js(__('Cancel')),
+                            customClass: { popup: 'rounded-3xl border-none shadow-2xl' }
+                        });
+                        if (!result.isConfirmed) return;
+                        try {
+                            const url = this.urls.kbDestroyTemplate.replace('__KB__', ruleId);
+                            const response = await fetch(url, { method: 'DELETE', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') } });
+                            const data = await this.parseJsonResponse(response);
+                            this.kbRules = this.kbRules.filter(r => r.id !== ruleId);
+                            Swal.fire({ title: @js(__('Deleted!')), text: data.message || @js(__('Preference removed.')), icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, customClass: { popup: 'rounded-2xl shadow-xl border-none' } });
+                        } catch (e) { Swal.fire({ title: @js(__('Error')), text: e.message, icon: 'error', customClass: { popup: 'rounded-3xl border-none shadow-2xl' } }); }
+                    }
+                };
+            };
+        </script>
+    @endpush

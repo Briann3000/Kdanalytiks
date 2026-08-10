@@ -36,30 +36,14 @@ class DataAggregatorService
                 if (!isset($field['name']) || in_array($field['type'], ['header', 'paragraph', 'group']))
                     continue;
 
-                if (in_array($field['type'], ['likert_matrix_grid', 'likert_matrix'])) {
-                    $rows = $field['rows'] ?? [];
-                    foreach ($rows as $r) {
-                        $rowVal = $r['value'] ?? '';
-                        $rowLabel = $r['label'] ?? $rowVal;
-                        $expandedSchema[] = (object) [
-                            'id' => $field['name'] . '___' . $rowVal,
-                            'name' => $field['name'] . '___' . $rowVal,
-                            'type' => 'radio',
-                            'label' => ($field['label'] ?? $field['name']) . ' - ' . $rowLabel,
-                            'is_virtual_likert' => true,
-                            'parent_likert_name' => $field['name'],
-                            'likert_row_value' => $rowVal,
-                            'columns' => $field['columns'] ?? [],
-                        ];
-                    }
-                } else {
-                    $expandedSchema[] = (object) [
-                        'id' => $field['name'],
-                        'name' => $field['name'],
-                        'type' => $field['type'] ?? 'text',
-                        'label' => $field['label'] ?? $field['name'],
-                    ];
-                }
+                $expandedSchema[] = (object) [
+                    'id' => $field['name'],
+                    'name' => $field['name'],
+                    'type' => $field['type'] ?? 'text',
+                    'label' => $field['label'] ?? $field['name'],
+                    'rows' => $field['rows'] ?? [],
+                    'columns' => $field['columns'] ?? [],
+                ];
             }
 
             foreach ($expandedSchema as $qObj) {
@@ -170,8 +154,9 @@ class DataAggregatorService
 
         if (!empty($frequencyCount)) {
             foreach ($frequencyCount as $option => $count) {
+                $optionLabel = ($option === '' || $option === null) ? 'Skipped' : $option;
                 $data['stats'][] = [
-                    'option' => $option,
+                    'option' => $optionLabel,
                     'count' => $count,
                     'percentage' => $totalResponses > 0 ? round(($count / $totalResponses) * 100, 2) : 0
                 ];

@@ -66,6 +66,10 @@
     @stack('styles')
     @yield('head')
     <style>
+        [x-cloak] {
+            display: none !important;
+        }
+
         /* Global Responsiveness Helpers */
         .table-container {
             width: 100%;

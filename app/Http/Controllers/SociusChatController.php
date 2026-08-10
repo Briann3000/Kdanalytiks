@@ -651,6 +651,17 @@ class SociusChatController extends Controller
             $messages = $thread->messages()->orderBy('id')->get();
         }
 
+        // Omit system instructions and setup text from exported document
+        $messages = $messages->filter(function ($message) {
+            if ($message->role === 'system')
+                return false;
+            $trim = trim($message->content);
+            if (str_starts_with($trim, '[System') || str_starts_with($trim, '[Instruction') || str_starts_with($trim, 'System Instruction:')) {
+                return false;
+            }
+            return true;
+        });
+
         return match ($format) {
             'pdf' => $this->exportToPdf($thread, $messages, (bool) $messageId),
             'docx' => $this->exportToDocx($thread, $messages, (bool) $messageId),
@@ -687,6 +698,11 @@ class SociusChatController extends Controller
 
     private function renderSociusMarkdownHtml(string $content): string
     {
+        $content = preg_replace('/<!--\s*INSTRUCTION[\s\S]*?-->/i', '', $content);
+        $content = preg_replace('/\[System Instruction:[\s\S]*?\]/i', '', $content);
+        $content = preg_replace('/\[Instruction:[\s\S]*?\]/i', '', $content);
+        $content = preg_replace('/<instruction>[\s\S]*?<\/instruction>/i', '', $content);
+
         $content = preg_replace_callback(
             '/```chartjs\s*([\s\S]*?)```/i',
             function ($matches) {

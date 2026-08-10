@@ -27,180 +27,180 @@
 
     <div :class="(reportTab === 'analyse' || reportTab === 'humanizer') ? '' : 'space-y-12'"
         x-data="{
-                                                                                                                                            reportTab: @js($initialReportTab) === 'crosstab' ? 'inferential' : @js($initialReportTab),
-                                                                                                                                            humanizerOriginal: '',
-                                                                                                                                            humanizerResult: '',
-                                                                                                                                            isHumanizing: false,
-                                                                                                                                            isAnalyzing: false,
-                                                                                                                                            humanizerMode: 'standard',
-                                                                                                                                            humanizerIntensity: 'medium',
-                                                                                                                                            customInstructions: '',
-                                                                                                                                            originalAnalysis: null,
-                                                                                                                                            humanizedAnalysis: null,
-                                                                                                                                            reportingStyle: @js($survey->reporting_style ?? 'apa'),
-                                                                                                                                            isPremium: @js(auth()->user() ? auth()->user()->hasActiveSubscription() : false),
-                                                                                                                                            globalFeedback: '',
-                                                                                                                                            globalRefining: false,
-                                                                                                                                            globalRefineProgress: '',
-                                                                                                                                            quantQuestionIds: @js(collect($analysis)->where('isChartable', true)->where('isLikertLike', false)->pluck('id')),
-                                                                                                                                            init() {
-                                                                                                                                                window.currentReportingStyle = this.reportingStyle;
-                                                                                                                                                this.$watch('reportingStyle', (val) => {
-                                                                                                                                                    window.currentReportingStyle = val;
-                                                                                                                                                    // Persist reporting style to database via fetch
-                                                                                                                                                    fetch(`{{ route('surveys.reporting-style', $survey->id) }}`, {
-                                                                                                                                                        method: 'POST',
-                                                                                                                                                        headers: {
-                                                                                                                                                            'Content-Type': 'application/json',
-                                                                                                                                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-                                                                                                                                                        },
-                                                                                                                                                        body: JSON.stringify({ reporting_style: val })
-                                                                                                                                                    }).then(res => {
-                                                                                                                                                        if (!res.ok) {
-                                                                                                                                                            console.error('Failed to update reporting style');
-                                                                                                                                                        } else {
-                                                                                                                                                            // If style changed, regenerate the visible cards
-                                                                                                                                                            for (const qId of this.quantQuestionIds) {
-                                                                                                                                                                const card = window.quantInsightInstances && window.quantInsightInstances[qId];
-                                                                                                                                                                if (card) {
-                                                                                                                                                                    card.generate(true); // Force refresh
-                                                                                                                                                                }
-                                                                                                                                                            }
-                                                                                                                                                        }
-                                                                                                                                                    });
-                                                                                                                                                });
+                                                                                                                                                                        reportTab: @js($initialReportTab) === 'crosstab' ? 'inferential' : @js($initialReportTab),
+                                                                                                                                                                        humanizerOriginal: '',
+                                                                                                                                                                        humanizerResult: '',
+                                                                                                                                                                        isHumanizing: false,
+                                                                                                                                                                        isAnalyzing: false,
+                                                                                                                                                                        humanizerMode: 'standard',
+                                                                                                                                                                        humanizerIntensity: 'medium',
+                                                                                                                                                                        customInstructions: '',
+                                                                                                                                                                        originalAnalysis: null,
+                                                                                                                                                                        humanizedAnalysis: null,
+                                                                                                                                                                        reportingStyle: @js($survey->reporting_style ?? 'apa'),
+                                                                                                                                                                        isPremium: @js(auth()->user() ? auth()->user()->hasActiveSubscription() : false),
+                                                                                                                                                                        globalFeedback: '',
+                                                                                                                                                                        globalRefining: false,
+                                                                                                                                                                        globalRefineProgress: '',
+                                                                                                                                                                        quantQuestionIds: @js(collect($analysis)->where('isChartable', true)->where('isLikertLike', false)->pluck('id')),
+                                                                                                                                                                        init() {
+                                                                                                                                                                            window.currentReportingStyle = this.reportingStyle;
+                                                                                                                                                                            this.$watch('reportingStyle', (val) => {
+                                                                                                                                                                                window.currentReportingStyle = val;
+                                                                                                                                                                                // Persist reporting style to database via fetch
+                                                                                                                                                                                fetch(`{{ route('surveys.reporting-style', $survey->id) }}`, {
+                                                                                                                                                                                    method: 'POST',
+                                                                                                                                                                                    headers: {
+                                                                                                                                                                                        'Content-Type': 'application/json',
+                                                                                                                                                                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                                                                                                                                                                                    },
+                                                                                                                                                                                    body: JSON.stringify({ reporting_style: val })
+                                                                                                                                                                                }).then(res => {
+                                                                                                                                                                                    if (!res.ok) {
+                                                                                                                                                                                        console.error('Failed to update reporting style');
+                                                                                                                                                                                    } else {
+                                                                                                                                                                                        // If style changed, regenerate the visible cards
+                                                                                                                                                                                        for (const qId of this.quantQuestionIds) {
+                                                                                                                                                                                            const card = window.quantInsightInstances && window.quantInsightInstances[qId];
+                                                                                                                                                                                            if (card) {
+                                                                                                                                                                                                card.generate(true); // Force refresh
+                                                                                                                                                                                            }
+                                                                                                                                                                                        }
+                                                                                                                                                                                    }
+                                                                                                                                                                                });
+                                                                                                                                                                            });
 
-                                                                                                                                                this.$watch('reportTab', (tab) => {
-                                                                                                                                                    if (tab === 'analyse') {
-                                                                                                                                                        this.$nextTick(() => {
-                                                                                                                                                            const inputEl = document.getElementById('socius-prompt-input');
-                                                                                                                                                            if (inputEl) {
-                                                                                                                                                                inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                                                                                                                                                inputEl.focus();
-                                                                                                                                                            }
-                                                                                                                                                        });
-                                                                                                                                                    }
-                                                                                                                                                });
-                                                                                                                                                if (this.reportTab === 'analyse') {
-                                                                                                                                                    this.$nextTick(() => {
-                                                                                                                                                        const inputEl = document.getElementById('socius-prompt-input');
-                                                                                                                                                        if (inputEl) {
-                                                                                                                                                            inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                                                                                                                                            inputEl.focus();
-                                                                                                                                                        }
-                                                                                                                                                    });
-                                                                                                                                                }
-                                                                                                                                            },
-                                                                                                                                            async globalRefineAll() {
-                                                                                                                                                if (!this.isPremium) {
-                                                                                                                                                    alert('Premium subscription required for bulk refinement.');
-                                                                                                                                                    return;
-                                                                                                                                                }
-                                                                                                                                                if (!this.globalFeedback.trim()) return;
-                                                                                                                                                this.globalRefining = true;
-                                                                                                                                                this.globalRefineProgress = '';
-                                                                                                                                                const total = this.quantQuestionIds.length;
-                                                                                                                                                let count = 0;
+                                                                                                                                                                            this.$watch('reportTab', (tab) => {
+                                                                                                                                                                                if (tab === 'analyse') {
+                                                                                                                                                                                    this.$nextTick(() => {
+                                                                                                                                                                                        const inputEl = document.getElementById('socius-prompt-input');
+                                                                                                                                                                                        if (inputEl) {
+                                                                                                                                                                                            inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                                                                                                                                                            inputEl.focus();
+                                                                                                                                                                                        }
+                                                                                                                                                                                    });
+                                                                                                                                                                                }
+                                                                                                                                                                            });
+                                                                                                                                                                            if (this.reportTab === 'analyse') {
+                                                                                                                                                                                this.$nextTick(() => {
+                                                                                                                                                                                    const inputEl = document.getElementById('socius-prompt-input');
+                                                                                                                                                                                    if (inputEl) {
+                                                                                                                                                                                        inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                                                                                                                                                        inputEl.focus();
+                                                                                                                                                                                    }
+                                                                                                                                                                                });
+                                                                                                                                                                            }
+                                                                                                                                                                        },
+                                                                                                                                                                        async globalRefineAll() {
+                                                                                                                                                                            if (!this.isPremium) {
+                                                                                                                                                                                alert('Premium subscription required for bulk refinement.');
+                                                                                                                                                                                return;
+                                                                                                                                                                            }
+                                                                                                                                                                            if (!this.globalFeedback.trim()) return;
+                                                                                                                                                                            this.globalRefining = true;
+                                                                                                                                                                            this.globalRefineProgress = '';
+                                                                                                                                                                            const total = this.quantQuestionIds.length;
+                                                                                                                                                                            let count = 0;
 
-                                                                                                                                                for (const qId of this.quantQuestionIds) {
-                                                                                                                                                    count++;
-                                                                                                                                                    this.globalRefineProgress = `Refining question ${count} of ${total}...`;
-                                                                                                                                                    const card = window.quantInsightInstances && window.quantInsightInstances[qId];
-                                                                                                                                                    if (card) {
-                                                                                                                                                        try {
-                                                                                                                                                            await card.refineFromGlobal(this.globalFeedback, this.reportingStyle);
-                                                                                                                                                        } catch (e) {
-                                                                                                                                                            console.error(`Refinement failed for question ${qId}:`, e);
-                                                                                                                                                        }
-                                                                                                                                                        // Introduce 1000ms delay to prevent rate limits
-                                                                                                                                                        await new Promise(resolve => setTimeout(resolve, 1000));
-                                                                                                                                                    }
-                                                                                                                                                }
-                                                                                                                                                this.globalFeedback = '';
-                                                                                                                                                this.globalRefining = false;
-                                                                                                                                                this.globalRefineProgress = '';
-                                                                                                                                            },
-                                                                                                                                            switchReportTab(tab) {
-                                                                                                                                                this.reportTab = tab;
-                                                                                                                                                const url = new URL(window.location.href);
-                                                                                                                                                url.searchParams.set('reportTab', tab);
-                                                                                                                                                if (tab !== 'analyse') {
-                                                                                                                                                    url.searchParams.delete('thread');
-                                                                                                                                                }
-                                                                                                                                                window.history.replaceState({}, '', url);
-                                                                                                                                            },
-                                                                                                                                            goToHumanizer(text) {
-                                                                                                                                                this.humanizerOriginal = text;
-                                                                                                                                                this.humanizerResult = '';
-                                                                                                                                                this.customInstructions = '';
-                                                                                                                                                this.originalAnalysis = null;
-                                                                                                                                                this.humanizedAnalysis = null;
-                                                                                                                                                this.switchReportTab('humanizer');
-                                                                                                                                                this.$nextTick(() => {
-                                                                                                                                                    this.analyzeHumanizerText();
-                                                                                                                                                });
-                                                                                                                                            },
-                                                                                                                                            async analyzeHumanizerText() {
-                                                                                                                                                if (!this.humanizerOriginal.trim()) return;
-                                                                                                                                                this.isAnalyzing = true;
-                                                                                                                                                try {
-                                                                                                                                                    const response = await fetch(`{{ route('surveys.analyse.humanize', $survey->id) }}`, {
-                                                                                                                                                        method: 'POST',
-                                                                                                                                                        headers: {
-                                                                                                                                                            'Content-Type': 'application/json',
-                                                                                                                                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-                                                                                                                                                        },
-                                                                                                                                                        body: JSON.stringify({
-                                                                                                                                                            text: this.humanizerOriginal,
-                                                                                                                                                            analyze_only: true
-                                                                                                                                                        })
-                                                                                                                                                    });
-                                                                                                                                                    const data = await response.json();
-                                                                                                                                                    this.originalAnalysis = data.analysis;
-                                                                                                                                                } catch (e) {
-                                                                                                                                                    console.error(e);
-                                                                                                                                                } finally {
-                                                                                                                                                    this.isAnalyzing = false;
-                                                                                                                                                }
-                                                                                                                                            },
-                                                                                                                                            transferBack() {
-                                                                                                                                                if (!this.humanizerResult.trim()) return;
-                                                                                                                                                this.humanizerOriginal = this.humanizerResult;
-                                                                                                                                                this.humanizerResult = '';
-                                                                                                                                                this.humanizedAnalysis = null;
-                                                                                                                                                this.originalAnalysis = null;
-                                                                                                                                                this.$nextTick(() => { this.analyzeHumanizerText(); });
-                                                                                                                                            },
-                                                                                                                                            async humanizeAction() {
-                                                                                                                                                if (!this.humanizerOriginal.trim()) return;
-                                                                                                                                                this.isHumanizing = true;
-                                                                                                                                                this.humanizerResult = '';
-                                                                                                                                                this.humanizedAnalysis = null;
-                                                                                                                                                try {
-                                                                                                                                                    const response = await fetch(`{{ route('surveys.analyse.humanize', $survey->id) }}`, {
-                                                                                                                                                        method: 'POST',
-                                                                                                                                                        headers: {
-                                                                                                                                                            'Content-Type': 'application/json',
-                                                                                                                                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-                                                                                                                                                        },
-                                                                                                                                                        body: JSON.stringify({
-                                                                                                                                                            text: this.humanizerOriginal,
-                                                                                                                                                            mode: this.humanizerMode,
-                                                                                                                                                            intensity: this.humanizerIntensity,
-                                                                                                                                                            custom_instructions: this.customInstructions
-                                                                                                                                                        })
-                                                                                                                                                    });
-                                                                                                                                                    const data = await response.json();
-                                                                                                                                                    this.humanizerResult = data.humanized_text;
-                                                                                                                                                    this.originalAnalysis = data.original_analysis;
-                                                                                                                                                    this.humanizedAnalysis = data.humanized_analysis;
-                                                                                                                                                } catch (e) {
-                                                                                                                                                    alert('Humanizer error: ' + e.message);
-                                                                                                                                                } finally {
-                                                                                                                                                    this.isHumanizing = false;
-                                                                                                                                                }
-                                                                                                                                            }
-                                                                                                                                        }">
+                                                                                                                                                                            for (const qId of this.quantQuestionIds) {
+                                                                                                                                                                                count++;
+                                                                                                                                                                                this.globalRefineProgress = `Refining question ${count} of ${total}...`;
+                                                                                                                                                                                const card = window.quantInsightInstances && window.quantInsightInstances[qId];
+                                                                                                                                                                                if (card) {
+                                                                                                                                                                                    try {
+                                                                                                                                                                                        await card.refineFromGlobal(this.globalFeedback, this.reportingStyle);
+                                                                                                                                                                                    } catch (e) {
+                                                                                                                                                                                        console.error(`Refinement failed for question ${qId}:`, e);
+                                                                                                                                                                                    }
+                                                                                                                                                                                    // Introduce 1000ms delay to prevent rate limits
+                                                                                                                                                                                    await new Promise(resolve => setTimeout(resolve, 1000));
+                                                                                                                                                                                }
+                                                                                                                                                                            }
+                                                                                                                                                                            this.globalFeedback = '';
+                                                                                                                                                                            this.globalRefining = false;
+                                                                                                                                                                            this.globalRefineProgress = '';
+                                                                                                                                                                        },
+                                                                                                                                                                        switchReportTab(tab) {
+                                                                                                                                                                            this.reportTab = tab;
+                                                                                                                                                                            const url = new URL(window.location.href);
+                                                                                                                                                                            url.searchParams.set('reportTab', tab);
+                                                                                                                                                                            if (tab !== 'analyse') {
+                                                                                                                                                                                url.searchParams.delete('thread');
+                                                                                                                                                                            }
+                                                                                                                                                                            window.history.replaceState({}, '', url);
+                                                                                                                                                                        },
+                                                                                                                                                                        goToHumanizer(text) {
+                                                                                                                                                                            this.humanizerOriginal = text;
+                                                                                                                                                                            this.humanizerResult = '';
+                                                                                                                                                                            this.customInstructions = '';
+                                                                                                                                                                            this.originalAnalysis = null;
+                                                                                                                                                                            this.humanizedAnalysis = null;
+                                                                                                                                                                            this.switchReportTab('humanizer');
+                                                                                                                                                                            this.$nextTick(() => {
+                                                                                                                                                                                this.analyzeHumanizerText();
+                                                                                                                                                                            });
+                                                                                                                                                                        },
+                                                                                                                                                                        async analyzeHumanizerText() {
+                                                                                                                                                                            if (!this.humanizerOriginal.trim()) return;
+                                                                                                                                                                            this.isAnalyzing = true;
+                                                                                                                                                                            try {
+                                                                                                                                                                                const response = await fetch(`{{ route('surveys.analyse.humanize', $survey->id) }}`, {
+                                                                                                                                                                                    method: 'POST',
+                                                                                                                                                                                    headers: {
+                                                                                                                                                                                        'Content-Type': 'application/json',
+                                                                                                                                                                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                                                                                                                                                                                    },
+                                                                                                                                                                                    body: JSON.stringify({
+                                                                                                                                                                                        text: this.humanizerOriginal,
+                                                                                                                                                                                        analyze_only: true
+                                                                                                                                                                                    })
+                                                                                                                                                                                });
+                                                                                                                                                                                const data = await response.json();
+                                                                                                                                                                                this.originalAnalysis = data.analysis;
+                                                                                                                                                                            } catch (e) {
+                                                                                                                                                                                console.error(e);
+                                                                                                                                                                            } finally {
+                                                                                                                                                                                this.isAnalyzing = false;
+                                                                                                                                                                            }
+                                                                                                                                                                        },
+                                                                                                                                                                        transferBack() {
+                                                                                                                                                                            if (!this.humanizerResult.trim()) return;
+                                                                                                                                                                            this.humanizerOriginal = this.humanizerResult;
+                                                                                                                                                                            this.humanizerResult = '';
+                                                                                                                                                                            this.humanizedAnalysis = null;
+                                                                                                                                                                            this.originalAnalysis = null;
+                                                                                                                                                                            this.$nextTick(() => { this.analyzeHumanizerText(); });
+                                                                                                                                                                        },
+                                                                                                                                                                        async humanizeAction() {
+                                                                                                                                                                            if (!this.humanizerOriginal.trim()) return;
+                                                                                                                                                                            this.isHumanizing = true;
+                                                                                                                                                                            this.humanizerResult = '';
+                                                                                                                                                                            this.humanizedAnalysis = null;
+                                                                                                                                                                            try {
+                                                                                                                                                                                const response = await fetch(`{{ route('surveys.analyse.humanize', $survey->id) }}`, {
+                                                                                                                                                                                    method: 'POST',
+                                                                                                                                                                                    headers: {
+                                                                                                                                                                                        'Content-Type': 'application/json',
+                                                                                                                                                                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                                                                                                                                                                                    },
+                                                                                                                                                                                    body: JSON.stringify({
+                                                                                                                                                                                        text: this.humanizerOriginal,
+                                                                                                                                                                                        mode: this.humanizerMode,
+                                                                                                                                                                                        intensity: this.humanizerIntensity,
+                                                                                                                                                                                        custom_instructions: this.customInstructions
+                                                                                                                                                                                    })
+                                                                                                                                                                                });
+                                                                                                                                                                                const data = await response.json();
+                                                                                                                                                                                this.humanizerResult = data.humanized_text;
+                                                                                                                                                                                this.originalAnalysis = data.original_analysis;
+                                                                                                                                                                                this.humanizedAnalysis = data.humanized_analysis;
+                                                                                                                                                                            } catch (e) {
+                                                                                                                                                                                alert('Humanizer error: ' + e.message);
+                                                                                                                                                                            } finally {
+                                                                                                                                                                                this.isHumanizing = false;
+                                                                                                                                                                            }
+                                                                                                                                                                        }
+                                                                                                                                                                    }">
         <!-- Sub Navigation -->
         <div x-show="reportTab !== 'analyse'"
             class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 border-b border-gray-100 pb-6">
@@ -476,7 +476,7 @@
                                                     class="text-[9px] sm:text-[11px] font-black text-gray-700 tracking-wider border-b border-gray-200">
                                                     <th rowspan="2"
                                                         class="py-2 sm:py-3 px-2 sm:px-4 break-words border-r border-gray-200 align-bottom bg-gray-50/90 w-1/4 sm:w-1/3">
-                                                        {{ __('Value') }}
+                                                        {{ __('Item') }}
                                                     </th>
                                                     @foreach($item['stats'] as $stat)
                                                         @if(!isset($stat['is_missing']) || !$stat['is_missing'])
@@ -508,33 +508,65 @@
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-200">
-                                                <tr class="hover:bg-gray-50/30 transition-colors">
-                                                    <td
-                                                        class="py-2 sm:py-3 px-2 sm:px-4 text-[10px] sm:text-xs font-normal text-gray-700 break-words leading-tight border-r border-gray-200">
-                                                        {{ $item['label'] }}
-                                                    </td>
-                                                    @foreach($item['stats'] as $stat)
-                                                        @if(!isset($stat['is_missing']) || !$stat['is_missing'])
-                                                            @php
-                                                                $totalFreqLikert = array_sum(array_column(array_filter($item['stats'], fn($s) => !isset($s['is_missing']) || !$s['is_missing']), 'count'));
-                                                                $percentLikert = $totalFreqLikert > 0 ? ($stat['count'] / $totalFreqLikert) * 100 : 0;
-                                                            @endphp
+                                                @if(!empty($item['likert_matrix_rows']))
+                                                    @foreach($item['likert_matrix_rows'] as $matrixRow)
+                                                        <tr class="hover:bg-gray-50/30 transition-colors">
                                                             <td
-                                                                class="hidden sm:table-cell py-3 px-2 text-center text-xs font-normal text-gray-900 border-r border-gray-200">
-                                                                {{ number_format($stat['count']) }}
+                                                                class="py-2 sm:py-3 px-2 sm:px-4 text-[10px] sm:text-xs font-semibold text-gray-800 break-words leading-tight border-r border-gray-200">
+                                                                {{ $matrixRow['label'] }}
                                                             </td>
-                                                            <td
-                                                                class="hidden sm:table-cell py-3 px-2 text-center text-xs font-normal text-gray-900 border-r border-gray-200">
-                                                                {{ number_format($percentLikert, 1) }}%
-                                                            </td>
-                                                            <td
-                                                                class="sm:hidden py-2 px-1 text-center text-[10px] font-normal text-gray-900 border-r border-gray-200 whitespace-nowrap">
-                                                                {{ number_format($stat['count']) }} <span
-                                                                    class="text-gray-500">({{ number_format($percentLikert, 0) }}%)</span>
-                                                            </td>
-                                                        @endif
+                                                            @foreach($matrixRow['stats'] as $stat)
+                                                                @if(!isset($stat['is_missing']) || !$stat['is_missing'])
+                                                                    @php
+                                                                        $totalFreqLikert = array_sum(array_column(array_filter($matrixRow['stats'], fn($s) => !isset($s['is_missing']) || !$s['is_missing']), 'count'));
+                                                                        $percentLikert = $totalFreqLikert > 0 ? ($stat['count'] / $totalFreqLikert) * 100 : 0;
+                                                                    @endphp
+                                                                    <td
+                                                                        class="hidden sm:table-cell py-3 px-2 text-center text-xs font-normal text-gray-900 border-r border-gray-200">
+                                                                        {{ number_format($stat['count']) }}
+                                                                    </td>
+                                                                    <td
+                                                                        class="hidden sm:table-cell py-3 px-2 text-center text-xs font-normal text-gray-900 border-r border-gray-200">
+                                                                        {{ number_format($percentLikert, 1) }}%
+                                                                    </td>
+                                                                    <td
+                                                                        class="sm:hidden py-2 px-1 text-center text-[10px] font-normal text-gray-900 border-r border-gray-200 whitespace-nowrap">
+                                                                        {{ number_format($stat['count']) }} <span
+                                                                            class="text-gray-500">({{ number_format($percentLikert, 0) }}%)</span>
+                                                                    </td>
+                                                                @endif
+                                                            @endforeach
+                                                        </tr>
                                                     @endforeach
-                                                </tr>
+                                                @else
+                                                    <tr class="hover:bg-gray-50/30 transition-colors">
+                                                        <td
+                                                            class="py-2 sm:py-3 px-2 sm:px-4 text-[10px] sm:text-xs font-normal text-gray-700 break-words leading-tight border-r border-gray-200">
+                                                            {{ $item['label'] }}
+                                                        </td>
+                                                        @foreach($item['stats'] as $stat)
+                                                            @if(!isset($stat['is_missing']) || !$stat['is_missing'])
+                                                                @php
+                                                                    $totalFreqLikert = array_sum(array_column(array_filter($item['stats'], fn($s) => !isset($s['is_missing']) || !$s['is_missing']), 'count'));
+                                                                    $percentLikert = $totalFreqLikert > 0 ? ($stat['count'] / $totalFreqLikert) * 100 : 0;
+                                                                @endphp
+                                                                <td
+                                                                    class="hidden sm:table-cell py-3 px-2 text-center text-xs font-normal text-gray-900 border-r border-gray-200">
+                                                                    {{ number_format($stat['count']) }}
+                                                                </td>
+                                                                <td
+                                                                    class="hidden sm:table-cell py-3 px-2 text-center text-xs font-normal text-gray-900 border-r border-gray-200">
+                                                                    {{ number_format($percentLikert, 1) }}%
+                                                                </td>
+                                                                <td
+                                                                    class="sm:hidden py-2 px-1 text-center text-[10px] font-normal text-gray-900 border-r border-gray-200 whitespace-nowrap">
+                                                                    {{ number_format($stat['count']) }} <span
+                                                                        class="text-gray-500">({{ number_format($percentLikert, 0) }}%)</span>
+                                                                </td>
+                                                            @endif
+                                                        @endforeach
+                                                    </tr>
+                                                @endif
                                             </tbody>
                                         @else
                                             <thead class="bg-gray-50/70 border-b border-gray-200 shadow-sm">
@@ -563,7 +595,7 @@
                                             </thead>
                                             <tbody class="divide-y divide-gray-200">
                                                 @php 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    $totalFreq = 0;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            $totalFreq = 0;
                                                     $validFreq = 0;
                                                     // First pass to get valid total
                                                     foreach ($item['stats'] as $s) {
@@ -790,16 +822,16 @@
                                                         @if($isSignature)
                                                             <button
                                                                 onclick="Swal.fire({
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                title: '{{ __("Signature Preview") }}',
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                imageUrl: '{{ $answer }}',
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                imageAlt: 'Signature',
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                customClass: {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    popup: 'rounded-[3rem] border-none shadow-2xl',
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    image: 'rounded-2xl border border-gray-100 shadow-sm max-h-[400px] w-auto'
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                },
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                confirmButtonText: '{{ __("Close") }}',
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                confirmButtonColor: '#4f46e5'
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            })"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            title: '{{ __("Signature Preview") }}',
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            imageUrl: '{{ $answer }}',
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            imageAlt: 'Signature',
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            customClass: {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                popup: 'rounded-[3rem] border-none shadow-2xl',
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                image: 'rounded-2xl border border-gray-100 shadow-sm max-h-[400px] w-auto'
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            },
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            confirmButtonText: '{{ __("Close") }}',
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            confirmButtonColor: '#4f46e5'
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        })"
                                                                 class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl font-black text-[10px]  tracking-widest hover:bg-indigo-100 transition-all">
                                                                 <i class="fa-solid fa-signature text-sm"></i>
                                                                 {{ __('View Captured Signature') }}
@@ -991,7 +1023,7 @@
                                             </thead>
                                             <tbody class="divide-y divide-gray-200">
                                                 @php 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            $totalFreq = 0;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    $totalFreq = 0;
                                                     $validFreq = 0;
                                                     foreach ($item['stats'] as $s) {
                                                         if (!isset($s['is_missing']) || !$s['is_missing']) {
@@ -2592,8 +2624,8 @@
                                                         :class="msg.role === 'user' ? 'items-end' : 'items-start'">
                                                         <div class="max-w-[85%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed font-medium"
                                                             :class="msg.role === 'user' 
-                                                                                                                                                                                             ? 'bg-indigo-600 text-white rounded-br-none shadow-sm' 
-                                                                                                                                                                                             : 'bg-white/90 text-gray-800 rounded-bl-none border border-gray-200/50 shadow-sm'">
+                                                                                                                                                                                                                         ? 'bg-indigo-600 text-white rounded-br-none shadow-sm' 
+                                                                                                                                                                                                                         : 'bg-white/90 text-gray-800 rounded-bl-none border border-gray-200/50 shadow-sm'">
                                                             <p class="whitespace-pre-wrap" x-text="msg.content"></p>
                                                         </div>
                                                     </div>
@@ -2740,9 +2772,9 @@
 
                                 if (areas.length > 0) {
                                     htmlContent = `<img src="${dataUrl}" usemap="#${mapName}" style="max-width:100%;height:auto;" />
-                                                                                                                                                                                                                                                                        <map name="${mapName}">
-                                                                                                                                                                                                                                                                          ${areas.join('\n  ')}
-                                                                                                                                                                                                                                                                        </map>`;
+                                                                                                                                                                                                                                                                                                                                <map name="${mapName}">
+                                                                                                                                                                                                                                                                                                                                  ${areas.join('\n  ')}
+                                                                                                                                                                                                                                                                                                                                </map>`;
                                 }
                             }
 
@@ -3900,6 +3932,33 @@
                                     if (el && config) {
                                         chartInstances[canvasId] = createChart(canvasId, config, this.chartTypes[canvasId] || 'bar', this.activeColors[canvasId] || 'vibrant');
                                     }
+                                },
+
+                                async uploadKbDocument(event) {
+                                    const file = event.target.files[0];
+                                    if (!file) return;
+                                    this.uploadingKbDoc = true;
+                                    const formData = new FormData();
+                                    formData.append('document', file);
+                                    try {
+                                        const response = await fetch('/socius/knowledge-base/upload', {
+                                            method: 'POST',
+                                            headers: {
+                                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                                'Accept': 'application/json'
+                                            },
+                                            body: formData
+                                        });
+                                        const data = await response.json();
+                                        if (!response.ok) throw new Error(data.message || 'Upload failed');
+                                        await this.loadKbRules();
+                                        Swal.fire({ title: 'Knowledge Integrated!', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 4500, timerProgressBar: true, customClass: { popup: 'rounded-2xl shadow-xl border-none' } });
+                                    } catch (e) {
+                                        Swal.fire({ title: 'Upload Error', text: e.message, icon: 'error', customClass: { popup: 'rounded-3xl border-none shadow-2xl' } });
+                                    } finally {
+                                        this.uploadingKbDoc = false;
+                                        event.target.value = '';
+                                    }
                                 }
                             }
                         };
@@ -4004,6 +4063,7 @@
                                 newKbRuleContent: '',
                                 loadingKb: false,
                                 savingKb: false,
+                                uploadingKbDoc: false,
 
                                 init() {
                                     this.loadThreads();
@@ -4072,6 +4132,15 @@
                                     window.getSelection().removeAllRanges();
                                     const inputEl = document.getElementById('socius-prompt-input');
                                     if (inputEl) inputEl.focus();
+                                },
+
+                                adjustTextareaHeight(target) {
+                                    const el = target || document.getElementById('socius-prompt-input');
+                                    if (!el) return;
+                                    el.style.height = 'auto';
+                                    const newHeight = Math.min(el.scrollHeight, 200);
+                                    el.style.height = newHeight + 'px';
+                                    el.style.overflowY = el.scrollHeight > 200 ? 'auto' : 'hidden';
                                 },
 
                                 async loadThreads() {
@@ -4879,27 +4948,27 @@
                                                 const type = codeBlockType === 'chart.js' ? 'chartjs' : codeBlockType;
                                                 const isImage = type === 'pollinations';
                                                 blocks.push(`
-                                                                                                                                                                                                                                                                                                                <div class="socius-visual my-6 bg-white/5 rounded-2xl border border-white/10 overflow-hidden" 
-                                                                                                                                                                                                                                                                                                                     data-visual-type="${type}" 
-                                                                                                                                                                                                                                                                                                                     data-visual-id="${id}">
-                                                                                                                                                                                                                                                                                                                    <div class="visual-header flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/5">
-                                                                                                                                                                                                                                                                                                                        <div class="flex gap-2 ml-auto">
-                                                                                                                                                                                                                                                                                                                            <button onclick="window.sociusVisuals.copy('${id}', this)" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
-                                                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-copy mr-1"></i> {{ __('Copy') }}
-                                                                                                                                                                                                                                                                                                                            </button>
-                                                                                                                                                                                                                                                                                                                            <button onclick="window.sociusVisuals.download('${id}', 'png')" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
-                                                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-download mr-1"></i> {{ __('PNG') }}
-                                                                                                                                                                                                                                                                                                                            </button>
-                                                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                                                                    <div id="${id}" class="visual-body p-6 flex justify-center overflow-x-auto min-h-[100px] relative">
-                                                                                                                                                                                                                                                                                                                        <textarea class="visual-source hidden">${this.escapeHtml(content)}</textarea>
-                                                                                                                                                                                                                                                                                                                        <div class="visual-target w-full flex justify-center">
-                                                                                                                                                                                                                                                                                                                            ${isImage ? '<div class="animate-pulse flex flex-col items-center gap-3 p-8"><i class="fa-solid fa-wand-magic-sparkles text-[#3894dc] text-2xl"></i><span class="text-[10px] text-slate-500 font-bold">{{ __('Generating Image...') }}</span></div>' : ''}
-                                                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                                                                            `);
+                                                                                                                                                                                                                                                                                                                                                                        <div class="socius-visual my-6 bg-white/5 rounded-2xl border border-white/10 overflow-hidden" 
+                                                                                                                                                                                                                                                                                                                                                                             data-visual-type="${type}" 
+                                                                                                                                                                                                                                                                                                                                                                             data-visual-id="${id}">
+                                                                                                                                                                                                                                                                                                                                                                            <div class="visual-header flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/5">
+                                                                                                                                                                                                                                                                                                                                                                                <div class="flex gap-2 ml-auto">
+                                                                                                                                                                                                                                                                                                                                                                                    <button onclick="window.sociusVisuals.copy('${id}', this)" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
+                                                                                                                                                                                                                                                                                                                                                                                        <i class="fa-solid fa-copy mr-1"></i> {{ __('Copy') }}
+                                                                                                                                                                                                                                                                                                                                                                                    </button>
+                                                                                                                                                                                                                                                                                                                                                                                    <button onclick="window.sociusVisuals.download('${id}', 'png')" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
+                                                                                                                                                                                                                                                                                                                                                                                        <i class="fa-solid fa-download mr-1"></i> {{ __('PNG') }}
+                                                                                                                                                                                                                                                                                                                                                                                    </button>
+                                                                                                                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                                                                                            <div id="${id}" class="visual-body p-6 flex justify-center overflow-x-auto min-h-[100px] relative">
+                                                                                                                                                                                                                                                                                                                                                                                <textarea class="visual-source hidden">${this.escapeHtml(content)}</textarea>
+                                                                                                                                                                                                                                                                                                                                                                                <div class="visual-target w-full flex justify-center">
+                                                                                                                                                                                                                                                                                                                                                                                    ${isImage ? '<div class="animate-pulse flex flex-col items-center gap-3 p-8"><i class="fa-solid fa-wand-magic-sparkles text-[#3894dc] text-2xl"></i><span class="text-[10px] text-slate-500 font-bold">{{ __('Generating Image...') }}</span></div>' : ''}
+                                                                                                                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                                                                                                    `);
                                             } else {
                                                 blocks.push(`<pre class="bg-black/30 p-4 rounded-xl overflow-x-auto text-xs my-4 border border-white/5"><code>${this.escapeHtml(content)}</code></pre>`);
                                             }
@@ -4982,11 +5051,11 @@
                                             const type = codeBlockType === 'chart.js' ? 'chartjs' : codeBlockType;
                                             const isImage = type === 'pollinations';
                                             blocks.push(`
-                                                                                                                                                                                                                                                                                                            <div class="socius-visual-loading my-6 bg-white/5 rounded-2xl border border-white/10 border-dashed p-8 text-center animate-pulse">
-                                                                                                                                                                                                                                                                                                                <i class="fa-solid ${isImage ? 'fa-wand-magic-sparkles' : 'fa-chart-simple'} text-[#3894dc]/50 text-2xl mb-3"></i>
-                                                                                                                                                                                                                                                                                                                <p class="text-[10px] text-slate-500 font-bold">{{ __('Socius is generating an image...') }}</p>
-                                                                                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                                                                                        `);
+                                                                                                                                                                                                                                                                                                                                                                    <div class="socius-visual-loading my-6 bg-white/5 rounded-2xl border border-white/10 border-dashed p-8 text-center animate-pulse">
+                                                                                                                                                                                                                                                                                                                                                                        <i class="fa-solid ${isImage ? 'fa-wand-magic-sparkles' : 'fa-chart-simple'} text-[#3894dc]/50 text-2xl mb-3"></i>
+                                                                                                                                                                                                                                                                                                                                                                        <p class="text-[10px] text-slate-500 font-bold">{{ __('Socius is generating an image...') }}</p>
+                                                                                                                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                                                                                                                `);
                                         } else {
                                             flushCodeBlock();
                                         }
@@ -5065,36 +5134,36 @@
                                     const tableId = `socius-table-${Math.random().toString(36).slice(2, 10)}`;
 
                                     return `
-                                                                                <div class="my-4 rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e2d]/60 shadow-xl">
-                                                                                    <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-white/[0.05] border-b border-white/10">
+                                                                                                                                        <div class="my-4 rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e2d]/60 shadow-xl">
+                                                                                                                                            <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-white/[0.05] border-b border-white/10">
 
-                                                                                        <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-[10px] font-bold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
-                                                                                            <i class="fa-regular fa-copy text-[10px]"></i>
-                                                                                            {{ __('Copy Table') }}
-                                                                                        </button>
-                                                                                    </div>
-                                                                                    <div class="overflow-x-auto">
-                                                                                        <table id="${tableId}" class="min-w-full text-left text-xs border-collapse">
-                                                                                            <thead>
-                                                                                                <tr class="bg-white/[0.04] border-b border-white/10">
-                                                                                                    ${header.map(cell => `<th class="px-4 py-3 text-[11px] font-bold text-blue-300 border-b border-white/10 bg-white/[0.03]">${this.inlineFormat(cell)}</th>`).join('')}
-                                                                                                </tr>
-                                                                                            </thead>
-                                                                                            <tbody>
-                                                                                                ${body.map((row, rIdx) => {
+                                                                                                                                                <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-[10px] font-bold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
+                                                                                                                                                    <i class="fa-regular fa-copy text-[10px]"></i>
+                                                                                                                                                    {{ __('Copy Table') }}
+                                                                                                                                                </button>
+                                                                                                                                            </div>
+                                                                                                                                            <div class="overflow-x-auto">
+                                                                                                                                                <table id="${tableId}" class="min-w-full text-left text-xs border-collapse">
+                                                                                                                                                    <thead>
+                                                                                                                                                        <tr class="bg-white/[0.04] border-b border-white/10">
+                                                                                                                                                            ${header.map(cell => `<th class="px-4 py-3 text-[11px] font-bold text-blue-300 border-b border-white/10 bg-white/[0.03]">${this.inlineFormat(cell)}</th>`).join('')}
+                                                                                                                                                        </tr>
+                                                                                                                                                    </thead>
+                                                                                                                                                    <tbody>
+                                                                                                                                                        ${body.map((row, rIdx) => {
                                         const isTotal = row[0] && row[0].toLowerCase().includes('total');
                                         const rowBg = isTotal ? 'bg-white/[0.08] font-bold text-blue-200' : (rIdx % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]');
                                         return `
-                                                                                                        <tr class="${rowBg}">
-                                                                                                            ${row.map(cell => `<td class="px-4 py-2.5 border-b border-white/5 ${isTotal ? 'font-bold text-blue-200 border-t border-white/10' : 'text-slate-200'}">${this.inlineFormat(cell)}</td>`).join('')}
-                                                                                                        </tr>
-                                                                                                    `;
+                                                                                                                                                                <tr class="${rowBg}">
+                                                                                                                                                                    ${row.map(cell => `<td class="px-4 py-2.5 border-b border-white/5 ${isTotal ? 'font-bold text-blue-200 border-t border-white/10' : 'text-slate-200'}">${this.inlineFormat(cell)}</td>`).join('')}
+                                                                                                                                                                </tr>
+                                                                                                                                                            `;
                                     }).join('')}
-                                                                                            </tbody>
-                                                                                        </table>
-                                                                                    </div>
-                                                                                </div>
-                                                                            `;
+                                                                                                                                                    </tbody>
+                                                                                                                                                </table>
+                                                                                                                                            </div>
+                                                                                                                                        </div>
+                                                                                                                                    `;
                                 },
 
                                 async renderVisuals() {
@@ -5313,9 +5382,9 @@
                                         } catch (e) {
                                             console.error(`Socius Visual Error [${type}]:`, e);
                                             target.innerHTML = `<div class="text-red-400/60 text-[10px] font-bold p-4 bg-red-500/10 rounded-xl border border-red-500/20">
-                                                                                                                                                                                                                                                                                                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
-                                                                                                                                                                                                                                                                                                            {{ __('Invalid visual syntax.') }}
-                                                                                                                                                                                                                                                                                                        </div>`;
+                                                                                                                                                                                                                                                                                                                                                                    <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
+                                                                                                                                                                                                                                                                                                                                                                    {{ __('Invalid visual syntax.') }}
+                                                                                                                                                                                                                                                                                                                                                                </div>`;
                                             el.classList.add('rendered');
                                         }
                                     }
@@ -5341,9 +5410,9 @@
                                         const { prompt, target, el } = window._sociusImageQueue.shift();
 
                                         target.innerHTML = `<div class="animate-pulse flex flex-col items-center gap-3 p-8">
-                                                                                                                                                                                                                                                                                                        <i class="fa-solid fa-wand-magic-sparkles fa-bounce text-indigo-400 text-2xl"></i>
-                                                                                                                                                                                                                                                                                                        <span class="text-[10px] text-slate-500  tracking-widest font-bold">{{ __('Visualizing Analysis...') }}</span>
-                                                                                                                                                                                                                                                                                                    </div>`;
+                                                                                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-wand-magic-sparkles fa-bounce text-indigo-400 text-2xl"></i>
+                                                                                                                                                                                                                                                                                                                                                                <span class="text-[10px] text-slate-500  tracking-widest font-bold">{{ __('Visualizing Analysis...') }}</span>
+                                                                                                                                                                                                                                                                                                                                                            </div>`;
 
                                         await this.loadSingleImage(prompt, target, el);
                                         await new Promise(r => setTimeout(r, 1000));
@@ -5390,17 +5459,17 @@
                                                 };
                                                 img.onerror = () => {
                                                     target.innerHTML = `<div class="p-6 text-center bg-slate-800/40 rounded-xl border border-slate-700/30">
-                                                                                                                                                                                                                                                                                                                    <i class="fa-solid fa-triangle-exclamation text-amber-500/50 text-xl mb-2"></i>
-                                                                                                                                                                                                                                                                                                                    <p class="text-[10px] text-slate-400  font-bold tracking-widest">{{ __('Image Source Unreachable') }}</p>
-                                                                                                                                                                                                                                                                                                                </div>`;
+                                                                                                                                                                                                                                                                                                                                                                            <i class="fa-solid fa-triangle-exclamation text-amber-500/50 text-xl mb-2"></i>
+                                                                                                                                                                                                                                                                                                                                                                            <p class="text-[10px] text-slate-400  font-bold tracking-widest">{{ __('Image Source Unreachable') }}</p>
+                                                                                                                                                                                                                                                                                                                                                                        </div>`;
                                                     resolve();
                                                 };
                                             }
                                         } catch (e) {
                                             console.error('Image load failed:', e);
                                             target.innerHTML = `<div class="p-6 text-center bg-slate-800/40 rounded-xl">
-                                                                                                                                                                                                                                                                                                            <p class="text-[9px] text-slate-500">{{ __('Visualization failed to render') }}</p>
-                                                                                                                                                                                                                                                                                                        </div>`;
+                                                                                                                                                                                                                                                                                                                                                                    <p class="text-[9px] text-slate-500">{{ __('Visualization failed to render') }}</p>
+                                                                                                                                                                                                                                                                                                                                                                </div>`;
                                             resolve();
                                         }
                                     });
@@ -5554,6 +5623,33 @@
                                             icon: 'error',
                                             customClass: { popup: 'rounded-3xl border-none shadow-2xl' }
                                         });
+                                    }
+                                },
+
+                                async uploadKbDocument(event) {
+                                    const file = event.target.files[0];
+                                    if (!file) return;
+                                    this.uploadingKbDoc = true;
+                                    const formData = new FormData();
+                                    formData.append('document', file);
+                                    try {
+                                        const response = await fetch('/socius/knowledge-base/upload', {
+                                            method: 'POST',
+                                            headers: {
+                                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                                'Accept': 'application/json'
+                                            },
+                                            body: formData
+                                        });
+                                        const data = await response.json();
+                                        if (!response.ok) throw new Error(data.message || 'Upload failed');
+                                        await this.loadKbRules();
+                                        Swal.fire({ title: 'Knowledge Integrated!', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 4500, timerProgressBar: true, customClass: { popup: 'rounded-2xl shadow-xl border-none' } });
+                                    } catch (e) {
+                                        Swal.fire({ title: 'Upload Error', text: e.message, icon: 'error', customClass: { popup: 'rounded-3xl border-none shadow-2xl' } });
+                                    } finally {
+                                        this.uploadingKbDoc = false;
+                                        event.target.value = '';
                                     }
                                 }
                             }
@@ -5787,35 +5883,35 @@
 
                 <!-- Floating Scroll Control Stack -->
                 <div x-show="reportTab !== 'analyse'" x-data="{ 
-                            showTop: false, 
-                            showBottom: true,
-                            getScrollContainer() {
-                                return document.getElementById('main-viewport') || document.querySelector('.content-pane') || document.documentElement;
-                            },
-                            check() {
-                                const p = this.getScrollContainer();
-                                const scrollTop = p.scrollTop || window.pageYOffset || 0;
-                                const scrollHeight = p.scrollHeight || document.documentElement.scrollHeight || 0;
-                                const clientHeight = p.clientHeight || window.innerHeight || 0;
+                                                        showTop: false, 
+                                                        showBottom: true,
+                                                        getScrollContainer() {
+                                                            return document.getElementById('main-viewport') || document.querySelector('.content-pane') || document.documentElement;
+                                                        },
+                                                        check() {
+                                                            const p = this.getScrollContainer();
+                                                            const scrollTop = p.scrollTop || window.pageYOffset || 0;
+                                                            const scrollHeight = p.scrollHeight || document.documentElement.scrollHeight || 0;
+                                                            const clientHeight = p.clientHeight || window.innerHeight || 0;
 
-                                this.showTop = scrollTop > 50; 
-                                this.showBottom = (scrollTop + clientHeight) < (scrollHeight - 100);
-                            },
-                            scrollToTop() {
-                                const p = this.getScrollContainer();
-                                p.scrollTo({ top: 0, behavior: 'smooth' });
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                            },
-                            scrollToBottom() {
-                                const p = this.getScrollContainer();
-                                p.scrollTo({ top: p.scrollHeight, behavior: 'smooth' });
-                                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-                            }
-                        }" x-init="$nextTick(() => {
-                            check();
-                            const p = getScrollContainer();
-                            if (p) p.addEventListener('scroll', () => check(), { passive: true });
-                        })" @scroll.window.throttle.50ms="check()"
+                                                            this.showTop = scrollTop > 50; 
+                                                            this.showBottom = (scrollTop + clientHeight) < (scrollHeight - 100);
+                                                        },
+                                                        scrollToTop() {
+                                                            const p = this.getScrollContainer();
+                                                            p.scrollTo({ top: 0, behavior: 'smooth' });
+                                                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                        },
+                                                        scrollToBottom() {
+                                                            const p = this.getScrollContainer();
+                                                            p.scrollTo({ top: p.scrollHeight, behavior: 'smooth' });
+                                                            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                                                        }
+                                                    }" x-init="$nextTick(() => {
+                                                        check();
+                                                        const p = getScrollContainer();
+                                                        if (p) p.addEventListener('scroll', () => check(), { passive: true });
+                                                    })" @scroll.window.throttle.50ms="check()"
                     class="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2">
 
                     <!-- TOP BUTTON -->

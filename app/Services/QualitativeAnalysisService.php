@@ -142,6 +142,10 @@ RULES:
      */
     public function analyzeQuantitativeData(array $stats, ?string $questionText = null, string $style = 'apa'): string
     {
+        if ($questionText && (preg_match('/^field-\d+$/i', trim($questionText)) || preg_match('/^question[-_\d]+$/i', trim($questionText)))) {
+            $questionText = "this survey question";
+        }
+
         $statsText = "";
         if ($questionText) {
             $statsText .= "QUESTION: {$questionText}\n";
@@ -187,6 +191,7 @@ OUTPUT FORMAT — NON-NEGOTIABLE:
 - No bullet points, no numbered lists, no headings, no Markdown of any kind.
 - No asterisks, no pound signs, no backticks, no bold, no italics.
 - Pure plain text only.
+- DO NOT reference raw code identifiers or field names like "field-1783944490217" or "question-123".
 
 TONE: {$styleTone}
 
@@ -194,7 +199,7 @@ LANGUAGE: Write entirely in {$targetLang}.
 
 WRITING RULES:
 - Write in past tense throughout (e.g., "emerged", "indicated", "accounted for", "revealed").
-- Use plain, direct English. Replace complex academic jargon with simpler words (e.g., use "split" not "bifurcated", "divided" not "dichotomized", "pattern" not "paradigm").
+- Use plain, direct English. Replace complex academic jargon with simpler words.
 - Do not open with clichés like "Based on the provided data", "Looking at the chart", or "The data shows".
 - Use percentages only (e.g., 24.4%). Never include raw counts or sample sizes like (n = 122).
 
@@ -207,11 +212,92 @@ PROMPT;
 
         try {
             $content = $this->aiService->callAi($userMessage, $systemPrompt, false, 300, 0.3);
+            if ($content) {
+                $content = preg_replace('/\bfield-\d+\b/i', 'this question', $content);
+                $content = preg_replace('/\bquestion-\d+\b/i', 'this question', $content);
+            }
             return $content ?? "No insight generated.";
 
         } catch (\Exception $e) {
             Log::error('QualitativeAnalysisService Quant Error: ' . $e->getMessage());
             return "Unable to analyze data at this time.";
+        }
+    }
+
+    /**
+     * Analyze Likert matrix statistical data row item by row item.
+     */
+    public function analyzeLikertMatrixData(array $likertMatrixRows, ?string $questionText = null, string $style = 'apa'): string
+    {
+        if ($questionText && (preg_match('/field-\d+/i', trim($questionText)) || preg_match('/question[-_\d]+/i', trim($questionText)))) {
+            $questionText = "Likert Matrix Question";
+        }
+
+        $statsText = "";
+        if ($questionText) {
+            $statsText .= "QUESTION: {$questionText}\n";
+        }
+        $statsText .= "STATEMENT / ROW ITEM BREAKDOWN:\n";
+
+        foreach ($likertMatrixRows as $row) {
+            $rowLabel = $row['label'] ?? $row['value'] ?? 'Item';
+            $rowStats = $row['stats'] ?? [];
+            $itemStatsStr = [];
+            foreach ($rowStats as $s) {
+                if (isset($s['is_missing']) && $s['is_missing'])
+                    continue;
+                $itemStatsStr[] = $s['value'] . ": " . $s['percentage'] . "%";
+            }
+            $statsText .= "- Statement Item \"{$rowLabel}\": " . implode(", ", $itemStatsStr) . "\n";
+        }
+
+        $styleTones = [
+            'apa' => 'Write in a formal academic tone consistent with APA 7th edition conventions.',
+            'harvard' => 'Write in a formal academic tone consistent with Harvard referencing conventions.',
+            'oscola' => 'Write in a precise, structured analytical tone consistent with legal scholarship.',
+            'ieee' => 'Write in a concise, technical and objective tone consistent with IEEE engineering style.',
+            'vancouver' => 'Write in an objective, systematic tone consistent with biomedical research reporting.',
+            'mla' => 'Write in a cohesive, prose-driven tone consistent with MLA humanities conventions.',
+        ];
+
+        $styleTone = $styleTones[$style] ?? $styleTones['apa'];
+        $targetLang = $this->getTargetLanguage();
+
+        $systemPrompt = <<<PROMPT
+You are a quantitative research analyst interpreting a Likert Matrix survey question.
+
+OUTPUT FORMAT — NON-NEGOTIABLE:
+- Write EXACTLY ONE paragraph.
+- EXACTLY 3 to 4 sentences total. No more. No fewer.
+- No bullet points, no numbered lists, no headings, no Markdown of any kind.
+- No asterisks, no pound signs, no backticks, no bold, no italics.
+- Pure plain text only.
+- DO NOT reference internal code identifiers or field names like "field-1783944490217" or "question-123". Refer to items by their statement text.
+
+TONE: {$styleTone}
+
+LANGUAGE: Write entirely in {$targetLang}.
+
+WRITING RULES:
+- Focus your analysis on comparing and contrasting the findings across the specific statement items (rows) in the matrix.
+- Highlight which specific statement items received the highest positive agreement (Agree / Strongly Agree) and which statement items recorded higher neutral or disagree responses.
+- Write in past tense throughout (e.g., "recorded", "indicated", "revealed", "emerged").
+- Use percentages only (e.g., 60.0%). Never include raw counts or sample sizes like (n = 122).
+- Do not open with clichés like "Based on the provided data".
+PROMPT;
+
+        $userMessage = "STATISTICAL DATA:\n{$statsText}\n\nWrite ONE paragraph, 3 to 4 sentences, plain text only interpreting the statement items.";
+
+        try {
+            $content = $this->aiService->callAi($userMessage, $systemPrompt, false, 300, 0.3);
+            if ($content) {
+                $content = preg_replace('/\bfield-\d+\b/i', 'this question', $content);
+                $content = preg_replace('/\bquestion-\d+\b/i', 'this question', $content);
+            }
+            return $content ?? "No insight generated.";
+        } catch (\Exception $e) {
+            Log::error('QualitativeAnalysisService Likert Error: ' . $e->getMessage());
+            return "Unable to analyze Likert matrix data at this time.";
         }
     }
 

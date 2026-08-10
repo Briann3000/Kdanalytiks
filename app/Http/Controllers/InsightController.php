@@ -263,8 +263,32 @@ class InsightController extends Controller
         $style = $request->query('style', $survey->reporting_style ?? 'apa');
 
         $cacheKey = "quantitative_analysis_{$survey->id}_{$questionId}_{$style}";
+        $likertCacheKey = "likert_matrix_analysis_{$survey->id}_{$questionId}_{$style}";
         if ($request->has('refresh')) {
             Cache::forget($cacheKey);
+            Cache::forget($likertCacheKey);
+        }
+
+        $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
+        $schema = is_array($schema) ? $schema : [];
+        $field = collect($schema)->firstWhere('name', $questionId);
+
+        if ($field && in_array($field['type'] ?? '', ['likert_matrix', 'likert_matrix_grid'])) {
+            $insight = Cache::remember($likertCacheKey, 86400, function () use ($survey, $questionId, $field, $style) {
+                $rawLabel = !empty($field['label']) ? $field['label'] : (!empty($field['title']) ? $field['title'] : ($field['name'] ?? $questionId));
+                $label = (preg_match('/^field-\d+$/i', trim($rawLabel)) || preg_match('/^question[-_\d]+$/i', trim($rawLabel))) ? 'Survey Question' : $rawLabel;
+
+                $controller = new \App\Http\Controllers\SurveyController();
+                $analyticalData = $controller->getAnalyticalData($survey, $survey->responses, true);
+                $analysisList = $analyticalData['analysis'] ?? [];
+                $qItem = collect($analysisList)->firstWhere('id', $questionId);
+                if ($qItem && !empty($qItem['likert_matrix_rows'])) {
+                    return $this->analysisService->analyzeLikertMatrixData($qItem['likert_matrix_rows'], $label, $style);
+                }
+                return "Insufficient data for trend interpretation.";
+            });
+
+            return response()->json(['insight' => $insight]);
         }
 
         $insight = Cache::remember($cacheKey, 86400, function () use ($survey, $questionId, $style) {

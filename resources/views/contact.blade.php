@@ -72,7 +72,7 @@
                                     </p>
                                     <a href="https://www.kenpro.org" target="_blank"
                                         class="text-sm font-bold text-white hover:text-emerald-300 transition-colors">KENPRO
-                                        (Kenya Projects Organization)</a>
+                                        (Kenya Data Analytiks)</a>
                                 </div>
                             </div>
                         </div>

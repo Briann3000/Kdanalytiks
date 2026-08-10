@@ -60,17 +60,19 @@
 
                 <div class="flex items-center gap-3">
                     @if($survey->status->value === 'draft' || $survey->status->value === 'pending_approval')
-                        <form action="{{ route('surveys.publish', $survey) }}" method="POST">
-                            @csrf
-                            <button type="submit"
-                                class="px-6 py-3 bg-[#2271b1] text-white rounded-xl font-black text-[12px] tracking-widest shadow-lg shadow-zinc-200/50 hover:bg-[#135e96] transition-all">
-                                <i class="fa-solid fa-paper-plane mr-2"></i> {{ __('Deploy Survey') }}
-                            </button>
-                        </form>
+                        <a href="{{ route('surveys.preview', $survey) }}"
+                            class="px-6 py-3 bg-[#2271b1] text-white rounded-xl font-black text-[12px] tracking-widest shadow-lg shadow-zinc-200/50 hover:bg-[#135e96] transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-eye text-xs"></i> {{ __('Preview & Deploy') }}
+                        </a>
+                    @else
+                        <a href="{{ route('surveys.show', $survey) }}" target="_blank"
+                            class="px-6 py-3 bg-[#2271b1] text-white rounded-xl font-black text-[12px] tracking-widest shadow-lg shadow-zinc-200/50 hover:bg-[#135e96] transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-external-link text-xs"></i> {{ __('Live Form') }}
+                        </a>
                     @endif
                     <a href="{{ route('surveys.edit', $survey) }}"
-                        class="px-6 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-black text-[12px] tracking-widest hover:bg-gray-50 transition-all">
-                        <i class="fa-solid fa-pen-to-square mr-2"></i> {{ __('Edit Survey') }}
+                        class="px-6 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-black text-[12px] tracking-widest hover:bg-gray-50 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-pen-to-square text-xs"></i> {{ __('Edit Survey') }}
                     </a>
                 </div>
             </header>

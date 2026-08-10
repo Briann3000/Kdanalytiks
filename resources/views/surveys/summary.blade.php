@@ -63,13 +63,10 @@
                             <p class="text-xs font-bold opacity-70 leading-relaxed mb-4">
                                 {{ __('This survey is currently a draft. No data can be collected until it is deployed.') }}
                             </p>
-                            <form action="{{ route('surveys.publish', $survey) }}" method="POST">
-                                @csrf
-                                <button type="submit"
-                                    class="px-6 py-3 bg-amber-600 text-white rounded-xl font-black text-[10px]   tracking-widest hover:bg-amber-700 transition-all shadow-lg shadow-amber-200">
-                                    {{ __('Deploy Now') }}
-                                </button>
-                            </form>
+                            <a href="{{ route('surveys.preview', $survey) }}"
+                                class="inline-flex items-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-xl font-black text-[10px] tracking-widest hover:bg-amber-700 transition-all shadow-lg shadow-amber-200">
+                                <i class="fa-solid fa-eye text-xs"></i> {{ __('Preview & Deploy') }}
+                            </a>
                         </div>
                     </div>
                 </div>
