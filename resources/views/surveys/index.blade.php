@@ -236,9 +236,19 @@
                         </a>
                     </div>
 
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider border shrink-0 {{ $statusColor }}">
-                        {{ ucfirst(__($statusVal)) }}
-                    </span>
+                    @if($survey->approval_status === 'pending_approval')
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-wider bg-amber-50 text-amber-800 border border-amber-300 shrink-0">
+                            <i class="fa-solid fa-clock mr-1 text-[9px]"></i> {{ __('Pending Approval') }}
+                        </span>
+                    @elseif($survey->approval_status === 'rejected')
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-wider bg-rose-50 text-rose-800 border border-rose-300 shrink-0" title="{{ $survey->rejection_reason }}">
+                            <i class="fa-solid fa-circle-xmark mr-1 text-[9px]"></i> {{ __('Rejected') }}
+                        </span>
+                    @else
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider border shrink-0 {{ $statusColor }}">
+                            {{ ucfirst(__($statusVal)) }}
+                        </span>
+                    @endif
                 </div>
 
                 <div class="flex items-center justify-between pt-2 border-t border-gray-100 text-xs">
@@ -249,6 +259,40 @@
                     </div>
 
                     <div class="flex items-center gap-2">
+                        @if($survey->approval_status === 'pending_approval' && (optional($currentMember)->isAdmin() || optional($currentMember)->isOwner() || auth()->user()->role === 'organization'))
+                            <form action="{{ route('organization.surveys.approve_workspace', $survey->id) }}" method="POST" class="inline">
+                                @csrf
+                                <button type="submit" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-bold shadow-sm transition flex items-center gap-1" title="{{ __('Approve & Deploy Survey Live') }}">
+                                    <i class="fa-solid fa-check text-[9px]"></i>
+                                    <span>{{ __('Approve') }}</span>
+                                </button>
+                            </form>
+                            <button type="button" @click.stop="
+                                Swal.fire({
+                                    title: '{{ __('Reject Survey') }}',
+                                    input: 'textarea',
+                                    inputLabel: '{{ __('Rejection Reason / Feedback') }}',
+                                    inputPlaceholder: '{{ __('Provide feedback for researcher...') }}',
+                                    inputValidator: (value) => { if (!value) return '{{ __('Reason is required!') }}'; },
+                                    showCancelButton: true,
+                                    confirmButtonText: '{{ __('Reject Survey') }}',
+                                    confirmButtonColor: '#ef4444'
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        const form = document.createElement('form');
+                                        form.method = 'POST';
+                                        form.action = '{{ route('organization.surveys.reject_workspace', $survey->id) }}';
+                                        form.innerHTML = `<input type=\'hidden\' name=\'_token\' value=\'{{ csrf_token() }}\'><input type=\'hidden\' name=\'reason\' value=\'${result.value}\'>`;
+                                        document.body.appendChild(form);
+                                        form.submit();
+                                    }
+                                });
+                            " class="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-bold shadow-sm transition flex items-center gap-1" title="{{ __('Reject Survey with Feedback') }}">
+                                <i class="fa-solid fa-xmark text-[9px]"></i>
+                                <span>{{ __('Reject') }}</span>
+                            </button>
+                        @endif
+
                         <a href="{{ route('surveys.summary', $survey) }}" 
                            class="px-3 py-1.5 bg-[#2271b1] text-white rounded-xl text-[10px] font-bold shadow-sm hover:bg-[#135e96] flex items-center gap-1">
                             <span>{{ __('Manage') }}</span>
@@ -333,17 +377,19 @@
                                 </a>
                             </td>
                             <td class="px-6 py-6">
-                                @php
-                                    $statusColor = match($statusVal) {
-                                        'active' => ' text-green-600 border-[#2271b1]',
-                                        'draft' => 'text-gray-600 border[#2271b1]',
-                                        'archived' => 'text-gray-600 border-[#2271b1]',
-                                        default => 'bg-slate-50 text-slate-600 border-slate-100',
-                                    };
-                                @endphp
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-semibold tracking-wider border {{ $statusColor }}">
-                                    {{ ucfirst(__($statusVal)) }}
-                                </span>
+                                @if($survey->approval_status === 'pending_approval')
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider bg-amber-50 text-amber-800 border border-amber-300">
+                                        <i class="fa-solid fa-clock mr-1 text-[9px]"></i> {{ __('Pending Approval') }}
+                                    </span>
+                                @elseif($survey->approval_status === 'rejected')
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider bg-rose-50 text-rose-800 border border-rose-300" title="{{ $survey->rejection_reason }}">
+                                        <i class="fa-solid fa-circle-xmark mr-1 text-[9px]"></i> {{ __('Rejected') }}
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-semibold tracking-wider border {{ $statusColor }}">
+                                        {{ ucfirst(__($statusVal)) }}
+                                    </span>
+                                @endif
                             </td>
                             <td class="px-6 py-6 font-medium">
                                 <div class="flex flex-col gap-2">
@@ -382,6 +428,40 @@
                             </td>
                             <td class="px-8 py-6 text-right pr-20">
                                 <div class="flex items-center justify-end gap-2">
+                                    @if($survey->approval_status === 'pending_approval' && (optional($currentMember)->isAdmin() || optional($currentMember)->isOwner() || auth()->user()->role === 'organization'))
+                                        <form action="{{ route('organization.surveys.approve_workspace', $survey->id) }}" method="POST" class="inline">
+                                            @csrf
+                                            <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-bold shadow-sm transition flex items-center gap-1" title="{{ __('Approve & Deploy Survey Live') }}">
+                                                <i class="fa-solid fa-check text-[9px]"></i>
+                                                <span>{{ __('Approve') }}</span>
+                                            </button>
+                                        </form>
+                                        <button type="button" @click.stop="
+                                            Swal.fire({
+                                                title: '{{ __('Reject Survey') }}',
+                                                input: 'textarea',
+                                                inputLabel: '{{ __('Rejection Reason / Feedback') }}',
+                                                inputPlaceholder: '{{ __('Provide feedback for researcher...') }}',
+                                                inputValidator: (value) => { if (!value) return '{{ __('Reason is required!') }}'; },
+                                                showCancelButton: true,
+                                                confirmButtonText: '{{ __('Reject Survey') }}',
+                                                confirmButtonColor: '#ef4444'
+                                            }).then((result) => {
+                                                if (result.isConfirmed) {
+                                                    const form = document.createElement('form');
+                                                    form.method = 'POST';
+                                                    form.action = '{{ route('organization.surveys.reject_workspace', $survey->id) }}';
+                                                    form.innerHTML = `<input type=\'hidden\' name=\'_token\' value=\'{{ csrf_token() }}\'><input type=\'hidden\' name=\'reason\' value=\'${result.value}\'>`;
+                                                    document.body.appendChild(form);
+                                                    form.submit();
+                                                }
+                                            });
+                                        " class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-bold shadow-sm transition flex items-center gap-1" title="{{ __('Reject Survey with Feedback') }}">
+                                            <i class="fa-solid fa-xmark text-[9px]"></i>
+                                            <span>{{ __('Reject') }}</span>
+                                        </button>
+                                    @endif
+
                                     <a href="{{ route('surveys.summary', $survey) }}" class="w-8 h-8 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-[#2271b1] hover:text-white transition-all shadow-sm" title="Open Survey Hub">
                                          <i class="fa-solid fa-arrow-right text-[10px]"></i>
                                      </a>

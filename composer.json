@@ -26,6 +26,7 @@
         "tiamo/spss": "*"
     },
     "require-dev": {
+        "doctrine/dbal": "^3.10",
         "fakerphp/faker": "1.23",
         "laravel/pint": "^1.0",
         "laravel/sail": "^1.18",

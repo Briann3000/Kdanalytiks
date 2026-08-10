@@ -366,12 +366,82 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('/surveys/bulk-destroy', [\App\Http\Controllers\AdminController::class, 'bulkDestroy'])->name('surveys.bulk-destroy');
 });
 
-// Organization Routes
-Route::middleware(['auth', 'verified', 'role:organization'])->prefix('organization')->name('organization.')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+// Public Organization Invitation Routes
+Route::prefix('org')->name('org.')->group(function () {
+    Route::get('/invite/{token}', [\App\Http\Controllers\Org\OrgInvitationController::class, 'show'])->name('invite.show');
+    Route::get('/invite/{token}/register', [\App\Http\Controllers\Org\OrgInvitationController::class, 'register'])->name('invite.register');
+    Route::post('/invite/{token}/register', [\App\Http\Controllers\Org\OrgInvitationController::class, 'storeNewUser'])->name('invite.register.store');
+    Route::post('/invite/{token}/accept', [\App\Http\Controllers\Org\OrgInvitationController::class, 'accept'])->middleware('auth')->name('invite.accept');
+});
 
-    Route::get('/responses', [SurveyController::class, 'responsesIndex'])->name('responses.index');
-    Route::get('/reports', [SurveyController::class, 'reportsIndex'])->name('reports.index');
+// Organization Routes
+Route::middleware(['auth', 'verified'])->prefix('organization')->name('organization.')->group(function () {
+    Route::get('/select-workspace', [\App\Http\Controllers\Org\OrgSwitcherController::class, 'index'])->name('switcher');
+    Route::post('/select-workspace', [\App\Http\Controllers\Org\OrgSwitcherController::class, 'activate'])->name('switcher.activate');
+
+    // Team Management (index open to lead_researcher, mutations admin & owner)
+    Route::prefix('team')->name('team.')->group(function () {
+        Route::middleware(['org.member:owner,admin,lead_researcher'])->get('/', [\App\Http\Controllers\Org\OrgTeamController::class, 'index'])->name('index');
+        Route::middleware(['org.member:owner,admin'])->group(function () {
+            Route::post('/invite', [\App\Http\Controllers\Org\OrgTeamController::class, 'invite'])->name('invite');
+            Route::patch('/members/{member}/role', [\App\Http\Controllers\Org\OrgTeamController::class, 'updateRole'])->name('members.role');
+            Route::patch('/members/{member}/suspend', [\App\Http\Controllers\Org\OrgTeamController::class, 'suspend'])->name('members.suspend');
+            Route::delete('/members/{member}', [\App\Http\Controllers\Org\OrgTeamController::class, 'remove'])->name('members.remove');
+            Route::post('/invitations/{invitation}/resend', [\App\Http\Controllers\Org\OrgTeamController::class, 'resendInvitation'])->name('invitations.resend');
+            Route::delete('/invitations/{invitation}', [\App\Http\Controllers\Org\OrgTeamController::class, 'revokeInvitation'])->name('invitations.revoke');
+        });
+    });
+
+    // Org Socius — cross-survey intelligence (all roles except enumerator)
+    Route::middleware(['org.member:owner,admin,lead_researcher,analyst'])->prefix('socius')->name('socius.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Org\OrgSociusController::class, 'index'])->name('index');
+        Route::post('/threads', [\App\Http\Controllers\Org\OrgSociusController::class, 'createThread'])->name('threads.create');
+        Route::get('/threads/{thread}', [\App\Http\Controllers\Org\OrgSociusController::class, 'showThread'])->name('threads.show');
+        Route::patch('/threads/{thread}', [\App\Http\Controllers\Org\OrgSociusController::class, 'updateThread'])->name('threads.update');
+        Route::delete('/threads/{thread}', [\App\Http\Controllers\Org\OrgSociusController::class, 'destroyThread'])->name('threads.destroy');
+        Route::get('/threads/{thread}/stream', [\App\Http\Controllers\Org\OrgSociusController::class, 'streamOrgContext'])->name('threads.stream');
+        Route::post('/knowledge-base', [\App\Http\Controllers\Org\OrgSociusController::class, 'storeKnowledgeBase'])->name('kb.store');
+    });
+
+    // Resource Usage (admin & owner)
+    Route::middleware(['org.member:owner,admin'])->get('/resources/usage', [\App\Http\Controllers\Org\OrgResourceController::class, 'usage'])->name('resources.usage');
+
+    // Fieldwork & Enumerator Coordination (owner, admin, lead_researcher)
+    Route::middleware(['org.member:owner,admin,lead_researcher'])->prefix('fieldwork')->name('fieldwork.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Org\OrgFieldworkController::class, 'index'])->name('index');
+        Route::post('/surveys/{survey}/assign', [\App\Http\Controllers\Org\OrgFieldworkController::class, 'assign'])->name('assign');
+        Route::delete('/assignments/{assignment}', [\App\Http\Controllers\Org\OrgFieldworkController::class, 'unassign'])->name('unassign');
+        Route::get('/surveys/{survey}/progress', [\App\Http\Controllers\Org\OrgFieldworkController::class, 'progress'])->name('progress');
+    });
+
+    // Survey Approval Workflow
+    Route::post('/surveys/{survey}/submit-approval', [\App\Http\Controllers\Org\OrgSurveyController::class, 'submitForApproval'])->name('surveys.submit_approval');
+
+    // Admin & Owner Workspace Governance
+    Route::middleware(['org.member:owner,admin'])->group(function () {
+        Route::post('/surveys/{survey}/approve-workspace', [\App\Http\Controllers\Org\OrgSurveyController::class, 'approve'])->name('surveys.approve_workspace');
+        Route::post('/surveys/{survey}/reject-workspace', [\App\Http\Controllers\Org\OrgSurveyController::class, 'reject'])->name('surveys.reject_workspace');
+
+        // Settings & Governance
+        Route::prefix('settings')->name('settings.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Org\OrgSettingsController::class, 'index'])->name('index');
+            Route::post('/branding', [\App\Http\Controllers\Org\OrgSettingsController::class, 'updateBranding'])->name('branding');
+            Route::post('/approval', [\App\Http\Controllers\Org\OrgSettingsController::class, 'updateApproval'])->name('approval');
+            Route::post('/pii', [\App\Http\Controllers\Org\OrgSettingsController::class, 'updatePii'])->name('pii');
+        });
+
+        // Audit Trail Logs
+        Route::prefix('audit')->name('audit.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Org\OrgAuditController::class, 'index'])->name('index');
+            Route::get('/export', [\App\Http\Controllers\Org\OrgAuditController::class, 'export'])->name('export');
+        });
+    });
+
+    Route::middleware(['role:organization'])->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/responses', [SurveyController::class, 'responsesIndex'])->name('responses.index');
+        Route::get('/reports', [SurveyController::class, 'reportsIndex'])->name('reports.index');
+    });
 });
 
 // Independent Researcher Routes

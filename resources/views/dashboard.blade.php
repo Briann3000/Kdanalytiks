@@ -8,7 +8,7 @@
                     {{ __('Welcome back') }}, {{ $displayName }}
                 </h3>
                 <p class="text-sm text-gray-600 font-bold tracking-widest">
-                    {{ __(ucfirst($role) . ' Dashboard') }}
+                    {{ auth()->user()->activeOrganization() ? auth()->user()->activeOrganization()->name : __(ucfirst($role) . ' Dashboard') }}
                 </p>
             </div>
             @if(in_array($role, ['organization', 'independent']) && isset($subscriptionTier))

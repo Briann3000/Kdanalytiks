@@ -85,7 +85,10 @@ class SurveyController extends Controller
         $newSurvey->share_token = \Illuminate\Support\Str::random(32);
         $newSurvey->share_report_token = null;
 
-        if ($role === 'organization') {
+        $activeOrg = $user->activeOrganization();
+        if ($activeOrg) {
+            $newSurvey->organization_id = $activeOrg->id;
+        } elseif ($role === 'organization') {
             $newSurvey->organization_id = $user->organization?->id;
         } elseif ($role === 'independent') {
             $newSurvey->independent_id = $user->independent?->id;
@@ -100,6 +103,7 @@ class SurveyController extends Controller
     {
         $user = auth()->user();
         $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+        $activeOrg = $user->activeOrganization();
 
         $query = \App\Models\Survey::where('is_template', false)->withCount('responses');
 
@@ -117,17 +121,23 @@ class SurveyController extends Controller
             $query->where('title', 'like', '%' . request('search') . '%');
         }
 
-        $query->where(function ($q) use ($user, $role) {
-            $q->where('created_by', $user->id);
-            if ($role === 'organization' && $user->organization?->id) {
-                $q->orWhere('organization_id', $user->organization->id);
-            } elseif ($role === 'independent' && $user->independent?->id) {
-                $q->orWhere('independent_id', $user->independent->id);
-            }
-        });
+        if ($activeOrg) {
+            $query->where('organization_id', $activeOrg->id);
+        } else {
+            $query->where(function ($q) use ($user, $role) {
+                $q->where('created_by', $user->id);
+                if ($role === 'organization' && $user->organization?->id) {
+                    $q->orWhere('organization_id', $user->organization->id);
+                } elseif ($role === 'independent' && $user->independent?->id) {
+                    $q->orWhere('independent_id', $user->independent->id);
+                }
+            });
+        }
 
+        $currentMember = $activeOrg ? $activeOrg->memberRecord($user) : null;
         $surveys = $query->orderBy('created_at', 'desc')->paginate(10);
-        return view($viewName, compact('surveys', 'role', 'status'));
+
+        return view($viewName, compact('surveys', 'role', 'status', 'activeOrg', 'currentMember'));
     }
 
 
@@ -143,7 +153,10 @@ class SurveyController extends Controller
         $survey->type = \App\Enums\SurveyType::Public;
         $survey->created_by = $user->id;
 
-        if ($role === 'organization') {
+        $activeOrg = $user->activeOrganization();
+        if ($activeOrg) {
+            $survey->organization_id = $activeOrg->id;
+        } elseif ($role === 'organization') {
             $survey->organization_id = $user->organization?->id;
         } elseif ($role === 'independent') {
             $survey->independent_id = $user->independent?->id;
@@ -187,7 +200,10 @@ class SurveyController extends Controller
         $survey->public_access = 'submit';
         $survey->created_by = $user->id;
 
-        if ($role === 'organization') {
+        $activeOrg = $user->activeOrganization();
+        if ($activeOrg) {
+            $survey->organization_id = $activeOrg->id;
+        } elseif ($role === 'organization') {
             $survey->organization_id = $user->organization?->id;
         } elseif ($role === 'independent') {
             $survey->independent_id = $user->independent?->id;
@@ -465,15 +481,26 @@ class SurveyController extends Controller
         $survey->reward_per_response = $request->input('reward_per_response', 0);
         $survey->reward_budget = $rewardBudget;
 
+        $org = $request->attributes->get('active_org') ?? $user->activeOrganization();
+        $member = $org ? $org->memberRecord($user) : null;
+
         if ($request->filled('status')) {
-            $survey->status = \App\Enums\SurveyStatus::tryFrom($request->status) ?? $survey->status;
+            $requestedStatus = \App\Enums\SurveyStatus::tryFrom($request->status) ?? $survey->status;
+            if ($requestedStatus === \App\Enums\SurveyStatus::Active && $org && $org->survey_approval_required && (!$member || !($member->isOwner() || $member->isAdmin()))) {
+                $survey->status = \App\Enums\SurveyStatus::Draft;
+                $survey->approval_status = 'pending_approval';
+            } else {
+                $survey->status = $requestedStatus;
+            }
         } elseif (!$survey->exists) {
             $survey->status = \App\Enums\SurveyStatus::Draft;
         }
 
         if (!$survey->exists) {
             $userRoleValue = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
-            if ($userRoleValue === 'organization') {
+            if ($org) {
+                $survey->organization_id = $org->id;
+            } elseif ($userRoleValue === 'organization') {
                 $survey->organization_id = $user->organization?->id;
             } elseif ($userRoleValue === 'independent') {
                 $survey->independent_id = $user->independent?->id;
@@ -2500,13 +2527,39 @@ class SurveyController extends Controller
         $this->authorizeOwner($survey);
 
         $user = auth()->user();
+        $org = $request->attributes->get('active_org') ?? $user->activeOrganization();
+        $member = $org ? $org->memberRecord($user) : null;
+
+        // Check if approval policy requires non-admin surveys to be reviewed
+        if ($org && $org->survey_approval_required && (!$member || !($member->isOwner() || $member->isAdmin()))) {
+            $survey->update([
+                'approval_status' => 'pending_approval',
+                'status' => \App\Enums\SurveyStatus::Draft,
+            ]);
+
+            \App\Models\OrgAuditLog::create([
+                'organization_id' => $org->id,
+                'user_id' => $user->id,
+                'action' => 'survey.submitted_for_approval',
+                'target_type' => 'Survey',
+                'target_id' => $survey->id,
+                'ip_address' => $request->ip(),
+                'metadata' => ['title' => $survey->title],
+            ]);
+
+            return back()->with('success', 'Survey submitted for Workspace Admin approval. It will go live once reviewed and approved by an administrator.');
+        }
+
         $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
         $entity = ($role === 'organization') ? $user->organization : (($role === 'independent') ? $user->independent : null);
         if ($survey->status !== \App\Enums\SurveyStatus::Active && $entity?->hasReachedSurveyLimit()) {
             return back()->with('error', 'Limit Reached: You cannot publish more surveys on your current plan. Please upgrade.');
         }
 
-        $survey->update(['status' => \App\Enums\SurveyStatus::Active]);
+        $survey->update([
+            'status' => \App\Enums\SurveyStatus::Active,
+            'approval_status' => 'approved',
+        ]);
         return back()->with('success', 'Project deployed successfully and is now live!');
     }
 
@@ -2683,9 +2736,9 @@ class SurveyController extends Controller
             auth()->id()
         );
 
-        $survey->update([
+        $survey->fill([
             'title' => $validated['title'],
-            'description' => $validated['description'],
+            'description' => $validated['description'] ?? null,
             'category' => $validated['category'],
             'type' => $validated['type'],
             'public_access' => ($validated['type'] === 'public') ? 'submit' : 'none',
@@ -2697,6 +2750,17 @@ class SurveyController extends Controller
 
         if ($request->filled('status')) {
             $survey->status = \App\Enums\SurveyStatus::tryFrom($request->status) ?? $survey->status;
+        }
+
+        $org = $survey->organization ?: auth()->user()?->activeOrganization();
+        if ($org) {
+            $org = $org->fresh();
+            if ($org->enforce_branding) {
+                $survey->logo_url = $org->logo_url;
+                $survey->brand_color = $org->brand_color;
+                $survey->export_logo_url = $org->logo_url;
+                $survey->export_org_name = $org->name;
+            }
         }
 
         $survey->save();
@@ -2895,6 +2959,9 @@ class SurveyController extends Controller
             $response = new \App\Models\Response();
             $response->survey_id = $survey->id;
             $response->respondent_id = auth()->id(); // Will be null for guests
+            if (auth()->check()) {
+                $response->collector_id = auth()->id();
+            }
             if (!auth()->check()) {
                 $response->guest_name = $request->input('guest_name');
                 $response->guest_phone = $request->input('guest_phone');

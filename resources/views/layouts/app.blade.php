@@ -633,6 +633,7 @@
 
         @php
             $isSociusFullHeight = request()->routeIs('socius.chat.*')
+                || request()->routeIs('organization.socius.threads.show')
                 || request()->routeIs('transcription.*')
                 || request('reportTab') === 'analyse'
                 || (request()->routeIs('surveys.reports') && request('reportTab') === 'analyse')
