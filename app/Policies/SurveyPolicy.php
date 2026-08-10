@@ -133,6 +133,11 @@ class SurveyPolicy
             return true;
         }
 
+        $activeOrg = $user->activeOrganization();
+        if ($survey->organization_id && $activeOrg && (int) $survey->organization_id === (int) $activeOrg->id) {
+            return true;
+        }
+
         // Independent ownership
         if ($survey->independent_id && $user->independent && (int) $survey->independent_id === (int) $user->independent->id) {
             return true;
