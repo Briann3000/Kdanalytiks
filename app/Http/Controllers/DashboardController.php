@@ -22,6 +22,27 @@ class DashboardController extends Controller
         $pendingSurveys = 0;
         $reportsGenerated = 0;
 
+        $activeOrg = $user->activeOrganization();
+        if ($activeOrg) {
+            $member = $user->orgRole($activeOrg);
+            if ($member && $member->org_workspace_role === 'field_enumerator') {
+                $assignments = \App\Models\OrgSurveyAssignment::where('user_id', $user->id)
+                    ->where('organization_id', $activeOrg->id)
+                    ->with('survey')
+                    ->latest()
+                    ->get()
+                    ->map(function ($assignment) use ($user) {
+                        $assignment->collected_count = \App\Models\Response::where('survey_id', $assignment->survey_id)
+                            ->where('collector_id', $user->id)
+                            ->count();
+                        return $assignment;
+                    });
+
+                $organization = $activeOrg;
+                return view('organization.enumerator_dashboard', compact('organization', 'assignments'));
+            }
+        }
+
         if ($role === 'organization') {
             $orgId = $user->organization?->id;
             $totalSurveys = Survey::where('organization_id', $orgId)->count();
@@ -93,13 +114,17 @@ class DashboardController extends Controller
             return view('respondent.dashboard', compact('responses', 'availableSurveys', 'wallet', 'reportsGenerated'));
         }
 
-        $displayName = $user->organization?->name ?? $user->independent?->name ?? $user->name;
+        $activeOrg = $user->activeOrganization();
+        $displayName = $user->name;
 
-        // Resolve subscription tier for org/independent users
-        $entity = $user->organization ?? $user->independent ?? null;
-        $subscriptionTier = ($user->hasActiveSubscription() && $entity)
-            ? $entity->subscriptionTier
-            : \App\Models\SubscriptionTier::where('slug', 'free')->first();
+        if ($activeOrg) {
+            $subscriptionTier = $activeOrg->subscriptionTier ?? \App\Models\SubscriptionTier::where('slug', 'free')->first();
+        } else {
+            $entity = $user->organization ?? $user->independent ?? null;
+            $subscriptionTier = ($user->hasActiveSubscription() && $entity)
+                ? $entity->subscriptionTier
+                : \App\Models\SubscriptionTier::where('slug', 'free')->first();
+        }
 
         return view('dashboard', array_merge(compact(
             'role',

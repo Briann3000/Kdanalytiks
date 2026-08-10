@@ -9,9 +9,33 @@ use Illuminate\Support\Str;
 
 class OrganizationController extends Controller
 {
-    public function dashboard()
+    public function dashboard(Request $request)
     {
-        $organization = auth()->user()->organization;
+        $organization = $request->attributes->get('active_org') ?? auth()->user()->activeOrganization();
+
+        if (!$organization) {
+            $organization = auth()->user()->organization;
+        }
+
+        $member = $organization ? auth()->user()->orgRole($organization) : null;
+        $userRole = $member ? $member->org_workspace_role : null;
+
+        if ($userRole === 'field_enumerator') {
+            $assignments = \App\Models\OrgSurveyAssignment::where('user_id', auth()->id())
+                ->where('organization_id', $organization?->id)
+                ->with('survey')
+                ->latest()
+                ->get()
+                ->map(function ($assignment) {
+                    $assignment->collected_count = \App\Models\Response::where('survey_id', $assignment->survey_id)
+                        ->where('collector_id', auth()->id())
+                        ->count();
+                    return $assignment;
+                });
+
+            return view('organization.enumerator_dashboard', compact('organization', 'assignments'));
+        }
+
         $surveys = $organization ? $organization->surveys : collect();
 
         return view('organization.dashboard', compact('organization', 'surveys'));

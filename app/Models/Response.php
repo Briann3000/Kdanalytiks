@@ -14,6 +14,7 @@ class Response extends Model
     protected $fillable = [
         'survey_id',
         'respondent_id',
+        'collector_id',
         'guest_name',
         'guest_phone',
         'ai_metadata',
@@ -39,6 +40,11 @@ class Response extends Model
     public function respondent(): BelongsTo
     {
         return $this->belongsTo(User::class, 'respondent_id');
+    }
+
+    public function collector(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'collector_id');
     }
 
     public function answers(): HasMany
