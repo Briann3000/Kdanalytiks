@@ -5,7 +5,7 @@
 @section('sub_sidebar')
     <!-- Professional Collapsible Sidebar for Proposal Navigation -->
     <div class="bg-white border-r border-gray-100 flex-shrink-0 flex flex-col z-30 shadow-sm transition-all duration-300 relative"
-        :class="sidebarOpen ? 'w-60' : 'w-14'">
+        :class="sidebarOpen ? 'w-64' : 'w-14'">
 
         <div class="p-4 border-b border-gray-100 bg-gray-50/30 flex items-center justify-between"
             :class="sidebarOpen ? '' : 'px-2 justify-center'">
@@ -13,7 +13,7 @@
                 <i class="fa-solid fa-file-invoice text-[#2271b1]" :class="sidebarOpen ? 'mr-2' : ''"></i>
                 <h3 x-show="sidebarOpen" x-transition
                     class="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate">
-                    Proposal Draft
+                    Proposal Chapters
                 </h3>
             </div>
             <button @click="sidebarOpen = !sidebarOpen"
@@ -23,29 +23,48 @@
             </button>
         </div>
 
+        <!-- Dynamic Table of Contents Populated by Alpine -->
         <nav class="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
-            @foreach($proposal->content ?? [] as $title => $content)
-                <a href="#section-{{ $loop->iteration }}" title="{{ $title }}"
-                    @click.prevent="document.getElementById('section-{{ $loop->iteration }}')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
-                    class="flex items-center rounded-xl text-xs font-bold text-gray-600 hover:bg-zinc-100 hover:text-[#135e96] transition-all group border border-transparent hover:border-zinc-200"
-                    :class="sidebarOpen ? 'px-4 py-3' : 'p-2 justify-center'">
-                    <span
-                        class="w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-lg bg-gray-50 text-[10px] group-hover:bg-zinc-200 group-hover:text-[#2271b1] transition-colors"
-                        :class="sidebarOpen ? 'mr-3' : ''">
-                        {{ $loop->iteration }}
+            <template x-for="(navItem, idx) in toc" :key="idx">
+                <a :href="'#' + navItem.id" :title="navItem.title"
+                    @click.prevent="document.getElementById(navItem.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
+                    class="flex items-center rounded-xl text-xs transition-all group border border-transparent hover:border-zinc-200 hover:bg-zinc-100"
+                    :class="[
+                            sidebarOpen ? 'px-3 py-2.5' : 'p-2 justify-center',
+                            navItem.level === 1 ? 'font-bold text-gray-800 mt-2' : (navItem.level === 2 ? 'font-semibold text-gray-600 pl-4' : 'font-normal text-gray-500 pl-6')
+                        ]">
+
+                    <!-- Icon/Number for H1s -->
+                    <template x-if="navItem.level === 1">
+                        <span
+                            class="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-md bg-blue-50 text-[9px] font-black text-[#2271b1] mr-2"
+                            x-show="sidebarOpen">
+                            <i class="fa-solid fa-hashtag text-[8px]"></i>
+                        </span>
+                    </template>
+
+                    <!-- Bullet for nested items -->
+                    <template x-if="navItem.level > 1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 flex-shrink-0" x-show="sidebarOpen"></span>
+                    </template>
+
+                    <span x-show="sidebarOpen" class="truncate" x-text="navItem.title"></span>
+
+                    <!-- Closed sidebar icon fallback -->
+                    <span x-show="!sidebarOpen"
+                        class="w-6 h-6 flex items-center justify-center rounded-lg bg-gray-50 text-[10px] text-gray-500 group-hover:bg-zinc-200 group-hover:text-[#2271b1]">
+                        <i class="fa-solid fa-minus" x-show="navItem.level > 1"></i>
+                        <i class="fa-solid fa-hashtag" x-show="navItem.level === 1"></i>
                     </span>
-                    <span x-show="sidebarOpen" x-transition:enter="transition ease-out duration-200"
-                        x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-                        class="truncate">{{ $title }}</span>
                 </a>
-            @endforeach
+            </template>
         </nav>
     </div>
 @endsection
 
 @section('content')
-    <div class="flex flex-col bg-gray-50/50" x-data="{ showRefineModal: false }" style="min-h-screen;">
-        <!-- Condensed Sticky Toolbar matching Preview -->
+    <div class="flex flex-col bg-gray-50/50" x-data="proposalViewer()" x-init="initParser()" style="min-h-screen;">
+        <!-- Condensed Sticky Toolbar -->
         <div
             class="sticky top-0 z-40 px-4 py-3 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm flex items-center justify-between">
             <div class="flex items-center space-x-3">
@@ -60,16 +79,18 @@
                         <i class="fa-solid fa-arrow-left text-[10px]"></i>
                     </a>
                     <div class="hidden sm:block">
-                        <h1 class="text-[10px] font-black text-gray-900 uppercase tracking-tight leading-none">Research Proposal
-                        </h1>
+                        <h1 class="text-[10px] font-black text-gray-900 uppercase tracking-tight leading-none">Research
+                            Proposal</h1>
                         <p class="text-[8px] text-gray-400 font-bold uppercase tracking-wider truncate max-w-[200px]">
-                            {{ $proposal->title }}</p>
+                            {{ $proposal->title }}
+                        </p>
                     </div>
                 </div>
                 <div class="h-5 w-[1px] bg-gray-200"></div>
                 <span
-                    class="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[8px] font-black uppercase tracking-widest rounded border border-emerald-100 italic">Formal
-                    Proposal</span>
+                    class="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[8px] font-black uppercase tracking-widest rounded border border-emerald-100 italic">
+                    Formal Proposal
+                </span>
             </div>
 
             <div class="flex items-center space-x-3">
@@ -93,20 +114,26 @@
         </div>
 
         <!-- Refine Modal -->
-        <div x-show="showRefineModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4" style="display: none;">
+        <div x-show="showRefineModal"
+            class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+            style="display: none;">
             <div class="bg-white rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
                 <div class="flex items-center justify-between">
                     <h3 class="text-base font-black text-gray-900 flex items-center gap-2">
                         <i class="fa-solid fa-wand-magic-sparkles text-[#2271b1]"></i>
                         {{ __('Refine Proposal with AI') }}
                     </h3>
-                    <button @click="showRefineModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+                    <button @click="showRefineModal = false" class="text-gray-400 hover:text-gray-600"><i
+                            class="fa-solid fa-xmark"></i></button>
                 </div>
                 <form action="{{ route('research-proposal.refine', $proposal->id) }}" method="POST" class="space-y-4">
                     @csrf
+                    <!-- ... Modal Fields remain identical ... -->
                     <div class="space-y-1">
-                        <label class="block text-xs font-bold text-gray-700">{{ __('Select Target Chapter / Section to Refine:') }}</label>
-                        <select name="target_section" class="w-full text-xs font-bold p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#2271b1]">
+                        <label
+                            class="block text-xs font-bold text-gray-700">{{ __('Select Target Chapter / Section to Refine:') }}</label>
+                        <select name="target_section"
+                            class="w-full text-xs font-bold p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#2271b1]">
                             <option value="all">{{ __('-- Entire Proposal (All Sections) --') }}</option>
                             <option value="preliminaries">{{ __('Preliminaries & Abstract') }}</option>
                             <option value="ch1">{{ __('Chapter 1: Introduction & Background') }}</option>
@@ -114,7 +141,6 @@
                             <option value="ch3">{{ __('Chapter 3: Research Methodology & Sampling') }}</option>
                             <option value="budget">{{ __('Proposed Budget & Work Plan') }}</option>
                         </select>
-                        <p class="text-[10px] text-gray-400 font-medium">{{ __('Refining chapter-by-chapter keeps AI focus razor-sharp and prevents memory loss.') }}</p>
                     </div>
 
                     <div class="space-y-1">
@@ -125,9 +151,11 @@
                     </div>
 
                     <div class="flex justify-end gap-2 pt-2">
-                        <button type="button" @click="showRefineModal = false" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold">{{ __('Cancel') }}</button>
-                        <button type="submit" class="px-6 py-2 bg-[#2271b1] text-white rounded-xl text-xs font-bold shadow-md hover:bg-[#135e96] transition-all">
-                            {{ __('Regenerate Target Chapter') }}
+                        <button type="button" @click="showRefineModal = false"
+                            class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold">{{ __('Cancel') }}</button>
+                        <button type="submit"
+                            class="px-6 py-2 bg-[#2271b1] text-white rounded-xl text-xs font-bold shadow-md hover:bg-[#135e96] transition-all">
+                            {{ __('Regenerate') }}
                         </button>
                     </div>
                 </form>
@@ -138,56 +166,46 @@
         <div class="flex-1 p-3 sm:p-8 overflow-y-auto custom-scrollbar bg-gray-50/50">
             <div
                 class="max-w-4xl mx-auto bg-white shadow-2xl shadow-gray-200/50 rounded-lg border border-gray-100 p-4 sm:p-10 md:p-16 min-h-screen mb-12">
+
                 <!-- Cover Section -->
                 <div class="text-center py-12 mb-16 border-b-2 border-gray-50">
-                    <span
-                        class="text-[12px] font-black text-[#2271b1] uppercase tracking-[0.4em] mb-4 block animate-pulse">Formal
-                        Research Proposal</span>
+                    <span class="text-[12px] font-black text-[#2271b1] uppercase tracking-[0.4em] mb-4 block">
+                        Formal Research Proposal
+                    </span>
                     <h2 class="text-4xl font-black text-gray-900 mb-4 tracking-tighter uppercase leading-none">
-                        {{ $proposal->title }}</h2>
+                        {{ $proposal->title }}
+                    </h2>
                     <div class="w-16 h-1 bg-[#2271b1] mx-auto rounded-full mb-6"></div>
 
                     <div class="flex items-center justify-center space-x-6">
                         <div class="text-center">
                             <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Methodology</p>
                             <p class="text-[10px] font-black text-gray-900 uppercase tracking-widest italic">
-                                {{ $proposal->methodology_type }}</p>
+                                {{ $proposal->methodology_type }}
+                            </p>
                         </div>
                         <div class="h-8 w-[1px] bg-gray-100"></div>
                         <div class="text-center">
                             <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Standard</p>
                             <p class="text-[10px] font-black text-gray-900 uppercase tracking-widest">
-                                {{ strtoupper($proposal->style) }}</p>
+                                {{ strtoupper($proposal->style) }}
+                            </p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Generated Sections -->
-                <div class="space-y-16">
-                    @php
-                        $currentChapter = null;
-                    @endphp
+                <div class="space-y-12">
                     @foreach($proposal->content ?? [] as $title => $content)
-                        @php
-                            // Check if it's a new chapter to add spacing/headers
-                            $isChapter = str_contains(strtoupper($title), 'CHAPTER');
-                        @endphp
-
-                        <section id="section-{{ $loop->iteration }}" class="scroll-mt-32">
-                            @if($isChapter)
-                                <div class="pt-8 pb-4 mb-10 border-b-4 border-gray-900">
-                                    <h3 class="text-2xl font-black text-gray-900 tracking-tighter uppercase leading-none">
-                                        {{ $title }}</h3>
-                                </div>
-                            @else
-                                <h4
-                                    class="text-lg font-black text-gray-900 mb-6 border-l-4 border-[#2271b1] pl-5 tracking-tight uppercase leading-none">
-                                    {{ $title }}</h4>
-                            @endif
-
+                        <section class="scroll-mt-32">
+                            <!-- Removed whitespace-pre-wrap to fix gaping space issues -->
                             <div
-                                class="prose prose-slate prose-lg max-w-none text-gray-700 leading-relaxed font-serif text-justify whitespace-pre-wrap {{ $isChapter ? 'hidden' : '' }}">
-                                {!! $content !!}
+                                class="prose prose-slate prose-lg max-w-none text-gray-700 leading-relaxed font-serif text-justify markdown-container">
+                                <script type="application/json" class="raw-markdown">
+                                            {!! json_encode($content) !!}
+                                        </script>
+                                <!-- Parsed Markdown will be injected here -->
+                                <div class="parsed-content"></div>
                             </div>
                         </section>
                     @endforeach
@@ -195,10 +213,8 @@
             </div>
 
             <footer class="max-w-4xl mx-auto py-12 text-center">
-                <p class="text-[9px] text-gray-300 font-bold uppercase tracking-[0.3em]">&bull; END OF RESEARCH PROPOSAL &bull;
-                </p>
-                <p class="text-[8px] text-gray-400 font-medium mt-2 uppercase tracking-widest font-black italic opacity-50">
-                    Generated by PRC™ Synthesis Engine</p>
+                <p class="text-[9px] text-gray-300 font-bold uppercase tracking-[0.3em]">&bull; END OF RESEARCH PROPOSAL
+                    &bull;</p>
             </footer>
         </div>
     </div>
@@ -218,13 +234,126 @@
                 border-radius: 10px;
             }
 
+            /* Reduced paragraph margin drastically to fix whitespace issues */
             .prose p {
-                margin-bottom: 2rem;
+                margin-bottom: 1rem;
+                margin-top: 0;
             }
 
             html {
                 scroll-behavior: smooth;
             }
+
+            /* Markdown Tables */
+            .prose table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .prose th {
+                background-color: #f3f4f6;
+                padding: 0.75rem;
+                border: 1px solid #e5e7eb;
+                font-weight: 700;
+                text-align: left;
+            }
+
+            .prose td {
+                padding: 0.75rem;
+                border: 1px solid #e5e7eb;
+            }
         </style>
+    @endpush
+
+    @push('scripts')
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+        <script>
+            function proposalViewer() {
+                return {
+                    showRefineModal: false,
+                    toc: [], // Holds dynamically extracted chapters/headers
+
+                    initParser() {
+                        const containers = document.querySelectorAll('.markdown-container');
+                        let allTocItems = [];
+                        let headingCounter = 0;
+
+                        containers.forEach(container => {
+                            try {
+                                const scriptEl = container.querySelector('.raw-markdown');
+                                const parsedDiv = container.querySelector('.parsed-content');
+
+                                if (scriptEl && parsedDiv) {
+                                    const rawMarkdown = JSON.parse(scriptEl.textContent);
+                                    let html = marked.parse(rawMarkdown);
+
+                                    // Extract Headers and inject custom styling
+                                    const tempDiv = document.createElement('div');
+                                    tempDiv.innerHTML = html;
+                                    const headings = tempDiv.querySelectorAll('h1, h2, h3');
+
+                                    headings.forEach((heading) => {
+                                        const titleText = heading.textContent.trim();
+                                        const id = 'chapter-' + headingCounter++;
+                                        heading.setAttribute('id', id);
+                                        heading.classList.add('scroll-mt-32'); // Ensure jumping to header accounts for sticky toolbar
+
+                                        // Address "headers look different" by applying Tailwind Typography overrides
+                                        heading.classList.add('font-black', 'text-gray-900', 'tracking-tight', 'mb-4');
+                                        if (heading.tagName === 'H1') {
+                                            heading.classList.add('text-3xl', 'uppercase', 'mt-12', 'border-b-2', 'border-gray-100', 'pb-3');
+                                        } else if (heading.tagName === 'H2') {
+                                            heading.classList.add('text-xl', 'mt-8', 'text-[#2271b1]');
+                                        } else if (heading.tagName === 'H3') {
+                                            heading.classList.add('text-lg', 'mt-6');
+                                        }
+
+                                        // Push to Sidebar TOC array
+                                        allTocItems.push({
+                                            id: id,
+                                            title: titleText,
+                                            level: parseInt(heading.tagName.substring(1))
+                                        });
+                                    });
+
+                                    parsedDiv.innerHTML = tempDiv.innerHTML;
+                                }
+                            } catch (e) {
+                                console.error('Failed to parse section markdown:', e);
+                            }
+                        });
+
+                        this.toc = allTocItems;
+
+                        this.$nextTick(() => {
+                            this.renderCharts();
+                        });
+                    },
+                    renderCharts() {
+                        const chartBlocks = document.querySelectorAll('pre code.language-chartjs');
+                        chartBlocks.forEach((codeEl, index) => {
+                            try {
+                                const chartConfig = JSON.parse(codeEl.textContent);
+                                const canvas = document.createElement('canvas');
+                                canvas.id = 'proposal-chart-' + index;
+                                canvas.className = 'my-6 max-h-96 w-full';
+
+                                const preParent = codeEl.closest('pre');
+                                if (preParent) {
+                                    preParent.replaceWith(canvas);
+                                    new Chart(canvas.getContext('2d'), chartConfig);
+                                }
+                            } catch (e) {
+                                console.error('Failed to render Chart.js block:', e);
+                            }
+                        });
+                    }
+                }
+            }
+        </script>
     @endpush
 @endsection

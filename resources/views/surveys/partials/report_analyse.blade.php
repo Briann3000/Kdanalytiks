@@ -483,8 +483,33 @@
                             </template>
 
                             <template x-if="editingMessageId !== message.id">
-                                <div :id="`socius-message-body-${message.id}`" class="text-sm leading-7 socius-prose"
-                                    x-html="renderMessage(message.content, message.role)"></div>
+                                <div>
+                                    <div :id="`socius-message-body-${message.id}`"
+                                        class="text-sm leading-7 socius-prose"
+                                        x-html="renderMessage(message.content, message.role)"></div>
+
+                                    <template x-if="!sending && message.role === 'assistant'">
+                                        <div
+                                            class="mt-4 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+                                            <div class="flex items-center gap-2">
+                                                <span
+                                                    class="text-[10px] font-bold text-slate-400 mr-1">{{ __('Was this response helpful?') }}</span>
+                                                <button @click="rateMessage(message.id, 'like')"
+                                                    class="px-2.5 py-1 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all"
+                                                    :class="message.metadata?.rating === 'like' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'"
+                                                    title="{{ __('Helpful response') }}">
+                                                    <i class="fa-solid fa-thumbs-up text-[10px]"></i> {{ __('Yes') }}
+                                                </button>
+                                                <button @click="rateMessage(message.id, 'dislike')"
+                                                    class="px-2.5 py-1 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all"
+                                                    :class="message.metadata?.rating === 'dislike' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'"
+                                                    title="{{ __('Needs improvement') }}">
+                                                    <i class="fa-solid fa-thumbs-down text-[10px]"></i> {{ __('No') }}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
                             </template>
                         </div>
                     </div>
@@ -740,9 +765,25 @@
 
                 {{-- Rules List --}}
                 <div class="space-y-3">
-                    <h4 class="text-xs font-bold text-slate-400">
-                        {{ __('Active Instructions') }}
-                    </h4>
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-bold text-slate-400">
+                            {{ __('Active Instructions') }}
+                        </h4>
+                        <template x-if="!loadingKb && kbRules.length > 0">
+                            <div class="flex items-center gap-2">
+                                <button type="button" @click="deactivateAllKbRules()"
+                                    class="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 border border-amber-500/20 transition-all flex items-center gap-1"
+                                    title="{{ __('Deactivate all instructions') }}">
+                                    <i class="fa-solid fa-power-off text-[9px]"></i> {{ __('Deactivate All') }}
+                                </button>
+                                <button type="button" @click="deleteAllKbRules()"
+                                    class="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all flex items-center gap-1"
+                                    title="{{ __('Delete all instructions') }}">
+                                    <i class="fa-solid fa-trash-can text-[9px]"></i> {{ __('Delete All') }}
+                                </button>
+                            </div>
+                        </template>
+                    </div>
 
                     <template x-if="loadingKb">
                         <div class="space-y-2">
@@ -784,9 +825,27 @@
 
                                         {{-- Content --}}
                                         <div class="flex-1 min-w-0">
-                                            <p class="text-sm text-slate-100 break-words whitespace-pre-wrap font-medium leading-relaxed"
-                                                :class="{ 'line-through text-slate-500': !rule.is_active }"
-                                                x-text="rule.content"></p>
+                                            <template
+                                                x-if="rule.content && (rule.content.startsWith('[Book/Doc:') || rule.content.startsWith('[Doc:'))">
+                                                <div>
+                                                    <div class="flex items-center gap-2">
+                                                        <i class="fa-solid fa-file-lines text-blue-400 text-sm"></i>
+                                                        <span class="text-xs font-extrabold text-slate-100 truncate"
+                                                            x-text="formatDocName(rule.content)"></span>
+                                                    </div>
+                                                    <p class="text-[10px] text-emerald-400 font-bold mt-1">
+                                                        <i class="fa-solid fa-circle-check text-[9px] mr-1"></i>
+                                                        <span
+                                                            x-text="'Document read & active (' + rule.content.length.toLocaleString() + ' characters)'"></span>
+                                                    </p>
+                                                </div>
+                                            </template>
+                                            <template
+                                                x-if="!rule.content || (!rule.content.startsWith('[Book/Doc:') && !rule.content.startsWith('[Doc:'))">
+                                                <p class="text-sm text-slate-100 break-words whitespace-pre-wrap font-medium leading-relaxed"
+                                                    :class="{ 'line-through text-slate-500': !rule.is_active }"
+                                                    x-text="rule.content"></p>
+                                            </template>
                                             <p class="text-[9px] text-slate-500 mt-1 font-bold"
                                                 x-text="formatRelativeTime(rule.created_at)"></p>
                                         </div>

@@ -38,7 +38,7 @@ class GroqStreamingClient
                 'model' => $model,
                 'messages' => $messages,
                 'temperature' => $temperature ?? 0.3,
-                'max_tokens' => 4096,
+                'max_tokens' => 8192,
                 'stream' => true,
                 'stream_options' => ['include_usage' => true],
             ],

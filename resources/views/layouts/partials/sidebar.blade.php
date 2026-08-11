@@ -354,6 +354,8 @@
                                 class="block px-3 py-1.5 text-xs font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-lg">{{ __('Archived Surveys') }}</a>
                             <a href="{{ route('library.templates') }}"
                                 class="block px-3 py-1.5 text-xs font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-lg">{{ __('Templates') }}</a>
+                            <a href="{{ route('research-proposal.history') }}"
+                                class="block px-3 py-1.5 text-xs font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-lg">{{ __('Socius Library') }}</a>
                         </div>
                     </template>
 
@@ -362,6 +364,8 @@
                             class="block py-1 text-xs font-bold {{ (request()->routeIs('surveys.index') && request('status') === 'archived') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Archived Surveys') }}</a>
                         <a href="{{ route('library.templates') }}"
                             class="block py-1 text-xs font-bold {{ request()->routeIs('library.templates') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Templates') }}</a>
+                        <a href="{{ route('research-proposal.history') }}"
+                            class="block py-1 text-xs font-bold {{ request()->routeIs('research-proposal.history') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Socius Library') }}</a>
                     </div>
                 </div>
             @else
@@ -589,6 +593,8 @@
                                     class="block px-3 py-1.5 text-xs font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-lg">{{ __('Archived Surveys') }}</a>
                                 <a href="{{ route('library.templates') }}"
                                     class="block px-3 py-1.5 text-xs font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-lg">{{ __('Templates') }}</a>
+                                <a href="{{ route('research-proposal.history') }}"
+                                    class="block px-3 py-1.5 text-xs font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-lg">{{ __('Socius Library') }}</a>
                             </div>
                         </template>
 
@@ -597,6 +603,8 @@
                                 class="block py-1 text-xs font-bold {{ (request()->routeIs('surveys.index') && request('status') === 'archived') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Archived Surveys') }}</a>
                             <a href="{{ route('library.templates') }}"
                                 class="block py-1 text-xs font-bold {{ request()->routeIs('library.templates') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Templates') }}</a>
+                            <a href="{{ route('research-proposal.history') }}"
+                                class="block py-1 text-xs font-bold {{ request()->routeIs('research-proposal.history') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Socius Library') }}</a>
                         </div>
                     </div>
                 @endif
@@ -650,7 +658,7 @@
                 :style="{ top: (parseInt(flyoutTop) > 400 ? (parseInt(flyoutTop) - 80) : parseInt(flyoutTop)) + 'px', left: flyoutLeft + 'px' }"
                 style="display: none;" @mouseenter="hoverItem = 'studio'" @mouseleave="clearFlyout()">
                 <a href="{{ route('research-proposal.create') }}"
-                    class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-proposal.create') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Generate Proposal') }}</a>
+                    class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-proposal.create') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Draft Proposal with Socius AI') }}</a>
                 <a href="{{ route('research-studio.report.create') }}"
                     class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-studio.report.create') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Generate Report') }}</a>
                 <a href="{{ route('research-studio.proofread.create') }}"
@@ -660,13 +668,9 @@
 
         <div x-show="expandedItem === 'studio'" x-collapse class="sidebar-submenu">
             <a href="{{ route('research-proposal.create') }}"
-                class="block py-1 text-xs font-bold {{ request()->routeIs('research-proposal.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Generate Proposal') }}</a>
-            <a href="{{ route('research-proposal.history') }}"
-                class="block py-1 text-xs font-bold {{ request()->routeIs('research-proposal.history') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Proposal History') }}</a>
+                class="block py-1 text-xs font-bold {{ request()->routeIs('research-proposal.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Draft Proposal with Socius AI') }}</a>
             <a href="{{ route('research-studio.report.create') }}"
                 class="block py-1 text-xs font-bold {{ request()->routeIs('research-studio.report.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Generate Report') }}</a>
-            <a href="{{ route('research-studio.report.history') }}"
-                class="block py-1 text-xs font-bold {{ request()->routeIs('research-studio.report.history') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Report History') }}</a>
             <a href="{{ route('research-studio.proofread.create') }}"
                 class="block py-1 text-xs font-bold {{ request()->routeIs('research-studio.proofread.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Proofread Report') }}</a>
         </div>

@@ -31,6 +31,15 @@ FORMATTING DEFAULTS (can be overridden by user instructions above):
   - After each table, add a short APA-style interpretation in plain prose referencing the table by number.
 - Keep wording professional, concise, and publication-ready.
 
+EXHAUSTIVE ACADEMIC PROPOSAL DIRECTIVE (STRICT BOUNDARIES):
+- When drafting or generating a Research Proposal, NEVER provide brief summaries, bullet-point outlines, or placeholder notes (e.g. '[Insert Literature Review Here]').
+- You MUST generate the FULL, COMPREHENSIVE, EXHAUSTIVE document with ONLY Chapter 1, Chapter 2, and Chapter 3 articulated in deep, publishable academic prose:
+  * CHAPTER 1: INTRODUCTION (1.1 Background of the Study, 1.2 Statement of the Problem, 1.3 Purpose & Objectives, 1.4 Research Questions, 1.5 Significance of the Study, 1.6 Scope & Delimitations, 1.7 Operational Definitions).
+  * CHAPTER 2: LITERATURE REVIEW (2.1 Theoretical Framework, 2.2 Conceptual Framework, 2.3 Empirical Literature Review organized by themes, 2.4 Synthesis & Identified Research Gap).
+  * CHAPTER 3: RESEARCH METHODOLOGY (3.1 Research Design, 3.2 Target Population, 3.3 Sampling Technique & Sample Size, 3.4 Data Collection Instruments, 3.5 Validity & Reliability, 3.6 Data Collection Procedures, 3.7 Data Analysis Plan, 3.8 Ethical Considerations).
+- STRICT CHAPTER 3 END BOUNDARY: Stop strictly after Chapter 3 (Methodology). Do NOT generate Chapter 4 (Expected Outcomes), Chapter 5 (Timeline), or Chapter 6 (Budget) UNLESS the user specifically asks for them in their prompt.
+- ABSOLUTELY NO CONVERSATIONAL CLOSINGS OR EMPTY PLACEHOLDERS: NEVER append conversational questions or closing chitchat (e.g. 'Please let me know if this meets your requirements', 'I look forward to your feedback', or 'Would you like me to generate charts'). NEVER output empty table headers or broken chart tags without real data. Output the proposal document cleanly.
+
 CRITICAL: VISUAL GENERATION RULES:
 You CANNOT execute Python code or use Matplotlib. You MUST use one of the following formats for ALL charts and diagrams. DO NOT provide Python code.
 
@@ -112,6 +121,19 @@ PROMPT;
       $kbText = collect($knowledgeBaseRules)->map(fn($r) => "- " . $r)->implode("\n");
       $prompt .= "\n\nUSER KNOWLEDGE BASE / PREFERENCES:\nYou MUST follow these user-defined formatting preferences and instructions exactly:\n" . $kbText;
     }
+
+    try {
+      $baselineText = app(\App\Services\ProposalBaselineService::class)->getBaselineText();
+      if (!empty($baselineText)) {
+        $prompt .= "\n\nSECRET SYSTEM BASELINE GUIDANCE (Background Reference Structure):\n" . $baselineText;
+        if (!empty($knowledgeBaseRules)) {
+          $prompt .= "\n\nOVERRIDE INSTRUCTION: The User Knowledge Base / Preferences provided above take priority over the System Baseline Guidance. Apply User Preferences first, using System Baseline only for sections not covered by the user.";
+        }
+      }
+    } catch (\Throwable $e) {
+      \Illuminate\Support\Facades\Log::error('Baseline retrieval error: ' . $e->getMessage());
+    }
+
     return $prompt;
   }
 

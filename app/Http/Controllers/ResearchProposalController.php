@@ -26,32 +26,83 @@ class ResearchProposalController extends Controller
      */
     public function index()
     {
-        return redirect()->route('research-proposal.create');
+        return redirect()->route('research-proposal.history');
     }
 
     /**
-     * Show the Workshop History: Reports and Proposals.
+     * Show User Proposals Library (Saved proposals and uploaded proposals).
      */
     public function history()
     {
         $user = auth()->user();
-
-        // Proposals from the database
         $proposals = ResearchProposal::where('user_id', $user->id)->latest()->get();
-
-        // We'll also show any 'reports' generated in this session (or if we had a reports table, from there)
-        // For now, let's look for any session-based reports or simulated past reports
-        $reports = []; // If there was a GeneratedReport model, we'd query it here.
-
-        return view('admin.research-proposal.history', compact('proposals', 'reports'));
+        return view('admin.research-proposal.history', compact('proposals'));
     }
 
     /**
-     * Show the guided intake form for drafting a NEW proposal.
+     * Launch Socius AI pre-configured in Proposal Mode.
      */
     public function create()
     {
-        return view('admin.research-proposal.create');
+        return redirect()->route('socius.chat.index', ['preset' => 'proposal'])
+            ->with('info', __('Draft your proposal interactively using Socius AI and KnowledgeBases.'));
+    }
+
+    /**
+     * Save proposal output directly from Socius AI into User Library.
+     */
+    public function saveFromSocius(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'content' => 'required|string',
+            'style' => 'nullable|string',
+        ]);
+
+        $proposal = ResearchProposal::create([
+            'user_id' => auth()->id(),
+            'title' => $validated['title'],
+            'research_question' => $validated['title'],
+            'objectives' => __('Generated from Socius AI Workspace'),
+            'methodology_type' => 'mixed',
+            'content' => ['proposal' => $validated['content']],
+            'style' => $validated['style'] ?? 'apa7',
+            'status' => 'completed'
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => __('Proposal saved to your Library successfully!'),
+            'proposal' => $proposal
+        ]);
+    }
+
+    /**
+     * Upload an existing proposal file directly into User Library.
+     */
+    public function uploadProposal(Request $request)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'file' => 'required|file|mimes:docx,pdf,txt|max:10240'
+        ]);
+
+        $file = $request->file('file');
+        $extractedText = app(\App\Services\DocumentExtractionService::class)->extractTextFromFile($file);
+
+        $proposal = ResearchProposal::create([
+            'user_id' => auth()->id(),
+            'title' => $request->title,
+            'research_question' => $request->title,
+            'objectives' => __('Uploaded Document Proposal'),
+            'methodology_type' => 'mixed',
+            'content' => ['proposal' => $extractedText],
+            'style' => 'apa7',
+            'status' => 'completed'
+        ]);
+
+        return redirect()->route('research-proposal.history')
+            ->with('success', __('Proposal uploaded and saved to your Library!'));
     }
 
     /**

@@ -39,8 +39,15 @@ class StandaloneSociusController extends Controller
     {
         $user = $request->user();
 
-        // Optionally receive initial context seeded from another feature (e.g. transcription)
+        // Optionally receive initial context seeded from another feature or query preset
         $initialContext = session()->pull('socius_standalone_context', null);
+        if (!$initialContext && $request->query('preset') === 'proposal') {
+            $initialContext = "RESEARCH PROPOSAL GENERATION MODE: Hello Socius! Please draft a full, comprehensive, and exhaustive Research Proposal using our institutional KnowledgeBase guidelines. Do NOT summarize or use placeholders. Generate the complete proposal with ALL chapters and subchapters in full academic detail:\n\n" .
+                "• CHAPTER 1: INTRODUCTION (1.1 Background of the Study, 1.2 Statement of the Problem, 1.3 Purpose & Objectives, 1.4 Research Questions, 1.5 Significance of the Study, 1.6 Scope & Operational Definitions)\n" .
+                "• CHAPTER 2: LITERATURE REVIEW (2.1 Theoretical Framework, 2.2 Conceptual Framework, 2.3 Empirical Literature Review by themes, 2.4 Research Gap)\n" .
+                "• CHAPTER 3: RESEARCH METHODOLOGY (3.1 Research Design, 3.2 Target Population, 3.3 Sampling & Sample Size, 3.4 Data Collection Instruments, 3.5 Validity & Reliability, 3.6 Data Analysis Plan, 3.7 Ethical Considerations)\n\n" .
+                "Write the complete, publishable document in full academic prose.";
+        }
 
         return view('socius.chat', [
             'canAnalyze' => $user->canUseAiAnalysis(),
@@ -182,6 +189,7 @@ class StandaloneSociusController extends Controller
 
         $messages = $this->buildMessages($thread, $webSearchEnabled);
         $assistantMessage = $thread->messages()->create([
+            'user_id' => $request->user()->id,
             'role' => 'assistant',
             'content' => '',
             'metadata' => ['status' => 'streaming'],
@@ -588,5 +596,51 @@ class StandaloneSociusController extends Controller
         $writer->save($tmpPath);
 
         return response()->download($tmpPath, Str::slug($title) . '.docx')->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Store Thumbs Up / Thumbs Down feedback for AI learning on a message.
+     */
+    public function rateMessage(Request $request, $messageId)
+    {
+        $validated = $request->validate([
+            'rating' => 'required|string|in:like,dislike',
+            'feedback' => 'nullable|string|max:1000',
+        ]);
+
+        $userId = auth()->id();
+        $message = SurveyAiMessage::where(function ($query) use ($userId) {
+            $query->where('user_id', $userId)
+                ->orWhereHas('thread', function ($q) use ($userId) {
+                    $q->where('user_id', $userId);
+                });
+        })->find($messageId);
+
+        if (!$message) {
+            return response()->json(['success' => false, 'message' => 'Message not found'], 404);
+        }
+
+        $meta = $message->metadata ?? [];
+        $meta['rating'] = $validated['rating'];
+        if (!empty($validated['feedback'])) {
+            $meta['rating_feedback'] = $validated['feedback'];
+        }
+        $message->metadata = $meta;
+        $message->save();
+
+        // If dislike with feedback, save feedback as negative memory preference so AI learns
+        if ($validated['rating'] === 'dislike' && !empty($validated['feedback'])) {
+            \App\Models\SurveyAiMemory::create([
+                'user_id' => auth()->id(),
+                'fact' => "User Disliked Output Pattern: " . $validated['feedback'],
+                'importance' => 4,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => __('Thank you for your feedback! Socius has logged this to refine future outputs.'),
+            'rating' => $validated['rating'],
+        ]);
     }
 }

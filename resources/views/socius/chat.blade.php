@@ -141,10 +141,11 @@
 
 @section('content')
     <div x-data="standaloneSociusManager({
-                                            canAnalyze: @js($canAnalyze),
-                                            initialContext: @js($initialContext),
-                                            urls: @js($urls)
-                                        })" x-init="init()" class="socius-root-container animate-in fade-in duration-500">
+                                                        canAnalyze: @js($canAnalyze),
+                                                        initialContext: @js($initialContext),
+                                                        urls: @js($urls)
+                                                    })" x-init="init()"
+        class="socius-root-container animate-in fade-in duration-500">
 
         <div class="relative flex gap-4 w-full bg-[#1e1e1e]" style="height: calc(100dvh - 4.1rem); overflow: hidden;">
 
@@ -208,8 +209,8 @@
                                     <button @click="selectThread(thread.id)"
                                         class="w-full text-left rounded-2xl px-3 py-3 pr-9 border transition-all"
                                         :class="currentThreadId === thread.id
-                                                                            ? 'bg-white text-slate-900 border-white shadow-xl shadow-black/20'
-                                                                            : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-white'">
+                                                                                        ? 'bg-white text-slate-900 border-white shadow-xl shadow-black/20'
+                                                                                        : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-white'">
                                         <div class="flex items-center gap-1.5 overflow-hidden">
                                             <template x-if="thread.is_pinned">
                                                 <i
@@ -227,9 +228,9 @@
                                     <button @click.stop="threadMenuOpen = (threadMenuOpen === thread.id ? null : thread.id)"
                                         class="absolute right-2 top-3 w-6 h-6 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover/thread:opacity-100 focus:opacity-100"
                                         :class="[
-                                                                            threadMenuOpen === thread.id ? 'opacity-100' : '',
-                                                                            currentThreadId === thread.id ? 'hover:bg-slate-200 text-slate-600' : 'hover:bg-white/15 text-slate-400'
-                                                                        ]">
+                                                                                        threadMenuOpen === thread.id ? 'opacity-100' : '',
+                                                                                        currentThreadId === thread.id ? 'hover:bg-slate-200 text-slate-600' : 'hover:bg-white/15 text-slate-400'
+                                                                                    ]">
                                         <i class="fa-solid fa-ellipsis-vertical text-[11px]"></i>
                                     </button>
 
@@ -424,9 +425,10 @@
                     <template x-for="(message, index) in messages" :key="message.id">
                         <div :id="'msg-' + message.id" class="max-w-4xl mx-auto group/msg"
                             :class="message.role === 'user' ? 'flex justify-end' : 'flex justify-start'">
-                            <div class="relative w-full md:w-auto md:max-w-[80%] rounded-[2rem] px-5 py-4 border" :class="message.role === 'user'
-                                                                    ? 'bg-[#2271b1] text-white border-[#1d629b] shadow-lg shadow-blue-500/10'
-                                                                    : 'bg-white/[0.04] text-white border-white/10'">
+                            <div class="relative w-full md:w-auto md:max-w-[80%] rounded-[2rem] px-5 py-4 border"
+                                :class="message.role === 'user'
+                                                                                ? 'bg-[#2271b1] text-white border-[#1d629b] shadow-lg shadow-blue-500/10'
+                                                                                : 'bg-white/[0.04] text-white border-white/10'">
                                 <div class="flex items-center gap-3 mb-3">
                                     <div class="w-9 h-9 rounded-2xl flex items-center justify-center text-sm"
                                         :class="message.role === 'user' ? 'bg-white/60' : 'bg-white/10 text-blue-300'">
@@ -444,8 +446,7 @@
                                         :class="localExportOpen ? 'opacity-100' : 'opacity-0 group-hover/msg:opacity-100'">
                                         <template x-if="message.role === 'user'">
                                             <button @click="startEditing(message.id, message.content)"
-                                                class="w-7 h-7 rounded-xl flex items-center justify-center transition-all"
-                                                :class="message.role === 'user' ? 'hover:bg-black/10 text-slate-700' : 'hover:bg-white/10 text-slate-400'">
+                                                class="w-7 h-7 rounded-xl flex items-center justify-center transition-all hover:bg-black/10 text-slate-700">
                                                 <i class="fa-regular fa-pen-to-square text-xs"></i>
                                             </button>
                                         </template>
@@ -457,7 +458,8 @@
                                         </template>
                                         <button @click="copyMessage(message.content, message.id, $event.currentTarget)"
                                             class="w-7 h-7 rounded-xl flex items-center justify-center transition-all"
-                                            :class="message.role === 'user' ? 'hover:bg-black/10 text-slate-700' : 'hover:bg-white/10 text-slate-400'">
+                                            :class="message.role === 'user' ? 'hover:bg-black/10 text-slate-700' : 'hover:bg-white/10 text-slate-400'"
+                                            title="{{ __('Copy message') }}">
                                             <i class="fa-regular fa-copy text-xs"></i>
                                         </button>
                                     </div>
@@ -494,8 +496,69 @@
                                 </template>
 
                                 <template x-if="editingMessageId !== message.id">
-                                    <div :id="`socius-message-body-${message.id}`" class="text-sm leading-7 socius-prose"
-                                        x-html="renderMessage(message.content, message.role)"></div>
+                                    <div>
+                                        <div :id="`socius-message-body-${message.id}`"
+                                            class="text-sm leading-7 socius-prose"
+                                            x-html="renderMessage(message.content, message.role)"></div>
+
+                                        {{-- Bottom Toolbar & Quality Rating (Rendered ONLY after output is finished) --}}
+                                        <template x-if="!sending && message.role === 'assistant'">
+                                            <div
+                                                class="mt-4 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+                                                <div class="flex items-center gap-2">
+                                                    <span
+                                                        class="text-[10px] font-bold text-slate-400 mr-1">{{ __('Was this response helpful?') }}</span>
+                                                    <button @click="rateMessage(message.id, 'like')"
+                                                        class="px-2.5 py-1 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all"
+                                                        :class="message.metadata?.rating === 'like' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'"
+                                                        title="{{ __('Helpful response') }}">
+                                                        <i class="fa-solid fa-thumbs-up text-[10px]"></i> {{ __('Yes') }}
+                                                    </button>
+                                                    <button @click="rateMessage(message.id, 'dislike')"
+                                                        class="px-2.5 py-1 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all"
+                                                        :class="message.metadata?.rating === 'dislike' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'"
+                                                        title="{{ __('Needs improvement') }}">
+                                                        <i class="fa-solid fa-thumbs-down text-[10px]"></i> {{ __('No') }}
+                                                    </button>
+                                                </div>
+
+                                                <div>
+                                                    <button @click="saveAsProposal(message.content)"
+                                                        class="px-3 py-1.5 rounded-xl text-[10px] font-bold bg-[#2271b1] text-white hover:bg-[#135e96] flex items-center gap-1.5 shadow-xs transition-all"
+                                                        title="{{ __('Save this response in your Library') }}">
+                                                        <i class="fa-solid fa-bookmark text-[9px]"></i>
+                                                        {{ __('Save') }}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        {{-- Optional Suggestions Bar (Rendered ONLY after output is finished) --}}
+                                        <template
+                                            x-if="!sending && message.role === 'assistant' && (message.content.includes('Chapter 1') || message.content.includes('Proposal') || message.content.includes('Methodology'))">
+                                            <div class="mt-3 pt-2 flex flex-wrap items-center gap-2">
+                                                <span
+                                                    class="text-[10px] font-bold text-slate-400 mr-1 flex items-center gap-1">
+                                                    {{ __('Add Optional Sections:') }}
+                                                </span>
+                                                <button
+                                                    @click="promptSuggestedSection('Include Project Budget following the baseline structure')"
+                                                    class="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 flex items-center gap-1 transition-all">
+                                                    {{ __('➕ Add Budget') }}
+                                                </button>
+                                                <button
+                                                    @click="promptSuggestedSection('Include Project Timeline & Milestones following the baseline structure')"
+                                                    class="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 flex items-center gap-1 transition-all">
+                                                    {{ __('➕ Add Timeline') }}
+                                                </button>
+                                                <button
+                                                    @click="promptSuggestedSection('Include Expected Outcomes & Policy Implications following the baseline structure')"
+                                                    class="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 flex items-center gap-1 transition-all">
+                                                    {{ __('➕ Add Expected Outcomes') }}
+                                                </button>
+                                            </div>
+                                        </template>
+                                    </div>
                                 </template>
                             </div>
                         </div>
@@ -697,7 +760,23 @@
                             </div>
                         </div>
                         <div class="space-y-3">
-                            <h4 class="text-xs font-bold text-slate-400">{{ __('Active Instructions') }}</h4>
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-xs font-bold text-slate-400">{{ __('Active Instructions') }}</h4>
+                                <template x-if="!loadingKb && kbRules.length > 0">
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" @click="deactivateAllKbRules()"
+                                            class="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 border border-amber-500/20 transition-all flex items-center gap-1"
+                                            title="{{ __('Deactivate all instructions') }}">
+                                            <i class="fa-solid fa-power-off text-[9px]"></i> {{ __('Deactivate All') }}
+                                        </button>
+                                        <button type="button" @click="deleteAllKbRules()"
+                                            class="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all flex items-center gap-1"
+                                            title="{{ __('Delete all instructions') }}">
+                                            <i class="fa-solid fa-trash-can text-[9px]"></i> {{ __('Delete All') }}
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
                             <template x-if="loadingKb">
                                 <div class="space-y-2">
                                     <div class="h-16 rounded-2xl bg-white/[0.03] animate-pulse"></div>
@@ -727,9 +806,27 @@
                                                         :class="rule.is_active ? 'translate-x-4' : 'translate-x-0'"></span>
                                                 </button>
                                                 <div class="flex-1 min-w-0">
-                                                    <p class="text-sm text-slate-100 break-words whitespace-pre-wrap font-medium leading-relaxed"
-                                                        :class="{ 'line-through text-slate-500': !rule.is_active }"
-                                                        x-text="rule.content"></p>
+                                                    <template
+                                                        x-if="rule.content && (rule.content.startsWith('[Book/Doc:') || rule.content.startsWith('[Doc:'))">
+                                                        <div>
+                                                            <div class="flex items-center gap-2">
+                                                                <i class="fa-solid fa-file-lines text-blue-400 text-sm"></i>
+                                                                <span class="text-xs font-extrabold text-slate-100 truncate"
+                                                                    x-text="formatDocName(rule.content)"></span>
+                                                            </div>
+                                                            <p class="text-[10px] text-emerald-400 font-bold mt-1">
+                                                                <i class="fa-solid fa-circle-check text-[9px] mr-1"></i>
+                                                                <span
+                                                                    x-text="'Document read & active (' + rule.content.length.toLocaleString() + ' characters)'"></span>
+                                                            </p>
+                                                        </div>
+                                                    </template>
+                                                    <template
+                                                        x-if="!rule.content || (!rule.content.startsWith('[Book/Doc:') && !rule.content.startsWith('[Doc:'))">
+                                                        <p class="text-sm text-slate-100 break-words whitespace-pre-wrap font-medium leading-relaxed"
+                                                            :class="{ 'line-through text-slate-500': !rule.is_active }"
+                                                            x-text="rule.content"></p>
+                                                    </template>
                                                     <p class="text-[9px] text-slate-500 mt-1 font-bold"
                                                         x-text="formatRelativeTime(rule.created_at)"></p>
                                                 </div>
@@ -1495,7 +1592,7 @@
                         const body = [...rows.slice(2)];
 
                         // Auto-check if Total row is present; if not, calculate and append
-                        const hasTotalRow = body.some(row => row[0] && row[0].toLowerCase().includes('total'));
+                        /*const hasTotalRow = body.some(row => row[0] && row[0].toLowerCase().includes('total'));
                         if (!hasTotalRow && body.length > 0) {
                             const totalRow = [];
                             header.forEach((colName, colIdx) => {
@@ -1522,40 +1619,40 @@
                                 }
                             });
                             body.push(totalRow);
-                        }
+                        }*/
 
                         const tableId = `socius-table-${Math.random().toString(36).slice(2, 10)}`;
 
                         return `
-                                                        <div class="my-4 rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e2d]/60 shadow-xl">
-                                                            <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-white/[0.05] border-b border-white/10">
-                                                                <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-[10px] font-bold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
-                                                                    <i class="fa-regular fa-copy text-[10px]"></i>
-                                                                    ${@js(__('Copy Table'))}
-                                                                </button>
-                                                            </div>
-                                                            <div class="overflow-x-auto">
-                                                                <table id="${tableId}" class="min-w-full text-left text-xs border-collapse">
-                                                                    <thead>
-                                                                        <tr class="bg-white/[0.04] border-b border-white/10">
-                                                                            ${header.map(cell => `<th class="px-4 py-3 text-[11px] font-bold text-blue-300 border-b border-white/10 bg-white/[0.03]">${this.inlineFormat(cell)}</th>`).join('')}
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody>
-                                                                        ${body.map((row, rIdx) => {
+                                                                    <div class="my-4 rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e2d]/60 shadow-xl">
+                                                                        <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-white/[0.05] border-b border-white/10">
+                                                                            <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-[10px] font-bold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
+                                                                                <i class="fa-regular fa-copy text-[10px]"></i>
+                                                                                ${@js(__('Copy Table'))}
+                                                                            </button>
+                                                                        </div>
+                                                                        <div class="overflow-x-auto">
+                                                                            <table id="${tableId}" class="min-w-full text-left text-xs border-collapse">
+                                                                                <thead>
+                                                                                    <tr class="bg-white/[0.04] border-b border-white/10">
+                                                                                        ${header.map(cell => `<th class="px-4 py-3 text-[11px] font-bold text-blue-300 border-b border-white/10 bg-white/[0.03]">${this.inlineFormat(cell)}</th>`).join('')}
+                                                                                    </tr>
+                                                                                </thead>
+                                                                                <tbody>
+                                                                                    ${body.map((row, rIdx) => {
                             const isTotal = row[0] && row[0].toLowerCase().includes('total');
                             const rowBg = isTotal ? 'bg-white/[0.08] font-bold text-blue-200' : (rIdx % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]');
                             return `
-                                                                                <tr class="${rowBg}">
-                                                                                    ${row.map(cell => `<td class="px-4 py-2.5 border-b border-white/5 ${isTotal ? 'font-bold text-blue-200 border-t border-white/10' : 'text-slate-200'}">${this.inlineFormat(cell)}</td>`).join('')}
-                                                                                </tr>
-                                                                            `;
+                                                                                            <tr class="${rowBg}">
+                                                                                                ${row.map(cell => `<td class="px-4 py-2.5 border-b border-white/5 ${isTotal ? 'font-bold text-blue-200 border-t border-white/10' : 'text-slate-200'}">${this.inlineFormat(cell)}</td>`).join('')}
+                                                                                            </tr>
+                                                                                        `;
                         }).join('')}
-                                                                    </tbody>
-                                                                </table>
-                                                            </div>
-                                                        </div>
-                                                    `;
+                                                                                </tbody>
+                                                                            </table>
+                                                                        </div>
+                                                                    </div>
+                                                                `;
                     },
 
                     inlineFormat(text) {
@@ -1776,6 +1873,130 @@
                             this.kbRules = this.kbRules.filter(r => r.id !== ruleId);
                             Swal.fire({ title: @js(__('Deleted!')), text: data.message || @js(__('Preference removed.')), icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, customClass: { popup: 'rounded-2xl shadow-xl border-none' } });
                         } catch (e) { Swal.fire({ title: @js(__('Error')), text: e.message, icon: 'error', customClass: { popup: 'rounded-3xl border-none shadow-2xl' } }); }
+                    },
+                    async deactivateAllKbRules() {
+                        try {
+                            const response = await fetch('/socius/knowledge-base/deactivate-all', {
+                                method: 'POST',
+                                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
+                            });
+                            const data = await this.parseJsonResponse(response);
+                            this.kbRules.forEach(r => r.is_active = false);
+                            Swal.fire({ title: @js(__('All Deactivated')), text: data.message, icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 });
+                        } catch (e) { Swal.fire({ title: @js(__('Error')), text: e.message, icon: 'error', customClass: { popup: 'rounded-3xl border-none shadow-2xl' } }); }
+                    },
+                    async deleteAllKbRules() {
+                        const result = await Swal.fire({
+                            title: @js(__('Delete ALL Instructions?')),
+                            text: @js(__('CRITICAL: This will permanently remove all Knowledge Base instructions and uploaded documents.')),
+                            icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonColor: '#6b7280',
+                            confirmButtonText: @js(__('Yes, Delete All')), cancelButtonText: @js(__('Cancel')),
+                            customClass: { popup: 'rounded-3xl border-none shadow-2xl' }
+                        });
+                        if (!result.isConfirmed) return;
+                        try {
+                            const response = await fetch('/socius/knowledge-base/delete-all', {
+                                method: 'DELETE',
+                                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
+                            });
+                            const data = await this.parseJsonResponse(response);
+                            this.kbRules = [];
+                            Swal.fire({ title: @js(__('All Deleted!')), text: data.message, icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 });
+                        } catch (e) { Swal.fire({ title: @js(__('Error')), text: e.message, icon: 'error', customClass: { popup: 'rounded-3xl border-none shadow-2xl' } }); }
+                    },
+                    formatDocName(content) {
+                        if (!content) return 'Uploaded Document';
+                        const match = content.match(/^\[(?:Book\/Doc|Doc):\s*(.*?)\]/i);
+                        return match ? match[1] : 'Uploaded Document';
+                    },
+                    async saveAsProposal(content) {
+                        const { value: title } = await Swal.fire({
+                            title: @js(__('Save as Proposal')),
+                            input: 'text',
+                            inputLabel: @js(__('Enter a title for this Research Proposal:')),
+                            inputValue: @js(__('Socius Research Proposal')),
+                            showCancelButton: true,
+                            confirmButtonColor: '#2271b1',
+                            confirmButtonText: @js(__('Save to Library')),
+                            inputValidator: (value) => {
+                                if (!value) {
+                                    return @js(__('Please enter a title!'));
+                                }
+                            },
+                            customClass: { popup: 'rounded-3xl border-none shadow-2xl' }
+                        });
+
+                        if (!title) return;
+
+                        try {
+                            const response = await fetch('/research-proposal/save-from-socius', {
+                                method: 'POST',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                },
+                                body: JSON.stringify({ title: title, content: content })
+                            });
+                            const data = await this.parseJsonResponse(response);
+                            if (response.ok && data.success) {
+                                Swal.fire({
+                                    title: @js(__('Chat Saved!')),
+                                    text: @js(__('Your chat has been saved to your Socius Library.')),
+                                    icon: 'success',
+                                    toast: true,
+                                    position: 'top-end',
+                                    showConfirmButton: false,
+                                    timer: 3500,
+                                    customClass: { popup: 'rounded-2xl shadow-xl border-none' }
+                                });
+                            } else {
+                                throw new Error(data.message || 'Error saving proposal');
+                            }
+                        } catch (e) {
+                            Swal.fire({ title: @js(__('Save Error')), text: e.message, icon: 'error', customClass: { popup: 'rounded-3xl border-none shadow-2xl' } });
+                        }
+                    },
+                    humanizeMessage(content) {
+                        if (!content) return;
+                        window.location.href = "{{ route('humanizer.index') }}?text=" + encodeURIComponent(content);
+                    },
+                    promptSuggestedSection(promptText) {
+                        this.draft = promptText;
+                        this.sendMessage();
+                    },
+                    async rateMessage(messageId, rating) {
+                        try {
+                            const response = await fetch(`/socius/chat/messages/${messageId}/rate`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                },
+                                body: JSON.stringify({ rating: rating })
+                            });
+                            const data = await response.json();
+                            if (data.success) {
+                                const msg = this.messages.find(m => m.id === messageId);
+                                if (msg) {
+                                    if (!msg.metadata) msg.metadata = {};
+                                    msg.metadata.rating = rating;
+                                }
+                                Swal.fire({
+                                    title: @js(__('Feedback Logged')),
+                                    text: data.message,
+                                    icon: 'success',
+                                    toast: true,
+                                    position: 'top-end',
+                                    showConfirmButton: false,
+                                    timer: 3000,
+                                    customClass: { popup: 'rounded-2xl shadow-xl border-none' }
+                                });
+                            }
+                        } catch (e) {
+                            console.error('Rate message failed', e);
+                        }
                     }
                 };
             };

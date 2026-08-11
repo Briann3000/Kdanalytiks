@@ -273,6 +273,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/socius/knowledge-base', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'index'])->name('socius.knowledge-base.index');
     Route::post('/socius/knowledge-base', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'store'])->name('socius.knowledge-base.store');
     Route::post('/socius/knowledge-base/upload', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'uploadDocument'])->name('socius.knowledge-base.upload');
+    Route::post('/socius/knowledge-base/deactivate-all', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'deactivateAll'])->name('socius.knowledge-base.deactivate-all');
+    Route::delete('/socius/knowledge-base/delete-all', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'deleteAll'])->name('socius.knowledge-base.delete-all');
     Route::patch('/socius/knowledge-base/{knowledgeBase}', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'update'])->name('socius.knowledge-base.update');
     Route::delete('/socius/knowledge-base/{knowledgeBase}', [\App\Http\Controllers\SociusKnowledgeBaseController::class, 'destroy'])->name('socius.knowledge-base.destroy');
 
@@ -287,6 +289,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/threads/{thread}/pin-toggle', [\App\Http\Controllers\StandaloneSociusController::class, 'togglePinThread'])->name('threads.pin_toggle');
         Route::delete('/threads/{thread}', [\App\Http\Controllers\StandaloneSociusController::class, 'destroyThread'])->name('threads.destroy');
         Route::get('/threads/{thread}/export', [\App\Http\Controllers\StandaloneSociusController::class, 'exportThread'])->name('threads.export');
+        Route::post('/messages/{messageId}/rate', [\App\Http\Controllers\StandaloneSociusController::class, 'rateMessage'])->name('messages.rate');
     });
 
 
@@ -297,9 +300,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/questions', [SurveyController::class, 'saveToLibrary'])->name('questions.save');
     });
 
-    // Research Proposal Studio
+    // Research Proposal Studio & Library
     Route::get('/research-proposal/history', [\App\Http\Controllers\ResearchProposalController::class, 'history'])->name('research-proposal.history');
     Route::post('/research-proposal/store', [\App\Http\Controllers\ResearchProposalController::class, 'storeProposal'])->name('research-proposal.store');
+    Route::post('/research-proposal/upload', [\App\Http\Controllers\ResearchProposalController::class, 'uploadProposal'])->name('research-proposal.upload');
+    Route::post('/research-proposal/save-from-socius', [\App\Http\Controllers\ResearchProposalController::class, 'saveFromSocius'])->name('research-proposal.save-from-socius');
     Route::get('/research-proposal/export-proposal/{id}', [\App\Http\Controllers\ResearchProposalController::class, 'exportProposal'])->name('research-proposal.export-proposal');
     Route::post('/research-proposal/generate', [\App\Http\Controllers\ResearchProposalController::class, 'generate'])->name('research-proposal.generate');
 

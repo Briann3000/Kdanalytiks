@@ -5,93 +5,93 @@
 
 @section('content')
     <div x-data="{
-                    humanizerOriginal: '',
-                    humanizerResult: '',
-                    isHumanizing: false,
-                    isAnalyzing: false,
-                    humanizerMode: 'standard',
-                    humanizerIntensity: 'medium',
-                    customInstructions: '',
-                    originalAnalysis: null,
-                    humanizedAnalysis: null,
+                        humanizerOriginal: @js(request('text', '')),
+                        humanizerResult: '',
+                        isHumanizing: false,
+                        isAnalyzing: false,
+                        humanizerMode: 'standard',
+                        humanizerIntensity: 'medium',
+                        customInstructions: '',
+                        originalAnalysis: null,
+                        humanizedAnalysis: null,
 
-                    async analyzeHumanizerText() {
-                        if (!this.humanizerOriginal.trim()) return;
-                        this.isAnalyzing = true;
-                        try {
-                            const response = await fetch('{{ route('humanizer.process') }}', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-                                },
-                                body: JSON.stringify({
-                                    text: this.humanizerOriginal,
-                                    analyze_only: true
-                                })
-                            });
-                            const data = await response.json();
-                            this.originalAnalysis = data.analysis;
-                        } catch (e) {
-                            console.error(e);
-                        } finally {
-                            this.isAnalyzing = false;
-                        }
-                    },
+                        async analyzeHumanizerText() {
+                            if (!this.humanizerOriginal.trim()) return;
+                            this.isAnalyzing = true;
+                            try {
+                                const response = await fetch('{{ route('humanizer.process') }}', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                                    },
+                                    body: JSON.stringify({
+                                        text: this.humanizerOriginal,
+                                        analyze_only: true
+                                    })
+                                });
+                                const data = await response.json();
+                                this.originalAnalysis = data.analysis;
+                            } catch (e) {
+                                console.error(e);
+                            } finally {
+                                this.isAnalyzing = false;
+                            }
+                        },
 
-                    async humanizeAction() {
-                        if (!this.humanizerOriginal.trim()) return;
-                        this.isHumanizing = true;
-                        this.humanizerResult = '';
-                        this.humanizedAnalysis = null;
-                        try {
-                            const response = await fetch('{{ route('humanizer.process') }}', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-                                },
-                                body: JSON.stringify({
-                                    text: this.humanizerOriginal,
-                                    mode: this.humanizerMode,
-                                    intensity: this.humanizerIntensity,
-                                    custom_instructions: this.customInstructions
-                                })
-                            });
-                            const data = await response.json();
-                            if (data.error) {
+                        async humanizeAction() {
+                            if (!this.humanizerOriginal.trim()) return;
+                            this.isHumanizing = true;
+                            this.humanizerResult = '';
+                            this.humanizedAnalysis = null;
+                            try {
+                                const response = await fetch('{{ route('humanizer.process') }}', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                                    },
+                                    body: JSON.stringify({
+                                        text: this.humanizerOriginal,
+                                        mode: this.humanizerMode,
+                                        intensity: this.humanizerIntensity,
+                                        custom_instructions: this.customInstructions
+                                    })
+                                });
+                                const data = await response.json();
+                                if (data.error) {
+                                    Swal.fire({
+                                        title: 'Humanizer Error',
+                                        text: data.message,
+                                        icon: 'error',
+                                        customClass: { popup: 'rounded-3xl' }
+                                    });
+                                    return;
+                                }
+                                this.humanizerResult = data.humanized_text;
+                                this.humanizedAnalysis = data.humanized_analysis;
+                            } catch (e) {
+                                console.error(e);
                                 Swal.fire({
-                                    title: 'Humanizer Error',
-                                    text: data.message,
+                                    title: 'Error',
+                                    text: 'Failed to humanize text. Please try again.',
                                     icon: 'error',
                                     customClass: { popup: 'rounded-3xl' }
                                 });
-                                return;
+                            } finally {
+                                this.isHumanizing = false;
                             }
-                            this.humanizerResult = data.humanized_text;
-                            this.humanizedAnalysis = data.humanized_analysis;
-                        } catch (e) {
-                            console.error(e);
-                            Swal.fire({
-                                title: 'Error',
-                                text: 'Failed to humanize text. Please try again.',
-                                icon: 'error',
-                                customClass: { popup: 'rounded-3xl' }
-                            });
-                        } finally {
-                            this.isHumanizing = false;
-                        }
-                    },
+                        },
 
-                    transferBack() {
-                        if (!this.humanizerResult.trim()) return;
-                        this.humanizerOriginal = this.humanizerResult;
-                        this.humanizerResult = '';
-                        this.humanizedAnalysis = null;
-                        this.originalAnalysis = null;
-                        this.$nextTick(() => { this.analyzeHumanizerText(); });
-                    }
-                }"
+                        transferBack() {
+                            if (!this.humanizerResult.trim()) return;
+                            this.humanizerOriginal = this.humanizerResult;
+                            this.humanizerResult = '';
+                            this.humanizedAnalysis = null;
+                            this.originalAnalysis = null;
+                            this.$nextTick(() => { this.analyzeHumanizerText(); });
+                        }
+                    }"
         class="min-h-screen bg-[#1d2327] text-slate-100 rounded-3xl border border-white/5 shadow-2xl flex flex-col font-sans">
         <!-- Header -->
         <div class="px-8 py-5 border-b border-white/5 bg-black/30 flex items-center justify-between">

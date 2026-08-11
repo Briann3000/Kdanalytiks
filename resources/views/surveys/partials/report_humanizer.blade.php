@@ -1,5 +1,5 @@
-<div
-    class="min-h-screen bg-[#1c1c1c] text-slate-100 rounded-3xl border border-white/5 shadow-2xl flex flex-col font-sans">
+<div class="w-full bg-[#1c1c1c] text-slate-100 flex flex-col font-sans overflow-y-auto custom-scrollbar"
+    style="height: calc(100dvh - 4.1rem);">
     <!-- Header -->
     <div class="px-8 py-5 border-b border-white/5 bg-[#222] flex items-center justify-between">
         <div class="flex items-center gap-3">

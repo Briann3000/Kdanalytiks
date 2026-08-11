@@ -83,6 +83,30 @@ class SociusKnowledgeBaseController extends Controller
     }
 
     /**
+     * Deactivate all knowledge base rules for the user.
+     */
+    public function deactivateAll(Request $request): JsonResponse
+    {
+        $request->user()->sociusKnowledgeBases()->update(['is_active' => false]);
+
+        return response()->json([
+            'message' => 'All knowledge base instructions deactivated.',
+        ]);
+    }
+
+    /**
+     * Delete all knowledge base rules for the user.
+     */
+    public function deleteAll(Request $request): JsonResponse
+    {
+        $request->user()->sociusKnowledgeBases()->delete();
+
+        return response()->json([
+            'message' => 'All knowledge base instructions deleted.',
+        ]);
+    }
+
+    /**
      * Upload a full knowledge base document (PDF, DOCX, TXT) to extract text into KB rules.
      */
     public function uploadDocument(Request $request): JsonResponse
