@@ -38,110 +38,18 @@ class AiHumanizerService
     ];
 
     public function __construct(
-        private readonly GroqStreamingClient $groqStreamingClient
+        private readonly GroqStreamingClient $groqStreamingClient,
+        private readonly ?\App\Services\Ai\UnifiedAiDetectorService $unifiedAiDetector = null
     ) {
     }
 
     /**
-     * Scan the text using heuristics to estimate AI signature probability.
+     * Scan the text using the centralized Unified AI detector for consistent scoring.
      */
     public function analyzeText(string $text): array
     {
-        // Strip punctuation and split to count total words
-        $cleanText = preg_replace('/[^a-z\s]/i', '', strtolower($text));
-        $words = preg_split('/\s+/', $cleanText);
-        $words = array_filter($words, fn($w) => strlen($w) > 0);
-        $totalWordsCount = count($words);
-
-        if ($totalWordsCount === 0) {
-            return [
-                'aiProbability' => 0,
-                'perplexity' => 100,
-                'burstiness' => 100,
-                'flaggedWords' => [],
-                'recommendations' => ['Please enter some text to analyze.']
-            ];
-        }
-
-        // 1. Perplexity (Unique Word Ratio)
-        $uniqueWords = array_unique($words);
-        $uniqueRatio = count($uniqueWords) / $totalWordsCount;
-        $perplexityScore = min(100, max(0, round($uniqueRatio * 125)));
-
-        // 2. Burstiness (Sentence Length Variance)
-        $sentences = preg_split('/[.!?]+/', $text);
-        $sentences = array_filter(array_map('trim', $sentences), fn($s) => strlen($s) > 0);
-        $sentenceCount = count($sentences);
-
-        $sentenceLengths = [];
-        foreach ($sentences as $sentence) {
-            $swords = preg_split('/\s+/', $sentence);
-            $sentenceLengths[] = count(array_filter($swords));
-        }
-
-        $burstinessScore = 0;
-        if ($sentenceCount > 1) {
-            $avgLength = array_sum($sentenceLengths) / $sentenceCount;
-            $varianceSum = 0;
-            foreach ($sentenceLengths as $len) {
-                $varianceSum += pow($len - $avgLength, 2);
-            }
-            $stdDev = sqrt($varianceSum / ($sentenceCount - 1));
-            // Map standard deviation to burstiness score (0 - 100) with realistic human threshold
-            $burstinessScore = min(100, max(0, round($stdDev * 14)));
-        } else {
-            $burstinessScore = 30;
-        }
-
-        // 3. Contraction Ratio (Human Signal)
-        preg_match_all("/\b[a-z]+'(?:t|ll|re|ve|d|m|s)\b/i", $text, $contractions);
-        $contractionCount = count($contractions[0]);
-        $contractionBonus = min(15, $contractionCount * 4);
-
-        // 4. Flagged Words
-        $foundFlags = [];
-        foreach (self::FLAGGED_WORDS as $flag) {
-            $pattern = '/\b' . preg_quote($flag, '/') . '\b/i';
-            if (preg_match_all($pattern, $text, $matches)) {
-                $foundFlags[] = [
-                    'word' => $flag,
-                    'count' => count($matches[0])
-                ];
-            }
-        }
-
-        // 5. AI Probability Estimate (Rebalanced)
-        $aiWeight = 100 - (($perplexityScore * 0.45) + ($burstinessScore * 0.45));
-        $aiWeight -= $contractionBonus;
-        // Cap flagged word penalty at 20 points max
-        $aiWeight += min(20, count($foundFlags) * 5);
-        $aiProbability = min(100, max(0, round($aiWeight)));
-
-        // 6. Recommendations
-        $recs = [];
-        if ($burstinessScore < 45) {
-            $recs[] = 'Sentence lengths are uniform. Mix short sentences with longer ones to improve natural burstiness.';
-        }
-        if ($perplexityScore < 45) {
-            $recs[] = 'Vocabulary choice is predictable. Try using more varied descriptive words and natural phrasing.';
-        }
-        if (count($foundFlags) > 0) {
-            $flagList = collect($foundFlags)->pluck('word')->implode(', ');
-            $recs[] = "Avoid typical AI transition words and clichés found in your text: {$flagList}.";
-        }
-        if ($aiProbability < 40) {
-            $recs[] = 'Great job! The text shows strong indicators of human erratic flow and vocabulary variety.';
-        } else {
-            $recs[] = 'Use the Humanizer to automatically restructure sentence rhythm and strip typical AI vocabulary patterns.';
-        }
-
-        return [
-            'aiProbability' => $aiProbability,
-            'perplexity' => $perplexityScore,
-            'burstiness' => $burstinessScore,
-            'flaggedWords' => $foundFlags,
-            'recommendations' => $recs
-        ];
+        $detector = $this->unifiedAiDetector ?? new \App\Services\Ai\UnifiedAiDetectorService($this->groqStreamingClient);
+        return $detector->analyze($text);
     }
 
     /**
@@ -246,7 +154,7 @@ Never use transition words like 'Look,', 'And yet,', 'Furthermore', or 'Moreover
         $result = $this->groqStreamingClient->streamChatCompletion(
             $messages,
             fn($delta) => null,
-            'llama-3.3-70b-versatile',
+            config('services.groq.model', 'openai/gpt-oss-120b'),
             0.95
         );
 
@@ -280,7 +188,7 @@ You must apply these exact formatting corrections:
         $result = $this->groqStreamingClient->streamChatCompletion(
             $messages,
             fn($delta) => null,
-            'llama-3.3-70b-versatile',
+            config('services.groq.model', 'openai/gpt-oss-120b'),
             0.95
         );
 

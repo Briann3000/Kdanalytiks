@@ -620,13 +620,23 @@
         </a>
     </div>
 
+    <!-- Plagiarism Checker Link -->
+    <div class="sidebar-item relative" @mouseenter="hoverItem = 'plagiarism'" @mouseleave="hoverItem = null">
+        <a href="{{ route('plagiarism.index') }}"
+            class="flex items-center px-3 py-2 text-sm font-bold tracking-wider {{ request()->routeIs('plagiarism.*') ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors">
+            <i
+                class="fa-solid fa-file-circle-check mr-3 {{ request()->routeIs('plagiarism.*') ? 'text-[#f0f0f1]' : 'text-zinc-200 group-hover:text-[#f0f0f1]' }}"></i>
+            {{ __('Plagiarism Checker') }}
+        </a>
+    </div>
+
     <!-- AI Transcription Link -->
     <div class="sidebar-item relative" @mouseenter="hoverItem = 'transcription'" @mouseleave="hoverItem = null">
         <a href="{{ route('transcription.index') }}"
             class="flex items-center px-3 py-2 text-sm font-bold tracking-wider {{ request()->routeIs('transcription.index') ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors">
             <i
                 class="fa-solid fa-microphone-lines mr-3 {{ request()->routeIs('transcription.index') ? 'text-[#f0f0f1]' : 'text-zinc-200 group-hover:text-[#f0f0f1]' }}"></i>
-            {{ __('AI Transcription') }}
+            {{ __('Transcription') }}
         </a>
     </div>
 

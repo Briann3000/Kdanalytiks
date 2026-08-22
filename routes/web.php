@@ -72,6 +72,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', function () {
         return view('auth.login-selection');
     })->name('login');
+    Route::post('/login', [\App\Http\Controllers\Auth\LoginController::class, 'login']);
 
     Route::get('/login/{role}', [\App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login.role');
     Route::post('/login/{role}', [\App\Http\Controllers\Auth\LoginController::class, 'login']);
@@ -155,6 +156,17 @@ Route::post('/email/verification-notification', function (Request $request) {
 
 // Shared Authenticated Routes
 Route::middleware(['auth', 'verified'])->group(function () {
+    // Plagiarism & Originality Checker
+    Route::prefix('plagiarism')->name('plagiarism.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\PlagiarismController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\PlagiarismController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\PlagiarismController::class, 'store'])->name('store');
+        Route::get('/{scan}', [\App\Http\Controllers\PlagiarismController::class, 'show'])->name('show');
+        Route::post('/{scan}/toggle-exclusion', [\App\Http\Controllers\PlagiarismController::class, 'toggleExclusion'])->name('toggle-exclusion');
+        Route::get('/{scan}/pdf', [\App\Http\Controllers\PlagiarismController::class, 'exportPdf'])->name('pdf');
+        Route::delete('/{scan}', [\App\Http\Controllers\PlagiarismController::class, 'destroy'])->name('destroy');
+    });
+
     // Survey Hub & Core Actions
     Route::get('/surveys/{survey}/responses', [SurveyController::class, 'showResponses'])->name('surveys.responses');
     Route::get('/surveys/{survey_id}/responses/{response_id}', [SurveyController::class, 'showResponseDetail'])->name('surveys.responses.show');

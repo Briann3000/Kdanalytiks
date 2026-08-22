@@ -172,6 +172,10 @@ class User extends Authenticatable implements MustVerifyEmail
             return 'enterprise';
         }
 
+        if (!$this->exists) {
+            return 'free';
+        }
+
         $activeOrg = $this->activeOrganization();
         if ($activeOrg && $activeOrg->subscriptionTier) {
             return strtolower($activeOrg->subscriptionTier->slug);
@@ -329,6 +333,90 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         return ($this->free_report_export_count ?? 0) < 2;
+    }
+
+    /**
+     * Check if user can run plagiarism scan (Free: 3 trial, Pro: 15/mo, Enterprise: Unlimited)
+     */
+    public function canCheckPlagiarism(): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        if (!$this->exists) {
+            return ($this->plagiarism_scan_count ?? 0) < 3;
+        }
+
+        $activeOrg = $this->activeOrganization();
+        if ($activeOrg && $activeOrg->resourcePool) {
+            return true;
+        }
+
+        $tierSlug = $this->effectiveTierSlug();
+
+        if (str_contains($tierSlug, 'enterprise')) {
+            return true;
+        }
+
+        if (str_contains($tierSlug, 'pro')) {
+            return ($this->plagiarism_scan_count ?? 0) < 15;
+        }
+
+        // Free tier: 3 trial scans
+        return ($this->plagiarism_scan_count ?? 0) < 3;
+    }
+
+    /**
+     * Get maximum allowed words per scan based on user tier
+     */
+    public function plagiarismWordLimit(): int
+    {
+        if ($this->isAdmin()) {
+            return 75000;
+        }
+
+        $tierSlug = $this->effectiveTierSlug();
+
+        if (str_contains($tierSlug, 'enterprise')) {
+            return 75000;
+        }
+
+        if (str_contains($tierSlug, 'pro')) {
+            return 15000;
+        }
+
+        return 1500;
+    }
+
+    /**
+     * Get human-readable remaining scan count
+     */
+    public function remainingPlagiarismScans(): int|string
+    {
+        if ($this->isAdmin()) {
+            return 'Unlimited';
+        }
+
+        $tierSlug = $this->effectiveTierSlug();
+
+        if (str_contains($tierSlug, 'enterprise')) {
+            return 'Unlimited';
+        }
+
+        if (str_contains($tierSlug, 'pro')) {
+            return max(0, 15 - ($this->plagiarism_scan_count ?? 0));
+        }
+
+        return max(0, 3 - ($this->plagiarism_scan_count ?? 0));
+    }
+
+    /**
+     * User plagiarism scans
+     */
+    public function plagiarismScans(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PlagiarismScan::class);
     }
 
     /**
