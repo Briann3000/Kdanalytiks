@@ -12,6 +12,13 @@
     <meta name="theme-color" content="#4f46e5">
     <link rel="manifest" href="{{ asset('manifest.json') }}?v=4">
 
+    <!-- Favicons & App Icons -->
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v=2">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v=2">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v=2">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v=2">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}?v=2">
+
     <!-- SEO & Indexing Directives -->
     <title>@yield('title', 'KDAnalytiks | Collect & Analyze Data, Compile & Report Findings')</title>
     <meta name="description"
@@ -249,6 +256,20 @@
             z-index: 99999;
             border-radius: 0.5rem;
             pointer-events: auto;
+            overflow-y: auto;
+            scrollbar-width: thin;
+        }
+
+        /* Invisible hover bridge to maintain hover when moving cursor from sidebar to flyout */
+        .flyout-menu::before {
+            content: "";
+            position: absolute;
+            top: -6px;
+            bottom: -6px;
+            left: -14px;
+            width: 18px;
+            background: transparent;
+            pointer-events: auto;
         }
 
         /* Basic submenu indentation */
@@ -261,7 +282,7 @@
         .content-pane {
             flex: 1;
             overflow-y: auto !important;
-            padding: 1.5rem 2rem;
+            padding: 0;
             position: relative;
             scrollbar-width: thin;
             background: #f0f2f5;
@@ -362,8 +383,9 @@
 
                         <div class="flex-shrink-0 flex items-center">
                             <a href="{{ url('/') }}"
-                                class="text-xl font-black text-[#f0f0f1] flex items-center tracking-tighter">
-                                <i class="fa-solid fa-square-poll-vertical mr-2 text-[#a7aaad]"></i>
+                                class="text-xl font-black text-[#f0f0f1] flex items-center tracking-tighter gap-2.5">
+                                <img src="{{ asset('images/logo.png') }}" alt="KDAnalytiks Logo"
+                                    class="h-8 w-auto max-h-8 object-contain">
                                 <span>KDAnalytiks</span>
                             </a>
                         </div>
@@ -668,9 +690,10 @@
                 @yield('sub_sidebar')
 
                 <main id="main-viewport"
-                    class="content-pane custom-scrollbar flex-1 overflow-x-hidden {{ $isSociusFullHeight ? 'socius-full-viewport' : '' }}"
-                    style="{{ $isSociusFullHeight ? 'overflow: hidden !important; padding: 0 !important; margin: 0 !important;' : '' }}">
-                    <div class="{{ $isSociusFullHeight ? 'h-full flex flex-col p-0 m-0' : 'flex-grow' }}">
+                    class="content-pane custom-scrollbar flex-1 overflow-x-hidden {{ $isSociusFullHeight ? 'socius-full-viewport' : '' }} {{ (request()->is('/') || request()->routeIs('welcome')) ? 'p-0 m-0 !bg-transparent' : '' }}"
+                    style="{{ ($isSociusFullHeight || request()->is('/') || request()->routeIs('welcome')) ? 'overflow-y: auto !important; padding: 0 !important; margin: 0 !important;' : '' }}">
+                    <div
+                        class="{{ $isSociusFullHeight ? 'h-full flex flex-col p-0 m-0' : ((request()->is('/') || request()->routeIs('welcome')) ? 'flex-grow w-full' : 'flex-grow w-full p-4 sm:p-6 lg:p-8') }}">
                         <!-- Global Session Alerts -->
                         @if(session('success') || session('error'))
                             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
@@ -742,29 +765,13 @@
             </div>
         @else
             <!-- Default Layout for Non-Workspace Pages -->
-            <main class="flex-grow py-8 px-4 sm:px-8 lg:px-12 overflow-y-auto">
+            <main
+                class="flex-grow {{ (request()->is('/') || request()->routeIs('welcome')) ? 'p-0 m-0' : 'py-8 px-4 sm:px-8 lg:px-12' }} overflow-y-auto w-full">
                 @yield('content')
             </main>
 
             <!-- Footer for Non-Workspace Pages -->
-            <footer class="bg-gray-800 border-t border-gray-700">
-                <div class="max-w-full mx-auto py-8 px-4 sm:px-8 lg:px-12 text-center text-sm text-gray-300">
-                    <div class="mb-2">
-                        <span class="font-bold text-white">KDAnalytiks</span> &copy; {{ date('Y') }}. All rights reserved.
-                    </div>
-                    <div>
-                        +254 725 788 400 <span class="mx-2 text-gray-500">|</span>
-                        Powered by <a href="https://www.kenpro.org" target="_blank"
-                            class="font-semibold text-white hover:underline">KENPRO</a> <span
-                            class="mx-2 text-gray-500">|</span>
-                        <a href="mailto:infokdanalytiks@gmail.com"
-                            class="hover:text-white transition-colors">infokdanalytiks@gmail.com</a>
-                        <span class="mx-2 text-gray-500">|</span>
-                        <a href="{{ route('privacy') }}"
-                            class="hover:text-white transition-colors font-medium underline">Privacy Policy</a>
-                    </div>
-                </div>
-            </footer>
+            @include('layouts.partials.footer')
         @endif
     </div>
 

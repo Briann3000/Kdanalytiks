@@ -3,6 +3,7 @@
 @section('title', __('Socius AI'))
 
 @push('styles')
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
     <style>
         /* Hide floating KDA agent button on Socius page */
         #kda-btn,
@@ -141,10 +142,10 @@
 
 @section('content')
     <div x-data="standaloneSociusManager({
-                                                        canAnalyze: @js($canAnalyze),
-                                                        initialContext: @js($initialContext),
-                                                        urls: @js($urls)
-                                                    })" x-init="init()"
+                                                                        canAnalyze: @js($canAnalyze),
+                                                                        initialContext: @js($initialContext),
+                                                                        urls: @js($urls)
+                                                                    })" x-init="init()"
         class="socius-root-container animate-in fade-in duration-500">
 
         <div class="relative flex gap-4 w-full bg-[#1e1e1e]" style="height: calc(100dvh - 4.1rem); overflow: hidden;">
@@ -209,8 +210,8 @@
                                     <button @click="selectThread(thread.id)"
                                         class="w-full text-left rounded-2xl px-3 py-3 pr-9 border transition-all"
                                         :class="currentThreadId === thread.id
-                                                                                        ? 'bg-white text-slate-900 border-white shadow-xl shadow-black/20'
-                                                                                        : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-white'">
+                                                                                                        ? 'bg-white text-slate-900 border-white shadow-xl shadow-black/20'
+                                                                                                        : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-white'">
                                         <div class="flex items-center gap-1.5 overflow-hidden">
                                             <template x-if="thread.is_pinned">
                                                 <i
@@ -228,9 +229,9 @@
                                     <button @click.stop="threadMenuOpen = (threadMenuOpen === thread.id ? null : thread.id)"
                                         class="absolute right-2 top-3 w-6 h-6 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover/thread:opacity-100 focus:opacity-100"
                                         :class="[
-                                                                                        threadMenuOpen === thread.id ? 'opacity-100' : '',
-                                                                                        currentThreadId === thread.id ? 'hover:bg-slate-200 text-slate-600' : 'hover:bg-white/15 text-slate-400'
-                                                                                    ]">
+                                                                                                        threadMenuOpen === thread.id ? 'opacity-100' : '',
+                                                                                                        currentThreadId === thread.id ? 'hover:bg-slate-200 text-slate-600' : 'hover:bg-white/15 text-slate-400'
+                                                                                                    ]">
                                         <i class="fa-solid fa-ellipsis-vertical text-[11px]"></i>
                                     </button>
 
@@ -427,8 +428,8 @@
                             :class="message.role === 'user' ? 'flex justify-end' : 'flex justify-start'">
                             <div class="relative w-full md:w-auto md:max-w-[80%] rounded-[2rem] px-5 py-4 border"
                                 :class="message.role === 'user'
-                                                                                ? 'bg-[#2271b1] text-white border-[#1d629b] shadow-lg shadow-blue-500/10'
-                                                                                : 'bg-white/[0.04] text-white border-white/10'">
+                                                                                                ? 'bg-[#2271b1] text-white border-[#1d629b] shadow-lg shadow-blue-500/10'
+                                                                                                : 'bg-white/[0.04] text-white border-white/10'">
                                 <div class="flex items-center gap-3 mb-3">
                                     <div class="w-9 h-9 rounded-2xl flex items-center justify-center text-sm"
                                         :class="message.role === 'user' ? 'bg-white/60' : 'bg-white/10 text-blue-300'">
@@ -854,6 +855,7 @@
 @endsection
 
     @push('scripts')
+        <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
         <script>
             function wrapLabel(label, maxLen = 18) {
                 if (!label) return '';
@@ -983,6 +985,8 @@
                     savingKb: false,
                     renderDebounce: null,
                     activeAbortController: null,
+                    proposalSuggestions: [],
+                    proposalProgress: [],
 
                     stopGeneration() {
                         if (this.activeAbortController) {
@@ -1242,6 +1246,7 @@
                             this.currentThreadId = data.thread.id;
                             this.messages = data.messages || [];
                             this.scrollMessages();
+                            this.evaluatePacingSuggestions();
                         } catch (error) {
                             this.error = error.message;
                         } finally {
@@ -1250,6 +1255,78 @@
                                 const inputEl = document.getElementById('socius-prompt-input');
                                 if (inputEl) inputEl.focus();
                             });
+                        }
+                    },
+
+                    evaluatePacingSuggestions() {
+                        if (!this.messages || this.messages.length === 0) {
+                            this.proposalSuggestions = [];
+                            return;
+                        }
+                        const assistantMsgs = this.messages.filter(m => m.role === 'assistant');
+                        if (assistantMsgs.length === 0) return;
+
+                        // Combine assistant message contents to detect highest chapter present
+                        const combinedContent = assistantMsgs.map(m => m.content || '').join('\n');
+                        const upperContent = combinedContent.toUpperCase();
+
+                        const hasCh3 = combinedContent.includes('<!-- CHAPTER_DONE: 3 -->') || upperContent.includes('CHAPTER 3') || upperContent.includes('RESEARCH METHODOLOGY') || upperContent.includes('ETHICAL CONSIDERATIONS');
+                        const hasCh2 = combinedContent.includes('<!-- CHAPTER_DONE: 2 -->') || upperContent.includes('CHAPTER 2') || upperContent.includes('LITERATURE REVIEW') || upperContent.includes('KNOWLEDGE GAP');
+                        const hasCh1 = combinedContent.includes('<!-- CHAPTER_DONE: 1 -->') || upperContent.includes('CHAPTER 1') || upperContent.includes('BACKGROUND TO THE STUDY') || upperContent.includes('BACKGROUND OF THE STUDY');
+
+                        if (hasCh3) {
+                            if (!this.proposalProgress.includes('ch1')) this.proposalProgress.push('ch1');
+                            if (!this.proposalProgress.includes('ch2')) this.proposalProgress.push('ch2');
+                            if (!this.proposalProgress.includes('ch3')) this.proposalProgress.push('ch3');
+                            this.proposalSuggestions = [
+                                {
+                                    key: 'appendices',
+                                    label: '📎 Add Appendices (Questionnaire, Work Plan, Budget)',
+                                    prompt: 'Please draft the APPENDICES for our research proposal including: 1. Questionnaire / Survey Instrument, 2. Interview Guide, 3. Work Plan & Schedule, 4. Detailed Research Budget.'
+                                },
+                                {
+                                    key: 'compile',
+                                    label: '📄 Compile Full Proposal Document',
+                                    action: 'compile'
+                                }
+                            ];
+                        } else if (hasCh2) {
+                            if (!this.proposalProgress.includes('ch1')) this.proposalProgress.push('ch1');
+                            if (!this.proposalProgress.includes('ch2')) this.proposalProgress.push('ch2');
+                            this.proposalSuggestions = [{
+                                key: 'ch3',
+                                label: '⚡ Generate Chapter 3: Research Methodology',
+                                prompt: 'Please draft CHAPTER 3: RESEARCH METHODOLOGY in full academic prose (600+ words per section) based on our proposal context. Include: 3.1 Research Design, 3.2 Target Population, 3.3 Sample Size & Sampling Procedure, 3.4 Data Collection Instruments, 3.5 Validity & Reliability of Data Collection Instruments, 3.6 Analysis Procedure, 3.7 Ethical Considerations. End your output with <!-- CHAPTER_DONE: 3 -->.'
+                            }];
+                        } else if (hasCh1) {
+                            if (!this.proposalProgress.includes('ch1')) this.proposalProgress.push('ch1');
+                            this.proposalSuggestions = [{
+                                key: 'ch2',
+                                label: '⚡ Generate Chapter 2: Literature Review',
+                                prompt: 'Please draft CHAPTER 2: REVIEW OF RELATED LITERATURE in full academic prose (600+ words per section) based on our Chapter 1 context. Include: 2.1 Introduction, 2.2 Theoretical Review, 2.3 Empirical Review (organized by themes/objectives), 2.4 Knowledge Gap / Synthesis. End your output with <!-- CHAPTER_DONE: 2 -->.'
+                            }];
+                        }
+                    },
+
+                    clickSuggestionChip(chip) {
+                        // Remove chip immediately so it disappears and cannot be double-clicked
+                        this.proposalSuggestions = this.proposalSuggestions.filter(c => c.key !== chip.key);
+                        if (chip.action === 'compile') {
+                            this.compileProposal();
+                        } else if (chip.prompt) {
+                            this.sendMessage(chip.prompt);
+                        }
+                    },
+
+                    compileProposal() {
+                        const assistantMsgs = this.messages.filter(m => m.role === 'assistant' && m.content);
+                        const totalLength = assistantMsgs.reduce((acc, m) => acc + m.content.length, 0);
+
+                        if (totalLength > 16000) {
+                            this.sendMessage("Please note: The full proposal across all chapters in this thread is extensive (over 15,000 characters). To ensure no text is truncated or omitted, please click 'Export (DOCX)' in the top right header menu to download the complete, un-edited document directly!");
+                        } else {
+                            const prompt = "Please compile our complete Research Proposal into one unified, publication-ready document with all Chapters (Chapter 1: Introduction, Chapter 2: Literature Review, Chapter 3: Research Methodology, and Appendices) presented continuously under clear Markdown headers. Do NOT omit, summarize, or alter any section from our previous chapter outputs.";
+                            this.sendMessage(prompt);
                         }
                     },
 
@@ -1494,7 +1571,8 @@
                     },
 
                     renderMarkdownLike(text) {
-                        const normalized = text.replace(/\r\n/g, '\n');
+                        let normalized = (text || '').replace(/\r\n/g, '\n');
+                        normalized = normalized.replace(/\$\$\n([\s\S]*?)\n\$\$/g, (m, math) => `$$ ${math.trim()} $$`);
                         const lines = normalized.split('\n');
                         const blocks = [];
                         let paragraph = [], listItems = [], tableLines = [];
@@ -1516,10 +1594,12 @@
                             if (inCodeBlock) {
                                 const content = codeBlockLines.join('\n');
                                 const id = 'visual-' + Math.random().toString(36).substr(2, 9);
-                                const type = codeBlockType === 'chart.js' ? 'chartjs' : codeBlockType;
+                                const type = (codeBlockType === 'chart.js' ? 'chartjs' : codeBlockType).toLowerCase().trim();
                                 const isVisual = ['mermaid', 'chartjs', 'pollinations'].includes(type);
                                 if (isVisual) {
                                     blocks.push(`<div class="socius-visual my-6 bg-white/5 rounded-2xl border border-white/10 overflow-hidden" data-visual-type="${type}" data-visual-id="${id}"><div class="visual-header flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/5"><div class="flex gap-2 ml-auto"><button onclick="window.sociusVisuals&&window.sociusVisuals.copy('${id}',this)" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors"><i class="fa-solid fa-copy mr-1"></i> Copy</button><button onclick="window.sociusVisuals&&window.sociusVisuals.download('${id}','png')" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors"><i class="fa-solid fa-download mr-1"></i> PNG</button></div></div><div id="${id}" class="visual-body p-6 flex justify-center overflow-x-auto min-h-[100px] relative"><textarea class="visual-source hidden">${this.escapeHtml(content)}</textarea><div class="visual-target w-full flex justify-center"></div></div></div>`);
+                                } else if (['markdown', 'md', 'text', 'txt', ''].includes(type)) {
+                                    blocks.push(this.renderMarkdownLike(content));
                                 } else {
                                     blocks.push(`<pre class="bg-black/30 p-4 rounded-xl overflow-x-auto text-xs my-4 border border-white/5"><code>${this.escapeHtml(content)}</code></pre>`);
                                 }
@@ -1545,7 +1625,7 @@
                                 flushParagraph(); flushList(); flushTable();
                                 const level = (line.match(/^(#{1,6})\s/) || [])[1]?.length || 2;
                                 const hText = line.replace(/^#{1,6}\s/, '');
-                                const classes = ['', '', 'text-xl font-bold mb-3 mt-5 text-slate-100', 'text-lg font-bold mb-2 mt-4 text-slate-100', 'text-base font-bold mb-2 mt-3 text-slate-200', 'text-sm font-bold mb-1 mt-2 text-slate-200', 'text-xs font-bold mb-1 mt-2 text-slate-300'];
+                                const classes = ['', '', 'text-xl font-bold mb-3 mt-5 text-slate-100', 'text-lg font-bold mb-2 mt-4 text-slate-100', 'text-base font-bold mb-2 mt-3 text-slate-200', 'text-sm font-bold mb-1 mt-2 text-slate-300', 'text-xs font-bold mb-1 mt-2 text-slate-300'];
                                 blocks.push(`<h${level} class="${classes[level] || ''}">${this.inlineFormat(hText)}</h${level}>`);
                             } else if (/^\d+\.\s/.test(line)) {
                                 flushParagraph(); flushTable();
@@ -1591,72 +1671,66 @@
                         });
                         const body = [...rows.slice(2)];
 
-                        // Auto-check if Total row is present; if not, calculate and append
-                        /*const hasTotalRow = body.some(row => row[0] && row[0].toLowerCase().includes('total'));
-                        if (!hasTotalRow && body.length > 0) {
-                            const totalRow = [];
-                            header.forEach((colName, colIdx) => {
-                                if (colIdx === 0) {
-                                    totalRow.push('Total');
-                                } else {
-                                    let sum = 0;
-                                    let isPercent = colName.includes('%') || colName.toLowerCase().includes('percentage');
-                                    let isCount = colName.toLowerCase().includes('freq') || colName.toLowerCase().includes('(n)') || colName.toLowerCase().includes('count');
-
-                                    body.forEach(r => {
-                                        const valStr = (r[colIdx] || '').replace(/[^0-9.]/g, '');
-                                        const val = parseFloat(valStr);
-                                        if (!isNaN(val)) sum += val;
-                                    });
-
-                                    if (isPercent) {
-                                        totalRow.push('100%');
-                                    } else if (isCount) {
-                                        totalRow.push(`${Math.round(sum)}`);
-                                    } else {
-                                        totalRow.push(sum > 0 ? (sum % 1 === 0 ? sum.toFixed(0) : sum.toFixed(1)) : '-');
-                                    }
-                                }
-                            });
-                            body.push(totalRow);
-                        }*/
-
                         const tableId = `socius-table-${Math.random().toString(36).slice(2, 10)}`;
 
                         return `
-                                                                    <div class="my-4 rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e2d]/60 shadow-xl">
-                                                                        <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-white/[0.05] border-b border-white/10">
-                                                                            <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-[10px] font-bold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
-                                                                                <i class="fa-regular fa-copy text-[10px]"></i>
-                                                                                ${@js(__('Copy Table'))}
-                                                                            </button>
-                                                                        </div>
-                                                                        <div class="overflow-x-auto">
-                                                                            <table id="${tableId}" class="min-w-full text-left text-xs border-collapse">
-                                                                                <thead>
-                                                                                    <tr class="bg-white/[0.04] border-b border-white/10">
-                                                                                        ${header.map(cell => `<th class="px-4 py-3 text-[11px] font-bold text-blue-300 border-b border-white/10 bg-white/[0.03]">${this.inlineFormat(cell)}</th>`).join('')}
-                                                                                    </tr>
-                                                                                </thead>
-                                                                                <tbody>
-                                                                                    ${body.map((row, rIdx) => {
+                                                                                    <div class="my-4 rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e2d]/60 shadow-xl">
+                                                                                        <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-white/[0.05] border-b border-white/10">
+                                                                                            <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-[10px] font-bold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
+                                                                                                <i class="fa-regular fa-copy text-[10px]"></i>
+                                                                                                ${@js(__('Copy Table'))}
+                                                                                            </button>
+                                                                                        </div>
+                                                                                        <div class="overflow-x-auto">
+                                                                                            <table id="${tableId}" class="min-w-full text-left text-xs border-collapse">
+                                                                                                <thead>
+                                                                                                    <tr class="bg-white/[0.04] border-b border-white/10">
+                                                                                                        ${header.map(cell => `<th class="px-4 py-3 text-[11px] font-bold text-blue-300 border-b border-white/10 bg-white/[0.03]">${this.inlineFormat(cell)}</th>`).join('')}
+                                                                                                    </tr>
+                                                                                                </thead>
+                                                                                                <tbody>
+                                                                                                    ${body.map((row, rIdx) => {
                             const isTotal = row[0] && row[0].toLowerCase().includes('total');
                             const rowBg = isTotal ? 'bg-white/[0.08] font-bold text-blue-200' : (rIdx % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]');
                             return `
-                                                                                            <tr class="${rowBg}">
-                                                                                                ${row.map(cell => `<td class="px-4 py-2.5 border-b border-white/5 ${isTotal ? 'font-bold text-blue-200 border-t border-white/10' : 'text-slate-200'}">${this.inlineFormat(cell)}</td>`).join('')}
-                                                                                            </tr>
-                                                                                        `;
+                                                                                                            <tr class="${rowBg}">
+                                                                                                                ${row.map(cell => `<td class="px-4 py-2.5 border-b border-white/5 ${isTotal ? 'font-bold text-blue-200 border-t border-white/10' : 'text-slate-200'}">${this.inlineFormat(cell)}</td>`).join('')}
+                                                                                                            </tr>
+                                                                                                        `;
                         }).join('')}
-                                                                                </tbody>
-                                                                            </table>
-                                                                        </div>
-                                                                    </div>
-                                                                `;
+                                                                                                </tbody>
+                                                                                            </table>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                `;
                     },
 
                     inlineFormat(text) {
-                        return text
+                        if (!text) return '';
+                        let formatted = text;
+
+                        // 1. Process block math $$...$$
+                        formatted = formatted.replace(/\$\$\s*([\s\S]+?)\s*\$\$/g, (match, math) => {
+                            if (typeof katex !== 'undefined') {
+                                try {
+                                    return `<div class="katex-block my-3 py-2 px-4 bg-white/5 rounded-xl border border-white/10 flex justify-center overflow-x-auto text-slate-100">${katex.renderToString(math.trim(), { displayMode: true, throwOnError: false })}</div>`;
+                                } catch (e) { }
+                            }
+                            return `<div class="katex-block my-3 py-2 px-4 bg-white/5 rounded-xl border border-white/10 flex justify-center text-blue-300 font-mono text-sm">${match}</div>`;
+                        });
+
+                        // 2. Process inline math $...$
+                        formatted = formatted.replace(/\$([^$\n]+?)\$/g, (match, math) => {
+                            if (typeof katex !== 'undefined') {
+                                try {
+                                    return katex.renderToString(math.trim(), { displayMode: false, throwOnError: false });
+                                } catch (e) { }
+                            }
+                            return `<span class="text-blue-300 font-mono text-xs">${match}</span>`;
+                        });
+
+                        // 3. Convert standard markdown formatting
+                        return formatted
                             .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
                             .replace(/\*(.+?)\*/g, '<em>$1</em>')
                             .replace(/`(.+?)`/g, '<code class="bg-white/10 px-1.5 py-0.5 rounded text-[11px] font-mono">$1</code>')
@@ -1667,36 +1741,56 @@
                         const element = document.getElementById(`socius-message-body-${messageId}`);
                         if (element) {
                             const clone = element.cloneNode(true);
-                            const controls = clone.querySelectorAll('.visual-header button, .socius-visual-loading, script, style, textarea.visual-source');
+                            // Remove all interactive UI artifacts (Copy Table buttons, loaders, scripts, styles)
+                            const controls = clone.querySelectorAll('.visual-header, .table-header, button, .socius-visual-loading, script, style, textarea.visual-source');
                             controls.forEach(el => el.remove());
+
+                            // Convert visuals/charts into clean titles instead of fallback error text
                             const visuals = clone.querySelectorAll('.socius-visual');
                             visuals.forEach(visual => {
-                                const titleEl = visual.querySelector('.visual-header span');
-                                const title = titleEl ? titleEl.innerText : 'chart';
+                                const titleEl = visual.querySelector('.visual-header span, figcaption');
+                                const title = titleEl ? titleEl.innerText.trim() : 'Figure';
                                 const replacement = document.createElement('p');
                                 replacement.style.fontWeight = 'bold';
-                                replacement.style.color = '#3f3f46';
-                                replacement.style.fontStyle = 'italic';
-                                replacement.innerText = `[${title} — chart not available in this format]`;
+                                replacement.style.margin = '1rem 0';
+                                replacement.innerText = `[${title}]`;
                                 visual.parentNode.replaceChild(replacement, visual);
                             });
+
+                            // Clean and style tables for HTML clipboard pasting (MS Word / Docs)
                             const tables = clone.querySelectorAll('table');
                             tables.forEach(table => {
-                                table.style.width = '100%'; table.style.borderCollapse = 'collapse'; table.style.margin = '12px 0';
+                                table.style.width = '100%';
+                                table.style.borderCollapse = 'collapse';
+                                table.style.margin = '12px 0';
                                 table.querySelectorAll('th, td').forEach(cell => {
-                                    cell.style.border = '1px solid #d4d4d8'; cell.style.padding = '8px 12px'; cell.style.textAlign = 'left';
+                                    cell.style.border = '1px solid #d4d4d8';
+                                    cell.style.padding = '8px 12px';
+                                    cell.style.textAlign = 'left';
                                 });
-                                table.querySelectorAll('th').forEach(th => { th.style.backgroundColor = '#f4f4f5'; th.style.fontWeight = 'bold'; });
+                                table.querySelectorAll('th').forEach(th => {
+                                    th.style.backgroundColor = '#f4f4f5';
+                                    th.style.fontWeight = 'bold';
+                                });
                             });
-                            const rawHtml = clone.innerHTML;
-                            const rawText = clone.innerText || clone.textContent;
+
+                            // Clean raw text clipboard fallback (strip redundant line breaks)
+                            let cleanText = (content || clone.innerText || clone.textContent || '').replace(/<!--[\s\S]*?-->/g, '').trim();
+
+                                            const rawHtml = clone.innerHTML;
                             const blobHtml = new Blob([rawHtml], { type: 'text/html' });
-                            const blobText = new Blob([rawText], { type: 'text/plain' });
+                            const blobText = new Blob([cleanText], { type: 'text/plain' });
+
                             navigator.clipboard.write([new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })]).then(() => {
-                                if (btn) { const orig = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-check text-green-400"></i>'; setTimeout(() => { btn.innerHTML = orig; }, 2000); }
-                            }).catch(() => navigator.clipboard.writeText(rawText));
+                                if (btn) {
+                                    const orig = btn.innerHTML;
+                                    btn.innerHTML = '<i class="fa-solid fa-check text-green-400"></i>';
+                                    setTimeout(() => { btn.innerHTML = orig; }, 2000);
+                                }
+                            }).catch(() => navigator.clipboard.writeText(cleanText));
                         } else {
-                            navigator.clipboard.writeText(content);
+                            const cleanContent = (content || '').replace(/<!--[\s\S]*?-->/g, '').trim();
+                                navigator.clipboard.writeText(cleanContent);
                         }
                     },
 
@@ -1736,8 +1830,8 @@
                             if (!target) continue;
                             try {
                                 if (type === 'mermaid' && typeof mermaid !== 'undefined') {
-                                    if (!source.match(/^(graph|sequenceDiagram|gantt|classDiagram|stateDiagram|erDiagram|journey|pie|quadrantChart|xychart-beta|mindmap|timeline)/i)) source = 'graph TD\n' + source;
-                                    const { svg } = await mermaid.render('svg-' + id, source);
+                                    const repairedSource = this.repairMermaid(source);
+                                    const { svg } = await mermaid.render('svg-' + id, repairedSource);
                                     target.innerHTML = svg;
                                     el.classList.add('rendered');
                                 } else if (type === 'chartjs' && typeof Chart !== 'undefined') {
@@ -1785,6 +1879,21 @@
                         cleaned = cleaned.replace(/^```(json)?\n?/i, '').replace(/```$/i, '').trim();
                         cleaned = cleaned.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1').replace(/,\s*([}\]])/g, '$1');
                         return cleaned.trim();
+                    },
+
+                    repairMermaid(str) {
+                        let cleaned = (str || '').trim();
+                        cleaned = cleaned.replace(/^```(mermaid)?\n?/i, '').replace(/```$/i, '').trim();
+                        // Fix invalid arrow syntax like -->|Label|> to -->|Label|
+                        cleaned = cleaned.replace(/-->\s*\|([^|]+)\|\s*>/g, '-->|$1|');
+                        cleaned = cleaned.replace(/--\s*\|([^|]+)\|\s*>/g, '-->|$1|');
+                        // Fix unquoted node labels with parentheses e.g. A[Socio-Economic Factors (IV1)] -> A["Socio-Economic Factors (IV1)"]
+                        cleaned = cleaned.replace(/(\w+)\s*\[\s*([^"\r\n\]]+?\([^"\r\n\]]+\)[^"\r\n\]]*)\s*\]/g, '$1["$2"]');
+
+                        if (!cleaned.match(/^(graph|flowchart|sequenceDiagram|gantt|classDiagram|stateDiagram|erDiagram|journey|pie|quadrantChart|xychart-beta|mindmap|timeline)/i)) {
+                            cleaned = 'graph LR\n' + cleaned;
+                        }
+                        return cleaned;
                     },
 
                     async loadKbRules() {
@@ -1999,6 +2108,199 @@
                         }
                     }
                 };
+            };
+
+            window.sociusVisuals = {
+                async copy(id, btn = null) {
+                    const target = document.querySelector(`#${id} .visual-target`);
+                    if (!target) return;
+
+                    let originalBtnHtml = '';
+                    if (btn) {
+                        originalBtnHtml = btn.innerHTML;
+                        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1 text-blue-400"></i> Copying...';
+                    }
+
+                    const setBtnSuccess = (text = 'Copied') => {
+                        if (btn) {
+                            btn.innerHTML = `<i class="fa-solid fa-check mr-1 text-green-400"></i> ${text}`;
+                            setTimeout(() => { btn.innerHTML = originalBtnHtml; }, 2000);
+                        }
+                    };
+
+                    const dataUrlToBlob = (dataUrl) => {
+                        const arr = dataUrl.split(',');
+                        const mime = arr[0].match(/:(.*?);/)[1];
+                        const bstr = atob(arr[1]);
+                        let n = bstr.length;
+                        const u8arr = new Uint8Array(n);
+                        while (n--) {
+                            u8arr[n] = bstr.charCodeAt(n);
+                        }
+                        return new Blob([u8arr], { type: mime });
+                    };
+
+                    // 1. Chart.js Canvas (Ultra-Fast < 10ms)
+                    const canvas = target.querySelector('canvas');
+                    if (canvas && typeof Chart !== 'undefined') {
+                        try {
+                            const tempCanvas = document.createElement('canvas');
+                            tempCanvas.width = canvas.width;
+                            tempCanvas.height = canvas.height;
+                            const tempCtx = tempCanvas.getContext('2d');
+                            tempCtx.fillStyle = '#ffffff';
+                            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                            tempCtx.drawImage(canvas, 0, 0);
+
+                            const dataUrl = tempCanvas.toDataURL('image/png');
+                            const blob = dataUrlToBlob(dataUrl);
+                            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                            setBtnSuccess('Copied');
+                            return;
+                        } catch (err) {
+                            window.sociusVisuals.download(id, 'png');
+                            setBtnSuccess('Downloaded');
+                            return;
+                        }
+                    }
+
+                    // 2. Fast Mermaid SVG Diagram Copy (< 100ms)
+                    const svgEl = target.querySelector('svg');
+                    if (svgEl) {
+                        try {
+                            const bbox = svgEl.getBoundingClientRect();
+                            const width = Math.max((bbox.width || 800) * 2, 800);
+                            const height = Math.max((bbox.height || 400) * 2, 400);
+
+                            const svgData = new XMLSerializer().serializeToString(svgEl);
+                            const svgUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgData);
+
+                            const img = new Image();
+                            img.onload = async () => {
+                                try {
+                                    const c = document.createElement('canvas');
+                                    c.width = width;
+                                    c.height = height;
+                                    const ctx = c.getContext('2d');
+                                    ctx.fillStyle = '#ffffff';
+                                    ctx.fillRect(0, 0, width, height);
+                                    ctx.drawImage(img, 0, 0, width, height);
+
+                                    const dataUrl = c.toDataURL('image/png');
+                                    const blob = dataUrlToBlob(dataUrl);
+                                    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                                    setBtnSuccess('Copied');
+                                } catch (e) {
+                                    window.sociusVisuals.download(id, 'png');
+                                    setBtnSuccess('Downloaded');
+                                }
+                            };
+                            img.onerror = async () => {
+                                window.sociusVisuals.download(id, 'png');
+                                setBtnSuccess('Downloaded');
+                            };
+                            img.src = svgUrl;
+                            return;
+                        } catch (e) { console.error('Fast SVG copy failed:', e); }
+                    }
+
+                    // 3. Fallback: htmlToImage
+                    if (typeof htmlToImage !== 'undefined') {
+                        const styleSheetsFilter = (sheet) => {
+                            try { const rules = sheet.cssRules; return true; } catch (e) { return false; }
+                        };
+                        try {
+                            const dataUrl = await htmlToImage.toPng(target, {
+                                backgroundColor: '#1e1e1e',
+                                style: { padding: '16px' },
+                                styleSheetsFilter
+                            });
+                            const blob = dataUrlToBlob(dataUrl);
+                            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                            setBtnSuccess('Copied');
+                            return;
+                        } catch (e) {
+                            console.error('htmlToImage copy error:', e);
+                            window.sociusVisuals.download(id, 'png');
+                            setBtnSuccess('Downloaded');
+                            return;
+                        }
+                    }
+                },
+
+                async download(id, format = 'png') {
+                    const target = document.querySelector(`#${id} .visual-target`);
+                    if (!target) return;
+
+                    const triggerDownload = (dataUrl, filename) => {
+                        const a = document.createElement('a');
+                        a.href = dataUrl;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    };
+
+                    // 1. Chart.js Canvas
+                    const canvas = target.querySelector('canvas');
+                    if (canvas && typeof Chart !== 'undefined') {
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = canvas.width;
+                        tempCanvas.height = canvas.height;
+                        const tempCtx = tempCanvas.getContext('2d');
+                        tempCtx.fillStyle = '#ffffff';
+                        tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                        tempCtx.drawImage(canvas, 0, 0);
+
+                        const dataUrl = tempCanvas.toDataURL('image/png');
+                        triggerDownload(dataUrl, `chart-${id}.png`);
+                        return;
+                    }
+
+                    // 2. Fast Mermaid SVG Download
+                    const svgEl = target.querySelector('svg');
+                    if (svgEl) {
+                        try {
+                            const bbox = svgEl.getBoundingClientRect();
+                            const width = Math.max((bbox.width || 800) * 2, 800);
+                            const height = Math.max((bbox.height || 400) * 2, 400);
+
+                            const svgData = new XMLSerializer().serializeToString(svgEl);
+                            const svgUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgData);
+
+                            const img = new Image();
+                            img.onload = () => {
+                                const c = document.createElement('canvas');
+                                c.width = width;
+                                c.height = height;
+                                const ctx = c.getContext('2d');
+                                ctx.fillStyle = '#ffffff';
+                                ctx.fillRect(0, 0, width, height);
+                                ctx.drawImage(img, 0, 0, width, height);
+                                triggerDownload(c.toDataURL('image/png'), `diagram-${id}.png`);
+                            };
+                            img.src = svgUrl;
+                            return;
+                        } catch (e) { }
+                    }
+
+                    // 3. Fallback: htmlToImage
+                    if (typeof htmlToImage !== 'undefined') {
+                        const styleSheetsFilter = (sheet) => {
+                            try { const rules = sheet.cssRules; return true; } catch (e) { return false; }
+                        };
+                        try {
+                            const dataUrl = await htmlToImage.toPng(target, {
+                                backgroundColor: '#ffffff',
+                                style: { padding: '20px', color: '#111111' },
+                                styleSheetsFilter
+                            });
+                            triggerDownload(dataUrl, `visual-${id}.png`);
+                        } catch (e) {
+                            console.error('Download failed:', e);
+                        }
+                    }
+                }
             };
         </script>
     @endpush

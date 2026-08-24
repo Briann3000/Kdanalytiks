@@ -41,7 +41,7 @@ class MemoryExtractionService
 
         try {
             // Use a non-streaming call or just capture the full result
-            $result = $this->groqStreamingClient->streamChatCompletion($prompt, function ($delta) {}, 'llama-3.1-8b-instant');
+            $result = $this->groqStreamingClient->streamChatCompletion($prompt, function ($delta) {}, config('services.groq.model', 'openai/gpt-oss-120b'));
             $content = $result['content'] ?? '[]';
 
             $facts = json_decode($this->cleanJson($content), true);

@@ -2,6 +2,7 @@
 
 @section('title', __('Public Research Surveys — KDAnalytiks'))
 @section('meta_description', __('Explore active public research surveys on KDAnalytiks and participate in open data collection.'))
+@section('meta_robots', 'noindex, nofollow')
 
 @section('content')
     @auth

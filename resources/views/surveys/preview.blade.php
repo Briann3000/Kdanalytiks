@@ -22,7 +22,7 @@
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 
     <!-- FormRender -->
-    <script src="https://formbuilder.online/assets/js/form-render.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jQuery-formBuilder/3.4.2/form-render.min.js"></script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -59,6 +59,7 @@
             line-height: 1.6 !important;
             color: #475569 !important;
             margin-bottom: 1rem !important;
+            white-space: pre-line !important;
         }
 
         /* Form Input, Textarea & Select Visibility */

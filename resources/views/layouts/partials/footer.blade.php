@@ -1,5 +1,5 @@
-<footer class="bg-[#1d2327] border-t border-[#2c3338] text-[#a7aaad] pb-20 md:pb-0 z-0">
-    <div class="max-w-7xl mx-auto py-12 px-4 sm:px-8 lg:px-12">
+<footer class="bg-[#1d2327] border-t border-[#2c3338] text-[#a7aaad] pb-20 md:pb-0 z-0 w-full">
+    <div class="max-w-7xl mx-auto py-12 px-4 sm:px-8 lg:px-12 w-full">
 
         <!-- Top Section: Multi-Column Grid -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
@@ -7,6 +7,8 @@
             <!-- Column 1: Brand & Socials -->
             <div class="space-y-4 md:col-span-1">
                 <div class="flex items-center space-x-2">
+                    <img src="{{ asset('images/logo.png') }}" alt="KDAnalytiks Logo"
+                        class="h-7 w-auto max-h-7 object-contain">
                     <span class="font-bold text-lg text-[#f0f0f1]">KDAnalytiks</span>
                 </div>
                 <p class="text-xs text-[#a7aaad] leading-relaxed">
@@ -15,12 +17,12 @@
                 </p>
                 <!-- Social Media Links (X & LinkedIn) -->
                 <div class="flex items-center gap-3 pt-2">
-                    <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"
+                    <a href="#"
                         class="w-9 h-9 rounded-full bg-[#101417] hover:bg-[#2271b1] text-[#a7aaad] hover:text-white flex items-center justify-center transition-colors shadow-sm"
                         title="Follow KDAnalytiks on X (Twitter)">
                         <i class="fa-brands fa-x-twitter text-sm"></i>
                     </a>
-                    <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer"
+                    <a href="#"
                         class="w-9 h-9 rounded-full bg-[#101417] hover:bg-[#2271b1] text-[#a7aaad] hover:text-white flex items-center justify-center transition-colors shadow-sm"
                         title="Connect with KDAnalytiks on LinkedIn">
                         <i class="fa-brands fa-linkedin-in text-sm"></i>
@@ -49,6 +51,8 @@
                             class="hover:text-white transition-colors">{{ __('Contact') }}</a></li>
                     <li><a href="{{ route('privacy') }}"
                             class="hover:text-white transition-colors">{{ __('Privacy Policy') }}</a></li>
+                    <li><a href="{{ route('terms') }}"
+                            class="hover:text-white transition-colors">{{ __('Terms of Service') }}</a></li>
                 </ul>
             </div>
 

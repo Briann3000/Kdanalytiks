@@ -40,27 +40,67 @@
 <div class="space-y-6 px-1 h-full" x-data="{ 
     expandedItem: '{{ $initialExpanded }}', 
     hoverItem: null,
+    activeEl: null,
+    flyoutTimer: null,
     mobileMenuOpen: false,
     hubExpanded: {{ request()->filled('category') && (request()->routeIs('surveys.*') || request()->routeIs('surveys.create')) ? 'true' : 'false' }},
     publicExpanded: {{ request()->routeIs('surveys.public') && request()->filled('category') ? 'true' : 'false' }},
     flyoutTop: 0,
     flyoutLeft: 0,
+    flyoutMaxHeight: 'calc(100vh - 20px)',
     setFlyout(e, type) {
-        if(!e) return;
+        if (this.flyoutTimer) {
+            clearTimeout(this.flyoutTimer);
+            this.flyoutTimer = null;
+        }
+        if (!e || !type) {
+            this.hoverItem = null;
+            this.activeEl = null;
+            return;
+        }
         this.hoverItem = type;
-        const r = e.getBoundingClientRect();
-        this.flyoutTop = r.top;
-        this.flyoutLeft = r.right - 5;
+        this.activeEl = e;
+        this.updatePosition();
     },
-    clearFlyout() {
-        this.hoverItem = null;
+    updatePosition() {
+        if (!this.activeEl || !this.hoverItem) return;
+        const r = this.activeEl.getBoundingClientRect();
+        const sidebar = this.$el.closest('.sidebar-pane') || this.$el;
+        const sRect = sidebar.getBoundingClientRect();
+        
+        // If element scrolled outside the visible sidebar area, dismiss flyout
+        if (r.bottom < sRect.top || r.top > sRect.bottom) {
+            this.hoverItem = null;
+            this.activeEl = null;
+            return;
+        }
+        
+        this.flyoutLeft = r.right;
+        this.flyoutTop = r.top;
+        this.flyoutMaxHeight = Math.max(120, (window.innerHeight - r.top - 12)) + 'px';
+    },
+    scheduleClearFlyout() {
+        if (this.flyoutTimer) clearTimeout(this.flyoutTimer);
+        this.flyoutTimer = setTimeout(() => {
+            this.hoverItem = null;
+            this.activeEl = null;
+        }, 150);
+    },
+    cancelClearFlyout() {
+        if (this.flyoutTimer) {
+            clearTimeout(this.flyoutTimer);
+            this.flyoutTimer = null;
+        }
     }
-}">
+}" @scroll.window.passive="updatePosition()" x-init="
+    const scrollParent = $el.closest('.sidebar-pane') || window;
+    scrollParent.addEventListener('scroll', () => updatePosition(), { passive: true });
+">
     <div>
 
         <nav class="space-y-1">
             @if($role === 'admin')
-                <div class="sidebar-item relative" @mouseenter="hoverItem = 'dashboard'" @mouseleave="hoverItem = null">
+                <div class="sidebar-item relative" @mouseenter="setFlyout(null, null)">
                     <a href="{{ route('admin.dashboard') }}"
                         class="flex items-center px-3 py-2 text-sm font-bold tracking-wider {{ request()->routeIs('admin.dashboard') ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors">
                         <i
@@ -70,7 +110,8 @@
                 </div>
 
                 <!-- MANAGE USERS -->
-                <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'users')" @mouseleave="clearFlyout()">
+                <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'users')"
+                    @mouseleave="scheduleClearFlyout()">
                     <div class="flex items-center justify-between px-3 py-2 text-sm font-bold tracking-wider {{ request()->is('admin/users*') ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors cursor-pointer"
                         @click="expandedItem = (expandedItem === 'users' ? null : 'users')">
                         <div class="flex items-center">
@@ -85,8 +126,8 @@
                     <template x-teleport="body">
                         <div class="flyout-menu shadow-xl border border-gray-100 p-4 min-w-[200px]"
                             x-show="hoverItem === 'users' && expandedItem !== 'users'"
-                            :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px' }" style="display: none;"
-                            @mouseenter="hoverItem = 'users'" @mouseleave="clearFlyout()">
+                            :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px', maxHeight: flyoutMaxHeight }"
+                            style="display: none;" @mouseenter="cancelClearFlyout()" @mouseleave="scheduleClearFlyout()">
                             <div class="mb-3">
                                 <div class="text-[10px] font-black text-[#a7aaad] uppercase tracking-widest mb-2 px-3">
                                     {{ __('Quick Actions') }}
@@ -166,7 +207,8 @@
                 </div>
 
                 <!-- MANAGE SURVEYS -->
-                <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'surveys')" @mouseleave="clearFlyout()">
+                <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'surveys')"
+                    @mouseleave="scheduleClearFlyout()">
                     <div class="flex items-center justify-between px-3 py-2 text-sm font-bold tracking-wider {{ request()->is('admin/surveys*') ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors cursor-pointer"
                         @click="expandedItem = (expandedItem === 'surveys' ? null : 'surveys')">
                         <div class="flex items-center">
@@ -182,8 +224,8 @@
                         <!-- Flyout for Manage Surveys -->
                         <div class="flyout-menu shadow-xl border border-gray-100 p-4 min-w-[200px]"
                             x-show="hoverItem === 'surveys' && expandedItem !== 'surveys'"
-                            :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px' }" style="display: none;"
-                            @mouseenter="hoverItem = 'surveys'" @mouseleave="clearFlyout()">
+                            :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px', maxHeight: flyoutMaxHeight }"
+                            style="display: none;" @mouseenter="cancelClearFlyout()" @mouseleave="scheduleClearFlyout()">
                             <div class="mb-3">
                                 <div class="text-[10px] font-black text-[#a7aaad] uppercase tracking-widest mb-2 px-3">
                                     {{ __('Inventory') }}
@@ -304,15 +346,15 @@
                         </div>
 
                         <div class="sidebar-item relative mt-1" @mouseenter="setFlyout($el, 'admin_create')"
-                            @mouseleave="clearFlyout()">
+                            @mouseleave="scheduleClearFlyout()">
                             <a href="{{ route('surveys.create') }}"
                                 class="block py-1 text-xs font-bold tracking-wide {{ request()->routeIs('surveys.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Create Survey') }}</a>
                             <template x-teleport="body">
                                 <div class="flyout-menu shadow-2xl border border-[#2c3338] p-3 min-w-[140px]"
                                     x-show="hoverItem === 'admin_create'"
-                                    :style="{ top: (parseInt(flyoutTop) > 400 ? (parseInt(flyoutTop) - 80) : parseInt(flyoutTop)) + 'px', left: flyoutLeft + 'px' }"
-                                    style="display: none;" @mouseenter="hoverItem = 'admin_create'"
-                                    @mouseleave="clearFlyout()">
+                                    :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px', maxHeight: flyoutMaxHeight }"
+                                    style="display: none;" @mouseenter="cancelClearFlyout()"
+                                    @mouseleave="scheduleClearFlyout()">
                                     <div class="text-[9px] font-black text-[#a7aaad] uppercase tracking-widest mb-3 px-2">
                                         {{ __('Method') }}
                                     </div>
@@ -333,7 +375,8 @@
                 </div>
 
                 <!-- Admin Library -->
-                <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'library')" @mouseleave="clearFlyout()">
+                <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'library')"
+                    @mouseleave="scheduleClearFlyout()">
                     <div @click="expandedItem = (expandedItem === 'library' ? null : 'library')"
                         class="flex items-center justify-between px-3 py-2 text-sm font-bold tracking-wider {{ request()->routeIs('surveys.archived') ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors cursor-pointer">
                         <div class="flex items-center">
@@ -348,8 +391,8 @@
                     <template x-teleport="body">
                         <div class="flyout-menu shadow-xl border border-gray-100 p-2"
                             x-show="hoverItem === 'library' && expandedItem !== 'library'"
-                            :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px' }" style="display: none;"
-                            @mouseenter="hoverItem = 'library'" @mouseleave="clearFlyout()">
+                            :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px', maxHeight: flyoutMaxHeight }"
+                            style="display: none;" @mouseenter="cancelClearFlyout()" @mouseleave="scheduleClearFlyout()">
                             <a href="{{ route('surveys.index', ['status' => 'archived']) }}"
                                 class="block px-3 py-1.5 text-xs font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-lg">{{ __('Archived Surveys') }}</a>
                             <a href="{{ route('library.templates') }}"
@@ -376,82 +419,15 @@
                     {{ __($role === 'guest' ? 'Home' : 'Dashboard') }}
                 </a>
 
-                @if(in_array($role, ['organization', 'independent']) || auth()->user()?->activeOrganization())
-                    <!-- Organization Workspace Section (2nd Item) -->
-                    <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'workspace')" @mouseleave="clearFlyout()">
-                        <div @click="expandedItem = (expandedItem === 'workspace' ? null : 'workspace')"
-                            class="flex items-center justify-between px-3 py-2 text-sm font-bold {{ $isWorkspaceActive ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors cursor-pointer">
-                            <div class="flex items-center">
-                                <i
-                                    class="fa-solid fa-building-user mr-3 {{ $isWorkspaceActive ? 'text-[#f0f0f1]' : 'text-zinc-200 group-hover:text-[#f0f0f1]' }}"></i>
-                                {{ __('Organization Workspace') }}
-                            </div>
-                            <i class="fa-solid fa-chevron-right text-[10px] text-zinc-300 transition-transform duration-300"
-                                :class="expandedItem === 'workspace' ? 'rotate-90 text-[#f0f0f1]' : ''"></i>
-                        </div>
-
-                        <!-- Flyout Menu on Hover -->
-                        <template x-teleport="body">
-                            <div class="flyout-menu shadow-xl border border-[#2c3338] p-2 min-w-[200px]"
-                                x-show="hoverItem === 'workspace' && expandedItem !== 'workspace'"
-                                :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px' }" style="display: none;"
-                                @mouseenter="hoverItem = 'workspace'" @mouseleave="clearFlyout()">
-                                @if($canManageOrg)
-                                    <a href="{{ route('organization.audit.index') }}"
-                                        class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('organization.audit.*') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Audit Trail Logs') }}</a>
-                                @endif
-                                @if($canFieldwork)
-                                    <a href="{{ route('organization.fieldwork.index') }}"
-                                        class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('organization.fieldwork.*') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Fieldwork & Enumerators') }}</a>
-                                @endif
-                                @if($canSocius)
-                                    <a href="{{ route('organization.socius.index') }}"
-                                        class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('organization.socius.*') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Org Socius AI') }}</a>
-                                @endif
-                                @if($canManageOrg)
-                                    <a href="{{ route('organization.settings.index') }}"
-                                        class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('organization.settings.*') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Settings') }}</a>
-                                @endif
-                                <a href="{{ route('organization.switcher') }}"
-                                    class="block px-3 py-1.5 text-xs font-bold text-indigo-300 hover:text-indigo-200 rounded-lg">{{ __('Switch Workspace') }}</a>
-                                @if($canTeamView)
-                                    <a href="{{ route('organization.team.index') }}"
-                                        class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('organization.team.*') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Team Members') }}</a>
-                                @endif
-                            </div>
-                        </template>
-
-                        <!-- Accordion Submenu -->
-                        <div x-show="expandedItem === 'workspace'" x-collapse class="sidebar-submenu">
-                            @if($canManageOrg)
-                                <a href="{{ route('organization.audit.index') }}"
-                                    class="block py-1 text-xs font-bold {{ request()->routeIs('organization.audit.*') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Audit Trail Logs') }}</a>
-                            @endif
-                            @if($canFieldwork)
-                                <a href="{{ route('organization.fieldwork.index') }}"
-                                    class="block py-1 text-xs font-bold {{ request()->routeIs('organization.fieldwork.*') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Fieldwork & Enumerators') }}</a>
-                            @endif
-                            @if($canSocius)
-                                <a href="{{ route('organization.socius.index') }}"
-                                    class="block py-1 text-xs font-bold {{ request()->routeIs('organization.socius.*') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Org Socius AI') }}</a>
-                            @endif
-                            @if($canManageOrg)
-                                <a href="{{ route('organization.settings.index') }}"
-                                    class="block py-1 text-xs font-bold {{ request()->routeIs('organization.settings.*') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Settings') }}</a>
-                            @endif
-                            <a href="{{ route('organization.switcher') }}"
-                                class="block py-1 text-xs font-bold text-indigo-300 hover:text-indigo-200">{{ __('Switch Workspace') }}</a>
-                            @if($canTeamView)
-                                <a href="{{ route('organization.team.index') }}"
-                                    class="block py-1 text-xs font-bold {{ request()->routeIs('organization.team.*') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Team Members') }}</a>
-                            @endif
-                        </div>
-                    </div>
+                @if($role === 'organization')
+                    <!-- Organization Workspace Section (2nd Item for Organization accounts) -->
+                    @include('layouts.partials._org_workspace_menu')
                 @endif
 
                 @if(in_array($role, ['organization', 'independent']))
                             <!-- Surveys Section -->
-                            <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'org_projects')" @mouseleave="clearFlyout()">
+                            <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'org_projects')"
+                                @mouseleave="scheduleClearFlyout()">
                                 <div @click="expandedItem = (expandedItem === 'org_projects' ? null : 'org_projects')"
                                     class="flex items-center justify-between px-3 py-2 text-sm font-bold {{ (request()->routeIs('surveys.index') && request('status') !== 'archived' || request()->routeIs('surveys.create')) ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors cursor-pointer">
                                     <div class="flex items-center">
@@ -466,8 +442,8 @@
                                 <template x-teleport="body">
                                     <div class="flyout-menu shadow-xl border border-[#2c3338] p-4 min-w-[200px]"
                                         x-show="hoverItem === 'org_projects' && expandedItem !== 'org_projects'"
-                                        :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px' }" style="display: none;"
-                                        @mouseenter="hoverItem = 'org_projects'" @mouseleave="clearFlyout()">
+                                        :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px', maxHeight: flyoutMaxHeight }"
+                                        style="display: none;" @mouseenter="cancelClearFlyout()" @mouseleave="scheduleClearFlyout()">
                                         <div class="mb-3">
                                             <div class="text-[10px] font-black text-[#a7aaad] uppercase tracking-widest mb-2 px-3">
                                                 {{ __('Survey Hub') }}
@@ -572,7 +548,7 @@
                     </div>
 
                     <!-- Library Section -->
-                    <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'org_library')" @mouseleave="clearFlyout()">
+                    <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'org_library')" @mouseleave="scheduleClearFlyout()">
                         <div @click="expandedItem = (expandedItem === 'org_library' ? null : 'org_library')"
                             class="flex items-center justify-between px-3 py-2 text-sm font-bold {{ (request()->routeIs('surveys.index') && request('status') === 'archived') ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors cursor-pointer">
                             <div class="flex items-center">
@@ -587,8 +563,8 @@
                         <template x-teleport="body">
                             <div class="flyout-menu shadow-xl border border-[#2c3338] p-2"
                                 x-show="hoverItem === 'org_library' && expandedItem !== 'org_library'"
-                                :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px' }" style="display: none;"
-                                @mouseenter="hoverItem = 'org_library'" @mouseleave="clearFlyout()">
+                                :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px', maxHeight: flyoutMaxHeight }"
+                                style="display: none;" @mouseenter="cancelClearFlyout()" @mouseleave="scheduleClearFlyout()">
                                 <a href="{{ route('surveys.index', ['status' => 'archived']) }}"
                                     class="block px-3 py-1.5 text-xs font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-lg">{{ __('Archived Surveys') }}</a>
                                 <a href="{{ route('library.templates') }}"
@@ -611,17 +587,17 @@
             @endif
 
     <!-- AI Humanizer Link -->
-    <div class="sidebar-item relative" @mouseenter="hoverItem = 'humanizer'" @mouseleave="hoverItem = null">
+    <div class="sidebar-item relative" @mouseenter="setFlyout(null, null)">
         <a href="{{ route('humanizer.index') }}"
             class="flex items-center px-3 py-2 text-sm font-bold tracking-wider {{ request()->routeIs('humanizer.index') ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors">
             <i
                 class="fa-solid fa-wand-magic-sparkles mr-3 {{ request()->routeIs('humanizer.index') ? 'text-[#f0f0f1]' : 'text-zinc-200 group-hover:text-[#f0f0f1]' }}"></i>
-            {{ __('AI Humanizer') }}
+            {{ __('Humanizer') }}
         </a>
     </div>
 
     <!-- Plagiarism Checker Link -->
-    <div class="sidebar-item relative" @mouseenter="hoverItem = 'plagiarism'" @mouseleave="hoverItem = null">
+    <div class="sidebar-item relative" @mouseenter="setFlyout(null, null)">
         <a href="{{ route('plagiarism.index') }}"
             class="flex items-center px-3 py-2 text-sm font-bold tracking-wider {{ request()->routeIs('plagiarism.*') ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors">
             <i
@@ -631,7 +607,7 @@
     </div>
 
     <!-- AI Transcription Link -->
-    <div class="sidebar-item relative" @mouseenter="hoverItem = 'transcription'" @mouseleave="hoverItem = null">
+    <div class="sidebar-item relative" @mouseenter="setFlyout(null, null)">
         <a href="{{ route('transcription.index') }}"
             class="flex items-center px-3 py-2 text-sm font-bold tracking-wider {{ request()->routeIs('transcription.index') ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors">
             <i
@@ -641,7 +617,7 @@
     </div>
 
     <!-- Socius AI Standalone Chat -->
-    <div class="sidebar-item relative" @mouseenter="hoverItem = 'socius-chat'" @mouseleave="hoverItem = null">
+    <div class="sidebar-item relative" @mouseenter="setFlyout(null, null)">
         <a href="{{ route('socius.chat.index') }}"
             class="flex items-center px-3 py-2 text-sm font-bold tracking-wider {{ request()->routeIs('socius.chat.*') ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors">
             <i
@@ -650,7 +626,7 @@
         </a>
     </div>
 
-    <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'studio')" @mouseleave="clearFlyout()">
+    <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'studio')" @mouseleave="scheduleClearFlyout()">
         <div @click="expandedItem = (expandedItem === 'studio' ? null : 'studio')"
             class="flex items-center justify-between px-3 py-2 text-sm font-bold {{ (request()->routeIs('research-proposal.*') || request()->routeIs('research-studio.*')) ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors cursor-pointer">
             <div class="flex items-center">
@@ -665,8 +641,8 @@
         <template x-teleport="body">
             <div class="flyout-menu shadow-xl border border-gray-100 p-2"
                 x-show="hoverItem === 'studio' && expandedItem !== 'studio'"
-                :style="{ top: (parseInt(flyoutTop) > 400 ? (parseInt(flyoutTop) - 80) : parseInt(flyoutTop)) + 'px', left: flyoutLeft + 'px' }"
-                style="display: none;" @mouseenter="hoverItem = 'studio'" @mouseleave="clearFlyout()">
+                :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px', maxHeight: flyoutMaxHeight }"
+                style="display: none;" @mouseenter="cancelClearFlyout()" @mouseleave="scheduleClearFlyout()">
                 <a href="{{ route('research-proposal.create') }}"
                     class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-proposal.create') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Draft Proposal with Socius AI') }}</a>
                 <a href="{{ route('research-studio.report.create') }}"
@@ -686,8 +662,13 @@
         </div>
     </div>
 
+
+    @if($role !== 'organization' && (in_array($role, ['independent', 'researcher']) || auth()->user()?->activeOrganization()))
+        <!-- Organization Workspace Section (Positioned below Research Studio for Researcher / Independent accounts) -->
+        @include('layouts.partials._org_workspace_menu')
+    @endif
     <!-- Public Surveys Section -->
-    <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'public')" @mouseleave="clearFlyout()">
+    <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'public')" @mouseleave="scheduleClearFlyout()">
         <div @click="expandedItem = (expandedItem === 'public' ? null : 'public')"
             class="flex items-center justify-between px-3 py-2 text-sm font-bold {{ request()->routeIs('surveys.public') ? 'text-[#f0f0f1] bg-[#2271b1] border-l-2 border-[#2271b1] shadow-sm' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg group transition-colors cursor-pointer">
             <div class="flex items-center">
@@ -702,8 +683,8 @@
         <template x-teleport="body">
             <div class="flyout-menu shadow-xl border border-gray-100 p-4 min-w-[200px]"
                 x-show="hoverItem === 'public' && expandedItem !== 'public'"
-                :style="{ top: (parseInt(flyoutTop) > 400 ? (parseInt(flyoutTop) - 120) : parseInt(flyoutTop)) + 'px', left: flyoutLeft + 'px' }"
-                style="display: none;" @mouseenter="hoverItem = 'public'" @mouseleave="clearFlyout()">
+                :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px', maxHeight: flyoutMaxHeight }"
+                style="display: none;" @mouseenter="cancelClearFlyout()" @mouseleave="scheduleClearFlyout()">
                 <div class="mb-3">
                     <div class="text-[10px] font-black text-[#a7aaad] uppercase tracking-widest mb-2 px-3">
                         {{ __('Discover') }}
@@ -769,7 +750,8 @@
         <div class="pt-6 border-t border-gray-100 px-3">
             <h4 class="text-xs font-black text-[#a7aaad] uppercase tracking-widest mb-4">{{ __('Quick Links') }}</h4>
             <div class="space-y-3">
-                <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'quick_create')" @mouseleave="clearFlyout()">
+                <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'quick_create')"
+                    @mouseleave="scheduleClearFlyout()">
                     @if(in_array($role, ['organization', 'independent', 'admin']))
                         <a href="{{ route('surveys.create') }}"
                             class="flex items-center justify-center w-full py-2.5 px-3 bg-[#2271b1] hover:bg-[#101417] hover:text-[#72aee6] text-[#f0f0f1] text-[11px] font-bold tracking-wider rounded-lg text-center shadow-md transition-all whitespace-nowrap">
@@ -780,8 +762,8 @@
                         <!-- Flyout -->
                         <div class="flyout-menu shadow-2xl border border-[#2c3338] p-3 min-w-[140px]"
                             x-show="hoverItem === 'quick_create'"
-                            :style="{ top: (parseInt(flyoutTop) > 400 ? (parseInt(flyoutTop) - 100) : parseInt(flyoutTop)) + 'px', left: flyoutLeft + 'px' }"
-                            style="display: none;" @mouseenter="hoverItem = 'quick_create'" @mouseleave="clearFlyout()">
+                            :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px', maxHeight: flyoutMaxHeight }"
+                            style="display: none;" @mouseenter="cancelClearFlyout()" @mouseleave="scheduleClearFlyout()">
                             <div class="text-[9px] font-black text-[#a7aaad] tracking-widest mb-3 px-2">
                                 {{ __('Method') }}
                             </div>

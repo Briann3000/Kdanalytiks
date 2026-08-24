@@ -137,103 +137,105 @@
 
         </div>
 
-        <!-- WordPress Connection Modal -->
-        <div x-show="wpModalOpen" x-cloak
-            class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" x-transition>
-            <div class="bg-white rounded-2xl max-w-lg w-full p-8 space-y-6 shadow-2xl border border-gray-200 relative"
-                @click.away="wpModalOpen = false">
-                <button type="button" @click="wpModalOpen = false"
-                    class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
-                    <i class="fa-solid fa-times text-lg"></i>
-                </button>
+        @auth
+            <!-- WordPress Connection Modal -->
+            <div x-show="wpModalOpen" x-cloak
+                class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" x-transition>
+                <div class="bg-white rounded-2xl max-w-lg w-full p-8 space-y-6 shadow-2xl border border-gray-200 relative"
+                    @click.away="wpModalOpen = false">
+                    <button type="button" @click="wpModalOpen = false"
+                        class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
+                        <i class="fa-solid fa-times text-lg"></i>
+                    </button>
 
-                <div class="space-y-2">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-brands fa-wordpress text-2xl text-[#2271b1]"></i>
-                        <h3 class="text-xl font-bold text-gray-900">{{ __('Connect WordPress Site') }}</h3>
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-brands fa-wordpress text-2xl text-[#2271b1]"></i>
+                            <h3 class="text-xl font-bold text-gray-900">{{ __('Connect WordPress Site') }}</h3>
+                        </div>Q1`
+                        <p class="text-xs text-gray-500 leading-relaxed">
+                            {{ __('Enter your WordPress site URL, Username and Application Password (generated in WP Admin → Users → Profile → Application Passwords).') }}
+                        </p>
                     </div>
-                    <p class="text-xs text-gray-500 leading-relaxed">
-                        {{ __('Enter your WordPress site URL, Username and Application Password (generated in WP Admin → Users → Profile → Application Passwords).') }}
-                    </p>
+
+                    <!-- Layperson Error Banner -->
+                    <div x-show="wpMessage" x-cloak
+                        :class="wpSuccess ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'"
+                        class="p-4 rounded-xl border text-xs font-semibold flex items-center gap-2 leading-relaxed">
+                        <i class="fa-solid"
+                            :class="wpSuccess ? 'fa-circle-check text-green-600' : 'fa-circle-exclamation text-red-600'"></i>
+                        <span x-text="wpMessage"></span>
+                    </div>
+
+                    <form @submit.prevent="
+                                                                                                        wpTesting = true; wpMessage = '';
+                                                                                                        fetch('{{ route('publications.test-wordpress') }}', {
+                                                                                                            method: 'POST',
+                                                                                                            headers: {
+                                                                                                                'Content-Type': 'application/json',
+                                                                                                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                                                                                            },
+                                                                                                            body: JSON.stringify({
+                                                                                                                site_url: $refs.wp_url.value,
+                                                                                                                username: $refs.wp_user.value,
+                                                                                                                app_password: $refs.wp_pass.value
+                                                                                                            })
+                                                                                                        })
+                                                                                                        .then(res => res.json())
+                                                                                                        .then(data => {
+                                                                                                            wpTesting = false;
+                                                                                                            wpSuccess = data.success;
+                                                                                                            wpMessage = data.message;
+                                                                                                            if(data.success) {
+                                                                                                                setTimeout(() => { wpModalOpen = false; window.location.reload(); }, 1500);
+                                                                                                            }
+                                                                                                        })
+                                                                                                        .catch(err => {
+                                                                                                            wpTesting = false;
+                                                                                                            wpSuccess = false;
+                                                                                                            wpMessage = 'Unable to reach the WordPress website URL. Please double-check that your website address is spelled correctly and online.';
+                                                                                                        });
+                                                                                                    " class="space-y-4">
+                        <div class="space-y-1">
+                            <label
+                                class="block text-xs font-bold text-gray-700 uppercase tracking-wider">{{ __('WordPress Site URL') }}</label>
+                            <input type="url" x-ref="wp_url" required value="{{ session('wp_config.site_url', 'https://') }}"
+                                class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:bg-white focus:ring-2 focus:ring-[#2271b1]"
+                                placeholder="https://myresearchblog.com">
+                        </div>
+
+                        <div class="space-y-1">
+                            <label
+                                class="block text-xs font-bold text-gray-700 uppercase tracking-wider">{{ __('WP Username') }}</label>
+                            <input type="text" x-ref="wp_user" required value="{{ session('wp_config.username') }}"
+                                class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:bg-white focus:ring-2 focus:ring-[#2271b1]"
+                                placeholder="admin or editor username">
+                        </div>
+
+                        <div class="space-y-1">
+                            <label
+                                class="block text-xs font-bold text-gray-700 uppercase tracking-wider">{{ __('Application Password') }}</label>
+                            <input type="password" x-ref="wp_pass" required value="{{ session('wp_config.app_password') }}"
+                                class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:bg-white focus:ring-2 focus:ring-[#2271b1]"
+                                placeholder="xxxx xxxx xxxx xxxx">
+                        </div>
+
+                        <div class="pt-2 flex items-center justify-end gap-3">
+                            <button type="button" @click="wpModalOpen = false"
+                                class="px-5 py-2.5 text-xs font-bold text-gray-500 hover:text-gray-700">
+                                {{ __('Cancel') }}
+                            </button>
+                            <button type="submit" :disabled="wpTesting"
+                                class="px-6 py-2.5 bg-[#2271b1] hover:bg-[#135e96] text-white font-bold text-xs rounded-xl shadow transition-all flex items-center gap-2">
+                                <i class="fa-solid fa-spinner fa-spin" x-show="wpTesting" x-cloak></i>
+                                <span
+                                    x-text="wpTesting ? '{{ __('Testing Connection...') }}' : '{{ __('Connect & Save Credentials') }}'"></span>
+                            </button>
+                        </div>
+                    </form>
                 </div>
-
-                <!-- Layperson Error Banner -->
-                <div x-show="wpMessage" x-cloak
-                    :class="wpSuccess ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'"
-                    class="p-4 rounded-xl border text-xs font-semibold flex items-center gap-2 leading-relaxed">
-                    <i class="fa-solid"
-                        :class="wpSuccess ? 'fa-circle-check text-green-600' : 'fa-circle-exclamation text-red-600'"></i>
-                    <span x-text="wpMessage"></span>
-                </div>
-
-                <form @submit.prevent="
-                                        wpTesting = true; wpMessage = '';
-                                        fetch('{{ route('publications.test-wordpress') }}', {
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type': 'application/json',
-                                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                            },
-                                            body: JSON.stringify({
-                                                site_url: $refs.wp_url.value,
-                                                username: $refs.wp_user.value,
-                                                app_password: $refs.wp_pass.value
-                                            })
-                                        })
-                                        .then(res => res.json())
-                                        .then(data => {
-                                            wpTesting = false;
-                                            wpSuccess = data.success;
-                                            wpMessage = data.message;
-                                            if(data.success) {
-                                                setTimeout(() => { wpModalOpen = false; window.location.reload(); }, 1500);
-                                            }
-                                        })
-                                        .catch(err => {
-                                            wpTesting = false;
-                                            wpSuccess = false;
-                                            wpMessage = 'Unable to reach the WordPress website URL. Please double-check that your website address is spelled correctly and online.';
-                                        });
-                                    " class="space-y-4">
-                    <div class="space-y-1">
-                        <label
-                            class="block text-xs font-bold text-gray-700 uppercase tracking-wider">{{ __('WordPress Site URL') }}</label>
-                        <input type="url" x-ref="wp_url" required value="{{ session('wp_config.site_url', 'https://') }}"
-                            class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:bg-white focus:ring-2 focus:ring-[#2271b1]"
-                            placeholder="https://myresearchblog.com">
-                    </div>
-
-                    <div class="space-y-1">
-                        <label
-                            class="block text-xs font-bold text-gray-700 uppercase tracking-wider">{{ __('WP Username') }}</label>
-                        <input type="text" x-ref="wp_user" required value="{{ session('wp_config.username') }}"
-                            class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:bg-white focus:ring-2 focus:ring-[#2271b1]"
-                            placeholder="admin or editor username">
-                    </div>
-
-                    <div class="space-y-1">
-                        <label
-                            class="block text-xs font-bold text-gray-700 uppercase tracking-wider">{{ __('Application Password') }}</label>
-                        <input type="password" x-ref="wp_pass" required value="{{ session('wp_config.app_password') }}"
-                            class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:bg-white focus:ring-2 focus:ring-[#2271b1]"
-                            placeholder="xxxx xxxx xxxx xxxx">
-                    </div>
-
-                    <div class="pt-2 flex items-center justify-end gap-3">
-                        <button type="button" @click="wpModalOpen = false"
-                            class="px-5 py-2.5 text-xs font-bold text-gray-500 hover:text-gray-700">
-                            {{ __('Cancel') }}
-                        </button>
-                        <button type="submit" :disabled="wpTesting"
-                            class="px-6 py-2.5 bg-[#2271b1] hover:bg-[#135e96] text-white font-bold text-xs rounded-xl shadow transition-all flex items-center gap-2">
-                            <i class="fa-solid fa-spinner fa-spin" x-show="wpTesting" x-cloak></i>
-                            <span
-                                x-text="wpTesting ? '{{ __('Testing Connection...') }}' : '{{ __('Connect & Save Credentials') }}'"></span>
-                        </button>
-                    </div>
-                </form>
             </div>
-        </div>
+        @endauth
 
         <!-- Submit Publication Modal -->
         <div x-show="pubModalOpen" x-cloak
