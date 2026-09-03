@@ -590,32 +590,60 @@ class AiService
             ];
         }
 
-        $systemPrompt = "You are an expert survey designer. Your task is to analyze the provided text document containing a questionnaire, extract EVERY single question, heading, and instruction, and convert them into a flat JSON array of question objects compatible with 'jQuery FormBuilder'.
+        $systemPrompt = "You are an expert survey designer and psychometrician. Your task is to analyze the provided text document containing a questionnaire, extract EVERY single question, heading, instruction, and Likert/rating grid, and convert them into a flat JSON array of question objects compatible with the survey engine.
 
         CRITICAL INSTRUCTIONS:
-        1. DO NOT group questions under section headers. The output must be a FLAT array of ALL questions in order.
-        2. Identify sections/headers (e.g., \"Section 1: Demographic Information\") and output them as type: 'header' with the section title as the label.
-        3. Identify paragraphs of instructions/introduction and output them as type: 'paragraph' or 'note' with the text as the label.
-        4. For every individual question (e.g. \"1. What is your role in the school?\"), output a question object. 
-           - Determine the correct type: 'text', 'number', 'select_one' (for single choice/radio), 'select_many' (for multiple choice/checkboxes), etc.
-           - Ensure the question text is mapped to the 'label' property.
-        5. For multiple-choice questions (e.g. Strongly Agree, Agree...), extract the options and map them to the 'values' property as an array of {label: '...', value: '...'}.
-        6. Do not skip any questions. Every single question listed in the document MUST be represented in the final JSON array.
+        1. DO NOT group questions under nested sections. The output must be a FLAT array of all elements in exact document order starting from the very first line of the document.
+        2. VERY FIRST DOCUMENT HEADER:
+           - The very first line/title of the document (e.g., \"Appendix II: QUESTIONNAIRE FOR STAFF\", \"RESEARCH QUESTIONNAIRE\", \"SURVEY ON BUDGET MANAGEMENT\") MUST BE EXTRACTED as the very first item in the array with type: 'header' and its exact text as 'label'. DO NOT discard or skip the top document title!
+        3. Identify all section titles/headers (e.g., \"SECTION A: Demographic Information\", \"SECTION B: Value-Based Budgeting and Financial Sustainability\") and output them as type: 'header' with the section title as the 'label'.
+        4. Identify paragraphs of instructions/introduction/notes (e.g. \"Dear Respondent, I am conducting a research study...\") and output them as type: 'paragraph' or 'note' with the text as the 'label'.
+        5. CRITICAL RULE FOR LIKERT MATRICES / RATING TABLES / GRIDS:
+           When a section contains a grid/table where multiple statement rows share common scale rating columns (e.g. Scale: 1 = Not at all, 2 = To some extent, 3 = Neutral, 4 = To a greater extent, or Strongly Disagree to Strongly Agree, or a table with columns 1, 2, 3, 4, 5 / SD, D, N, A, SA):
+           - DO NOT split the table into separate individual single-choice questions!
+           - Output ONE SINGLE question object of type: 'likert_matrix'.
+           - 'label': The lead question or instruction prompt above the table (e.g., \"To what extent have Don Bosco TVET institutions applied the following value-based budgeting practices in managing financial resources for financial sustainability?\").
+           - 'rows': Array of row statement objects: [{\"label\": \"1. The institution allocates financial resources...\", \"value\": \"r1\"}, {\"label\": \"2. The institution prioritises budget allocations...\", \"value\": \"r2\"}, ...]
+           - 'columns': Array of column scale objects representing the scale options: [{\"label\": \"Not at all\", \"value\": \"1\"}, {\"label\": \"To some extent\", \"value\": \"2\"}, {\"label\": \"Neutral\", \"value\": \"3\"}, {\"label\": \"To a greater extent\", \"value\": \"4\"}] (or 1 to 5 / Strongly Disagree to Strongly Agree).
+        6. For standard standalone questions (e.g. \"What is your gender?\", \"Years of experience?\"):
+           - Determine the correct type: 'text', 'number', 'select_one' (single choice/radio), 'select_many' (checkboxes), 'date', 'textarea'.
+           - 'label': The question text.
+           - 'values': Array of options for multiple choice: [{\"label\": \"Male\", \"value\": \"male\"}, {\"label\": \"Female\", \"value\": \"female\"}].
+        7. Do not skip any questions or statements. Every question and title in the document MUST be represented.
 
         Supported types:
-        - 'header' (for section titles)
+        - 'header' (for document titles, appendix titles, and section headings)
         - 'paragraph' (for introduction / general instructions)
-        - 'text' (for open text questions)
+        - 'likert_matrix' (for rating grids, Likert tables, matrix questions with rows and scale columns)
+        - 'select_one' (for single-choice multiple choice questions)
+        - 'select_many' (for multi-select checkboxes)
+        - 'text' (for single-line text answers)
+        - 'textarea' (for open-ended long responses)
         - 'number' (for numeric inputs)
-        - 'select_one' (for multiple choice - single select)
-        - 'select_many' (for checkboxes - multi select)
-        - 'date'
+        - 'date' (for date pickers)
 
         Example JSON format:
         [
-          { \"type\": \"header\", \"label\": \"Section 1: Demographic Information\" },
-          { \"type\": \"text\", \"label\": \"What is your role in the school?\", \"name\": \"role\", \"required\": true },
-          { \"type\": \"select_one\", \"label\": \"Do you agree?\", \"name\": \"agree_q\", \"values\": [{\"label\": \"Yes\", \"value\": \"yes\"}, {\"label\": \"No\", \"value\": \"no\"}] }
+          { \"type\": \"header\", \"label\": \"Appendix II: QUESTIONNAIRE FOR STAFF\" },
+          { \"type\": \"paragraph\", \"label\": \"Dear Respondent, I am conducting a research study on...\" },
+          { \"type\": \"header\", \"label\": \"SECTION A: Demographic Information\" },
+          { \"type\": \"select_one\", \"label\": \"Gender\", \"name\": \"gender\", \"values\": [{\"label\": \"Male\", \"value\": \"male\"}, {\"label\": \"Female\", \"value\": \"female\"}] },
+          { \"type\": \"header\", \"label\": \"SECTION B: Value-Based Budgeting\" },
+          {
+            \"type\": \"likert_matrix\",
+            \"label\": \"To what extent does your institution apply the following budgeting practices?\",
+            \"name\": \"vbb_matrix\",
+            \"rows\": [
+              { \"label\": \"1. The institution allocates resources based on expected value\", \"value\": \"r1\" },
+              { \"label\": \"2. The institution prioritises budget allocations to core activities\", \"value\": \"r2\" }
+            ],
+            \"columns\": [
+              { \"label\": \"Not at all\", \"value\": \"1\" },
+              { \"label\": \"To some extent\", \"value\": \"2\" },
+              { \"label\": \"Neutral\", \"value\": \"3\" },
+              { \"label\": \"To a greater extent\", \"value\": \"4\" }
+            ]
+          }
         ]";
 
         try {

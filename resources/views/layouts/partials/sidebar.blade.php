@@ -644,7 +644,7 @@
                 :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px', maxHeight: flyoutMaxHeight }"
                 style="display: none;" @mouseenter="cancelClearFlyout()" @mouseleave="scheduleClearFlyout()">
                 <a href="{{ route('research-proposal.create') }}"
-                    class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-proposal.create') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Draft Proposal with Socius AI') }}</a>
+                    class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-proposal.create') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Draft Proposal') }}</a>
                 <a href="{{ route('research-studio.report.create') }}"
                     class="block px-3 py-1.5 text-xs font-bold {{ request()->routeIs('research-studio.report.create') ? 'text-[#f0f0f1] font-semibold bg-[#2271b1]' : 'text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6]' }} rounded-lg">{{ __('Generate Report') }}</a>
                 <a href="{{ route('research-studio.proofread.create') }}"
@@ -654,7 +654,7 @@
 
         <div x-show="expandedItem === 'studio'" x-collapse class="sidebar-submenu">
             <a href="{{ route('research-proposal.create') }}"
-                class="block py-1 text-xs font-bold {{ request()->routeIs('research-proposal.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Draft Proposal with Socius AI') }}</a>
+                class="block py-1 text-xs font-bold {{ request()->routeIs('research-proposal.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Draft Proposal') }}</a>
             <a href="{{ route('research-studio.report.create') }}"
                 class="block py-1 text-xs font-bold {{ request()->routeIs('research-studio.report.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Generate Report') }}</a>
             <a href="{{ route('research-studio.proofread.create') }}"

@@ -2,71 +2,13 @@
 
 @section('title', 'View Proposal - Research Studio')
 
-@section('sub_sidebar')
-    <!-- Professional Collapsible Sidebar for Proposal Navigation -->
-    <div class="bg-white border-r border-gray-100 flex-shrink-0 flex flex-col z-30 shadow-sm transition-all duration-300 relative"
-        :class="sidebarOpen ? 'w-64' : 'w-14'">
 
-        <div class="p-4 border-b border-gray-100 bg-gray-50/30 flex items-center justify-between"
-            :class="sidebarOpen ? '' : 'px-2 justify-center'">
-            <div class="flex items-center truncate">
-                <i class="fa-solid fa-file-invoice text-[#2271b1]" :class="sidebarOpen ? 'mr-2' : ''"></i>
-                <h3 x-show="sidebarOpen" x-transition
-                    class="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate">
-                    Proposal Chapters
-                </h3>
-            </div>
-            <button @click="sidebarOpen = !sidebarOpen"
-                class="w-6 h-6 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-400 hover:text-[#2271b1] transition-all shrink-0">
-                <i class="fa-solid fa-chevron-left text-[10px] transition-transform duration-300"
-                    :class="sidebarOpen ? '' : 'rotate-180'"></i>
-            </button>
-        </div>
-
-        <!-- Dynamic Table of Contents Populated by Alpine -->
-        <nav class="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
-            <template x-for="(navItem, idx) in toc" :key="idx">
-                <a :href="'#' + navItem.id" :title="navItem.title"
-                    @click.prevent="document.getElementById(navItem.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
-                    class="flex items-center rounded-xl text-xs transition-all group border border-transparent hover:border-zinc-200 hover:bg-zinc-100"
-                    :class="[
-                            sidebarOpen ? 'px-3 py-2.5' : 'p-2 justify-center',
-                            navItem.level === 1 ? 'font-bold text-gray-800 mt-2' : (navItem.level === 2 ? 'font-semibold text-gray-600 pl-4' : 'font-normal text-gray-500 pl-6')
-                        ]">
-
-                    <!-- Icon/Number for H1s -->
-                    <template x-if="navItem.level === 1">
-                        <span
-                            class="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-md bg-blue-50 text-[9px] font-black text-[#2271b1] mr-2"
-                            x-show="sidebarOpen">
-                            <i class="fa-solid fa-hashtag text-[8px]"></i>
-                        </span>
-                    </template>
-
-                    <!-- Bullet for nested items -->
-                    <template x-if="navItem.level > 1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-gray-300 mr-2 flex-shrink-0" x-show="sidebarOpen"></span>
-                    </template>
-
-                    <span x-show="sidebarOpen" class="truncate" x-text="navItem.title"></span>
-
-                    <!-- Closed sidebar icon fallback -->
-                    <span x-show="!sidebarOpen"
-                        class="w-6 h-6 flex items-center justify-center rounded-lg bg-gray-50 text-[10px] text-gray-500 group-hover:bg-zinc-200 group-hover:text-[#2271b1]">
-                        <i class="fa-solid fa-minus" x-show="navItem.level > 1"></i>
-                        <i class="fa-solid fa-hashtag" x-show="navItem.level === 1"></i>
-                    </span>
-                </a>
-            </template>
-        </nav>
-    </div>
-@endsection
 
 @section('content')
-    <div class="flex flex-col bg-gray-50/50" x-data="proposalViewer()" x-init="initParser()" style="min-h-screen;">
+    <div class="flex flex-col bg-gray-50/50" x-data="proposalViewer()" x-init="initParser()" style="min-height: 100vh;">
         <!-- Condensed Sticky Toolbar -->
         <div
-            class="sticky top-0 z-40 px-4 py-3 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm flex items-center justify-between">
+            class="sticky top-0 z-40 px-4 py-3 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <button type="button" @click="sidebarOpen = !sidebarOpen"
                     class="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-50 text-[#2271b1] hover:bg-blue-100 transition-all border border-blue-100"
@@ -74,7 +16,7 @@
                     <i class="fa-solid fa-bars-staggered text-xs"></i>
                 </button>
                 <div class="flex items-center space-x-2">
-                    <a href="{{ route('research-proposal.history') }}"
+                    <a href="{{ route('research-proposal.create') }}" title="{{ __('Back to Proposal Studio Editor') }}"
                         class="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-50 text-gray-400 hover:bg-gray-100 transition-all border border-gray-100">
                         <i class="fa-solid fa-arrow-left text-[10px]"></i>
                     </a>
@@ -118,93 +60,63 @@
             class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
             style="display: none;">
             <div class="bg-white rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-base font-black text-gray-900 flex items-center gap-2">
-                        <i class="fa-solid fa-wand-magic-sparkles text-[#2271b1]"></i>
-                        {{ __('Refine Proposal with AI') }}
+                <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                    <h3 class="text-sm font-black text-gray-900 flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i>
+                        {{ __('Refine Research Proposal') }}
                     </h3>
-                    <button @click="showRefineModal = false" class="text-gray-400 hover:text-gray-600"><i
-                            class="fa-solid fa-xmark"></i></button>
+                    <button @click="showRefineModal = false" class="text-gray-400 hover:text-gray-600">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
                 </div>
-                <form action="{{ route('research-proposal.refine', $proposal->id) }}" method="POST" class="space-y-4">
+
+                <form action="{{ route('research-proposal.generate') }}" method="POST" class="space-y-4">
                     @csrf
-                    <!-- ... Modal Fields remain identical ... -->
-                    <div class="space-y-1">
+                    <input type="hidden" name="proposal_id" value="{{ $proposal->id }}">
+
+                    <div>
                         <label
-                            class="block text-xs font-bold text-gray-700">{{ __('Select Target Chapter / Section to Refine:') }}</label>
+                            class="block text-xs font-bold text-gray-700 mb-1">{{ __('Target Section / Chapter') }}</label>
                         <select name="target_section"
-                            class="w-full text-xs font-bold p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#2271b1]">
-                            <option value="all">{{ __('-- Entire Proposal (All Sections) --') }}</option>
-                            <option value="preliminaries">{{ __('Preliminaries & Abstract') }}</option>
+                            class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium focus:ring-2 focus:ring-[#2271b1]">
+                            <option value="all">{{ __('Entire Document (All Sections)') }}</option>
                             <option value="ch1">{{ __('Chapter 1: Introduction & Background') }}</option>
-                            <option value="ch2">{{ __('Chapter 2: Literature & Theoretical Framework') }}</option>
-                            <option value="ch3">{{ __('Chapter 3: Research Methodology & Sampling') }}</option>
+                            <option value="ch2">{{ __('Chapter 2: Literature Review & Framework') }}</option>
+                            <option value="ch3">{{ __('Chapter 3: Research Methodology') }}</option>
                             <option value="budget">{{ __('Proposed Budget & Work Plan') }}</option>
+                            <option value="appendix">{{ __('References & Appendices') }}</option>
                         </select>
                     </div>
 
-                    <div class="space-y-1">
-                        <label class="block text-xs font-bold text-gray-700">{{ __('Refinement Instructions:') }}</label>
-                        <textarea name="refinement_instructions" rows="4" required
-                            placeholder="{{ __('e.g. Deepen Chapter 2 literature review, expand Chapter 3 sampling formula, or rewrite specific sections...') }}"
-                            class="w-full text-xs p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#2271b1]"></textarea>
+                    <div>
+                        <label
+                            class="block text-xs font-bold text-gray-700 mb-1">{{ __('Refinement Instructions') }}</label>
+                        <textarea name="user_feedback" rows="4" required
+                            class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs focus:ring-2 focus:ring-[#2271b1]"
+                            placeholder="{{ __('e.g., Expand Section 1.1 with more Kajiado statistics; elaborate the TAM theoretical framework in Chapter 2; adjust the sample size in Chapter 3...') }}"></textarea>
                     </div>
 
                     <div class="flex justify-end gap-2 pt-2">
                         <button type="button" @click="showRefineModal = false"
                             class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold">{{ __('Cancel') }}</button>
                         <button type="submit"
-                            class="px-6 py-2 bg-[#2271b1] text-white rounded-xl text-xs font-bold shadow-md hover:bg-[#135e96] transition-all">
-                            {{ __('Regenerate') }}
-                        </button>
+                            class="px-5 py-2 bg-[#2271b1] text-white rounded-xl text-xs font-bold hover:bg-[#135e96]">{{ __('Apply Refinement') }}</button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Scrollable Draft Content Area -->
-        <div class="flex-1 p-3 sm:p-8 overflow-y-auto custom-scrollbar bg-gray-50/50">
-            <div
-                class="max-w-4xl mx-auto bg-white shadow-2xl shadow-gray-200/50 rounded-lg border border-gray-100 p-4 sm:p-10 md:p-16 min-h-screen mb-12">
-
-                <!-- Cover Section -->
-                <div class="text-center py-12 mb-16 border-b-2 border-gray-50">
-                    <span class="text-[12px] font-black text-[#2271b1] uppercase tracking-[0.4em] mb-4 block">
-                        Formal Research Proposal
-                    </span>
-                    <h2 class="text-4xl font-black text-gray-900 mb-4 tracking-tighter uppercase leading-none">
-                        {{ $proposal->title }}
-                    </h2>
-                    <div class="w-16 h-1 bg-[#2271b1] mx-auto rounded-full mb-6"></div>
-
-                    <div class="flex items-center justify-center space-x-6">
-                        <div class="text-center">
-                            <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Methodology</p>
-                            <p class="text-[10px] font-black text-gray-900 uppercase tracking-widest italic">
-                                {{ $proposal->methodology_type }}
-                            </p>
-                        </div>
-                        <div class="h-8 w-[1px] bg-gray-100"></div>
-                        <div class="text-center">
-                            <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Standard</p>
-                            <p class="text-[10px] font-black text-gray-900 uppercase tracking-widest">
-                                {{ strtoupper($proposal->style) }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Generated Sections -->
-                <div class="space-y-12">
+        <!-- Main Content Document View -->
+        <div class="flex-1 p-6 md:p-10 max-w-5xl mx-auto w-full">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 md:p-14 mb-10">
+                <div class="space-y-8">
                     @foreach($proposal->content ?? [] as $title => $content)
                         <section class="scroll-mt-32">
-                            <!-- Removed whitespace-pre-wrap to fix gaping space issues -->
                             <div
-                                class="prose prose-slate prose-lg max-w-none text-gray-700 leading-relaxed font-serif text-justify markdown-container">
+                                class="prose prose-slate prose-lg max-w-none text-slate-800 leading-relaxed text-justify markdown-container">
                                 <script type="application/json" class="raw-markdown">
-                                            {!! json_encode($content) !!}
-                                        </script>
-                                <!-- Parsed Markdown will be injected here -->
+                                                    {!! json_encode($content) !!}
+                                                </script>
                                 <div class="parsed-content"></div>
                             </div>
                         </section>
@@ -212,72 +124,124 @@
                 </div>
             </div>
 
-            <footer class="max-w-4xl mx-auto py-12 text-center">
-                <p class="text-[9px] text-gray-300 font-bold uppercase tracking-[0.3em]">&bull; END OF RESEARCH PROPOSAL
-                    &bull;</p>
+            <footer class="max-w-4xl mx-auto py-8 text-center">
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-[0.25em]">&bull; END OF FORMAL RESEARCH
+                    PROPOSAL &bull;</p>
             </footer>
         </div>
     </div>
 
     @push('styles')
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
         <style>
             .custom-scrollbar::-webkit-scrollbar {
                 width: 4px;
             }
 
-            .custom-scrollbar::-webkit-scrollbar-track {
-                background: transparent;
-            }
-
             .custom-scrollbar::-webkit-scrollbar-thumb {
-                background: #E5E7EB;
+                background: #cbd5e1;
                 border-radius: 10px;
             }
 
-            /* Reduced paragraph margin drastically to fix whitespace issues */
+            /* Academic Proposal Styling */
+            .prose h1 {
+                font-size: 1.5rem !important;
+                font-weight: 900 !important;
+                color: #0f172a !important;
+                text-transform: uppercase !important;
+                letter-spacing: -0.02em !important;
+                margin-top: 2.5rem !important;
+                margin-bottom: 1.25rem !important;
+                padding-bottom: 0.5rem !important;
+                border-bottom: 2px solid #0f172a !important;
+            }
+
+            .prose h2 {
+                font-size: 1.2rem !important;
+                font-weight: 800 !important;
+                color: #0f172a !important;
+                margin-top: 2rem !important;
+                margin-bottom: 0.75rem !important;
+                padding-left: 0.75rem !important;
+                border-left: 4px solid #2271b1 !important;
+            }
+
+            .prose h3 {
+                font-size: 1.05rem !important;
+                font-weight: 700 !important;
+                color: #334155 !important;
+                margin-top: 1.5rem !important;
+                margin-bottom: 0.5rem !important;
+            }
+
             .prose p {
-                margin-bottom: 1rem;
-                margin-top: 0;
+                margin-bottom: 1.15rem !important;
+                margin-top: 0 !important;
+                line-height: 1.8 !important;
+                color: #334155 !important;
             }
 
-            html {
-                scroll-behavior: smooth;
-            }
-
-            /* Markdown Tables */
+            /* Beautiful Academic Tables */
             .prose table {
-                width: 100%;
-                border-collapse: collapse;
-                margin-top: 1.5rem;
-                margin-bottom: 1.5rem;
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin: 1.75rem 0 !important;
+                font-size: 0.85rem !important;
+                border: 1px solid #cbd5e1 !important;
+                box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
             }
 
             .prose th {
-                background-color: #f3f4f6;
-                padding: 0.75rem;
-                border: 1px solid #e5e7eb;
-                font-weight: 700;
-                text-align: left;
+                background-color: #f1f5f9 !important;
+                color: #0f172a !important;
+                font-weight: 800 !important;
+                padding: 10px 14px !important;
+                border: 1px solid #cbd5e1 !important;
+                text-align: left !important;
             }
 
             .prose td {
-                padding: 0.75rem;
-                border: 1px solid #e5e7eb;
+                padding: 10px 14px !important;
+                border: 1px solid #e2e8f0 !important;
+                vertical-align: top !important;
+                color: #334155 !important;
+            }
+
+            .prose tr:nth-child(even) {
+                background-color: #f8fafc !important;
+            }
+
+            .prose ul,
+            .prose ol {
+                margin-top: 0.5rem !important;
+                margin-bottom: 1rem !important;
+                padding-left: 1.5rem !important;
+            }
+
+            .prose li {
+                margin-bottom: 0.35rem !important;
             }
         </style>
     @endpush
 
     @push('scripts')
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+        <script>mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose', suppressErrorRendering: true });</script>
         <script>
             function proposalViewer() {
                 return {
                     showRefineModal: false,
-                    toc: [], // Holds dynamically extracted chapters/headers
+                    toc: [],
 
                     initParser() {
+                        this.$nextTick(() => {
+                            this.buildTableOfContents();
+                        });
+                    },
+                    buildTableOfContents() {
                         const containers = document.querySelectorAll('.markdown-container');
                         let allTocItems = [];
                         let headingCounter = 0;
@@ -288,10 +252,28 @@
                                 const parsedDiv = container.querySelector('.parsed-content');
 
                                 if (scriptEl && parsedDiv) {
-                                    const rawMarkdown = JSON.parse(scriptEl.textContent);
+                                    let rawMarkdown = JSON.parse(scriptEl.textContent);
+
+                                    // Pre-process markdown: Auto-elevate plain numbered headings like "1.1 Background" to markdown ## if missing
+                                    rawMarkdown = rawMarkdown.replace(/^(\d+\.\d+\s+[A-Za-z].*)$/gm, '## $1');
+                                    rawMarkdown = rawMarkdown.replace(/^(\d+\.\d+\.\d+\s+[A-Za-z].*)$/gm, '### $1');
+                                    rawMarkdown = rawMarkdown.replace(/^(CHAPTER\s+\d+[:\s]+[A-Za-z\s]+)$/gmi, '# $1');
+                                    rawMarkdown = rawMarkdown.replace(/^(PROPOSED BUDGET AND WORK PLAN|REFERENCES|APPENDIX\s+[A-Z][: ].*)$/gmi, '# $1');
+
                                     let html = marked.parse(rawMarkdown);
 
-                                    // Extract Headers and inject custom styling
+                                    // Replace ```mermaid with safe containers
+                                    let dIdx = 0;
+                                    html = html.replace(/<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/gi, function (match, code) {
+                                        dIdx++;
+                                        let cleanCode = code.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+                                        cleanCode = cleanCode.replace(/\[([^\]"'\n]+)\]/g, function (m, p1) {
+                                            return '["' + p1.replace(/"/g, '') + '"]';
+                                        });
+                                        const cId = 'mermaid-show-' + dIdx + '-' + Date.now();
+                                        return '<div class="mermaid-diagram-container" id="' + cId + '" data-code="' + btoa(unescape(encodeURIComponent(cleanCode.trim()))) + '"></div>';
+                                    });
+
                                     const tempDiv = document.createElement('div');
                                     tempDiv.innerHTML = html;
                                     const headings = tempDiv.querySelectorAll('h1, h2, h3');
@@ -300,19 +282,8 @@
                                         const titleText = heading.textContent.trim();
                                         const id = 'chapter-' + headingCounter++;
                                         heading.setAttribute('id', id);
-                                        heading.classList.add('scroll-mt-32'); // Ensure jumping to header accounts for sticky toolbar
+                                        heading.classList.add('scroll-mt-32');
 
-                                        // Address "headers look different" by applying Tailwind Typography overrides
-                                        heading.classList.add('font-black', 'text-gray-900', 'tracking-tight', 'mb-4');
-                                        if (heading.tagName === 'H1') {
-                                            heading.classList.add('text-3xl', 'uppercase', 'mt-12', 'border-b-2', 'border-gray-100', 'pb-3');
-                                        } else if (heading.tagName === 'H2') {
-                                            heading.classList.add('text-xl', 'mt-8', 'text-[#2271b1]');
-                                        } else if (heading.tagName === 'H3') {
-                                            heading.classList.add('text-lg', 'mt-6');
-                                        }
-
-                                        // Push to Sidebar TOC array
                                         allTocItems.push({
                                             id: id,
                                             title: titleText,
@@ -321,6 +292,22 @@
                                     });
 
                                     parsedDiv.innerHTML = tempDiv.innerHTML;
+
+                                    // Extract headings directly from DOM
+                                    parsedDiv.querySelectorAll('h1, h2, h3').forEach((heading) => {
+                                        const titleText = heading.innerText.trim();
+                                        if (titleText) {
+                                            const id = 'chapter-' + (++headingCounter);
+                                            heading.setAttribute('id', id);
+                                            heading.classList.add('scroll-mt-32');
+
+                                            allTocItems.push({
+                                                id: id,
+                                                title: titleText,
+                                                level: parseInt(heading.tagName.substring(1))
+                                            });
+                                        }
+                                    });
                                 }
                             } catch (e) {
                                 console.error('Failed to parse section markdown:', e);
@@ -329,30 +316,43 @@
 
                         this.toc = allTocItems;
 
-                        this.$nextTick(() => {
-                            this.renderCharts();
-                        });
-                    },
-                    renderCharts() {
-                        const chartBlocks = document.querySelectorAll('pre code.language-chartjs');
-                        chartBlocks.forEach((codeEl, index) => {
-                            try {
-                                const chartConfig = JSON.parse(codeEl.textContent);
-                                const canvas = document.createElement('canvas');
-                                canvas.id = 'proposal-chart-' + index;
-                                canvas.className = 'my-6 max-h-96 w-full';
-
-                                const preParent = codeEl.closest('pre');
-                                if (preParent) {
-                                    preParent.replaceWith(canvas);
-                                    new Chart(canvas.getContext('2d'), chartConfig);
+                        setTimeout(async () => {
+                            if (window.mermaid) {
+                                const containers = document.querySelectorAll('.mermaid-diagram-container[data-code]');
+                                for (let el of containers) {
+                                    try {
+                                        const rawCode = decodeURIComponent(escape(atob(el.getAttribute('data-code'))));
+                                        const id = 'svg-' + Math.random().toString(36).substr(2, 9);
+                                        const { svg } = await window.mermaid.render(id, rawCode);
+                                        el.innerHTML = svg;
+                                        el.removeAttribute('data-code');
+                                    } catch (err) {
+                                        console.warn('Mermaid rendering fallback in show:', err);
+                                        el.innerHTML = '<div class="w-full bg-slate-50 border border-slate-200 rounded-lg p-4 text-center text-xs text-slate-600"><span class="font-bold text-slate-800"><i class="fa-solid fa-project-diagram text-[#2271b1] mr-1.5"></i> Conceptual Model Relationships</span></div>';
+                                    }
                                 }
-                            } catch (e) {
-                                console.error('Failed to render Chart.js block:', e);
                             }
-                        });
+
+                            try {
+                                if (window.renderMathInElement) {
+                                    document.querySelectorAll('.markdown-container').forEach(el => {
+                                        window.renderMathInElement(el, {
+                                            delimiters: [
+                                                { left: '$$', right: '$$', display: true },
+                                                { left: '\\[', right: '\\]', display: true },
+                                                { left: '$', right: '$', display: false },
+                                                { left: '\\(', right: '\\)', display: false }
+                                            ],
+                                            throwOnError: false
+                                        });
+                                    });
+                                }
+                            } catch (mathErr) {
+                                console.warn('KaTeX math render error in show:', mathErr);
+                            }
+                        }, 100);
                     }
-                }
+                };
             }
         </script>
     @endpush

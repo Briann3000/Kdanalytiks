@@ -102,36 +102,75 @@ class DocumentExtractionService
         if ($zip->open($path) === true) {
             $xmlContent = $zip->getFromName('word/document.xml');
             $zip->close();
-
-            if ($xmlContent !== false) {
-                // Replace paragraph closing tags with double newlines
-                $xmlContent = str_replace('</w:p>', "\n\n", $xmlContent);
-                $text = strip_tags($xmlContent);
-                $text = html_entity_decode($text, ENT_QUOTES | ENT_XML1, 'UTF-8');
-                return trim($text);
-            }
+        } else {
+            throw new RuntimeException('This DOCX file could not be read. Please re-save it as a standard Word document and try again.');
         }
 
-        throw new RuntimeException('This DOCX file could not be read. Please re-save it as a standard Word document and try again.');
+        if ($xmlContent === false) {
+            throw new RuntimeException('This DOCX file does not contain readable document XML.');
+        }
+
+        // Parse tables into structured markdown/pipe format before stripping tags
+        $xmlContent = preg_replace_callback('/<w:tbl\b[\s\S]*?<\/w:tbl>/u', function ($tblMatch) {
+            $tableXml = $tblMatch[0];
+            $rows = [];
+            if (preg_match_all('/<w:tr\b[\s\S]*?<\/w:tr>/u', $tableXml, $trMatches)) {
+                foreach ($trMatches[0] as $trXml) {
+                    $cells = [];
+                    if (preg_match_all('/<w:tc\b[\s\S]*?<\/w:tc>/u', $trXml, $tcMatches)) {
+                        foreach ($tcMatches[0] as $tcXml) {
+                            $cellText = strip_tags(str_replace('</w:p>', ' ', $tcXml));
+                            $cellText = html_entity_decode($cellText, ENT_QUOTES | ENT_XML1, 'UTF-8');
+                            $cells[] = trim(preg_replace('/\s+/u', ' ', $cellText));
+                        }
+                    }
+                    if (!empty($cells) && array_filter($cells, fn($c) => $c !== '')) {
+                        $rows[] = '| ' . implode(' | ', $cells) . ' |';
+                    }
+                }
+            }
+            return !empty($rows) ? "\n\n" . implode("\n", $rows) . "\n\n" : '';
+        }, $xmlContent);
+
+        // Replace paragraph closing tags with double newlines
+        $xmlContent = str_replace('</w:p>', "\n\n", $xmlContent);
+        $text = strip_tags($xmlContent);
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_XML1, 'UTF-8');
+        return trim($text);
     }
 
     private function extractPhpWordElements(iterable $elements, array &$chunks): void
     {
         foreach ($elements as $element) {
+            if (method_exists($element, 'getRows')) {
+                // Table element: render as formatted markdown table rows
+                $tableRows = [];
+                foreach ($element->getRows() as $row) {
+                    $cellTexts = [];
+                    foreach ($row->getCells() as $cell) {
+                        $cellChunks = [];
+                        $this->extractPhpWordElements($cell->getElements(), $cellChunks);
+                        $cellTexts[] = trim(implode(' ', $cellChunks));
+                    }
+                    if (!empty($cellTexts) && array_filter($cellTexts, fn($c) => $c !== '')) {
+                        $tableRows[] = '| ' . implode(' | ', $cellTexts) . ' |';
+                    }
+                }
+                if (!empty($tableRows)) {
+                    $chunks[] = implode("\n", $tableRows);
+                }
+                continue;
+            }
+
             if (method_exists($element, 'getText')) {
-                $chunks[] = trim((string) $element->getText());
+                $text = trim((string) $element->getText());
+                if ($text !== '') {
+                    $chunks[] = $text;
+                }
             }
 
             if (method_exists($element, 'getElements')) {
                 $this->extractPhpWordElements($element->getElements(), $chunks);
-            }
-
-            if (method_exists($element, 'getRows')) {
-                foreach ($element->getRows() as $row) {
-                    foreach ($row->getCells() as $cell) {
-                        $this->extractPhpWordElements($cell->getElements(), $chunks);
-                    }
-                }
             }
         }
     }

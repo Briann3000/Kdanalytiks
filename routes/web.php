@@ -314,6 +314,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Research Proposal Studio & Library
     Route::get('/research-proposal/history', [\App\Http\Controllers\ResearchProposalController::class, 'history'])->name('research-proposal.history');
+    Route::post('/research-proposal/wizard/suggest-variables', [\App\Http\Controllers\ResearchProposalController::class, 'suggestVariables'])->name('research-proposal.wizard.suggest-variables');
+    Route::post('/research-proposal/wizard/preview-stage', [\App\Http\Controllers\ResearchProposalController::class, 'previewStage'])->name('research-proposal.wizard.preview-stage');
+    Route::post('/research-proposal/wizard/refine-stage-preview', [\App\Http\Controllers\ResearchProposalController::class, 'refineStagePreview'])->name('research-proposal.wizard.refine-stage-preview');
+    Route::post('/research-proposal/wizard/export-docx', [\App\Http\Controllers\ResearchProposalController::class, 'exportDocxFromWizard'])->name('research-proposal.wizard.export-docx');
     Route::post('/research-proposal/store', [\App\Http\Controllers\ResearchProposalController::class, 'storeProposal'])->name('research-proposal.store');
     Route::post('/research-proposal/upload', [\App\Http\Controllers\ResearchProposalController::class, 'uploadProposal'])->name('research-proposal.upload');
     Route::post('/research-proposal/save-from-socius', [\App\Http\Controllers\ResearchProposalController::class, 'saveFromSocius'])->name('research-proposal.save-from-socius');

@@ -338,6 +338,7 @@
             0% {
                 transform: translateX(0);
             }
+
             100% {
                 transform: translateX(-50%);
             }
@@ -716,21 +717,21 @@
 @section('content')
     <!-- Structured Data JSON-LD Schema for Google -->
     <script type="application/ld+json">
-        {
-          "@context": "https://schema.org",
-          "@type": "WebApplication",
-          "name": "KDAnalytiks",
-          "url": "{{ url('/') }}",
-          "applicationCategory": "BusinessApplication",
-          "operatingSystem": "All",
-          "description": "KDAnalytiks is an AI-powered research platform that helps users collect data, run statistical analysis and compile automated reports.",
-          "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "USD"
-          }
-        }
-        </script>
+            {
+              "@context": "https://schema.org",
+              "@type": "WebApplication",
+              "name": "KDAnalytiks",
+              "url": "{{ url('/') }}",
+              "applicationCategory": "BusinessApplication",
+              "operatingSystem": "All",
+              "description": "KDAnalytiks is an AI-powered research platform that helps users collect data, run statistical analysis and compile automated reports.",
+              "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+              }
+            }
+            </script>
 
     <!-- Full-Bleed Edge-to-Edge Container -->
     <div class="full-bleed-container">
@@ -764,7 +765,8 @@
                                     </div>
                                     <h4 class="font-extrabold text-sm text-slate-900 mb-0.5">{{ __('Collect Data') }}</h4>
                                     <p class="text-xs text-slate-500 leading-snug m-0">
-                                        {{ __('Gather accurate and relevant data.') }}</p>
+                                        {{ __('Gather accurate and relevant data.') }}
+                                    </p>
                                 </div>
 
                                 <div class="step-node-light">
@@ -773,7 +775,8 @@
                                     </div>
                                     <h4 class="font-extrabold text-sm text-slate-900 mb-0.5">{{ __('Analyze Data') }}</h4>
                                     <p class="text-xs text-slate-500 leading-snug m-0">
-                                        {{ __('Uncover patterns and generate insights.') }}</p>
+                                        {{ __('Uncover patterns and generate insights.') }}
+                                    </p>
                                 </div>
 
                                 <div class="step-node-light">
@@ -782,7 +785,8 @@
                                     </div>
                                     <h4 class="font-extrabold text-sm text-slate-900 mb-0.5">{{ __('Compile Report') }}</h4>
                                     <p class="text-xs text-slate-500 leading-snug m-0">
-                                        {{ __('Deliver clear, actionable reports.') }}</p>
+                                        {{ __('Deliver clear, actionable reports.') }}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -822,7 +826,8 @@
                                             style="display: none;">
                                             <i class="fa-solid fa-chart-line text-3xl text-[#2271b1]"></i>
                                             <p class="text-xs text-slate-300 font-bold m-0">
-                                                {{ __('KDAnalytiks Desktop Dashboard') }}</p>
+                                                {{ __('KDAnalytiks Desktop Dashboard') }}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -867,245 +872,281 @@
                                 <i class="fa-solid fa-wand-magic-sparkles"></i>
                             </div>
                             <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Humanizer') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Human-like content that connects.') }}</p>
-                                </div>
-                            </a>
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Humanizer') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">{{ __('Human-like content that connects.') }}
+                                </p>
+                            </div>
+                        </a>
 
-                            <!-- 2. AI Proofread -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card">
-                                <div class="feature-marquee-icon bg-blue-50 text-[#2271b1]">
-                                    <i class="fa-solid fa-spell-check"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Proofread') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Grammar, style & academic clarity.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 2. AI Proofread -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card">
+                            <div class="feature-marquee-icon bg-blue-50 text-[#2271b1]">
+                                <i class="fa-solid fa-spell-check"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Proofread') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">
+                                    {{ __('Grammar, style & academic clarity.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- 3. AI Transcription -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card">
-                                <div class="feature-marquee-icon bg-emerald-50 text-emerald-600">
-                                    <i class="fa-solid fa-microphone-lines"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Voice Transcription') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Accurate transcription in minutes.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 3. AI Transcription -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card">
+                            <div class="feature-marquee-icon bg-emerald-50 text-emerald-600">
+                                <i class="fa-solid fa-microphone-lines"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">
+                                    {{ __('Voice Transcription') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">
+                                    {{ __('Accurate transcription in minutes.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- 4. Socius AI -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card">
-                                <div class="feature-marquee-icon bg-sky-50 text-[#0284C7]">
-                                    <i class="fa-solid fa-brain"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Socius AI') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Your AI research assistant.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 4. Socius AI -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card">
+                            <div class="feature-marquee-icon bg-sky-50 text-[#0284C7]">
+                                <i class="fa-solid fa-brain"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Socius AI') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">{{ __('Your AI research assistant.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- 5. Proposal Generation -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card">
-                                <div class="feature-marquee-icon bg-purple-50 text-purple-600">
-                                    <i class="fa-solid fa-file-signature"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Proposal Generation') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Draft complete research proposals fast.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 5. Proposal Generation -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card">
+                            <div class="feature-marquee-icon bg-purple-50 text-purple-600">
+                                <i class="fa-solid fa-file-signature"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">
+                                    {{ __('Proposal Generation') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">
+                                    {{ __('Draft complete research proposals fast.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- 6. Report Generation -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card">
-                                <div class="feature-marquee-icon bg-amber-50 text-amber-600">
-                                    <i class="fa-solid fa-file-lines"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Report Generation') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Automated APA/IEEE formatted reports.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 6. Report Generation -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card">
+                            <div class="feature-marquee-icon bg-amber-50 text-amber-600">
+                                <i class="fa-solid fa-file-lines"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">
+                                    {{ __('Report Generation') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">
+                                    {{ __('Automated APA/IEEE formatted reports.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- 7. Plagiarism Checker -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card">
-                                <div class="feature-marquee-icon bg-rose-50 text-rose-600">
-                                    <i class="fa-solid fa-shield-halved"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Plagiarism Checker') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Verify originality & academic integrity.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 7. Plagiarism Checker -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card">
+                            <div class="feature-marquee-icon bg-rose-50 text-rose-600">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">
+                                    {{ __('Plagiarism Checker') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">
+                                    {{ __('Verify originality & academic integrity.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- 8. Paid Surveys -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card">
-                                <div class="feature-marquee-icon bg-teal-50 text-teal-600">
-                                    <i class="fa-solid fa-wallet"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Paid Surveys') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Field data collection with rewards.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 8. Paid Surveys -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card">
+                            <div class="feature-marquee-icon bg-teal-50 text-teal-600">
+                                <i class="fa-solid fa-wallet"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Paid Surveys') }}
+                                </h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">
+                                    {{ __('Field data collection with rewards.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- 9. Quantitative Analysis -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card">
-                                <div class="feature-marquee-icon bg-blue-50 text-[#2271b1]">
-                                    <i class="fa-solid fa-chart-pie"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Quantitative Analysis') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Descriptive statistics, charts & tables.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 9. Quantitative Analysis -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card">
+                            <div class="feature-marquee-icon bg-blue-50 text-[#2271b1]">
+                                <i class="fa-solid fa-chart-pie"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">
+                                    {{ __('Quantitative Analysis') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">
+                                    {{ __('Descriptive statistics, charts & tables.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- 10. Qualitative Analysis -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card">
-                                <div class="feature-marquee-icon bg-orange-50 text-orange-600">
-                                    <i class="fa-solid fa-tags"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Qualitative Analysis') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Structured thematic coding & insights.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 10. Qualitative Analysis -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card">
+                            <div class="feature-marquee-icon bg-orange-50 text-orange-600">
+                                <i class="fa-solid fa-tags"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">
+                                    {{ __('Qualitative Analysis') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">
+                                    {{ __('Structured thematic coding & insights.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- 11. Inferential Analysis -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card">
-                                <div class="feature-marquee-icon bg-indigo-50 text-indigo-600">
-                                    <i class="fa-solid fa-chart-line"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Inferential Analysis') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Hypothesis testing, ANOVA & regression.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 11. Inferential Analysis -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card">
+                            <div class="feature-marquee-icon bg-indigo-50 text-indigo-600">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">
+                                    {{ __('Inferential Analysis') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">
+                                    {{ __('Hypothesis testing, ANOVA & regression.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- Loop 2 (for seamless continuous infinite scroll) -->
-                            <!-- 1. AI Humanizer -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
-                                <div class="feature-marquee-icon bg-indigo-50 text-indigo-600">
-                                    <i class="fa-solid fa-wand-magic-sparkles"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Humanizer') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Human-like content that connects.') }}</p>
-                                </div>
-                            </a>
+                        <!-- Loop 2 (for seamless continuous infinite scroll) -->
+                        <!-- 1. AI Humanizer -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
+                            <div class="feature-marquee-icon bg-indigo-50 text-indigo-600">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Humanizer') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">{{ __('Human-like content that connects.') }}
+                                </p>
+                            </div>
+                        </a>
 
-                            <!-- 2. AI Proofread -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
-                                <div class="feature-marquee-icon bg-blue-50 text-[#2271b1]">
-                                    <i class="fa-solid fa-spell-check"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Proofread') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Grammar, style & academic clarity.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 2. AI Proofread -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
+                            <div class="feature-marquee-icon bg-blue-50 text-[#2271b1]">
+                                <i class="fa-solid fa-spell-check"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Proofread') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">
+                                    {{ __('Grammar, style & academic clarity.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- 3. AI Transcription -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
-                                <div class="feature-marquee-icon bg-emerald-50 text-emerald-600">
-                                    <i class="fa-solid fa-microphone-lines"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Voice Transcription') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Accurate transcription in minutes.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 3. AI Transcription -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
+                            <div class="feature-marquee-icon bg-emerald-50 text-emerald-600">
+                                <i class="fa-solid fa-microphone-lines"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">
+                                    {{ __('Voice Transcription') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">
+                                    {{ __('Accurate transcription in minutes.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- 4. Socius AI -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
-                                <div class="feature-marquee-icon bg-sky-50 text-[#0284C7]">
-                                    <i class="fa-solid fa-brain"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Socius AI') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Your AI research assistant.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 4. Socius AI -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
+                            <div class="feature-marquee-icon bg-sky-50 text-[#0284C7]">
+                                <i class="fa-solid fa-brain"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Socius AI') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">{{ __('Your AI research assistant.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- 5. Proposal Generation -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
-                                <div class="feature-marquee-icon bg-purple-50 text-purple-600">
-                                    <i class="fa-solid fa-file-signature"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Proposal Generation') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Draft complete research proposals fast.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 5. Proposal Generation -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
+                            <div class="feature-marquee-icon bg-purple-50 text-purple-600">
+                                <i class="fa-solid fa-file-signature"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">
+                                    {{ __('Proposal Generation') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">
+                                    {{ __('Draft complete research proposals fast.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- 6. Report Generation -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
-                                <div class="feature-marquee-icon bg-amber-50 text-amber-600">
-                                    <i class="fa-solid fa-file-lines"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Report Generation') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Automated APA/IEEE formatted reports.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 6. Report Generation -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
+                            <div class="feature-marquee-icon bg-amber-50 text-amber-600">
+                                <i class="fa-solid fa-file-lines"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">
+                                    {{ __('Report Generation') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">
+                                    {{ __('Automated APA/IEEE formatted reports.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- 7. Plagiarism Checker -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
-                                <div class="feature-marquee-icon bg-rose-50 text-rose-600">
-                                    <i class="fa-solid fa-shield-halved"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Plagiarism Checker') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Verify originality & academic integrity.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 7. Plagiarism Checker -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
+                            <div class="feature-marquee-icon bg-rose-50 text-rose-600">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">
+                                    {{ __('Plagiarism Checker') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">
+                                    {{ __('Verify originality & academic integrity.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- 8. Paid Surveys -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
-                                <div class="feature-marquee-icon bg-teal-50 text-teal-600">
-                                    <i class="fa-solid fa-wallet"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Paid Surveys') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Field data collection with rewards.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 8. Paid Surveys -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
+                            <div class="feature-marquee-icon bg-teal-50 text-teal-600">
+                                <i class="fa-solid fa-wallet"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Paid Surveys') }}
+                                </h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">
+                                    {{ __('Field data collection with rewards.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- 9. Quantitative Analysis -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
-                                <div class="feature-marquee-icon bg-blue-50 text-[#2271b1]">
-                                    <i class="fa-solid fa-chart-pie"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Quantitative Analysis') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Descriptive statistics, charts & tables.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 9. Quantitative Analysis -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
+                            <div class="feature-marquee-icon bg-blue-50 text-[#2271b1]">
+                                <i class="fa-solid fa-chart-pie"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">
+                                    {{ __('Quantitative Analysis') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">
+                                    {{ __('Descriptive statistics, charts & tables.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- 10. Qualitative Analysis -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
-                                <div class="feature-marquee-icon bg-orange-50 text-orange-600">
-                                    <i class="fa-solid fa-tags"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Qualitative Analysis') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Structured thematic coding & insights.') }}</p>
-                                </div>
-                            </a>
+                        <!-- 10. Qualitative Analysis -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
+                            <div class="feature-marquee-icon bg-orange-50 text-orange-600">
+                                <i class="fa-solid fa-tags"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">
+                                    {{ __('Qualitative Analysis') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">
+                                    {{ __('Structured thematic coding & insights.') }}</p>
+                            </div>
+                        </a>
 
-                            <!-- 11. Inferential Analysis -->
-                            <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
-                                <div class="feature-marquee-icon bg-indigo-50 text-indigo-600">
-                                    <i class="fa-solid fa-chart-line"></i>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">{{ __('Inferential Analysis') }}</h4>
-                                    <p class="text-xs text-slate-500 m-0 truncate">{{ __('Hypothesis testing, ANOVA & regression.') }}</p>
-                                </div>
-                            </a>
-                        </div>
+                        <!-- 11. Inferential Analysis -->
+                        <a href="{{ route('login') }}" class="feature-marquee-card" aria-hidden="true">
+                            <div class="feature-marquee-icon bg-indigo-50 text-indigo-600">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h4 class="font-extrabold text-slate-900 text-sm mb-0.5 truncate">
+                                    {{ __('Inferential Analysis') }}</h4>
+                                <p class="text-xs text-slate-500 m-0 truncate">
+                                    {{ __('Hypothesis testing, ANOVA & regression.') }}</p>
+                            </div>
+                        </a>
                     </div>
                 </div>
+            </div>
         </section>
 
         <!-- 2. Access Portal Section -->
@@ -1116,7 +1157,8 @@
                         class="text-xs font-extrabold text-[#2271b1] uppercase tracking-wider block mb-2">{{ __('Access Portal') }}</span>
                     <h2 class="text-3xl font-black text-slate-900 tracking-tight mb-3">{{ __('Get Started') }}</h2>
                     <p class="text-slate-600 text-sm sm:text-base">
-                        {{ __('Select your account type to sign in or register') }}</p>
+                        {{ __('Select your account type to sign in or register') }}
+                    </p>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 reveal-group">
@@ -1127,7 +1169,8 @@
                         </div>
                         <h3 class="font-extrabold text-lg text-slate-900 mb-2">{{ __('Organization') }}</h3>
                         <p class="text-xs sm:text-sm text-slate-600 leading-relaxed m-0">
-                            {{ __('For companies and institutions managing large-scale research surveys') }}</p>
+                            {{ __('For companies and institutions managing large-scale research surveys') }}
+                        </p>
                     </a>
 
                     <!-- Researcher -->
@@ -1137,7 +1180,8 @@
                         </div>
                         <h3 class="font-extrabold text-lg text-slate-900 mb-2">{{ __('Researcher') }}</h3>
                         <p class="text-xs sm:text-sm text-slate-600 leading-relaxed m-0">
-                            {{ __('For academicians and practitioners.') }}</p>
+                            {{ __('For academicians and practitioners.') }}
+                        </p>
                     </a>
 
                     <!-- Respondent -->
@@ -1147,7 +1191,8 @@
                         </div>
                         <h3 class="font-extrabold text-lg text-slate-900 mb-2">{{ __('Respondent') }}</h3>
                         <p class="text-xs sm:text-sm text-slate-600 leading-relaxed m-0">
-                            {{ __('Share feedback and earn') }}</p>
+                            {{ __('Share feedback and earn') }}
+                        </p>
                     </a>
                 </div>
 
@@ -1166,7 +1211,8 @@
                             </p>
                         </div>
                     </div>
-                    <a href="{{ route('surveys.public') }}" class="btn-kd-primary flex-shrink-0 w-full sm:w-auto justify-center">
+                    <a href="{{ route('surveys.public') }}"
+                        class="btn-kd-primary flex-shrink-0 w-full sm:w-auto justify-center">
                         <span>{{ __('Browse all surveys') }}</span>
                         <i class="fa-solid fa-arrow-right text-xs"></i>
                     </a>
@@ -1174,88 +1220,89 @@
             </div>
         </section>
 
-        <!-- 3. Monitoring & Evaluation (M&E) Suite -->
-        <section class="py-16 lg:py-20 bg-slate-50 border-b border-slate-200 reveal" id="m-and-e">
+        <!-- 3. Research & Field Studies Suite -->
+        <section class="py-16 lg:py-20 bg-slate-50 border-b border-slate-200 reveal" id="research-studies">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center max-w-3xl mx-auto mb-14">
                     <span
-                        class="text-xs font-extrabold text-[#2271b1] uppercase tracking-wider block mb-2">{{ __('Impact & Assessment') }}</span>
+                        class="text-xs font-extrabold text-[#2271b1] uppercase tracking-wider block mb-2">{{ __('Research & Fieldwork') }}</span>
                     <h2 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-3">
                         {{ __('KDAnalytiks for Conducting Studies') }}
                     </h2>
                     <p class="text-slate-600 text-sm sm:text-base leading-relaxed">
-                        {{ __('Optimize data collection, indicator tracking and reporting practices to align directly with your M&E framework.') }}
+                        {{ __('Streamline study design, multi-modal data collection, and empirical analysis from initial proposal to publication-ready synthesis.') }}
                     </p>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 reveal-group">
-                    <!-- M&E Card 1 -->
+                    <!-- Study Card 1 -->
                     <div class="me-card-light reveal-item">
                         <div
                             class="w-12 h-12 rounded-xl bg-blue-50 text-[#2271b1] flex items-center justify-center text-xl mb-5">
-                            <i class="fa-solid fa-rocket"></i>
+                            <i class="fa-solid fa-pen-ruler"></i>
                         </div>
-                        <h3 class="font-extrabold text-lg text-slate-900 mb-4">{{ __('Adaptive program monitoring') }}</h3>
+                        <h3 class="font-extrabold text-lg text-slate-900 mb-4">{{ __('Rigorous study & tool design') }}</h3>
                         <ul class="space-y-3 p-0 m-0 list-none">
                             <li class="flex items-start gap-2.5 text-xs sm:text-sm text-slate-600">
                                 <i class="fa-solid fa-circle-check text-[#2271b1] text-xs mt-1 flex-shrink-0"></i>
-                                <span>{{ __('Design flexible and precise survey tools with conditional branching.') }}</span>
+                                <span>{{ __('Design structured questionnaires with skip logic, Likert matrices, and field validation.') }}</span>
                             </li>
                             <li class="flex items-start gap-2.5 text-xs sm:text-sm text-slate-600">
                                 <i class="fa-solid fa-circle-check text-[#2271b1] text-xs mt-1 flex-shrink-0"></i>
-                                <span>{{ __('Track program indicators with speed, accuracy and field validation.') }}</span>
+                                <span>{{ __('Ensure methodological alignment across research objectives, hypotheses, and variables.') }}</span>
                             </li>
                             <li class="flex items-start gap-2.5 text-xs sm:text-sm text-slate-600">
                                 <i class="fa-solid fa-circle-check text-[#2271b1] text-xs mt-1 flex-shrink-0"></i>
-                                <span>{{ __('Enable faster evidence-based decisions during live interventions.') }}</span>
+                                <span>{{ __('Calculate statistically sound sample sizes using Yamane and Cochran formulas.') }}</span>
                             </li>
                         </ul>
                     </div>
 
-                    <!-- M&E Card 2 -->
+                    <!-- Study Card 2 -->
                     <div class="me-card-light reveal-item">
                         <div
                             class="w-12 h-12 rounded-xl bg-blue-50 text-[#2271b1] flex items-center justify-center text-xl mb-5">
-                            <i class="fa-solid fa-crosshairs"></i>
+                            <i class="fa-solid fa-layer-group"></i>
                         </div>
-                        <h3 class="font-extrabold text-lg text-slate-900 mb-4">{{ __('Targeted in-depth assessments') }}
+                        <h3 class="font-extrabold text-lg text-slate-900 mb-4">{{ __('Mixed-methods data collection') }}
                         </h3>
                         <ul class="space-y-3 p-0 m-0 list-none">
                             <li class="flex items-start gap-2.5 text-xs sm:text-sm text-slate-600">
                                 <i class="fa-solid fa-circle-check text-[#2271b1] text-xs mt-1 flex-shrink-0"></i>
-                                <span>{{ __('Integrate mixed quantitative surveys and qualitative interview data.') }}</span>
+                                <span>{{ __('Integrate quantitative web surveys, field enumerator mobile forms, and offline data sync.') }}</span>
                             </li>
                             <li class="flex items-start gap-2.5 text-xs sm:text-sm text-slate-600">
                                 <i class="fa-solid fa-circle-check text-[#2271b1] text-xs mt-1 flex-shrink-0"></i>
-                                <span>{{ __('Automatically transcribe voice dictations, KIIs and focus groups.') }}</span>
+                                <span>{{ __('Conduct and transcribe qualitative in-depth interviews, KIIs, and focus groups.') }}</span>
                             </li>
                             <li class="flex items-start gap-2.5 text-xs sm:text-sm text-slate-600">
                                 <i class="fa-solid fa-circle-check text-[#2271b1] text-xs mt-1 flex-shrink-0"></i>
-                                <span>{{ __('Identify longitudinal trends and baseline-to-endline shifts.') }}</span>
+                                <span>{{ __('Track respondent demographics and stratified cluster quotas in real time.') }}</span>
                             </li>
                         </ul>
                     </div>
 
-                    <!-- M&E Card 3 -->
+                    <!-- Study Card 3 -->
                     <div class="me-card-light reveal-item">
                         <div
                             class="w-12 h-12 rounded-xl bg-blue-50 text-[#2271b1] flex items-center justify-center text-xl mb-5">
-                            <i class="fa-solid fa-clipboard-list"></i>
+                            <i class="fa-solid fa-chart-line"></i>
                         </div>
                         <h3 class="font-extrabold text-lg text-slate-900 mb-4">
-                            {{ __('Comprehensive & flexible reporting') }}</h3>
+                            {{ __('Empirical analysis & synthesis') }}
+                        </h3>
                         <ul class="space-y-3 p-0 m-0 list-none">
                             <li class="flex items-start gap-2.5 text-xs sm:text-sm text-slate-600">
                                 <i class="fa-solid fa-circle-check text-[#2271b1] text-xs mt-1 flex-shrink-0"></i>
-                                <span>{{ __('Generate automated statistical summaries and significance tests.') }}</span>
+                                <span>{{ __('Generate descriptive summaries, cross-tabulations, and inferential regression diagnostics.') }}</span>
                             </li>
                             <li class="flex items-start gap-2.5 text-xs sm:text-sm text-slate-600">
                                 <i class="fa-solid fa-circle-check text-[#2271b1] text-xs mt-1 flex-shrink-0"></i>
-                                <span>{{ __('Produce impactful visualizations, cross-tabs and disaggregated metrics.') }}</span>
+                                <span>{{ __('Synthesize theoretical frameworks, empirical literature reviews, and gaps matrices.') }}</span>
                             </li>
                             <li class="flex items-start gap-2.5 text-xs sm:text-sm text-slate-600">
                                 <i class="fa-solid fa-circle-check text-[#2271b1] text-xs mt-1 flex-shrink-0"></i>
-                                <span>{{ __('Create custom stakeholder reports formatted in APA/IEEE standards.') }}</span>
+                                <span>{{ __('Export submission-ready academic manuscripts and research reports in APA 7th / IEEE formats.') }}</span>
                             </li>
                         </ul>
                     </div>
@@ -1297,7 +1344,8 @@
                                 <div>
                                     <h5 class="font-extrabold text-sm text-slate-900 mb-0.5">{{ __('Ask Anything') }}</h5>
                                     <p class="text-xs text-slate-500 m-0">
-                                        {{ __('Get clear answers and explanations about your topic.') }}</p>
+                                        {{ __('Get clear answers and explanations about your topic.') }}
+                                    </p>
                                 </div>
                             </div>
 
@@ -1310,7 +1358,8 @@
                                     <h5 class="font-extrabold text-sm text-slate-900 mb-0.5">{{ __('Explore Literature') }}
                                     </h5>
                                     <p class="text-xs text-slate-500 m-0">
-                                        {{ __('Find, summarize and understand relevant research.') }}</p>
+                                        {{ __('Find, summarize and understand relevant research.') }}
+                                    </p>
                                 </div>
                             </div>
 
@@ -1322,7 +1371,8 @@
                                 <div>
                                     <h5 class="font-extrabold text-sm text-slate-900 mb-0.5">{{ __('Run Analyses') }}</h5>
                                     <p class="text-xs text-slate-500 m-0">
-                                        {{ __('Support your work with data-driven analysis.') }}</p>
+                                        {{ __('Support your work with data-driven analysis.') }}
+                                    </p>
                                 </div>
                             </div>
 
@@ -1335,7 +1385,8 @@
                                     <h5 class="font-extrabold text-sm text-slate-900 mb-0.5">{{ __('Reliable & Private') }}
                                     </h5>
                                     <p class="text-xs text-slate-500 m-0">
-                                        {{ __('Your research stays secure and confidential.') }}</p>
+                                        {{ __('Your research stays secure and confidential.') }}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -1417,7 +1468,8 @@
                         <div>
                             <h5 class="font-extrabold text-sm text-slate-900 mb-0.5">{{ __('Research Assistant') }}</h5>
                             <p class="text-xs text-slate-500 m-0 leading-relaxed">
-                                {{ __('Socius AI understands your questions and research context.') }}</p>
+                                {{ __('Socius AI understands your questions and research context.') }}
+                            </p>
                         </div>
                     </div>
 
@@ -1426,7 +1478,8 @@
                         <div>
                             <h5 class="font-extrabold text-sm text-slate-900 mb-0.5">{{ __('Knowledge Base') }}</h5>
                             <p class="text-xs text-slate-500 m-0 leading-relaxed">
-                                {{ __('Built on trusted academic sources to support your studies.') }}</p>
+                                {{ __('Built on trusted academic sources to support your studies.') }}
+                            </p>
                         </div>
                     </div>
 
@@ -1435,7 +1488,8 @@
                         <div>
                             <h5 class="font-extrabold text-sm text-slate-900 mb-0.5">{{ __('Save Time') }}</h5>
                             <p class="text-xs text-slate-500 m-0 leading-relaxed">
-                                {{ __('From topic exploration to final analysis in minutes.') }}</p>
+                                {{ __('From topic exploration to final analysis in minutes.') }}
+                            </p>
                         </div>
                     </div>
 
@@ -1444,7 +1498,8 @@
                         <div>
                             <h5 class="font-extrabold text-sm text-slate-900 mb-0.5">{{ __('Private & Secure') }}</h5>
                             <p class="text-xs text-slate-500 m-0 leading-relaxed">
-                                {{ __('Your proprietary research data and chats remain private.') }}</p>
+                                {{ __('Your proprietary research data and chats remain private.') }}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -1472,13 +1527,16 @@
                         <ul class="space-y-2 p-0 m-0 list-none text-xs sm:text-sm text-slate-600">
                             <li class="flex items-start gap-2"><span
                                     class="w-1.5 h-1.5 rounded-full bg-[#2271b1] mt-1.5 flex-shrink-0"></span>
-                                {{ __('AI Questionnaire Architect drafts surveys from a prompt') }}</li>
+                                {{ __('AI Questionnaire Architect drafts surveys from a prompt') }}
+                            </li>
                             <li class="flex items-start gap-2"><span
                                     class="w-1.5 h-1.5 rounded-full bg-[#2271b1] mt-1.5 flex-shrink-0"></span>
-                                {{ __('Drag-and-drop builder with 12+ question types') }}</li>
+                                {{ __('Drag-and-drop builder with 12+ question types') }}
+                            </li>
                             <li class="flex items-start gap-2"><span
                                     class="w-1.5 h-1.5 rounded-full bg-[#2271b1] mt-1.5 flex-shrink-0"></span>
-                                {{ __('Conditional branching & dynamic validation rules') }}</li>
+                                {{ __('Conditional branching & dynamic validation rules') }}
+                            </li>
                         </ul>
                     </div>
 
@@ -1489,13 +1547,16 @@
                         <ul class="space-y-2 p-0 m-0 list-none text-xs sm:text-sm text-slate-600">
                             <li class="flex items-start gap-2"><span
                                     class="w-1.5 h-1.5 rounded-full bg-[#2271b1] mt-1.5 flex-shrink-0"></span>
-                                {{ __('Distribute via link, QR code, email, or embedded widget') }}</li>
+                                {{ __('Distribute via link, QR code, email, or embedded widget') }}
+                            </li>
                             <li class="flex items-start gap-2"><span
                                     class="w-1.5 h-1.5 rounded-full bg-[#2271b1] mt-1.5 flex-shrink-0"></span>
-                                {{ __('Built-in audio transcription for qualitative field interviews') }}</li>
+                                {{ __('Built-in audio transcription for qualitative field interviews') }}
+                            </li>
                             <li class="flex items-start gap-2"><span
                                     class="w-1.5 h-1.5 rounded-full bg-[#2271b1] mt-1.5 flex-shrink-0"></span>
-                                {{ __('Integrated incentive wallet with automated fraud detection') }}</li>
+                                {{ __('Integrated incentive wallet with automated fraud detection') }}
+                            </li>
                         </ul>
                     </div>
 
@@ -1506,13 +1567,16 @@
                         <ul class="space-y-2 p-0 m-0 list-none text-xs sm:text-sm text-slate-600">
                             <li class="flex items-start gap-2"><span
                                     class="w-1.5 h-1.5 rounded-full bg-[#2271b1] mt-1.5 flex-shrink-0"></span>
-                                {{ __('Descriptive statistics, t-tests, ANOVA and linear regression') }}</li>
+                                {{ __('Descriptive statistics, t-tests, ANOVA and linear regression') }}
+                            </li>
                             <li class="flex items-start gap-2"><span
                                     class="w-1.5 h-1.5 rounded-full bg-[#2271b1] mt-1.5 flex-shrink-0"></span>
-                                {{ __('Qualitative coding into structured thematic frameworks') }}</li>
+                                {{ __('Qualitative coding into structured thematic frameworks') }}
+                            </li>
                             <li class="flex items-start gap-2"><span
                                     class="w-1.5 h-1.5 rounded-full bg-[#2271b1] mt-1.5 flex-shrink-0"></span>
-                                {{ __('Query live datasets in natural plain language with Socius AI') }}</li>
+                                {{ __('Query live datasets in natural plain language with Socius AI') }}
+                            </li>
                         </ul>
                     </div>
 
@@ -1523,13 +1587,16 @@
                         <ul class="space-y-2 p-0 m-0 list-none text-xs sm:text-sm text-slate-600">
                             <li class="flex items-start gap-2"><span
                                     class="w-1.5 h-1.5 rounded-full bg-[#2271b1] mt-1.5 flex-shrink-0"></span>
-                                {{ __('Human Voice Guard preserves original intellectual style') }}</li>
+                                {{ __('Human Voice Guard preserves original intellectual style') }}
+                            </li>
                             <li class="flex items-start gap-2"><span
                                     class="w-1.5 h-1.5 rounded-full bg-[#2271b1] mt-1.5 flex-shrink-0"></span>
-                                {{ __('Auto-formatted APA and IEEE citations and tables') }}</li>
+                                {{ __('Auto-formatted APA and IEEE citations and tables') }}
+                            </li>
                             <li class="flex items-start gap-2"><span
                                     class="w-1.5 h-1.5 rounded-full bg-[#2271b1] mt-1.5 flex-shrink-0"></span>
-                                {{ __('One-click export to Word, PDF, or direct WordPress publish') }}</li>
+                                {{ __('One-click export to Word, PDF, or direct WordPress publish') }}
+                            </li>
                         </ul>
                     </div>
                 </div>
@@ -1545,9 +1612,11 @@
                     <span
                         class="text-xs font-extrabold text-[#2271b1] uppercase tracking-wider block mb-2">{{ __('The Advantage') }}</span>
                     <h2 class="text-3xl font-black text-slate-900 tracking-tight mb-3">
-                        {{ __('Unified Platform vs. Fragmented Tools') }}</h2>
+                        {{ __('Unified Platform vs. Fragmented Tools') }}
+                    </h2>
                     <p class="text-slate-600 text-sm sm:text-base">
-                        {{ __('See why research teams choose KDAnalytiks over juggling disconnected software.') }}</p>
+                        {{ __('See why research teams choose KDAnalytiks over juggling disconnected software.') }}
+                    </p>
                 </div>
 
                 <div class="overflow-x-auto">
@@ -1564,25 +1633,31 @@
                             <tr>
                                 <td class="font-bold text-slate-900">{{ __('All-in-One Lifecycle (Build to Report)') }}</td>
                                 <td class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check mr-1.5"></i>
-                                    {{ __('Yes, Seamless') }}</td>
+                                    {{ __('Yes, Seamless') }}
+                                </td>
                                 <td class="text-rose-500"><i class="fa-solid fa-circle-xmark mr-1.5"></i>
-                                    {{ __('Collection Only') }}</td>
+                                    {{ __('Collection Only') }}
+                                </td>
                                 <td class="text-rose-500"><i class="fa-solid fa-circle-xmark mr-1.5"></i>
-                                    {{ __('Analysis Only') }}</td>
+                                    {{ __('Analysis Only') }}
+                                </td>
                             </tr>
                             <tr>
                                 <td class="font-bold text-slate-900">{{ __('AI Dataset Querying & Copilot') }}</td>
                                 <td class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check mr-1.5"></i>
-                                    {{ __('Socius AI Built-in') }}</td>
+                                    {{ __('Socius AI Built-in') }}
+                                </td>
                                 <td class="text-rose-500"><i class="fa-solid fa-circle-xmark mr-1.5"></i> {{ __('No') }}
                                 </td>
                                 <td class="text-rose-500"><i class="fa-solid fa-circle-xmark mr-1.5"></i>
-                                    {{ __('Manual Syntax Only') }}</td>
+                                    {{ __('Manual Syntax Only') }}
+                                </td>
                             </tr>
                             <tr>
                                 <td class="font-bold text-slate-900">{{ __('Audio Transcription Studio') }}</td>
                                 <td class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check mr-1.5"></i>
-                                    {{ __('Direct Field Speech-to-Text') }}</td>
+                                    {{ __('Direct Field Speech-to-Text') }}
+                                </td>
                                 <td class="text-rose-500"><i class="fa-solid fa-circle-xmark mr-1.5"></i> {{ __('No') }}
                                 </td>
                                 <td class="text-rose-500"><i class="fa-solid fa-circle-xmark mr-1.5"></i> {{ __('No') }}
@@ -1591,11 +1666,14 @@
                             <tr>
                                 <td class="font-bold text-slate-900">{{ __('Automated APA & IEEE Formatted Output') }}</td>
                                 <td class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check mr-1.5"></i>
-                                    {{ __('Instant Chapter 4 & 5') }}</td>
+                                    {{ __('Instant Chapter 4 & 5') }}
+                                </td>
                                 <td class="text-rose-500"><i class="fa-solid fa-circle-xmark mr-1.5"></i>
-                                    {{ __('Raw CSV Only') }}</td>
+                                    {{ __('Raw CSV Only') }}
+                                </td>
                                 <td class="text-rose-500"><i class="fa-solid fa-circle-xmark mr-1.5"></i>
-                                    {{ __('Manual Formatting Needed') }}</td>
+                                    {{ __('Manual Formatting Needed') }}
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -1610,9 +1688,11 @@
                     <span
                         class="text-xs font-extrabold text-[#2271b1] uppercase tracking-wider block mb-2">{{ __('Got Questions?') }}</span>
                     <h2 class="text-3xl font-black text-slate-900 tracking-tight mb-3">
-                        {{ __('Frequently Asked Questions') }}</h2>
+                        {{ __('Frequently Asked Questions') }}
+                    </h2>
                     <p class="text-slate-600 text-sm sm:text-base">
-                        {{ __('Everything you need to know about the KDAnalytiks ecosystem and research workflows.') }}</p>
+                        {{ __('Everything you need to know about the KDAnalytiks ecosystem and research workflows.') }}
+                    </p>
                 </div>
 
                 <div class="space-y-3">
@@ -1629,16 +1709,7 @@
                     </div>
 
                     <!-- FAQ 2 -->
-                    <div class="faq-accordion-card">
-                        <button type="button" class="faq-accordion-btn" @click="openFaq = openFaq === 2 ? null : 2">
-                            <span>{{ __('How does the built-in M&E suite support project lifecycles?') }}</span>
-                            <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform"
-                                :class="{ 'rotate-180': openFaq === 2 }"></i>
-                        </button>
-                        <div x-show="openFaq === 2" x-cloak class="faq-accordion-content">
-                            {{ __('The M&E suite allows project teams to configure specific indicator targets, deploy baseline and endline assessments, capture qualitative beneficiary interviews via transcription and generate disaggregated progress reports for donors and stakeholders.') }}
-                        </div>
-                    </div>
+
 
                     <!-- FAQ 3 -->
                     <div class="faq-accordion-card">
@@ -1721,11 +1792,14 @@
                 <div class="flex flex-col lg:flex-row items-center justify-between gap-8">
                     <div class="space-y-2 text-center lg:text-left">
                         <h2 class="text-2xl sm:text-3xl font-black text-white m-0">
-                            {{ __('Ready to Streamline Your Research Workflows?') }}</h2>
+                            {{ __('Ready to Streamline Your Research Workflows?') }}
+                        </h2>
                         <p class="text-sm sm:text-base text-slate-300 m-0">
-                            {{ __('Design, collect, analyze and report — all in one unified workspace.') }}</p>
+                            {{ __('Design, collect, analyze and report — all in one unified workspace.') }}
+                        </p>
                     </div>
-                    <div class="flex items-center justify-center lg:justify-end gap-3 sm:gap-4 flex-wrap flex-shrink-0 w-full lg:w-auto">
+                    <div
+                        class="flex items-center justify-center lg:justify-end gap-3 sm:gap-4 flex-wrap flex-shrink-0 w-full lg:w-auto">
                         <a href="#get-started" class="btn-kd-primary w-full sm:w-auto justify-center">
                             <span>{{ __('Get Started Free') }}</span>
                             <i class="fa-solid fa-arrow-right text-xs"></i>

@@ -118,7 +118,7 @@
         }
 
         main {
-            overflow-x: auto;
+            overflow-x: clip;
             -webkit-overflow-scrolling: touch;
             width: 100%;
         }
@@ -358,7 +358,7 @@
 <body class="font-sans antialiased bg-gray-50 text-gray-900 overflow-x-hidden" x-data="{ mobileMenuOpen: false }"
     :class="Capacitor.isNativePlatform() ? 'is-native-app' : ''">
     <div class="min-h-screen flex flex-col"
-        x-data="{ mobileNavOpen: false, sidebarOpen: true, desktopSidebarOpen: window.innerWidth > 1024 && !{{ request()->routeIs('surveys.create', 'surveys.edit') ? 'true' : 'false' }} }"
+        x-data="{ mobileNavOpen: false, sidebarOpen: true, desktopSidebarOpen: window.innerWidth > 1024 && !{{ request()->routeIs('surveys.create', 'surveys.edit', 'research-proposal.create') ? 'true' : 'false' }} }"
         @close-sidebar.window="desktopSidebarOpen = false" @open-sidebar.window="desktopSidebarOpen = true">
         <!-- Navigation Bar -->
         <nav class="bg-[#1d2327] border-b border-[#2c3338] sticky top-0 z-[60] text-[#f0f0f1]">
@@ -663,6 +663,7 @@
                 || request()->routeIs('transcription.*')
                 || request('reportTab') === 'analyse'
                 || (request()->routeIs('surveys.reports') && request('reportTab') === 'analyse')
+                || request()->routeIs('research-proposal.create')
                 || request()->routeIs('docs*');
         @endphp
 

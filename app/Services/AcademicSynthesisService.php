@@ -94,157 +94,21 @@ class AcademicSynthesisService
         $results2 = $this->processWave($wave2, $survey, $style, $currentYear);
 
         // ── MERGE SEQUENTIALLY ──
-        // 1. Preliminaries
         $sections = array_merge($sections, $results1['prelim'] ?? []);
-
-        // 2. Chapter 1
-        $sections['CHAPTER 1: INTRODUCTION'] = '__chapter_header__';
         $sections = array_merge($sections, $results1['ch1'] ?? []);
-
-        // 3. Chapter 2
-        $sections['CHAPTER 2: LITERATURE REVIEW'] = '__chapter_header__';
         $sections = array_merge($sections, $results1['ch2'] ?? []);
-
-        // 4. Chapter 3
-        $sections['CHAPTER 3: RESEARCH METHODOLOGY'] = '__chapter_header__';
         $sections = array_merge($sections, $results2['ch3'] ?? []);
-
-        // 5. Chapter 4
-        $sections['CHAPTER 4: RESULTS AND DISCUSSION'] = '__chapter_header__';
         $sections = array_merge($sections, $results2['ch4'] ?? []);
+        $sections = array_merge($sections, $results2['ch5ref'] ?? []);
 
-        // 6. Chapter 5 & References
-        // The AI generates 5.1, 5.2, 5.3 and then REFERENCES.
-        // We need to inject the CHAPTER 5 header before 5.1.
-        $sections['CHAPTER 5: SUMMARY, CONCLUSIONS AND RECOMMENDATIONS'] = '__chapter_header__';
+        // ── 7. REFERENCES (Generated Deterministically from Citations) ──
+        $fullText = implode("\n\n", $sections);
+        $sections['REFERENCES'] = $this->referencingService->generateReferencesBlock($fullText, $style);
 
-        // Separate out REFERENCES if it exists in the chunk
-        $ch5RefChunk = $results2['ch5ref'] ?? [];
-        $refsContent = null;
-        if (isset($ch5RefChunk['REFERENCES'])) {
-            $refsContent = $ch5RefChunk['REFERENCES'];
-            unset($ch5RefChunk['REFERENCES']);
-        }
+        // ── 8. APPENDICES ──
+        $sections['Appendices'] = $this->generateAppendices($survey, $aggregatedData);
 
-        $sections = array_merge($sections, $ch5RefChunk);
-
-        if ($refsContent) {
-            $sections['REFERENCES'] = '__chapter_header__';
-            $sections['REFERENCES_CONTENT'] = $refsContent; // Using a unique key so it doesn't overwrite header
-        }
-
-        // ── RE-INJECT TABLES INTO CH4 ──
-        $targetKey = null;
-        foreach (array_keys($sections) as $key) {
-            if (str_contains($key, '4.4 Data Analysis')) {
-                $targetKey = $key;
-                break;
-            }
-        }
-
-        if ($targetKey) {
-            foreach ($aggregatedData['questions'] as $idx => $q) {
-                if (!empty($q['stats'])) {
-                    $sections[$targetKey] .= "\n\n" . $this->buildSingleQuestionTableHtml($q['label'], $q['stats'], $totalResponses, $branding);
-                }
-            }
-            // Fix sub-headings formatting (convert **4.4.x ...** or plain 4.4.x or ***4.4.x...*** to headings)
-            $sections[$targetKey] = preg_replace('/(?:\*+)?(4\.4\.\d+\s+[^\n\*]+)(?:\*+)?/', '<h4>$1</h4>', $sections[$targetKey]);
-            // Remove "(linked to objectives)" text from any headings
-            $sections[$targetKey] = preg_replace('/\s*\(linked\s+to\s+objectives\)/i', '', $sections[$targetKey]);
-        }
-
-        // Apply cleaning to all sections
-        foreach ($sections as $k => $v) {
-            if ($v !== '__chapter_header__') {
-                $sections[$k] = preg_replace('/\s*\(linked\s+to\s+objectives\)/i', '', $sections[$k]);
-
-                // Fix "Definition of Key Terms" asterisk formatting (e.g. **Term**: ... or ***Term***: ...)
-                if (str_contains($k, 'Definition of Key Terms')) {
-                    $sections[$k] = preg_replace('/(?:\*+)([^\*:]+)(?:\*+):/', '<strong>$1</strong>:', $sections[$k]);
-                }
-            }
-        }
-
-        // ── APPENDICES ──
-        $sections['APPENDICES'] = $this->generateAppendices($survey, $aggregatedData);
-
-        return [
-            'outline' => "Generated Academic Structure",
-            'sections' => array_filter($sections),
-            'metadata' => [
-                'survey_id' => $survey->id,
-                'style' => $style,
-                'manual_references' => $manualReferences,
-                'generated_at' => now()->toIso8601String(),
-                'total_responses' => $totalResponses,
-                'locale' => $locale,
-            ]
-        ];
-    }
-
-    /**
-     * Normalize report keys back to standard English keys so that __() can translate them.
-     */
-    public function normalizeReportKeys(array $sections)
-    {
-        $normalized = [];
-        $mappings = [
-            '1.1' => '1.1 Background of the Study',
-            '1.2' => '1.2 Statement of the Problem',
-            '1.3' => '1.3 Objectives and Research Questions',
-            '1.4' => '1.4 Significance of the Study',
-            '1.5' => '1.5 Scope and Limitations',
-            '2.1' => '2.1 Introduction',
-            '2.2' => '2.2 Theoretical Framework',
-            '2.3' => '2.3 Conceptual Framework',
-            '2.4' => '2.4 Empirical Review',
-            '2.5' => '2.5 Research Gaps',
-            '2.6' => '2.6 Summary',
-            '3.1' => '3.1 Research Design',
-            '3.2' => '3.2 Target Population',
-            '3.3' => '3.3 Sample Size and Sampling Techniques',
-            '3.4' => '3.4 Data Collection Instruments',
-            '3.6' => '3.6 Validity and Reliability',
-            '4.1' => '4.1 Introduction',
-            '4.2' => '4.2 Response Rate',
-            '4.3' => '4.3 Respondent Demographics',
-            '4.4' => '4.4 Data Analysis and Presentation',
-            '4.5' => '4.5 Discussion of Findings',
-            '4.6' => '4.6 Summary',
-            '5.1' => '5.1 Summary of Findings',
-            '5.2' => '5.2 Conclusions',
-            '5.3' => '5.3 Limitations of the Study',
-            '5.4' => '5.4 Recommendations',
-            'SURA YA 1' => 'CHAPTER 1: INTRODUCTION',
-            'SURA YA 2' => 'CHAPTER 2: LITERATURE REVIEW',
-            'SURA YA 3' => 'CHAPTER 3: RESEARCH METHODOLOGY',
-            'SURA YA 4' => 'CHAPTER 4: RESULTS AND DISCUSSION',
-            'SURA YA 5' => 'CHAPTER 5: SUMMARY, CONCLUSIONS AND RECOMMENDATIONS',
-            'CHAPITRE 1' => 'CHAPTER 1: INTRODUCTION',
-            'CHAPITRE 2' => 'CHAPTER 2: LITERATURE REVIEW',
-            'CHAPITRE 3' => 'CHAPTER 3: RESEARCH METHODOLOGY',
-            'CHAPITRE 4' => 'CHAPTER 4: RESULTS AND DISCUSSION',
-            'CHAPITRE 5' => 'CHAPTER 5: SUMMARY, CONCLUSIONS AND RECOMMENDATIONS',
-            'CAPÍTULO 1' => 'CHAPTER 1: INTRODUCTION',
-            'CAPÍTULO 2' => 'CHAPTER 2: LITERATURE REVIEW',
-            'CAPÍTULO 3' => 'CHAPTER 3: RESEARCH METHODOLOGY',
-            'CAPÍTULO 4' => 'CHAPTER 4: RESULTS AND DISCUSSION',
-            'CAPÍTULO 5' => 'CHAPTER 5: SUMMARY, CONCLUSIONS AND RECOMMENDATIONS',
-        ];
-
-        foreach ($sections as $title => $content) {
-            $newTitle = $title;
-            foreach ($mappings as $match => $standard) {
-                if (str_contains(strtoupper($title), strtoupper($match))) {
-                    $newTitle = $standard;
-                    break;
-                }
-            }
-            $normalized[$newTitle] = $content;
-        }
-
-        return $normalized;
+        return $sections;
     }
 
     private function parseAndInject($response, &$sections)
@@ -299,12 +163,6 @@ class AcademicSynthesisService
         }
     }
 
-    /**
-     * Process a batch of sections from a single AI call.
-     */
-    /**
-     * Translate an existing report to a new language using batched calls for speed.
-     */
     public function translateReport(array $sections, string $targetLocale)
     {
         $langMap = [
@@ -349,7 +207,6 @@ class AcademicSynthesisService
 
         $anySuccess = false;
         foreach ($responses as $key => $response) {
-            \Illuminate\Support\Facades\Log::info("Translation Response for $key: " . substr($response, 0, 200));
             if ($response) {
                 $anySuccess = true;
                 $parts = preg_split('/\[\[\[ID:\s*([^\]]+)\]\]\]/i', $response, -1, PREG_SPLIT_DELIM_CAPTURE);
@@ -368,9 +225,7 @@ class AcademicSynthesisService
             'sections' => $translatedSections
         ];
     }
-    /**
-     * Process a wave of 2 parallel AI calls, parsing results in order.
-     */
+
     private function processWave(array $prompts, $survey, $style, $currentYear)
     {
         $locale = \Illuminate\Support\Facades\App::getLocale();
@@ -397,7 +252,6 @@ class AcademicSynthesisService
 
         $parsedResults = [];
 
-        // Parse responses IN KEY ORDER
         foreach ($prompts as $key => $prompt) {
             $parsedResults[$key] = [];
             $response = $responses[$key] ?? null;
@@ -405,7 +259,6 @@ class AcademicSynthesisService
                 $this->parseAndInject($response, $parsedResults[$key]);
             } else {
                 Log::warning("Wave call '{$key}' returned null — falling back to sequential.");
-                // Fallback: try a single sequential call for this prompt
                 $fallback = $this->aiService->callAi($prompt, $systemPrompt);
                 if ($fallback) {
                     $this->parseAndInject($fallback, $parsedResults[$key]);
@@ -416,80 +269,6 @@ class AcademicSynthesisService
         return $parsedResults;
     }
 
-    private function batchProcess($prompt, &$sections, $survey, $style, $currentYear)
-    {
-        $locale = \Illuminate\Support\Facades\App::getLocale();
-        $langMap = [
-            'sw' => 'Swahili',
-            'fr' => 'French',
-            'de' => 'German',
-            'es' => 'Spanish',
-            'ar' => 'Arabic',
-            'zh-CN' => 'Chinese (Simplified)',
-        ];
-        $language = $langMap[$locale] ?? 'English';
-
-        $systemPrompt = "You are a senior academic director. Write formal, objective research prose. " .
-            "CRITICAL: You MUST use the exact English markers [SECTION: Name] provided in the prompt before every new section you write. " .
-            "Do NOT translate the names inside the [SECTION: ...] markers, even if you are writing the content in another language. " .
-            "Ground every claim in the survey findings. Attribute data to '{$survey->title}' ({$currentYear}). " .
-            "Citation style: {$style}. Output only the marked sections. " .
-            "WARNING: Do NOT append a 'References' list or bibliography at the end of your text unless explicitly asked to generate [SECTION: REFERENCES]. " .
-            "IMPORTANT: You MUST write the entire CONTENT of the sections in {$language}.";
-
-        Log::info("Executing Batch AI Call for prompt: " . substr($prompt, 0, 100) . "...");
-        $response = $this->aiService->callAi($prompt, $systemPrompt);
-
-        if ($response) {
-            // More resilient regex: handles optional spaces and case sensitivity
-            $parts = preg_split('/\[SECTION:\s*([^\]]+)\]/i', $response, -1, PREG_SPLIT_DELIM_CAPTURE);
-
-            for ($i = 1; $i < count($parts); $i += 2) {
-                $rawTitle = trim($parts[$i]);
-                $content = trim($parts[$i + 1] ?? '');
-
-                // Marker Normalization: Map common translations back to English keys
-                $title = $rawTitle;
-                $mappings = [
-                    'Background' => '1.1 Background of the Study',
-                    'Statement of the Problem' => '1.2 Statement of the Problem',
-                    'Objectives' => '1.3 Objectives of the Study',
-                    'Research Questions' => '1.4 Research Questions',
-                    'Significance' => '1.5 Significance of the Study',
-                    'Scope and Limitations' => '1.6 Scope and Limitations',
-                    'Theoretical Framework' => '2.1 Theoretical Framework',
-                    'Conceptual Framework' => '2.2 Conceptual Framework',
-                    'Empirical Review' => '2.3 Empirical Review',
-                    'Research Gaps' => '2.4 Research Gaps',
-                    'Summary' => '2.5 Summary',
-                ];
-
-                foreach ($mappings as $match => $standardKey) {
-                    if (str_contains($rawTitle, $match)) {
-                        $title = $standardKey;
-                        break;
-                    }
-                }
-
-                if ($title && $content) {
-                    $sections[$title] = $content;
-                }
-            }
-        } else {
-            // Improved failover: List exactly which sections were expected
-            preg_match_all('/\[SECTION:\s*([^\]]+)\]/i', $prompt, $matches);
-            foreach ($matches[1] as $expectedTitle) {
-                $trimmedTitle = trim($expectedTitle);
-                if (!isset($sections[$trimmedTitle])) {
-                    $sections[$trimmedTitle] = "[Generation timed out. Please try regenerating this specific section.]";
-                }
-            }
-        }
-    }
-
-    /**
-     * Static helper to build a data summary for prompts.
-     */
     private function buildDataSummary($aggregatedData)
     {
         $summary = "";
@@ -503,71 +282,6 @@ class AcademicSynthesisService
         }
         return substr($summary, 0, 2000);
     }
-
-    /**
-     * Helper to build HTML table for data.
-     */
-    private function buildSingleQuestionTableHtml($label, $stats, $totalResponses, $branding = [])
-    {
-        // ── 1. GENERATE CHART USING QUICKCHART ──
-        $chartLabels = [];
-        $chartData = [];
-        foreach (array_slice($stats, 0, 8) as $s) {
-            $chartLabels[] = strlen($s['option']) > 15 ? substr($s['option'], 0, 12) . '...' : $s['option'];
-            $chartData[] = $s['count'];
-        }
-
-        $brandColor = $branding['brandColor'] ?? '#4f46e5';
-
-        $chartConfig = [
-            'type' => 'bar',
-            'data' => [
-                'labels' => $chartLabels,
-                'datasets' => [
-                    [
-                        'label' => 'Frequency',
-                        'data' => $chartData,
-                        'backgroundColor' => $brandColor,
-                        'borderColor' => $brandColor,
-                        'borderWidth' => 1
-                    ]
-                ]
-            ],
-            'options' => [
-                'responsive' => true,
-                'plugins' => [
-                    'title' => ['display' => true, 'text' => $label]
-                ]
-            ]
-        ];
-
-        $chartUrl = "https://quickchart.io/chart?c=" . urlencode(json_encode($chartConfig)) . "&w=500&h=300";
-
-        $html = "<div style='text-align: center; margin: 30px 0;'>";
-        $html .= "<img src='{$chartUrl}' style='max-width: 100%; height: auto; border: 1px solid #eee; border-radius: 8px;' />";
-        $html .= "</div>";
-
-        $html .= "<h4>Table: {$label} (N={$totalResponses})</h4>";
-        $html .= "<table border='1' style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'>";
-        $html .= "<thead><tr style='background: #f3f4f6;'>";
-        $html .= "<th style='padding: 8px; text-align: left;'>Response</th>";
-        $html .= "<th style='padding: 8px; text-align: center;'>f</th>";
-        $html .= "<th style='padding: 8px; text-align: center;'>%</th>";
-        $html .= "</tr></thead>";
-        $html .= "<tbody>";
-        foreach ($stats as $s) {
-            $html .= "<tr>";
-            $html .= "<td style='padding: 8px; border: 1px solid #ddd;'>{$s['option']}</td>";
-            $html .= "<td style='padding: 8px; border: 1px solid #ddd; text-align: center;'>{$s['count']}</td>";
-            $html .= "<td style='padding: 8px; border: 1px solid #ddd; text-align: center;'>{$s['percentage']}%</td>";
-            $html .= "</tr>";
-        }
-        $html .= "</tbody></table>";
-        return $html;
-    }
-
-    // ... (Keep existing Title Page, Declaration, Acknowledgement, Appendices, Export methods from previous version) ...
-    // Note: I will merge the rest of the existing methods below.
 
     private function generateTitlePage($survey, $year, $style)
     {
@@ -612,19 +326,39 @@ class AcademicSynthesisService
         return $p ?: "General academic knowledge.";
     }
 
+    /**
+     * Export proposal / report sections to DOCX with native tables and formatted headers.
+     */
+    /**
+     * Export proposal / report sections to DOCX with native tables and formatted headers.
+     */
     public function exportToDocx(array $content, string $filename, array $branding = [])
     {
         $phpWord = new \PhpOffice\PhpWord\PhpWord();
-        $section = $phpWord->addSection();
+
+        // Define clean academic document styles (Times New Roman / Arial 11pt, 1.15 line spacing, 6pt after)
+        $phpWord->setDefaultFontName('Times New Roman');
+        $phpWord->setDefaultFontSize(12);
+
+        $phpWord->addTitleStyle(1, ['name' => 'Times New Roman', 'size' => 16, 'bold' => true, 'color' => '0F172A'], ['spaceBefore' => 280, 'spaceAfter' => 140]);
+        $phpWord->addTitleStyle(2, ['name' => 'Times New Roman', 'size' => 13, 'bold' => true, 'color' => '0F172A'], ['spaceBefore' => 200, 'spaceAfter' => 100]);
+        $phpWord->addTitleStyle(3, ['name' => 'Times New Roman', 'size' => 12, 'bold' => true, 'color' => '1E293B'], ['spaceBefore' => 160, 'spaceAfter' => 80]);
+
+        $section = $phpWord->addSection([
+            'marginTop' => 1440, // 1 inch
+            'marginBottom' => 1440,
+            'marginLeft' => 1440,
+            'marginRight' => 1440,
+        ]);
 
         // Handle Branding for DOCX
         if (!empty($branding)) {
-            if ($branding['showKdBranding']) {
+            if (!empty($branding['showKdBranding'])) {
                 $footer = $section->addFooter();
                 $footer->addPreserveText('Generated by KDAnalytiks - Page {PAGE} of {NUMPAGES}', ['bold' => true, 'size' => 10, 'color' => '999999'], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
             } else {
                 $header = $section->addHeader();
-                if ($branding['customLogo']) {
+                if (!empty($branding['customLogo'])) {
                     $logoPath = storage_path('app/public/' . $branding['customLogo']);
                     if (file_exists($logoPath)) {
                         $header->addImage($logoPath, [
@@ -634,7 +368,7 @@ class AcademicSynthesisService
                         ]);
                     }
                 }
-                if ($branding['customOrgName']) {
+                if (!empty($branding['customOrgName'])) {
                     $header->addTextBreak(1);
                     $header->addText($branding['customOrgName'], ['bold' => true, 'size' => 14], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
                 }
@@ -651,100 +385,275 @@ class AcademicSynthesisService
                 continue;
             }
 
-            // Skip title for the Title Page as it's usually inside the content
-            if ($title !== 'Title Page') {
+            // Skip title for the Title Page, Chapters, or Budget as the markdown body already includes the primary heading
+            if ($title !== 'Title Page' && !str_starts_with($title, 'CHAPTER') && !str_starts_with($title, 'PROPOSED BUDGET')) {
                 $section->addTitle($localizedTitle, 2);
             }
 
-            // If the content looks like HTML, use the HTML parser
-            if (str_contains($text, '<') && str_contains($text, '>')) {
-                try {
-                    // Strip problematic elements that PhpWord might not like
-                    $safeHtml = preg_replace('/<div[^>]*>/i', '', $text);
-                    $safeHtml = str_replace('</div>', '<br>', $safeHtml);
-                    \PhpOffice\PhpWord\Shared\Html::addHtml($section, $safeHtml, false, false);
-                } catch (\Exception $e) {
-                    Log::error("DOCX HTML Export error: " . $e->getMessage());
-                    $section->addText(strip_tags($text));
+            // Block-by-block robust injection with multi-tier sanitization
+            $blocks = $this->splitIntoBlocks($text);
+            foreach ($blocks as $block) {
+                $trimmedBlock = trim($block);
+                if (empty($trimmedBlock))
+                    continue;
+
+                // Handle standard Markdown headings natively for zero XML parse failures
+                if (preg_match('/^(#{1,4})\s+(.+)$/m', $trimmedBlock, $hMatches) && strlen($trimmedBlock) < 300 && !str_contains($trimmedBlock, "\n")) {
+                    $level = strlen($hMatches[1]);
+                    $headingText = trim(strip_tags($hMatches[2]));
+                    $section->addTitle($headingText, min($level, 3));
+                    continue;
                 }
-            } else {
-                $section->addText($text);
+
+                $blockHtml = $this->markdownToHtmlForWord($block);
+                try {
+                    \PhpOffice\PhpWord\Shared\Html::addHtml($section, $blockHtml, false, false);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("DOCX Block HTML Error: " . $e->getMessage() . " | Executing native fallback.");
+                    // Clean native fallback by line
+                    $lines = explode("\n", $trimmedBlock);
+                    foreach ($lines as $l) {
+                        $cleanL = trim(strip_tags($l));
+                        if (!empty($cleanL)) {
+                            if (str_starts_with($cleanL, '- ') || str_starts_with($cleanL, '* ')) {
+                                $section->addListItem(substr($cleanL, 2), 0, ['size' => 11, 'color' => '333333']);
+                            } else {
+                                $section->addText($cleanL, ['size' => 11, 'color' => '333333']);
+                            }
+                        }
+                    }
+                }
             }
 
             $section->addTextBreak(1);
         }
+
         $writer = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'Word2007');
         $path = storage_path('app/public/reports/' . $filename . '.docx');
         $writer->save($path);
         return $path;
     }
 
-    public function exportToPdf(array $content, string $filename, array $branding = [])
+    /**
+     * Split text into structural blocks (paragraphs, headers, tables) for isolated try-catch processing.
+     */
+    private function splitIntoBlocks(string $text): array
     {
-        $html = "";
-        foreach ($content as $title => $text) {
-            $localizedTitle = __($title);
-            if ($text === '__chapter_header__') {
-                $html .= "<h1 style='page-break-before:always; text-align:center;'>{$localizedTitle}</h1>";
-                continue;
-            }
-            if (str_contains($text, 'title-page')) {
-                $html .= $text;
-                continue;
-            }
-            $html .= "<h2>{$localizedTitle}</h2><div>" . nl2br(e($text)) . "</div>";
-        }
+        $blocks = [];
+        $lines = explode("\n", str_replace("\r", "", $text));
+        $currentTable = [];
+        $currentParagraph = [];
 
-        $mpdf = new \Mpdf\Mpdf([
-            'margin_left' => 20,
-            'margin_right' => 20,
-            'margin_top' => 50,
-            'margin_bottom' => 25,
-            'margin_header' => 10,
-            'margin_footer' => 10,
-        ]);
-
-        // Handle Branding for PDF
-        if (!empty($branding)) {
-            if ($branding['showKdBranding']) {
-                // BIGGER BRANDING for Free Tier
-                $mpdf->SetWatermarkText('KDAnalytiks');
-                $mpdf->showWatermarkText = true;
-                $mpdf->watermark_font = 'DejaVuSansCondensed';
-                $mpdf->watermarkTextAlpha = 0.1;
-
-                $footerHtml = '
-                <div style="border-top: 1px solid #eee; padding-top: 10px; font-size: 10px; color: #666; text-align: center; font-weight: bold;">
-                    THIS RESEARCH PROPOSAL WAS AI-GENERATED VIA kdanalytiks.com. UPGRADE TO REMOVE THIS NOTICE.
-                    <br/>
-                    <span style="font-size: 8px;">Page {PAGENO} of {nbpg}</span>
-                </div>';
-                $mpdf->SetHTMLFooter($footerHtml);
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            if (str_starts_with($trimmed, '|')) {
+                if (!empty($currentParagraph)) {
+                    $blocks[] = implode("\n", $currentParagraph);
+                    $currentParagraph = [];
+                }
+                $currentTable[] = $line;
             } else {
-                // Professional branding for Pro/Enterprise - CENTERED & BIGGER
-                $headerHtml = '<div style="text-align: center; border-bottom: 2px solid ' . ($branding['brandColor'] ?? '#4f46e5') . '; padding-bottom: 15px; margin-bottom: 20px;">';
-
-                if ($branding['customLogo']) {
-                    $logoPath = storage_path('app/public/' . $branding['customLogo']);
-                    if (file_exists($logoPath)) {
-                        $headerHtml .= '<img src="' . $logoPath . '" style="height: 70px; width: auto; margin-bottom: 10px;"><br>';
+                if (!empty($currentTable)) {
+                    $blocks[] = implode("\n", $currentTable);
+                    $currentTable = [];
+                }
+                if ($trimmed === '') {
+                    if (!empty($currentParagraph)) {
+                        $blocks[] = implode("\n", $currentParagraph);
+                        $currentParagraph = [];
                     }
+                } else {
+                    $currentParagraph[] = $line;
                 }
-
-                if ($branding['customOrgName']) {
-                    $headerHtml .= '<div style="font-size: 16px; color: #111; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">' . e($branding['customOrgName']) . '</div>';
-                }
-                $headerHtml .= '</div>';
-                $mpdf->SetHTMLHeader($headerHtml);
-
-                $footerHtml = '<div style="text-align: center; font-size: 9px; color: #999;">Page {PAGENO} of {nbpg}</div>';
-                $mpdf->SetHTMLFooter($footerHtml);
             }
         }
 
-        $mpdf->WriteHTML($html);
-        $path = storage_path('app/public/reports/' . $filename . '.pdf');
-        $mpdf->Output($path, \Mpdf\Output\Destination::FILE);
-        return $path;
+        if (!empty($currentTable)) {
+            $blocks[] = implode("\n", $currentTable);
+        }
+        if (!empty($currentParagraph)) {
+            $blocks[] = implode("\n", $currentParagraph);
+        }
+
+        return !empty($blocks) ? $blocks : [$text];
+    }
+
+    /**
+     * Convert markdown text (headers, bold, tables, lists) to safe, strictly-valid HTML for Word generation.
+     */
+    private function markdownToHtmlForWord(string $text): string
+    {
+        $trimmed = trim($text);
+        if (empty($trimmed))
+            return '';
+
+        // Transform Mermaid diagrams into an Academic Box-Model Table for native Word compatibility
+        if (stripos($trimmed, '```mermaid') !== false || stripos($trimmed, 'graph LR') !== false) {
+            $cleanMermaid = preg_replace('/```(?:mermaid)?/i', '', $trimmed);
+
+            // Extract independent and dependent variables from mermaid text
+            preg_match_all('/(?:IV\d*\["|\[)([^\]"]+)(?:"\]|\])/i', $cleanMermaid, $ivMatches);
+            preg_match_all('/(?:DV\d*\["|\[)([^\]"]+)(?:"\]|\])/i', $cleanMermaid, $dvMatches);
+
+            $ivItems = array_unique(array_filter($ivMatches[1] ?? [], function ($v) {
+                return !in_array(strtolower(trim($v)), ['independent variables', 'dependent variables', 'dependent variable', 'moderating variables']);
+            }));
+            $dvItems = array_unique(array_filter($dvMatches[1] ?? [], function ($v) {
+                return !in_array(strtolower(trim($v)), ['independent variables', 'dependent variables', 'dependent variable', 'moderating variables']);
+            }));
+
+            $ivListHtml = '';
+            foreach ($ivItems as $item) {
+                $ivListHtml .= '<li style="margin-bottom:4px; font-size:10pt;">' . htmlspecialchars($item) . '</li>';
+            }
+            if (empty($ivListHtml))
+                $ivListHtml = '<li style="font-size:10pt;">Independent Predictors (Construct Indicators)</li>';
+
+            $dvListHtml = '';
+            foreach ($dvItems as $item) {
+                $dvListHtml .= '<li style="margin-bottom:4px; font-size:10pt;">' . htmlspecialchars($item) . '</li>';
+            }
+            if (empty($dvListHtml))
+                $dvListHtml = '<li style="font-size:10pt;">Dependent Outcome Variables</li>';
+
+            return '<table border="1" cellpadding="8" style="width:100%; border-collapse:collapse; margin-top:14px; margin-bottom:18px; border:2px solid #1e293b;">' .
+                '<tr>' .
+                '<th style="width:44%; background-color:#f1f5f9; color:#0f172a; font-weight:bold; font-size:11pt; padding:10px 14px; text-align:left; border:1px solid #cbd5e1;">INDEPENDENT VARIABLES (IVs)</th>' .
+                '<th style="width:12%; background-color:#f8fafc; text-align:center; font-weight:bold; font-size:12pt; border:1px solid #cbd5e1; color:#2271b1;">PATH</th>' .
+                '<th style="width:44%; background-color:#f1f5f9; color:#0f172a; font-weight:bold; font-size:11pt; padding:10px 14px; text-align:left; border:1px solid #cbd5e1;">DEPENDENT VARIABLES (DVs)</th>' .
+                '</tr>' .
+                '<tr>' .
+                '<td style="vertical-align:middle; padding:14px 16px; border:1px solid #cbd5e1; background-color:#ffffff;"><ul style="margin:0; padding-left:18px;">' . $ivListHtml . '</ul></td>' .
+                '<td style="vertical-align:middle; text-align:center; font-size:16pt; color:#2271b1; border:1px solid #cbd5e1; background-color:#f8fafc;"><b>&#10132;</b></td>' .
+                '<td style="vertical-align:middle; padding:14px 16px; border:1px solid #cbd5e1; background-color:#ffffff;"><ul style="margin:0; padding-left:18px;">' . $dvListHtml . '</ul></td>' .
+                '</tr>' .
+                '</table>' .
+                '<p style="font-size:9pt; color:#64748b; font-style:italic; margin-top:4px; margin-bottom:16px;">Figure 2.1: Conceptual Framework mapping hypothesized relational pathways.</p>';
+        }
+
+        // If it's a markdown table block
+        if (str_starts_with($trimmed, '|')) {
+            $rows = explode("\n", str_replace("\r", "", $trimmed));
+            $html = '<table border="1" cellpadding="6" style="width:100%; border-collapse:collapse; margin-bottom:12px;">';
+            $isHeader = true;
+
+            foreach ($rows as $row) {
+                $row = trim($row);
+                if (empty($row) || preg_match('/^\|[\s\-:|]+\|$/', $row)) {
+                    $isHeader = false;
+                    continue;
+                }
+                $cells = array_map('trim', explode('|', trim($row, '|')));
+                $tag = $isHeader ? 'th' : 'td';
+                $bg = $isHeader ? 'background-color:#f1f5f9; font-weight:bold;' : '';
+
+                $html .= '<tr>';
+                foreach ($cells as $cell) {
+                    $cleanCell = htmlspecialchars($cell, ENT_QUOTES, 'UTF-8');
+                    // Allow simple inline bolding inside table cells
+                    $cleanCell = preg_replace('/\*\*(.+?)\*\*/s', '<b>$1</b>', $cleanCell);
+                    $html .= "<{$tag} style='padding:6px 10px; border:1px solid #cbd5e1; {$bg}'>{$cleanCell}</{$tag}>";
+                }
+                $html .= '</tr>';
+                if ($isHeader) {
+                    $isHeader = false;
+                }
+            }
+            $html .= '</table>';
+            return $html;
+        }
+
+        // Clean LaTeX math notations before markdown conversion for clean DOCX display
+        $formattedText = $this->convertLatexMathForWord($text);
+
+        // Use Laravel's built-in CommonMark parser for standard markdown blocks
+        try {
+            $html = \Illuminate\Support\Str::markdown($formattedText);
+            // Sanitize unneeded outer wrapper tags for PHPWord
+            $html = preg_replace('/<\/?(?:div|section|article)[^>]*>/i', '', $html);
+            return trim($html);
+        } catch (\Exception $e) {
+            return '<p style="margin-bottom:10px; line-height:1.6;">' . nl2br(htmlspecialchars($formattedText, ENT_QUOTES, 'UTF-8')) . '</p>';
+        }
+    }
+
+    /**
+     * Convert LaTeX math notation ($$...$$, \(...\), \frac, \beta, etc.) into clean Word-friendly HTML.
+     */
+    private function convertLatexMathForWord(string $text): string
+    {
+        // Replace display math $$ ... $$ with clean bold italic formula lines
+        $text = preg_replace_callback('/\$\$\s*(.+?)\s*\$\$/s', function ($matches) {
+            $formula = $matches[1];
+            $clean = $this->cleanMathExpression($formula);
+            return "\n\n> **Formula / Model:** *{$clean}*\n\n";
+        }, $text);
+
+        // Replace inline math \( ... \) or $ ... $
+        $text = preg_replace_callback('/\\\\\(\s*(.+?)\s*\\\\\)/s', function ($matches) {
+            return '*' . $this->cleanMathExpression($matches[1]) . '*';
+        }, $text);
+
+        $text = preg_replace_callback('/(?<!\$)\$(?!\$)(.+?)(?<!\$)\$(?!\$)/s', function ($matches) {
+            return '*' . $this->cleanMathExpression($matches[1]) . '*';
+        }, $text);
+
+        return $text;
+    }
+
+    /**
+     * Clean LaTeX symbols to standard Unicode academic characters for DOCX.
+     */
+    private function cleanMathExpression(string $expr): string
+    {
+        // Remove LaTeX formatting commands
+        $expr = preg_replace('/\\\\text\{([^}]+)\}/', '$1', $expr);
+        $expr = preg_replace('/\\\\bigl\(|\\\\bigr\)/', '', $expr);
+        $expr = preg_replace('/\\\\left\(|\\\\right\)/', '', $expr);
+
+        // Convert fractions \frac{num}{den} to (num / den)
+        $expr = preg_replace('/\\\\frac\{([^}]+)\}\{([^}]+)\}/', '($1 / $2)', $expr);
+
+        // Convert Greek & mathematical symbols to Unicode
+        $replacements = [
+            '\\beta_{0}' => 'β₀',
+            '\\beta_0' => 'β₀',
+            '\\beta_{1}' => 'β₁',
+            '\\beta_1' => 'β₁',
+            '\\beta_{2}' => 'β₂',
+            '\\beta_2' => 'β₂',
+            '\\beta_{3}' => 'β₃',
+            '\\beta_3' => 'β₃',
+            '\\beta_{4}' => 'β₄',
+            '\\beta_4' => 'β₄',
+            '\\beta_{5}' => 'β₅',
+            '\\beta_5' => 'β₅',
+            '\\beta_k' => 'βₖ',
+            '\\beta_{j}' => 'βⱼ',
+            '\\beta_j' => 'βⱼ',
+            '\\beta' => 'β',
+            '\\varepsilon' => 'ε',
+            '\\epsilon' => 'ε',
+            '\\alpha' => 'α',
+            '\\times' => ' × ',
+            '\\approx' => ' ≈ ',
+            '\\neq' => ' ≠ ',
+            '\\le' => ' ≤ ',
+            '\\ge' => ' ≥ ',
+            '\\pm' => ' ± ',
+            '\\sum' => 'Σ',
+            '\\sqrt' => '√',
+            '\\mu' => 'μ',
+            '\\sigma' => 'σ',
+            '\\Delta' => 'Δ',
+            '\\;' => ' ',
+            '\\,' => ' ',
+            '\\{' => '',
+            '\\}' => '',
+            '{' => '',
+            '}' => '',
+        ];
+
+        return trim(str_replace(array_keys($replacements), array_values($replacements), $expr));
     }
 }
