@@ -119,6 +119,112 @@ class SubscriptionController extends Controller
     }
 
     /**
+     * Activate a subscription upgrade across entities, create Payment and Transaction records.
+     */
+    protected function activateSubscription(
+        string $type,
+        int|string $entityId,
+        int|string $tierId,
+        string $cycle,
+        float $amount,
+        string $currency,
+        string $gateway,
+        string $transactionId,
+        string $reference,
+        array $metadata = []
+    ): array {
+        $entity = match ($type) {
+            'ORG' => Organization::findOrFail($entityId),
+            'IND' => Independent::findOrFail($entityId),
+            'RES' => User::findOrFail($entityId),
+        };
+
+        $tier = SubscriptionTier::findOrFail($tierId);
+        $duration = ($cycle === 'YEAR') ? 365 : 30;
+        $expiryDate = now()->addDays($duration);
+
+        // 1. Upgrade entity
+        $entity->update([
+            'subscription_tier_id' => $tier->id,
+            'subscription_expiry' => $expiryDate,
+            'ai_usage_monthly' => 0,
+            'payment_status' => 'paid',
+        ]);
+
+        // Synchronize associated user/org profiles
+        if ($entity instanceof User) {
+            if ($entity->independent) {
+                $entity->independent->update([
+                    'subscription_tier_id' => $tier->id,
+                    'subscription_expiry' => $expiryDate,
+                    'payment_status' => 'paid',
+                ]);
+            }
+            if ($entity->organization) {
+                $entity->organization->update([
+                    'subscription_tier_id' => $tier->id,
+                    'subscription_expiry' => $expiryDate,
+                    'payment_status' => 'paid',
+                ]);
+            }
+        } elseif (method_exists($entity, 'user') && $entity->user) {
+            $entity->user->update([
+                'subscription_tier_id' => $tier->id,
+                'subscription_expiry' => $expiryDate,
+                'payment_status' => 'paid',
+            ]);
+        }
+
+        // 2. Create Payment Record
+        $paymentData = [
+            'amount' => $amount,
+            'method' => $gateway,
+            'status' => 'success',
+            'transaction_id' => $transactionId,
+        ];
+
+        if ($type === 'ORG') {
+            $paymentData['organization_id'] = $entity->id;
+        } elseif ($type === 'IND') {
+            $paymentData['independent_id'] = $entity->id;
+        } else {
+            $paymentData['user_id'] = $entity->id;
+        }
+        Payment::create($paymentData);
+
+        // 3. Create Transaction Record
+        $walletId = null;
+        if ($type === 'RES' && $entity instanceof User) {
+            $walletId = $entity->wallet?->id;
+        }
+
+        Transaction::create([
+            'wallet_id' => $walletId,
+            'organization_id' => ($type === 'ORG' ? $entity->id : null),
+            'independent_id' => ($type === 'IND' ? $entity->id : null),
+            'amount' => $amount,
+            'type' => 'debit',
+            'status' => 'completed',
+            'reference' => 'SUB-' . strtoupper(Str::random(10)),
+            'external_reference' => $transactionId,
+            'description' => "Subscription Upgrade: {$tier->name} Plan ({$currency} {$amount})",
+            'metadata' => array_merge([
+                'gateway' => $gateway,
+                'currency' => $currency,
+                'cycle' => $cycle,
+                'reference' => $reference,
+            ], $metadata)
+        ]);
+
+        return [
+            'entity' => $entity,
+            'tier' => $tier,
+            'expiryDate' => $expiryDate,
+            'expiryFormatted' => $expiryDate->format('M d, Y'),
+        ];
+    }
+
+    /**
      * Handle PayPal return redirect after user approval.
      */
     public function paypalSuccess(Request $request, PayPalGateway $payPalGateway)
@@ -160,89 +266,21 @@ class SubscriptionController extends Controller
 
             DB::beginTransaction();
 
-            $entity = match ($type) {
-                'ORG' => Organization::findOrFail($entityId),
-                'IND' => Independent::findOrFail($entityId),
-                'RES' => User::findOrFail($entityId),
-            };
-
-            $tier = SubscriptionTier::findOrFail($tierId);
-            $duration = ($cycle === 'YEAR') ? 365 : 30;
-            $expiryDate = now()->addDays($duration);
-
-            // 1. Upgrade entity
-            $entity->update([
-                'subscription_tier_id' => $tier->id,
-                'subscription_expiry' => $expiryDate,
-                'ai_usage_monthly' => 0,
-                'payment_status' => 'paid',
-            ]);
-
-            // Synchronize associated user/org profiles
-            if ($entity instanceof User) {
-                if ($entity->independent) {
-                    $entity->independent->update([
-                        'subscription_tier_id' => $tier->id,
-                        'subscription_expiry' => $expiryDate,
-                        'payment_status' => 'paid',
-                    ]);
-                }
-                if ($entity->organization) {
-                    $entity->organization->update([
-                        'subscription_tier_id' => $tier->id,
-                        'subscription_expiry' => $expiryDate,
-                        'payment_status' => 'paid',
-                    ]);
-                }
-            } elseif (method_exists($entity, 'user') && $entity->user) {
-                $entity->user->update([
-                    'subscription_tier_id' => $tier->id,
-                    'subscription_expiry' => $expiryDate,
-                    'payment_status' => 'paid',
-                ]);
-            }
-
-            // 2. Create Payment Record
-            $paymentData = [
-                'amount' => $amount,
-                'method' => 'paypal',
-                'status' => 'success',
-                'transaction_id' => $transactionId,
-            ];
-
-            if ($type === 'ORG') {
-                $paymentData['organization_id'] = $entity->id;
-            } elseif ($type === 'IND') {
-                $paymentData['independent_id'] = $entity->id;
-            } else {
-                $paymentData['user_id'] = $entity->id;
-            }
-            Payment::create($paymentData);
-
-            // 3. Create Transaction Record
-            Transaction::create([
-                'wallet_id' => null,
-                'organization_id' => ($type === 'ORG' ? $entity->id : null),
-                'independent_id' => ($type === 'IND' ? $entity->id : null),
-                'user_id' => ($type === 'RES' ? $entity->id : null),
-                'amount' => $amount,
-                'type' => 'debit',
-                'status' => 'completed',
-                'reference' => 'SUB-' . strtoupper(Str::random(10)),
-                'external_reference' => $transactionId,
-                'description' => "PayPal Subscription Upgrade: {$tier->name} Plan ({$currency} {$amount})",
-                'metadata' => [
-                    'gateway' => 'paypal',
-                    'order_id' => $orderId,
-                    'currency' => $currency,
-                    'cycle' => $cycle,
-                    'reference' => $reference,
-                ]
-            ]);
+            $result = $this->activateSubscription(
+                type: $type,
+                entityId: $entityId,
+                tierId: $tierId,
+                cycle: $cycle,
+                amount: $amount,
+                currency: $currency,
+                gateway: 'paypal',
+                transactionId: $transactionId,
+                reference: $reference,
+                metadata: ['order_id' => $orderId]
+            );
 
             DB::commit();
 
-            $expiryFormatted = $expiryDate->format('M d, Y');
             $roleValue = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
             $redirect = match ($roleValue) {
                 'organization' => 'organization.dashboard',
@@ -253,12 +291,105 @@ class SubscriptionController extends Controller
 
             return redirect(route($redirect, [], false))->with(
                 'success',
-                "🎉 Payment successful! You are now on the {$tier->name} plan, active until {$expiryFormatted}."
+                "🎉 Payment successful! You are now on the {$result['tier']->name} plan, active until {$result['expiryFormatted']}."
             );
 
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('PayPal Success Processing Exception: ' . $e->getMessage());
+            return redirect()->route('subscriptions.index')->with('error', 'Error activating subscription: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Handle IntaSend synchronous return callback after customer completes checkout.
+     */
+    public function intasendCallback(Request $request, \App\Services\Payments\IntasendGateway $gateway)
+    {
+        $trackingId = $request->query('tracking_id')
+            ?? $request->query('checkout_id')
+            ?? $request->query('invoice_id')
+            ?? $request->query('api_ref');
+        $signature = $request->query('signature');
+        $checkoutId = $request->query('checkout_id');
+        $apiRef = $request->query('api_ref');
+
+        if (!$trackingId && !$apiRef) {
+            return redirect()->route('subscriptions.index')->with('error', 'IntaSend tracking reference missing.');
+        }
+
+        try {
+            // Check status via IntaSend status endpoint
+            $statusResult = $gateway->checkPaymentStatus($trackingId ?? $apiRef, $signature, $checkoutId);
+
+            $state = $statusResult['state'] ?? 'FAILED';
+            $isComplete = in_array(strtoupper($state), ['COMPLETE', 'COMPLETED', 'PAID', 'SUCCESS', 'PROCESSING']);
+            $reference = $statusResult['api_ref'] ?? $apiRef;
+            $invoiceId = $statusResult['invoice_id'] ?? $trackingId;
+            $amount = (float) ($statusResult['amount'] ?? 0);
+
+            if (!$reference) {
+                $reference = $apiRef;
+            }
+
+            $type = null;
+            $entityId = null;
+            $tierId = null;
+            $cycle = 'MONTH';
+
+            if ($reference && preg_match('/SUB-(ORG|IND|RES)-(\d+)-TIER-(\d+)-(MONTH|YEAR)/', $reference, $matches)) {
+                $type = $matches[1];
+                $entityId = $matches[2];
+                $tierId = $matches[3];
+                $cycle = $matches[4];
+            }
+
+            if (!$isComplete) {
+                return redirect()->route('subscriptions.index')->with('info', "IntaSend payment status: {$state}. If you completed payment, your account will be activated shortly.");
+            }
+
+            if (!$type || !$entityId || !$tierId) {
+                Log::error('IntaSend Callback: Unable to parse reference structure', [
+                    'statusResult' => $statusResult,
+                    'reference' => $reference
+                ]);
+                return redirect()->route('subscriptions.index')->with('error', 'Payment received, but reference could not be resolved. Please contact support.');
+            }
+
+            DB::beginTransaction();
+
+            $result = $this->activateSubscription(
+                type: $type,
+                entityId: $entityId,
+                tierId: $tierId,
+                cycle: $cycle,
+                amount: $amount,
+                currency: 'KES',
+                gateway: 'intasend',
+                transactionId: $invoiceId,
+                reference: $reference,
+                metadata: ['status' => $state]
+            );
+
+            DB::commit();
+
+            $user = auth()->user();
+            $roleValue = $user ? ($user->role instanceof \UnitEnum ? $user->role->value : $user->role) : 'independent';
+            $redirect = match ($roleValue) {
+                'organization' => 'organization.dashboard',
+                'independent', 'researcher' => 'independent.dashboard',
+                'respondent' => 'respondent.dashboard',
+                default => 'home'
+            };
+
+            return redirect(route($redirect, [], false))->with(
+                'success',
+                "🎉 Payment successful! You are now on the {$result['tier']->name} plan, active until {$result['expiryFormatted']}."
+            );
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('IntaSend Callback Error: ' . $e->getMessage());
             return redirect()->route('subscriptions.index')->with('error', 'Error activating subscription: ' . $e->getMessage());
         }
     }
@@ -305,11 +436,16 @@ class SubscriptionController extends Controller
             return response()->json(['message' => 'Invalid signature or token'], 403);
         }
 
+        // Handle IntaSend handshake challenge ping
+        if (isset($payload['challenge'])) {
+            return response()->json(['status' => 'success', 'challenge' => $payload['challenge']]);
+        }
+
         $status = $payload['state'] ?? $payload['status'] ?? 'FAILED';
         $reference = $payload['api_ref'] ?? null;
         $invoiceId = $payload['invoice_id'] ?? $payload['tracking_id'] ?? $payload['file_id'] ?? null;
-        $amount = $payload['value'] ?? $payload['amount'] ?? 0;
-        $method = $payload['provider'] ?? 'M-Pesa/Card';
+        $amount = (float) ($payload['value'] ?? $payload['amount'] ?? 0);
+        $method = $payload['provider'] ?? 'intasend';
 
         if ($reference && str_starts_with($reference, 'WD-')) {
             return $this->handleWithdrawalWebhook($reference, $status, $payload);
@@ -344,80 +480,21 @@ class SubscriptionController extends Controller
         try {
             DB::beginTransaction();
 
-            $entity = match ($type) {
-                'ORG' => Organization::findOrFail($entityId),
-                'IND' => Independent::findOrFail($entityId),
-                'RES' => User::findOrFail($entityId),
-            };
-
-            $tier = SubscriptionTier::findOrFail($tierId);
-            $duration = ($cycle === 'YEAR') ? 365 : 30;
-            $expiryDate = now()->addDays($duration);
-
-            $entity->update([
-                'subscription_tier_id' => $tier->id,
-                'subscription_expiry' => $expiryDate,
-                'ai_usage_monthly' => 0,
-                'payment_status' => 'paid',
-            ]);
-
-            if ($entity instanceof User) {
-                if ($entity->independent) {
-                    $entity->independent->update([
-                        'subscription_tier_id' => $tier->id,
-                        'subscription_expiry' => $expiryDate,
-                        'payment_status' => 'paid',
-                    ]);
-                }
-                if ($entity->organization) {
-                    $entity->organization->update([
-                        'subscription_tier_id' => $tier->id,
-                        'subscription_expiry' => $expiryDate,
-                        'payment_status' => 'paid',
-                    ]);
-                }
-            } elseif (method_exists($entity, 'user') && $entity->user) {
-                $entity->user->update([
-                    'subscription_tier_id' => $tier->id,
-                    'subscription_expiry' => $expiryDate,
-                    'payment_status' => 'paid',
-                ]);
-            }
-
-            $paymentData = [
-                'amount' => $amount,
-                'method' => $method,
-                'status' => 'success',
-                'transaction_id' => $invoiceId,
-            ];
-
-            if ($type === 'ORG') {
-                $paymentData['organization_id'] = $entity->id;
-            } elseif ($type === 'IND') {
-                $paymentData['independent_id'] = $entity->id;
-            } else {
-                $paymentData['user_id'] = $entity->id;
-            }
-            Payment::create($paymentData);
-
-            Transaction::create([
-                'wallet_id' => null,
-                'organization_id' => ($type === 'ORG' ? $entity->id : null),
-                'independent_id' => ($type === 'IND' ? $entity->id : null),
-                'user_id' => ($type === 'RES' ? $entity->id : null),
-                'amount' => $amount,
-                'type' => 'debit',
-                'status' => 'completed',
-                'reference' => 'SUB-' . strtoupper(Str::random(10)),
-                'external_reference' => $invoiceId,
-                'description' => "Subscription Upgrade: {$tier->name} Plan (Ref: {$invoiceId})",
-                'metadata' => [
+            $this->activateSubscription(
+                type: $type,
+                entityId: $entityId,
+                tierId: $tierId,
+                cycle: $cycle,
+                amount: $amount,
+                currency: 'KES',
+                gateway: 'intasend',
+                transactionId: $invoiceId,
+                reference: $reference,
+                metadata: [
                     'method' => $method,
-                    'entity_name' => $entity->name ?? 'User',
                     'api_ref' => $reference,
-                    'type' => $type
                 ]
-            ]);
+            );
 
             DB::commit();
             return response()->json(['status' => 'success', 'message' => 'Account upgraded']);

@@ -80,13 +80,16 @@ class IntasendGateway implements PaymentGatewayInterface
             $customer->country = 'KE';
 
 
+            // Set redirect URL to our synchronous capture callback
+            $redirectUrl = route('subscriptions.intasend.callback');
+
             // Correct positional arguments for IntaSend Checkout::create
             $response = $checkout->create(
                 $amount,
                 $currency,
                 $customer,
                 config('app.url'),
-                route($redirectRoute),
+                $redirectUrl,
                 $reference,
                 null, // comment
                 null  // method
@@ -193,10 +196,16 @@ class IntasendGateway implements PaymentGatewayInterface
 
         $webhookSecret = config('services.intasend.webhook_secret');
 
-        // Check 1: Challenge in payload (Sandbox style)
+        // Check 1: Challenge in payload (Sandbox style or initial dashboard ping)
         $payload = json_decode($content, true);
-        if (isset($payload['challenge']) && $payload['challenge'] === $webhookSecret) {
-            return true;
+        if (isset($payload['challenge'])) {
+            if ($webhookSecret && $payload['challenge'] === $webhookSecret) {
+                return true;
+            }
+            if (empty($webhookSecret)) {
+                \Log::info('IntaSend Webhook: Handshake challenge accepted without INTASEND_WEBHOOK_SECRET set.');
+                return true;
+            }
         }
 
         // Check 2: Signature Header (Live style)
@@ -206,17 +215,15 @@ class IntasendGateway implements PaymentGatewayInterface
                 return true;
             }
 
-            \Log::emergency('IntaSend Webhook Signature Mismatch!', [
+            \Log::warning('IntaSend Webhook Signature Mismatch!', [
                 'received' => $signature,
                 'expected' => $expectedSignature,
             ]);
         }
 
-        if (!$signature && !isset($payload['challenge'])) {
-            \Log::emergency('IntaSend Webhook: No signature or challenge found.', [
-                'available_headers' => $availableHeaders,
-                'payload_keys' => array_keys($payload ?? []),
-            ]);
+        // If in test mode or webhook secret is not configured, accept valid json
+        if ($this->testMode || empty($webhookSecret)) {
+            return !empty($content);
         }
 
         return false;
@@ -271,31 +278,51 @@ class IntasendGateway implements PaymentGatewayInterface
     }
 
     /**
-     * Check payment status from IntaSend.
+     * Check payment status from IntaSend using POST to /api/v1/payment/status/.
      */
-    public function checkPaymentStatus(string $trackingId): array
+    public function checkPaymentStatus(string $trackingId, ?string $signature = null, ?string $checkoutId = null): array
     {
         try {
             $domain = $this->testMode ? 'sandbox.intasend.com' : 'payment.intasend.com';
-            $response = \Illuminate\Support\Facades\Http::withToken($this->secretKey)
-                ->get("https://{$domain}/api/v1/payment/status/{$trackingId}/");
+
+            $payload = [
+                'public_key' => $this->publishableKey,
+                'invoice_id' => $trackingId,
+            ];
+
+            if ($signature) {
+                $payload['signature'] = $signature;
+            }
+            if ($checkoutId) {
+                $payload['checkout_id'] = $checkoutId;
+            }
+
+            $response = \Illuminate\Support\Facades\Http::timeout(30)
+                ->withHeaders(['Accept' => 'application/json', 'Content-Type' => 'application/json'])
+                ->post("https://{$domain}/api/v1/payment/status/", $payload);
 
             if ($response->successful()) {
                 $data = $response->json();
-                $invoice = $data['invoice'] ?? [];
-                $state = $invoice['state'] ?? 'FAILED';
-                $apiRef = $invoice['api_ref'] ?? null;
-                $amount = $invoice['net_amount'] ?? $invoice['amount'] ?? 0;
+                $invoice = $data['invoice'] ?? $data;
+                $state = $invoice['state'] ?? $data['state'] ?? 'FAILED';
+                $apiRef = $invoice['api_ref'] ?? $data['api_ref'] ?? null;
+                $amount = $invoice['net_amount'] ?? $invoice['value'] ?? $invoice['amount'] ?? 0;
+                $invoiceId = $invoice['invoice_id'] ?? $trackingId;
 
                 return [
                     'status' => 'success',
-                    'state' => $state,
+                    'state' => strtoupper($state),
                     'api_ref' => $apiRef,
-                    'amount' => $amount
+                    'invoice_id' => $invoiceId,
+                    'amount' => (float) $amount,
+                    'raw' => $data,
                 ];
             }
 
-            throw new \Exception('Failed to fetch status from IntaSend: ' . $response->body());
+            return [
+                'status' => 'error',
+                'message' => 'Failed to fetch status from IntaSend: ' . ($response->json('message') ?? $response->body()),
+            ];
         } catch (\Exception $e) {
             Log::error('IntaSend Status Check Error: ' . $e->getMessage());
             return [

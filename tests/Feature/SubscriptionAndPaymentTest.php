@@ -501,4 +501,101 @@ class SubscriptionAndPaymentTest extends TestCase
         $this->assertNull($independent->subscription_expiry);
         $this->assertEquals('unpaid', $independent->payment_status);
     }
+
+    public function test_intasend_callback_synchronously_activates_subscription()
+    {
+        $user = User::factory()->create([
+            'role' => UserRole::Independent->value,
+            'email_verified_at' => now(),
+        ]);
+        $enterpriseTier = SubscriptionTier::where('slug', 'enterprise')->first();
+        $freeTier = SubscriptionTier::where('slug', 'free')->first();
+
+        $independent = Independent::create([
+            'user_id' => $user->id,
+            'name' => $user->name,
+            'subscription_tier_id' => $freeTier->id,
+            'payment_status' => 'unpaid',
+        ]);
+
+        $mockTrackingId = 'INVOICE-TEST-INTASEND-123';
+        $customRef = "SUB-IND-{$independent->id}-TIER-{$enterpriseTier->id}-MONTH-RANDOM";
+
+        $mockGateway = $this->createMock(\App\Services\Payments\IntasendGateway::class);
+        $mockGateway->method('checkPaymentStatus')->willReturn([
+            'status' => 'success',
+            'state' => 'COMPLETE',
+            'api_ref' => $customRef,
+            'invoice_id' => $mockTrackingId,
+            'amount' => 4900.00,
+        ]);
+
+        $this->app->instance(\App\Services\Payments\IntasendGateway::class, $mockGateway);
+
+        $response = $this->actingAs($user)->get(route('subscriptions.intasend.callback', [
+            'tracking_id' => $mockTrackingId,
+            'signature' => 'mock-sig',
+            'checkout_id' => 'chk-123',
+            'api_ref' => $customRef,
+        ]));
+
+        $response->assertRedirect(route('independent.dashboard'));
+        $independent->refresh();
+
+        $this->assertEquals($enterpriseTier->id, $independent->subscription_tier_id);
+        $this->assertEquals('paid', $independent->payment_status);
+        $this->assertNotNull($independent->subscription_expiry);
+
+        $this->assertDatabaseHas('payments', [
+            'independent_id' => $independent->id,
+            'amount' => 4900.00,
+            'status' => 'success',
+            'transaction_id' => $mockTrackingId,
+        ]);
+    }
+
+    public function test_payment_method_normalization_and_enum_persistence()
+    {
+        $user = User::factory()->create();
+
+        // Storing with "M-Pesa/Card" or "IntaSend" should not crash and normalize to intasend
+        $payment = \App\Models\Payment::create([
+            'user_id' => $user->id,
+            'amount' => 1500.00,
+            'method' => 'M-Pesa/Card',
+            'status' => 'success',
+            'transaction_id' => 'TXN-NORMALIZE-1',
+        ]);
+
+        $this->assertEquals(\App\Enums\PaymentMethod::IntaSend, $payment->method);
+        $this->assertEquals('intasend', $payment->getRawOriginal('method'));
+
+        $payment2 = \App\Models\Payment::create([
+            'user_id' => $user->id,
+            'amount' => 25.00,
+            'method' => 'PayPal',
+            'status' => 'success',
+            'transaction_id' => 'TXN-NORMALIZE-2',
+        ]);
+
+        $this->assertEquals(\App\Enums\PaymentMethod::PayPal, $payment2->method);
+        $this->assertEquals('paypal', $payment2->getRawOriginal('method'));
+    }
+
+    public function test_intasend_webhook_challenge_returns_200_ok()
+    {
+        $mockGateway = $this->createMock(\App\Interfaces\PaymentGatewayInterface::class);
+        $mockGateway->method('validateWebhook')->willReturn(true);
+        $this->app->instance(\App\Interfaces\PaymentGatewayInterface::class, $mockGateway);
+
+        $response = $this->postJson(route('webhook.payment'), [
+            'challenge' => 'INTASEND_CHALLENGE_CODE_123',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'status' => 'success',
+            'challenge' => 'INTASEND_CHALLENGE_CODE_123',
+        ]);
+    }
 }
