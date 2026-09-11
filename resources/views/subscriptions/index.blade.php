@@ -2,26 +2,27 @@
 
 @section('content')
     <div x-data="{ 
-                    billingCycle: 'monthly',
-                    currency: 'KES',
-                    selectedGateway: 'intasend',
-                    checkoutModalOpen: false,
-                    checkoutCycle: 'monthly',
-                    modalPaymentMethod: 'intasend', // 'intasend' (KES) or 'paypal' (USD)
-                    modalTier: null,
-                    openCheckoutModal(tier) {
-                        if (tier.isFree) {
-                            document.getElementById('free-tier-id').value = tier.id;
-                            document.getElementById('free-cycle').value = this.billingCycle;
-                            document.getElementById('free-tier-form').submit();
-                            return;
+                        billingCycle: 'monthly',
+                        currency: 'KES',
+                        selectedGateway: 'intasend',
+                        checkoutModalOpen: false,
+                        cancelModalOpen: false,
+                        isDowngrade: false,
+                        checkoutCycle: 'monthly',
+                        modalPaymentMethod: 'intasend', // 'intasend' (KES) or 'paypal' (USD)
+                        modalTier: null,
+                        openCheckoutModal(tier) {
+                            if (tier.isFree) {
+                                this.cancelModalOpen = true;
+                                return;
+                            }
+                            this.modalTier = tier;
+                            this.isDowngrade = (tier.price < {{ $tiers->firstWhere('id', $currentTierId ?? 0)?->monthly_price ?? 0 }});
+                            this.checkoutCycle = this.billingCycle;
+                            this.modalPaymentMethod = (this.currency === 'USD') ? 'paypal' : 'intasend';
+                            this.checkoutModalOpen = true;
                         }
-                        this.modalTier = tier;
-                        this.checkoutCycle = this.billingCycle;
-                        this.modalPaymentMethod = (this.currency === 'USD') ? 'paypal' : 'intasend';
-                        this.checkoutModalOpen = true;
-                    }
-                }" class="py-12 bg-gray-50 min-h-screen">
+                    }" class="py-12 bg-gray-50 min-h-screen">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
             {{-- Header --}}
@@ -347,10 +348,9 @@
 
                                     @if(!$isFree && empty($isOrgMemberWithoutBilling))
                                         <div class="mt-4 text-center">
-                                            <button type="button"
-                                                onclick="if(confirm('{{ __('Are you sure you want to cancel your premium subscription? You will be reverted to the Free tier.') }}')) document.getElementById('cancel-form').submit();"
+                                            <button type="button" @click="cancelModalOpen = true"
                                                 class="text-xs font-bold text-red-500 hover:text-red-700 tracking-wider transition-colors">
-                                                {{ __('Cancel Subscription') }}
+                                                {{ __('Cancel / Downgrade to Free') }}
                                             </button>
                                         </div>
                                     @endif
@@ -361,16 +361,16 @@
                                     </button>
                                 @else
                                     <button type="button" @click="openCheckoutModal({
-                                                        id: {{ $tier->id }},
-                                                        name: '{{ addslashes($tier->name) }}',
-                                                        slug: '{{ $tier->slug }}',
-                                                        isFree: {{ $isFree ? 'true' : 'false' }},
-                                                        kesMonthly: 'KES {{ number_format($tier->monthly_price, 0) }}',
-                                                        kesYearly: 'KES {{ number_format($tier->yearly_price, 0) }}',
-                                                        usdMonthly: '${{ number_format($tier->monthly_price_usd, 2) }}',
-                                                        usdYearly: '${{ number_format($tier->yearly_price_usd, 2) }}',
-                                                        btnLabel: '{{ addslashes($btnLabel) }}'
-                                                    })"
+                                                                    id: {{ $tier->id }},
+                                                                    name: '{{ addslashes($tier->name) }}',
+                                                                    slug: '{{ $tier->slug }}',
+                                                                    isFree: {{ $isFree ? 'true' : 'false' }},
+                                                                    kesMonthly: 'KES {{ number_format($tier->monthly_price, 0) }}',
+                                                                    kesYearly: 'KES {{ number_format($tier->yearly_price, 0) }}',
+                                                                    usdMonthly: '${{ number_format($tier->monthly_price_usd, 2) }}',
+                                                                    usdYearly: '${{ number_format($tier->yearly_price_usd, 2) }}',
+                                                                    btnLabel: '{{ addslashes($btnLabel) }}'
+                                                                })"
                                         class="w-full {{ $isPopular ? 'bg-[#2271b1] text-white hover:bg-[#135e96] shadow-lg shadow-blue-500/20' : 'bg-slate-900 text-white hover:bg-slate-800' }} hover:scale-[1.02] active:scale-[0.98] transition-all py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-md">
                                         {{ $btnLabel }}
                                     </button>
@@ -395,149 +395,228 @@
                 <input type="hidden" name="currency" value="KES">
             </form>
 
-            {{-- Payment Gateway & Currency Selection Modal --}}
-            <div x-show="checkoutModalOpen" x-cloak
-                class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto" aria-modal="true"
-                role="dialog">
+            {{-- Downgrade / Cancel Confirmation Modal --}}
+            <template x-teleport="body">
+                <div x-show="cancelModalOpen" x-cloak
+                    class="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+                    aria-modal="true" role="dialog">
+                    <div x-show="cancelModalOpen" x-transition:enter="transition ease-out duration-300"
+                        x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                        x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
+                        x-transition:leave-end="opacity-0" @click="cancelModalOpen = false"
+                        class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm"></div>
 
-                {{-- Backdrop with blur --}}
-                <div x-show="checkoutModalOpen" x-transition:enter="transition ease-out duration-300"
-                    x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-                    x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
-                    x-transition:leave-end="opacity-0" @click="checkoutModalOpen = false"
-                    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+                    <div x-show="cancelModalOpen" x-transition:enter="transition ease-out duration-300"
+                        x-transition:enter-start="opacity-0 scale-95 translate-y-4"
+                        x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-200"
+                        x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                        x-transition:leave-end="opacity-0 scale-95 translate-y-4"
+                        class="relative bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-gray-100 overflow-hidden text-left z-10">
 
-                {{-- Modal Panel --}}
-                <div x-show="checkoutModalOpen" x-transition:enter="transition ease-out duration-300"
-                    x-transition:enter-start="opacity-0 scale-95 translate-y-4"
-                    x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-                    x-transition:leave="transition ease-in duration-200"
-                    x-transition:leave-start="opacity-100 scale-100 translate-y-0"
-                    x-transition:leave-end="opacity-0 scale-95 translate-y-4"
-                    class="relative bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-gray-100 overflow-hidden">
-
-                    {{-- Close Button --}}
-                    <button type="button" @click="checkoutModalOpen = false"
-                        class="absolute top-5 right-5 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center transition-colors">
-                        <i class="fa-solid fa-xmark text-sm"></i>
-                    </button>
-
-                    {{-- Header --}}
-                    <div class="text-left mb-6">
-                        <div class="flex items-center gap-2 mb-1.5">
-                            <span
-                                class="text-[10px] font-black tracking-widest uppercase bg-[#2271b1]/10 text-[#2271b1] px-3 py-1 rounded-full"
-                                x-text="modalTier ? modalTier.name : 'Plan Upgrade'"></span>
-                            <span
-                                class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full"
-                                x-text="checkoutCycle === 'yearly' ? '{{ __('Yearly Billing (~17% Off)') }}' : '{{ __('Monthly Billing') }}'"></span>
+                        <div
+                            class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl mb-4">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
                         </div>
-                        <h3 class="text-2xl font-black text-gray-900 tracking-tight">
-                            {{ __('Select Payment Method') }}
+
+                        <h3 class="text-xl font-black text-gray-900 tracking-tight">
+                            {{ __('Confirm Subscription Downgrade?') }}
                         </h3>
-                        <p class="text-xs text-gray-500 font-medium mt-1">
-                            {{ __('Choose your preferred currency and payment gateway to complete your subscription.') }}
+                        <p class="text-xs text-gray-600 mt-2 leading-relaxed">
+                            {{ __('Reverting to the Free tier will immediately adjust your quotas. You will lose access to:') }}
                         </p>
-                    </div>
 
-                    {{-- Billing Frequency Switcher Inside Modal --}}
-                    <div
-                        class="flex items-center justify-between p-3 bg-gray-50 border border-gray-200/80 rounded-2xl mb-6">
-                        <span class="text-xs font-bold text-gray-700">{{ __('Billing Frequency:') }}</span>
-                        <div class="inline-flex p-1 bg-gray-200/80 rounded-xl">
-                            <button type="button" @click="checkoutCycle = 'monthly'"
-                                :class="checkoutCycle === 'monthly' ? 'bg-white text-gray-900 shadow-sm font-black' : 'text-gray-500 font-semibold hover:text-gray-900'"
-                                class="px-3.5 py-1.5 rounded-lg text-xs transition-all">
-                                {{ __('Monthly') }}
+                        <ul
+                            class="my-4 space-y-2 text-xs text-gray-700 bg-amber-50/60 p-4 rounded-2xl border border-amber-200/60">
+                            <li class="flex items-center gap-2">
+                                <i class="fa-solid fa-xmark text-red-500 font-bold"></i>
+                                <span>{{ __('Socius AI Assistant & Research Chats') }}</span>
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <i class="fa-solid fa-xmark text-red-500 font-bold"></i>
+                                <span>{{ __('High-volume survey response collections') }}</span>
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <i class="fa-solid fa-xmark text-red-500 font-bold"></i>
+                                <span>{{ __('Audio/Video interview transcription suite') }}</span>
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <i class="fa-solid fa-xmark text-red-500 font-bold"></i>
+                                <span>{{ __('Advanced SPSS, Excel & XML data exports') }}</span>
+                            </li>
+                        </ul>
+
+                        <div class="flex items-center justify-end gap-3 mt-6">
+                            <button type="button" @click="cancelModalOpen = false"
+                                class="px-5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors">
+                                {{ __('Keep My Plan') }}
                             </button>
-                            <button type="button" @click="checkoutCycle = 'yearly'"
-                                :class="checkoutCycle === 'yearly' ? 'bg-white text-gray-900 shadow-sm font-black' : 'text-gray-500 font-semibold hover:text-gray-900'"
-                                class="px-3.5 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1">
-                                <span>{{ __('Yearly') }}</span>
-                                <span
-                                    class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 rounded-full">-17%</span>
+                            <button type="button" onclick="document.getElementById('cancel-form').submit();"
+                                class="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-md transition-colors">
+                                {{ __('Yes, Revert to Free') }}
                             </button>
                         </div>
-                    </div>
-
-                    {{-- Payment Method Choice Cards --}}
-                    <div class="space-y-3 mb-6">
-                        {{-- Option 1: KES (IntaSend - M-Pesa / Local Cards) --}}
-                        <div @click="modalPaymentMethod = 'intasend'"
-                            :class="modalPaymentMethod === 'intasend' ? 'border-[#2271b1] bg-blue-50/40 ring-2 ring-[#2271b1]/20 shadow-md' : 'border-gray-200 hover:border-gray-300 bg-white'"
-                            class="relative border-2 rounded-2xl p-4 cursor-pointer transition-all flex items-start gap-4">
-                            <div
-                                class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center flex-shrink-0 text-xl">
-                                <span>🇰🇪</span>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center justify-between">
-                                    <h4 class="text-sm font-black text-gray-900 flex items-center gap-2">
-                                        {{ __('KES (M-Pesa & Local Card)') }}
-                                    </h4>
-                                    <span class="text-sm font-black text-[#2271b1]"
-                                        x-text="checkoutCycle === 'monthly' ? modalTier?.kesMonthly : modalTier?.kesYearly"></span>
-                                </div>
-                                <p class="text-[11px] text-gray-500 font-medium mt-0.5">
-                                    {{ __('Pay instantly via M-Pesa STK Push, Airtel Money, or local Visa / Mastercard.') }}
-                                </p>
-                            </div>
-                            <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 flex-shrink-0"
-                                :class="modalPaymentMethod === 'intasend' ? 'border-[#2271b1] bg-[#2271b1]' : 'border-gray-300'">
-                                <div class="w-2 h-2 rounded-full bg-white" x-show="modalPaymentMethod === 'intasend'"></div>
-                            </div>
-                        </div>
-
-                        {{-- Option 2: USD (PayPal - PayPal / International Cards) --}}
-                        <div @click="modalPaymentMethod = 'paypal'"
-                            :class="modalPaymentMethod === 'paypal' ? 'border-[#2271b1] bg-blue-50/40 ring-2 ring-[#2271b1]/20 shadow-md' : 'border-gray-200 hover:border-gray-300 bg-white'"
-                            class="relative border-2 rounded-2xl p-4 cursor-pointer transition-all flex items-start gap-4">
-                            <div
-                                class="w-10 h-10 rounded-xl bg-blue-500/10 text-[#003087] flex items-center justify-center flex-shrink-0 text-xl">
-                                <i class="fa-brands fa-paypal text-[#003087]"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center justify-between">
-                                    <h4 class="text-sm font-black text-gray-900 flex items-center gap-2">
-                                        {{ __('USD (Card / PayPal)') }}
-                                    </h4>
-                                    <span class="text-sm font-black text-[#2271b1]"
-                                        x-text="checkoutCycle === 'monthly' ? modalTier?.usdMonthly : modalTier?.usdYearly"></span>
-                                </div>
-                                <p class="text-[11px] text-gray-500 font-medium mt-0.5">
-                                    {{ __('Pay securely with PayPal account or International Visa, Mastercard, AMEX.') }}
-                                </p>
-                            </div>
-                            <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 flex-shrink-0"
-                                :class="modalPaymentMethod === 'paypal' ? 'border-[#2271b1] bg-[#2271b1]' : 'border-gray-300'">
-                                <div class="w-2 h-2 rounded-full bg-white" x-show="modalPaymentMethod === 'paypal'"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Checkout Form Submission --}}
-                    <form action="{{ route('subscriptions.checkout') }}" method="POST">
-                        @csrf
-                        <input type="hidden" name="tier_id" :value="modalTier ? modalTier.id : ''">
-                        <input type="hidden" name="cycle" :value="checkoutCycle">
-                        <input type="hidden" name="gateway" :value="modalPaymentMethod">
-                        <input type="hidden" name="currency" :value="modalPaymentMethod === 'paypal' ? 'USD' : 'KES'">
-
-                        <button type="submit"
-                            class="w-full bg-[#2271b1] hover:bg-[#135e96] text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                            <span
-                                x-text="modalPaymentMethod === 'paypal' ? '{{ __('Proceed to PayPal Checkout') }}' : '{{ __('Proceed to M-Pesa / Card Checkout') }}'"></span>
-                            <i class="fa-solid fa-arrow-right text-xs"></i>
-                        </button>
-                    </form>
-
-                    <div
-                        class="mt-4 flex items-center justify-center gap-2 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                        <i class="fa-solid fa-lock text-emerald-600"></i>
-                        <span>{{ __('256-Bit SSL Encrypted & Secure Checkout') }}</span>
                     </div>
                 </div>
-            </div>
+            </template>
+
+            {{-- Payment Gateway & Currency Selection Modal --}}
+            <template x-teleport="body">
+                <div x-show="checkoutModalOpen" x-cloak
+                    class="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+                    aria-modal="true" role="dialog">
+
+                    {{-- Backdrop with blur --}}
+                    <div x-show="checkoutModalOpen" x-transition:enter="transition ease-out duration-300"
+                        x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                        x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
+                        x-transition:leave-end="opacity-0" @click="checkoutModalOpen = false"
+                        class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm"></div>
+
+                    {{-- Modal Panel --}}
+                    <div x-show="checkoutModalOpen" x-transition:enter="transition ease-out duration-300"
+                        x-transition:enter-start="opacity-0 scale-95 translate-y-4"
+                        x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-200"
+                        x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                        x-transition:leave-end="opacity-0 scale-95 translate-y-4"
+                        class="relative bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-gray-100 overflow-hidden z-10">
+
+                        {{-- Close Button --}}
+                        <button type="button" @click="checkoutModalOpen = false"
+                            class="absolute top-5 right-5 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center transition-colors">
+                            <i class="fa-solid fa-xmark text-sm"></i>
+                        </button>
+
+                        {{-- Header --}}
+                        <div class="text-left mb-6">
+                            <div class="flex items-center gap-2 mb-1.5">
+                                <span
+                                    class="text-[10px] font-black tracking-widest uppercase bg-[#2271b1]/10 text-[#2271b1] px-3 py-1 rounded-full"
+                                    x-text="modalTier ? modalTier.name : 'Plan Upgrade'"></span>
+                                <span
+                                    class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full"
+                                    x-text="checkoutCycle === 'yearly' ? '{{ __('Yearly Billing (~17% Off)') }}' : '{{ __('Monthly Billing') }}'"></span>
+                            </div>
+                            <h3 class="text-2xl font-black text-gray-900 tracking-tight">
+                                {{ __('Select Payment Method') }}
+                            </h3>
+                            <p class="text-xs text-gray-500 font-medium mt-1">
+                                {{ __('Choose your preferred currency and payment gateway to complete your subscription.') }}
+                            </p>
+                        </div>
+
+                        {{-- Downgrade Warning Notice --}}
+                        <div x-show="isDowngrade" x-cloak
+                            class="p-3.5 mb-5 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
+                            <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5 text-sm"></i>
+                            <div class="text-xs text-amber-900">
+                                <strong class="font-black">{{ __('Downgrade Warning') }}:</strong>
+                                {{ __('You are choosing a lower-tier plan. Quota limits and features will adjust to this tier upon checkout.') }}
+                            </div>
+                        </div>
+
+                        {{-- Billing Frequency Switcher Inside Modal --}}
+                        <div
+                            class="flex items-center justify-between p-3 bg-gray-50 border border-gray-200/80 rounded-2xl mb-6">
+                            <span class="text-xs font-bold text-gray-700">{{ __('Billing Frequency:') }}</span>
+                            <div class="inline-flex p-1 bg-gray-200/80 rounded-xl">
+                                <button type="button" @click="checkoutCycle = 'monthly'"
+                                    :class="checkoutCycle === 'monthly' ? 'bg-white text-gray-900 shadow-sm font-black' : 'text-gray-500 font-semibold hover:text-gray-900'"
+                                    class="px-3.5 py-1.5 rounded-lg text-xs transition-all">
+                                    {{ __('Monthly') }}
+                                </button>
+                                <button type="button" @click="checkoutCycle = 'yearly'"
+                                    :class="checkoutCycle === 'yearly' ? 'bg-white text-gray-900 shadow-sm font-black' : 'text-gray-500 font-semibold hover:text-gray-900'"
+                                    class="px-3.5 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1">
+                                    <span>{{ __('Yearly') }}</span>
+                                    <span
+                                        class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 rounded-full">-17%</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {{-- Payment Method Choice Cards --}}
+                        <div class="space-y-3 mb-6">
+                            {{-- Option 1: KES (IntaSend - M-Pesa / Local Cards) --}}
+                            <div @click="modalPaymentMethod = 'intasend'"
+                                :class="modalPaymentMethod === 'intasend' ? 'border-[#2271b1] bg-blue-50/40 ring-2 ring-[#2271b1]/20 shadow-md' : 'border-gray-200 hover:border-gray-300 bg-white'"
+                                class="relative border-2 rounded-2xl p-4 cursor-pointer transition-all flex items-start gap-4">
+                                <div
+                                    class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center flex-shrink-0 text-xl">
+                                    <span>🇰🇪</span>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="text-sm font-black text-gray-900 flex items-center gap-2">
+                                            {{ __('KES (M-Pesa & Local Card)') }}
+                                        </h4>
+                                        <span class="text-sm font-black text-[#2271b1]"
+                                            x-text="checkoutCycle === 'monthly' ? modalTier?.kesMonthly : modalTier?.kesYearly"></span>
+                                    </div>
+                                    <p class="text-[11px] text-gray-500 font-medium mt-0.5">
+                                        {{ __('Pay instantly via M-Pesa STK Push, Airtel Money, or local Visa / Mastercard.') }}
+                                    </p>
+                                </div>
+                                <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 flex-shrink-0"
+                                    :class="modalPaymentMethod === 'intasend' ? 'border-[#2271b1] bg-[#2271b1]' : 'border-gray-300'">
+                                    <div class="w-2 h-2 rounded-full bg-white" x-show="modalPaymentMethod === 'intasend'">
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Option 2: USD (PayPal - PayPal / International Cards) --}}
+                            <div @click="modalPaymentMethod = 'paypal'"
+                                :class="modalPaymentMethod === 'paypal' ? 'border-[#2271b1] bg-blue-50/40 ring-2 ring-[#2271b1]/20 shadow-md' : 'border-gray-200 hover:border-gray-300 bg-white'"
+                                class="relative border-2 rounded-2xl p-4 cursor-pointer transition-all flex items-start gap-4">
+                                <div
+                                    class="w-10 h-10 rounded-xl bg-blue-500/10 text-[#003087] flex items-center justify-center flex-shrink-0 text-xl">
+                                    <i class="fa-brands fa-paypal text-[#003087]"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="text-sm font-black text-gray-900 flex items-center gap-2">
+                                            {{ __('USD (Card / PayPal)') }}
+                                        </h4>
+                                        <span class="text-sm font-black text-[#2271b1]"
+                                            x-text="checkoutCycle === 'monthly' ? modalTier?.usdMonthly : modalTier?.usdYearly"></span>
+                                    </div>
+                                    <p class="text-[11px] text-gray-500 font-medium mt-0.5">
+                                        {{ __('Pay securely with PayPal account or International Visa, Mastercard, AMEX.') }}
+                                    </p>
+                                </div>
+                                <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 flex-shrink-0"
+                                    :class="modalPaymentMethod === 'paypal' ? 'border-[#2271b1] bg-[#2271b1]' : 'border-gray-300'">
+                                    <div class="w-2 h-2 rounded-full bg-white" x-show="modalPaymentMethod === 'paypal'">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Checkout Form Submission --}}
+                        <form action="{{ route('subscriptions.checkout') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="tier_id" :value="modalTier ? modalTier.id : ''">
+                            <input type="hidden" name="cycle" :value="checkoutCycle">
+                            <input type="hidden" name="gateway" :value="modalPaymentMethod">
+                            <input type="hidden" name="currency" :value="modalPaymentMethod === 'paypal' ? 'USD' : 'KES'">
+
+                            <button type="submit"
+                                class="w-full bg-[#2271b1] hover:bg-[#135e96] text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                                <span
+                                    x-text="modalPaymentMethod === 'paypal' ? '{{ __('Proceed to PayPal Checkout') }}' : '{{ __('Proceed to M-Pesa / Card Checkout') }}'"></span>
+                                <i class="fa-solid fa-arrow-right text-xs"></i>
+                            </button>
+                        </form>
+
+                        <div
+                            class="mt-4 flex items-center justify-center gap-2 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                            <i class="fa-solid fa-lock text-emerald-600"></i>
+                            <span>{{ __('256-Bit SSL Encrypted & Secure Checkout') }}</span>
+                        </div>
+                    </div>
+                </div>
+            </template>
 
             {{-- Support & Custom Quotes Banner --}}
             <div

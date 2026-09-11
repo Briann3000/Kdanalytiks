@@ -235,6 +235,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/publish', [SurveyController::class, 'publish'])->name('publish');
         Route::post('/archive', [SurveyController::class, 'archive'])->name('archive');
         Route::post('/toggle-shared-report', [SurveyController::class, 'toggleSharedReport'])->name('reports.toggle-shared');
+        Route::post('/toggle-shared-data', [SurveyController::class, 'toggleSharedData'])->name('toggle-shared-data');
         Route::get('/crosstab', [SurveyController::class, 'crosstab'])->name('reports.crosstab');
         Route::get('/inferential-analysis', [SurveyController::class, 'inferentialAnalysis'])->name('reports.inferential');
         Route::post('/inferential-analysis/save', [SurveyController::class, 'saveInferentialAnalysis'])->name('reports.inferential.save');
@@ -365,9 +366,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 // Public Survey Views
 Route::get('/surveys/{survey}', [SurveyController::class, 'show'])->name('surveys.show');
+Route::get('/surveys/{survey}/responses/{response}/media', [SurveyController::class, 'serveMedia'])->name('surveys.responses.media');
 Route::post('/surveys/{survey}/submit', [SurveyController::class, 'submit'])->middleware('throttle:10,1')->name('surveys.submit');
 Route::get('/surveys/{survey}/claim', [SurveyController::class, 'claimRewardPrompt'])->name('surveys.claim');
 Route::get('/reports/shared/{token}', [SurveyController::class, 'sharedReport'])->name('surveys.reports.shared');
+Route::get('/surveys/shared-data/{token}', [SurveyController::class, 'sharedData'])->name('surveys.shared_data');
+Route::get('/surveys/shared-data/{token}/export/{format}', [SurveyController::class, 'sharedDataExport'])->name('surveys.shared_data.export');
 Route::get('/surveys/{survey}/dashboard-preview', [\App\Http\Controllers\DashboardBuilderController::class, 'dashboardPreview'])->name('surveys.dashboard-preview');
 
 Route::post('/surveys/{survey}/invite', [SurveyController::class, 'invite'])->name('surveys.invite');
@@ -379,6 +383,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/users/create', [\App\Http\Controllers\AdminController::class, 'createUser'])->name('users.create');
     Route::post('/users/store', [\App\Http\Controllers\AdminController::class, 'storeUser'])->name('users.store');
     Route::post('/users/{user}/status', [\App\Http\Controllers\AdminController::class, 'updateUserStatus'])->name('users.status');
+    Route::post('/users/{user}/subscription', [\App\Http\Controllers\AdminController::class, 'updateUserSubscription'])->name('users.subscription');
     Route::get('/surveys', [\App\Http\Controllers\AdminController::class, 'surveys'])->name('surveys.index');
 
     Route::get('/reports-summary', [\App\Http\Controllers\AdminController::class, 'reports'])->name('reports.summary');
@@ -482,6 +487,7 @@ Route::middleware(['auth', 'verified', 'role:organization,independent,respondent
     Route::post('/subscriptions/cancel', [\App\Http\Controllers\SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
     Route::get('/subscriptions/paypal/success', [\App\Http\Controllers\SubscriptionController::class, 'paypalSuccess'])->name('subscriptions.paypal.success');
     Route::get('/subscriptions/paypal/cancel', [\App\Http\Controllers\SubscriptionController::class, 'paypalCancel'])->name('subscriptions.paypal.cancel');
+    Route::get('/subscriptions/intasend/callback', [\App\Http\Controllers\SubscriptionController::class, 'intasendCallback'])->name('subscriptions.intasend.callback');
 });
 
 // Webhooks (Public)

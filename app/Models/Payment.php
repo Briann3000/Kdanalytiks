@@ -25,6 +25,15 @@ class Payment extends Model
         'amount' => 'decimal:2',
     ];
 
+    public function setMethodAttribute($value): void
+    {
+        if ($value instanceof \App\Enums\PaymentMethod) {
+            $this->attributes['method'] = $value->value;
+        } else {
+            $this->attributes['method'] = \App\Enums\PaymentMethod::parse(is_string($value) ? $value : null)->value;
+        }
+    }
+
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);

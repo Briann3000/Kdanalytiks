@@ -79,7 +79,7 @@ class AdminController extends Controller
 
     public function users(Request $request)
     {
-        $query = User::query();
+        $query = User::with(['subscriptionTier', 'independent.subscriptionTier', 'organization.subscriptionTier']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -93,6 +93,15 @@ class AdminController extends Controller
             $query->where('role', $request->role);
         }
 
+        if ($request->filled('tier') && $request->tier !== 'all') {
+            $tierId = $request->tier;
+            $query->where(function ($q) use ($tierId) {
+                $q->where('subscription_tier_id', $tierId)
+                    ->orWhereHas('independent', fn($iq) => $iq->where('subscription_tier_id', $tierId))
+                    ->orWhereHas('organization', fn($oq) => $oq->where('subscription_tier_id', $tierId));
+            });
+        }
+
         if ($request->filled('status')) {
             if ($request->status !== 'all') {
                 $query->where('status', $request->status);
@@ -101,9 +110,10 @@ class AdminController extends Controller
             $query->where('status', 'active');
         }
 
-        $users = $query->orderBy('created_at', 'desc')->paginate(20);
+        $users = $query->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
+        $tiers = \App\Models\SubscriptionTier::orderBy('id')->get();
 
-        return view('admin.users', compact('users'));
+        return view('admin.users', compact('users', 'tiers'));
     }
 
     public function updateUserStatus(Request $request, User $user)
@@ -111,6 +121,83 @@ class AdminController extends Controller
         $status = \App\Enums\UserStatus::tryFrom($request->status) ?? \App\Enums\UserStatus::Active;
         $user->update(['status' => $status]);
         return back()->with('success', "User {$user->name} status updated to {$status->value}.");
+    }
+
+    public function updateUserSubscription(Request $request, User $user)
+    {
+        $preset = $request->input('expiry_preset') ?? $request->input('duration_preset', 'plus_30');
+        $customDate = $request->input('custom_expiry') ?? $request->input('custom_expires_at');
+
+        $request->validate([
+            'subscription_tier_id' => 'required|exists:subscription_tiers,id',
+            'custom_expiry' => 'nullable|date',
+            'custom_expires_at' => 'nullable|date',
+            'reset_counters' => 'nullable',
+        ]);
+
+        $tier = \App\Models\SubscriptionTier::findOrFail($request->subscription_tier_id);
+        $isFreeTier = str_contains(strtolower($tier->slug), 'free');
+
+        // Determine expiration timestamp
+        $expiryDate = match ($preset) {
+            'plus_30', '+30d' => now()->addDays(30),
+            'plus_90', '+90d' => now()->addDays(90),
+            'plus_365', '+365d' => now()->addDays(365),
+            'never' => null,
+            'custom' => $customDate ? \Carbon\Carbon::parse($customDate) : now()->addDays(30),
+            'unchanged', 'keep' => $user->subscription_expiry ?? ($user->independent?->subscription_expiry ?? ($user->organization?->subscription_expiry ?? now()->addDays(30))),
+            default => now()->addDays(30),
+        };
+
+        // If assigning a free tier without explicit expiry, expiry can be null
+        if ($isFreeTier && $preset !== 'custom') {
+            $expiryDate = null;
+        }
+
+        // Automatically assign 'paid' for paid tiers and 'free' for free tiers
+        $paymentStatus = $isFreeTier ? 'free' : 'paid';
+
+        $updateData = [
+            'subscription_tier_id' => $tier->id,
+            'subscription_expiry' => $expiryDate,
+            'payment_status' => $paymentStatus,
+        ];
+
+        if ($request->boolean('reset_counters') || $request->input('reset_counters') == '1') {
+            $updateData['transcription_count'] = 0;
+            $updateData['proofread_count'] = 0;
+            $updateData['plagiarism_scan_count'] = 0;
+            $updateData['ai_analysis_count'] = 0;
+        }
+
+        $user->update($updateData);
+
+        if ($user->independent) {
+            $indData = [
+                'subscription_tier_id' => $tier->id,
+                'subscription_expiry' => $expiryDate,
+                'payment_status' => $paymentStatus,
+            ];
+            if ($request->boolean('reset_counters') || $request->input('reset_counters') == '1') {
+                $indData['ai_usage_monthly'] = 0;
+            }
+            $user->independent->update($indData);
+        }
+
+        if ($user->organization) {
+            $orgData = [
+                'subscription_tier_id' => $tier->id,
+                'subscription_expiry' => $expiryDate,
+                'payment_status' => $paymentStatus,
+            ];
+            if ($request->boolean('reset_counters') || $request->input('reset_counters') == '1') {
+                $orgData['ai_usage_monthly'] = 0;
+            }
+            $user->organization->update($orgData);
+        }
+
+        $expiryFormatted = $expiryDate ? $expiryDate->format('M d, Y') : 'No Expiry (Lifetime/Free)';
+        return back()->with('success', "Subscription for {$user->name} updated to {$tier->name} (Valid: {$expiryFormatted}, Status: {$paymentStatus}).");
     }
 
     public function createUser()
