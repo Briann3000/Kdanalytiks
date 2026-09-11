@@ -164,6 +164,106 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Resolve the underlying subscription entity (User, Independent, or Organization).
+     */
+    public function resolvedSubscriptionEntity()
+    {
+        $activeOrg = $this->activeOrganization();
+        if ($activeOrg) {
+            return $activeOrg;
+        }
+
+        $roleVal = $this->role instanceof \UnitEnum ? $this->role->value : $this->role;
+        return match ($roleVal) {
+            'organization' => $this->organization,
+            'independent', 'researcher' => $this->independent,
+            default => $this
+        };
+    }
+
+    /**
+     * Get days remaining on active subscription.
+     */
+    public function subscriptionDaysRemaining(): ?int
+    {
+        $entity = $this->resolvedSubscriptionEntity();
+        if (!$entity || !$entity->subscription_expiry) {
+            return null;
+        }
+        if ($entity->subscription_expiry->isPast()) {
+            return 0;
+        }
+        return (int) ceil(now()->floatDiffInDays($entity->subscription_expiry));
+    }
+
+    /**
+     * Formatted expiration date string.
+     */
+    public function subscriptionExpiryFormatted(): ?string
+    {
+        $entity = $this->resolvedSubscriptionEntity();
+        if (!$entity || !$entity->subscription_expiry) {
+            return null;
+        }
+        return $entity->subscription_expiry->format('M d, Y');
+    }
+
+    /**
+     * Check if subscription expires soon (default <= 7 days).
+     */
+    public function isSubscriptionExpiringSoon(int $daysThreshold = 7): bool
+    {
+        $days = $this->subscriptionDaysRemaining();
+        return $days !== null && $days > 0 && $days <= $daysThreshold;
+    }
+
+    /**
+     * Check if user's subscription is expired.
+     */
+    public function isSubscriptionExpired(): bool
+    {
+        $entity = $this->resolvedSubscriptionEntity();
+        if (!$entity || !$entity->subscription_expiry) {
+            return false;
+        }
+        return $entity->subscription_expiry->isPast() && !$this->hasActiveSubscription();
+    }
+
+    /**
+     * Get comprehensive subscription details array.
+     */
+    public function getSubscriptionStatusDetails(): array
+    {
+        $entity = $this->resolvedSubscriptionEntity();
+        $tier = $entity?->subscriptionTier;
+        $tierName = $tier?->name ?? 'Free';
+        $tierSlug = $this->effectiveTierSlug();
+        $isActive = $this->hasActiveSubscription();
+        $isExpired = $this->isSubscriptionExpired();
+        $expiryFormatted = $this->subscriptionExpiryFormatted();
+        $daysRemaining = $this->subscriptionDaysRemaining();
+        $isExpiringSoon = $this->isSubscriptionExpiringSoon(7);
+
+        return [
+            'tier_name' => $tierName,
+            'tier_slug' => $tierSlug,
+            'is_active' => $isActive,
+            'is_expired' => $isExpired,
+            'is_expiring_soon' => $isExpiringSoon,
+            'expiry_formatted' => $expiryFormatted,
+            'days_remaining' => $daysRemaining,
+            'status_label' => $isActive
+                ? "Active {$tierName} Plan"
+                : ($isExpired ? "Subscription Expired" : "Free Plan"),
+            'message' => $isActive && $expiryFormatted
+                ? "Active {$tierName} Plan • Renews/Expires on {$expiryFormatted} ({$daysRemaining} days left)"
+                : ($isExpired && $expiryFormatted
+                    ? "Your {$tierName} subscription expired on {$expiryFormatted}. Renew now to unlock full features."
+                    : "You are currently on the Free plan.")
+        ];
+    }
+
+    /**
      * Get the effective subscription tier slug for this user, respecting expiry/active status.
      */
     public function effectiveTierSlug(): string
@@ -202,7 +302,7 @@ class User extends Authenticatable implements MustVerifyEmail
         $activeOrg = $this->activeOrganization();
         if ($activeOrg && $activeOrg->subscriptionTier) {
             $tierSlug = strtolower($activeOrg->subscriptionTier->slug);
-            if (str_contains($tierSlug, 'pro') || str_contains($tierSlug, 'enterprise')) {
+            if ((str_contains($tierSlug, 'pro') || str_contains($tierSlug, 'enterprise')) && $activeOrg->hasActiveSubscription()) {
                 return true;
             }
         }

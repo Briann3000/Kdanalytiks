@@ -13,6 +13,7 @@ class Payment extends Model
     protected $fillable = [
         'organization_id',
         'independent_id',
+        'user_id',
         'amount',
         'method',
         'status',
@@ -32,5 +33,10 @@ class Payment extends Model
     public function independent(): BelongsTo
     {
         return $this->belongsTo(Independent::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

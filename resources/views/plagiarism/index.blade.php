@@ -6,6 +6,8 @@
 @section('content')
     <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
 
+        <x-subscription-status-banner />
+
         <!-- Header & Action Row -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-200 pb-5">
             <div>
@@ -58,7 +60,8 @@
                     </span>
                 </div>
                 <p class="text-xs text-gray-400 pt-1">
-                    {{ __('Word limit: :count words per scan', ['count' => number_format($wordLimit)]) }}</p>
+                    {{ __('Word limit: :count words per scan', ['count' => number_format($wordLimit)]) }}
+                </p>
             </div>
 
             <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-1">

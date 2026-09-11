@@ -9,30 +9,55 @@ use App\Models\User;
 
 class PaymentManager
 {
-    protected $gateway;
+    protected array $drivers = [];
+    protected ?PaymentGatewayInterface $defaultGateway;
 
-    public function __construct(PaymentGatewayInterface $gateway)
+    public function __construct(PaymentGatewayInterface $defaultGateway)
     {
-        $this->gateway = $gateway;
+        $this->defaultGateway = $defaultGateway;
+        $this->drivers['intasend'] = $defaultGateway;
     }
 
     /**
-     * Get the active gateway driver.
+     * Get a gateway driver by name ('intasend' or 'paypal').
+     */
+    public function driver(?string $name = null): PaymentGatewayInterface
+    {
+        $name = strtolower($name ?? 'intasend');
+
+        if (!isset($this->drivers[$name])) {
+            $this->drivers[$name] = match ($name) {
+                'paypal' => app(PayPalGateway::class),
+                'intasend' => app(IntasendGateway::class),
+                default => $this->defaultGateway ?? app(IntasendGateway::class),
+            };
+        }
+
+        return $this->drivers[$name];
+    }
+
+    /**
+     * Get the default gateway.
      */
     public function gateway(): PaymentGatewayInterface
     {
-        return $this->gateway;
+        return $this->driver();
     }
 
     /**
      * Helper to process a subscription.
      */
-    public function subscribe($entity, SubscriptionTier $tier, bool $isYearly = false): array
-    {
-        $amount = $isYearly ? $tier->yearly_price : $tier->monthly_price;
+    public function subscribe(
+        $entity,
+        SubscriptionTier $tier,
+        bool $isYearly = false,
+        string $gateway = 'intasend',
+        string $currency = 'KES'
+    ): array {
+        $amount = $tier->getPrice($currency, $isYearly);
 
         // Bypass gateway for free tiers
-        if ($amount <= 0) {
+        if ($amount <= 0 || str_contains(strtolower($tier->slug), 'free')) {
             $entity->update([
                 'subscription_tier_id' => $tier->id,
                 'subscription_expiry' => null,
@@ -61,17 +86,25 @@ class PaymentManager
                     'payment_status' => 'paid',
                 ]);
             }
-            return ['status' => 'success', 'message' => 'Successfully upgraded to the ' . $tier->name . ' plan.'];
+            return [
+                'status' => 'success',
+                'message' => 'Successfully switched to the ' . $tier->name . ' plan.'
+            ];
         }
 
-        return $this->gateway->purchaseSubscription($entity, $tier, $isYearly);
+        return $this->driver($gateway)->purchaseSubscription($entity, $tier, $isYearly);
     }
 
     /**
      * Helper to process a respondent payout.
      */
-    public function payout(User $user, float $amount, string $currency, string $reference = null): array
-    {
-        return $this->gateway->withdrawToRespondent($user, $amount, $currency, $reference);
+    public function payout(
+        User $user,
+        float $amount,
+        string $currency = 'KES',
+        ?string $reference = null,
+        string $gateway = 'intasend'
+    ): array {
+        return $this->driver($gateway)->withdrawToRespondent($user, $amount, $currency, $reference);
     }
 }

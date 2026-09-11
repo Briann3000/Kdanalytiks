@@ -337,7 +337,19 @@ class SociusChatController extends Controller
 
     private function ensureAiEligible(Request $request): void
     {
-        abort_unless($request->user()->canUseAiAnalysis(), 403, 'AI analysis is unavailable for your account right now.');
+        $user = $request->user();
+        if (!$user->canUseAiAnalysis()) {
+            $status = $user->getSubscriptionStatusDetails();
+            $msg = $status['is_expired']
+                ? "🔒 Subscription Expired: Your {$status['tier_name']} plan ended on {$status['expiry_formatted']}. Please renew your plan to continue using Socius AI."
+                : "🔒 Quota Reached: You have reached your monthly AI limit on your current plan. Upgrade to unlock unlimited Socius AI research assistant access.";
+            abort(response()->json([
+                'error' => 'subscription_required',
+                'message' => $msg,
+                'status_details' => $status,
+                'upgrade_url' => route('subscriptions.index'),
+            ], 403));
+        }
     }
 
     private function threadQuery(Survey $survey, Request $request)

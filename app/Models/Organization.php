@@ -167,4 +167,29 @@ class Organization extends Model
 
         return $currentCount >= $tier->max_surveys;
     }
+
+    public function subscriptionDaysRemaining(): int
+    {
+        if (!$this->subscription_expiry || $this->subscription_expiry->isPast()) {
+            return 0;
+        }
+        return (int) ceil(now()->floatDiffInDays($this->subscription_expiry));
+    }
+
+    public function isSubscriptionExpired(): bool
+    {
+        if (!$this->subscription_expiry) {
+            return false;
+        }
+        return $this->subscription_expiry->isPast();
+    }
+
+    public function hasActiveSubscription(): bool
+    {
+        $tier = $this->subscriptionTier;
+        if (!$tier || $tier->isFree()) {
+            return false;
+        }
+        return $this->subscription_expiry && $this->subscription_expiry->isFuture();
+    }
 }
