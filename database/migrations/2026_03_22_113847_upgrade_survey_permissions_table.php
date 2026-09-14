@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -13,8 +12,13 @@ return new class extends Migration
     {
         Schema::table('survey_permissions', function (Blueprint $table) {
             $table->json('permissions')->nullable()->after('user_id');
-            $table->dropColumn('role');
         });
+
+        if (Schema::hasColumn('survey_permissions', 'role')) {
+            Schema::table('survey_permissions', function (Blueprint $table) {
+                $table->dropColumn('role');
+            });
+        }
     }
 
     public function down(): void

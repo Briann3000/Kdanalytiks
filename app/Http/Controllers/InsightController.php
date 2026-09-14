@@ -180,11 +180,13 @@ class InsightController extends Controller
         $matchName = $isVirtualLikert ? explode('___', $questionId)[0] : $questionId;
         $rowKey = $isVirtualLikert ? explode('___', $questionId)[1] : null;
 
+        $matchedField = null;
         if (!empty($survey->json_schema)) {
             $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
             if (is_array($schema)) {
                 foreach ($schema as $field) {
                     if (isset($field['name']) && $field['name'] === $matchName) {
+                        $matchedField = $field;
                         $baseLabel = $field['label'] ?? $field['name'];
                         if ($isVirtualLikert && isset($field['rows']) && is_array($field['rows'])) {
                             $rowDef = collect($field['rows'])->firstWhere('value', $rowKey);
@@ -224,7 +226,21 @@ class InsightController extends Controller
                                         $val = $val[$rowKey];
                                     }
                                     if ($val !== null && $val !== '') {
-                                        $valStr = is_array($val) ? implode(', ', $val) : $val;
+                                        if (is_array($val)) {
+                                            $mapped = [];
+                                            foreach ($val as $v) {
+                                                $opt = ($matchedField && isset($matchedField['values']) && is_array($matchedField['values']))
+                                                    ? collect($matchedField['values'])->firstWhere('value', $v)
+                                                    : null;
+                                                $mapped[] = $opt ? ($opt['label'] ?? $v) : $v;
+                                            }
+                                            $valStr = implode(', ', $mapped);
+                                        } else {
+                                            $opt = ($matchedField && isset($matchedField['values']) && is_array($matchedField['values']))
+                                                ? collect($matchedField['values'])->firstWhere('value', $val)
+                                                : null;
+                                            $valStr = $opt ? ($opt['label'] ?? $val) : $val;
+                                        }
                                         $frequencyCount[$valStr] = ($frequencyCount[$valStr] ?? 0) + 1;
                                     }
                                 }
@@ -494,11 +510,39 @@ class InsightController extends Controller
             return response()->json(['success' => false, 'message' => 'Conversation history and refinement instructions are required.'], 400);
         }
 
-        $data = $this->getQuestionStatsAndLabel($survey, $questionId);
-        $questionLabel = $data['label'];
-        $statsText = "";
-        foreach ($data['stats'] as $stat) {
-            $statsText .= "Choice: {$stat['value']} | Count: {$stat['count']} | Percentage: {$stat['percentage']}%\n";
+        $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
+        $schema = is_array($schema) ? $schema : [];
+        $field = collect($schema)->firstWhere('name', $questionId);
+
+        if ($field && in_array($field['type'] ?? '', ['likert_matrix', 'likert_matrix_grid'])) {
+            $rawLabel = !empty($field['label']) ? $field['label'] : (!empty($field['title']) ? $field['title'] : ($field['name'] ?? $questionId));
+            $questionLabel = (preg_match('/^field-\d+$/i', trim($rawLabel)) || preg_match('/^question[-_\d]+$/i', trim($rawLabel))) ? 'Likert Matrix Question' : $rawLabel;
+
+            $controller = new \App\Http\Controllers\SurveyController();
+            $analyticalData = $controller->getAnalyticalData($survey, $survey->responses, true);
+            $analysisList = $analyticalData['analysis'] ?? [];
+            $qItem = collect($analysisList)->firstWhere('id', $questionId);
+            $statsText = "STATEMENT / ROW ITEM BREAKDOWN:\n";
+            if ($qItem && !empty($qItem['likert_matrix_rows'])) {
+                foreach ($qItem['likert_matrix_rows'] as $row) {
+                    $rowLabel = $row['label'] ?? $row['value'] ?? 'Item';
+                    $rowStats = $row['stats'] ?? [];
+                    $itemStatsStr = [];
+                    foreach ($rowStats as $s) {
+                        if (isset($s['is_missing']) && $s['is_missing'])
+                            continue;
+                        $itemStatsStr[] = $s['value'] . ": " . $s['percentage'] . "%";
+                    }
+                    $statsText .= "- Statement Item \"{$rowLabel}\": " . implode(", ", $itemStatsStr) . "\n";
+                }
+            }
+        } else {
+            $data = $this->getQuestionStatsAndLabel($survey, $questionId);
+            $questionLabel = $data['label'];
+            $statsText = "";
+            foreach ($data['stats'] as $stat) {
+                $statsText .= "Choice: {$stat['value']} | Count: {$stat['count']} | Percentage: {$stat['percentage']}%\n";
+            }
         }
 
         $stylePrompts = [
@@ -562,8 +606,10 @@ Here is the conversation history with the researcher:
             // Save refined interpretation to cache keys to persist it
             $cacheKeyStyle = "quantitative_analysis_{$survey->id}_{$questionId}_{$style}";
             $cacheKeyDefault = "quantitative_analysis_{$survey->id}_{$questionId}";
+            $likertCacheKey = "likert_matrix_analysis_{$survey->id}_{$questionId}_{$style}";
             \Illuminate\Support\Facades\Cache::put($cacheKeyStyle, $insight, 86400);
             \Illuminate\Support\Facades\Cache::put($cacheKeyDefault, $insight, 86400);
+            \Illuminate\Support\Facades\Cache::put($likertCacheKey, $insight, 86400);
 
             return response()->json(['success' => true, 'insight' => $insight]);
         } catch (\Exception $e) {

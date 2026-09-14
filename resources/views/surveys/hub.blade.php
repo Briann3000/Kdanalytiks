@@ -25,10 +25,10 @@
         </style>
     @endif
     <div
-        class="{{ request('reportTab') === 'analyse' ? 'w-full h-full p-0 m-0 overflow-hidden' : 'container-fluid px-4 py-6' }}">
+        class="{{ request('reportTab') === 'analyse' ? 'w-full h-full p-4 sm:p-6 flex flex-col min-w-0 max-w-full overflow-hidden' : 'container-fluid px-4 py-6 min-w-0 w-full max-w-full' }}">
         @if((!isset($isSharedView) || !$isSharedView) && request('reportTab') !== 'analyse')
             <!-- Survey Header -->
-            <header class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <header class="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
                 <div>
                     <div class="flex items-center gap-2 mb-2">
                         @php
@@ -78,7 +78,7 @@
             </header>
 
             <!-- Survey Tabs -->
-            <div class="border-b border-gray-200 mb-8 relative z-30">
+            <div class="border-b border-gray-200 mb-6 relative z-30 shrink-0">
                 <nav
                     class="flex items-center gap-1.5 sm:gap-5 -mb-px py-0.5 overflow-visible w-full justify-between sm:justify-start">
                     <a href="{{ route('surveys.summary', $survey) }}"
@@ -93,7 +93,8 @@
 
                     <a href="{{ route('surveys.reports', $survey) }}?reportTab=analyse"
                         class="pb-3 sm:pb-4 px-1 sm:px-2 border-b-2 font-bold text-[11px] sm:text-sm transition-all whitespace-nowrap shrink-0 {{ (request()->routeIs('surveys.reports') && request('reportTab') === 'analyse') ? 'border-[#2271b1] text-[#135e96]' : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300' }}">
-                        <span>Analyze</span>
+                        <i class="fa-solid fa-chart-line mr-1 sm:mr-2 text-[10px] sm:text-xs"></i>
+                        <span>{{ __("Analyze") }}</span>
                     </a>
 
                     <!-- Reports Dropdown Container -->

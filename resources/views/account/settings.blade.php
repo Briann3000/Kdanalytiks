@@ -9,12 +9,12 @@
 
 
     <style>
-        .km-toggle-container { display: inline-block; position: relative; }
+        .kd-toggle-container { display: inline-block; position: relative; }
         .kd-toggle-checkbox { display: none; }
-        .km-toggle-bg { width: 44px; height: 24px; background-color: #d1d5db; border-radius: 999px; position: relative; cursor: pointer; transition: background-color 0.2s; display: inline-block; vertical-align: middle; }
-        .km-toggle-dot { width: 18px; height: 18px; background-color: white; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: transform 0.2s; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); }
-        .kd-toggle-checkbox:checked + .km-toggle-bg { background-color: #4f46e5; }
-        .kd-toggle-checkbox:checked + .km-toggle-bg .km-toggle-dot { transform: translateX(20px); }
+        .kd-toggle-bg { width: 44px; height: 24px; background-color: #d1d5db; border-radius: 999px; position: relative; cursor: pointer; transition: background-color 0.2s; display: inline-block; vertical-align: middle; }
+        .kd-toggle-dot { width: 18px; height: 18px; background-color: white; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: transform 0.2s; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); }
+        .kd-toggle-checkbox:checked + .kd-toggle-bg { background-color: #4f46e5; }
+        .kd-toggle-checkbox:checked + .kd-toggle-bg .kd-toggle-dot { transform: translateX(20px); }
         .password-toggle { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #9ca3af; transition: color 0.2s; }
         .password-toggle:hover { color: #4f46e5; }
     </style>
@@ -233,11 +233,11 @@
                                         {{ __('Remove "Exported via KDAnalytiks" from all your professional reports and proposals.') }}
                                     </p>
                                 </div>
-                                <div class="km-toggle-container">
+                                <div class="kd-toggle-container">
                                     <input type="hidden" name="remove_kd_branding_present" value="1">
                                     <input type="checkbox" name="remove_kd_branding" value="1" {{ $user->remove_kd_branding ? 'checked' : '' }} {{ $canCustom ? '' : 'disabled' }} class="kd-toggle-checkbox" id="branding_toggle">
-                                    <label for="branding_toggle" class="km-toggle-bg {{ !$canCustom ? 'opacity-30 cursor-not-allowed' : '' }}">
-                                        <div class="km-toggle-dot"></div>
+                                    <label for="branding_toggle" class="kd-toggle-bg {{ !$canCustom ? 'opacity-30 cursor-not-allowed' : '' }}">
+                                        <div class="kd-toggle-dot"></div>
                                     </label>
                                 </div>
                             </div>

@@ -3,7 +3,7 @@
 @section('title', 'Create Survey')
 
 @section('content')
-    <h1>Create New Survey</h1>
+    <h1>{{ __("Create New Survey") }}</h1>
 
     @if ($errors->any())
         <div class="w3-panel w3-red w3-round">

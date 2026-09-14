@@ -248,4 +248,131 @@ class SurveyImportController extends Controller
 
         return $applied;
     }
+
+    /**
+     * Import a complete .kdsurvey ZIP package bundle.
+     */
+    public function importPackage(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'max:51200'],
+            'append_to_survey' => ['nullable', 'integer', 'exists:surveys,id'],
+        ]);
+
+        $uploadedFile = $request->file('file');
+        $zip = new \ZipArchive();
+
+        if ($zip->open($uploadedFile->getRealPath()) !== true) {
+            if ($request->wantsJson()) {
+                return response()->json(['error' => __('Invalid data package or corrupted archive.')], 422);
+            }
+            return back()->with('error', __('Invalid data package or corrupted archive.'));
+        }
+
+        $surveyJsonStr = $zip->getFromName('survey.json');
+        $questionsJsonStr = $zip->getFromName('questions.json');
+        $responsesJsonStr = $zip->getFromName('responses.json');
+        $zip->close();
+
+        if (!$surveyJsonStr) {
+            if ($request->wantsJson()) {
+                return response()->json(['error' => __('The package is missing survey.json definition.')], 422);
+            }
+            return back()->with('error', __('The package is missing survey.json definition.'));
+        }
+
+        $surveyData = json_decode($surveyJsonStr, true) ?? [];
+        $questionsData = $questionsJsonStr ? (json_decode($questionsJsonStr, true) ?? []) : [];
+        $responsesData = $responsesJsonStr ? (json_decode($responsesJsonStr, true) ?? []) : [];
+
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $surveyData, $questionsData, $responsesData, $user, $role) {
+            if ($request->filled('append_to_survey')) {
+                $survey = Survey::findOrFail($request->integer('append_to_survey'));
+                $this->authorize('update', $survey);
+            } else {
+                $createData = [
+                    'title' => $surveyData['title'] ?? 'Imported Survey',
+                    'description' => $surveyData['description'] ?? 'Imported from .kdsurvey package.',
+                    'status' => \App\Enums\SurveyStatus::Active,
+                    'type' => \App\Enums\SurveyType::Invitation,
+                    'category' => \App\Enums\SurveyCategory::tryFrom($surveyData['category'] ?? '') ?? \App\Enums\SurveyCategory::Academic,
+                    'import_source' => 'package',
+                    'created_by' => $user->id,
+                    'json_schema' => !empty($surveyData['json_schema']) ? json_encode($surveyData['json_schema']) : json_encode([]),
+                    'share_token' => Str::random(32),
+                    'export_org_name' => $surveyData['export_org_name'] ?? null,
+                    'remove_kd_branding' => !empty($surveyData['remove_kd_branding']),
+                ];
+
+                if ($role === 'organization') {
+                    $createData['organization_id'] = $user->organization?->id;
+                } elseif ($role === 'independent') {
+                    $createData['independent_id'] = $user->independent?->id;
+                }
+
+                $survey = Survey::create($createData);
+            }
+
+            // Import responses
+            $importedCount = 0;
+            foreach ($responsesData as $r) {
+                $response = \App\Models\Response::create([
+                    'survey_id' => $survey->id,
+                    'respondent_id' => null,
+                    'guest_name' => $r['guest_name'] ?? 'Imported Respondent',
+                    'ai_metadata' => $r['ai_metadata'] ?? null,
+                    'created_at' => !empty($r['created_at']) ? \Carbon\Carbon::parse($r['created_at']) : now(),
+                ]);
+
+                // Prepare answers array
+                $answersArray = [];
+                if (!empty($r['data']) && is_array($r['data'])) {
+                    foreach ($r['data'] as $fName => $uVal) {
+                        $answersArray[] = [
+                            'name' => $fName,
+                            'userData' => $uVal,
+                        ];
+                    }
+                } elseif (!empty($r['answers']) && is_array($r['answers'])) {
+                    foreach ($r['answers'] as $ans) {
+                        $answersArray[] = [
+                            'name' => $ans['name'] ?? ($ans['question_id'] ? 'question_' . $ans['question_id'] : 'field'),
+                            'userData' => $ans['value'] ?? '',
+                        ];
+                    }
+                }
+
+                if (!empty($answersArray)) {
+                    \App\Models\Answer::create([
+                        'response_id' => $response->id,
+                        'question_id' => null,
+                        'value' => json_encode($answersArray),
+                    ]);
+                }
+
+                $importedCount++;
+            }
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'survey_id' => $survey->id,
+                    'message' => __('Package imported successfully with :count responses.', ['count' => $importedCount]),
+                    'links' => [
+                        'hub' => route('surveys.summary', $survey),
+                        'settings' => route('surveys.settings', $survey),
+                    ],
+                ]);
+            }
+
+            return redirect()->route('surveys.summary', $survey)->with(
+                'success',
+                __('Survey package imported successfully with :count responses.', ['count' => $importedCount])
+            );
+        });
+    }
 }
+

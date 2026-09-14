@@ -27,187 +27,187 @@
 
     <div :class="(reportTab === 'analyse' || reportTab === 'humanizer') ? '' : 'space-y-12'"
         x-data="{
-                                                                                                                                                                            reportTab: @js($initialReportTab) === 'crosstab' ? 'inferential' : @js($initialReportTab),
-                                                                                                                                                                            humanizerOriginal: '',
-                                                                                                                                                                            humanizerResult: '',
-                                                                                                                                                                            isHumanizing: false,
-                                                                                                                                                                            isAnalyzing: false,
-                                                                                                                                                                            humanizerMode: 'standard',
-                                                                                                                                                                            humanizerIntensity: 'medium',
-                                                                                                                                                                            customInstructions: '',
-                                                                                                                                                                            originalAnalysis: null,
-                                                                                                                                                                            humanizedAnalysis: null,
-                                                                                                                                                                            reportingStyle: @js($survey->reporting_style ?? 'apa'),
-                                                                                                                                                                            isPremium: @js(auth()->user() ? auth()->user()->hasActiveSubscription() : false),
-                                                                                                                                                                            globalFeedback: '',
-                                                                                                                                                                            globalRefining: false,
-                                                                                                                                                                            globalRefineProgress: '',
-                                                                                                                                                                            quantQuestionIds: @js(collect($analysis)->where('isChartable', true)->where('isLikertLike', false)->pluck('id')),
-                                                                                                                                                                            init() {
-                                                                                                                                                                                window.currentReportingStyle = this.reportingStyle;
-                                                                                                                                                                                this.$watch('reportingStyle', (val) => {
-                                                                                                                                                                                    window.currentReportingStyle = val;
-                                                                                                                                                                                    // Persist reporting style to database via fetch
-                                                                                                                                                                                    fetch(`{{ route('surveys.reporting-style', $survey->id) }}`, {
-                                                                                                                                                                                        method: 'POST',
-                                                                                                                                                                                        headers: {
-                                                                                                                                                                                            'Content-Type': 'application/json',
-                                                                                                                                                                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-                                                                                                                                                                                        },
-                                                                                                                                                                                        body: JSON.stringify({ reporting_style: val })
-                                                                                                                                                                                    }).then(res => {
-                                                                                                                                                                                        if (!res.ok) {
-                                                                                                                                                                                            console.error('Failed to update reporting style');
-                                                                                                                                                                                        } else {
-                                                                                                                                                                                            // If style changed, regenerate the visible cards
-                                                                                                                                                                                            for (const qId of this.quantQuestionIds) {
-                                                                                                                                                                                                const card = window.quantInsightInstances && window.quantInsightInstances[qId];
-                                                                                                                                                                                                if (card) {
-                                                                                                                                                                                                    card.generate(true); // Force refresh
+                                                                                                                                                                                    reportTab: @js($initialReportTab) === 'crosstab' ? 'inferential' : @js($initialReportTab),
+                                                                                                                                                                                    humanizerOriginal: '',
+                                                                                                                                                                                    humanizerResult: '',
+                                                                                                                                                                                    isHumanizing: false,
+                                                                                                                                                                                    isAnalyzing: false,
+                                                                                                                                                                                    humanizerMode: 'standard',
+                                                                                                                                                                                    humanizerIntensity: 'medium',
+                                                                                                                                                                                    customInstructions: '',
+                                                                                                                                                                                    originalAnalysis: null,
+                                                                                                                                                                                    humanizedAnalysis: null,
+                                                                                                                                                                                    reportingStyle: @js($survey->reporting_style ?? 'apa'),
+                                                                                                                                                                                    isPremium: @js(auth()->user() ? auth()->user()->hasActiveSubscription() : false),
+                                                                                                                                                                                    globalFeedback: '',
+                                                                                                                                                                                    globalRefining: false,
+                                                                                                                                                                                    globalRefineProgress: '',
+                                                                                                                                                                                    quantQuestionIds: @js(collect($analysis)->where('isChartable', true)->where('isLikertLike', false)->pluck('id')),
+                                                                                                                                                                                    init() {
+                                                                                                                                                                                        window.currentReportingStyle = this.reportingStyle;
+                                                                                                                                                                                        this.$watch('reportingStyle', (val) => {
+                                                                                                                                                                                            window.currentReportingStyle = val;
+                                                                                                                                                                                            // Persist reporting style to database via fetch
+                                                                                                                                                                                            fetch(`{{ route('surveys.reporting-style', $survey->id) }}`, {
+                                                                                                                                                                                                method: 'POST',
+                                                                                                                                                                                                headers: {
+                                                                                                                                                                                                    'Content-Type': 'application/json',
+                                                                                                                                                                                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                                                                                                                                                                                                },
+                                                                                                                                                                                                body: JSON.stringify({ reporting_style: val })
+                                                                                                                                                                                            }).then(res => {
+                                                                                                                                                                                                if (!res.ok) {
+                                                                                                                                                                                                    console.error('Failed to update reporting style');
+                                                                                                                                                                                                } else {
+                                                                                                                                                                                                    // If style changed, regenerate the visible cards
+                                                                                                                                                                                                    for (const qId of this.quantQuestionIds) {
+                                                                                                                                                                                                        const card = window.quantInsightInstances && window.quantInsightInstances[qId];
+                                                                                                                                                                                                        if (card) {
+                                                                                                                                                                                                            card.generate(true); // Force refresh
+                                                                                                                                                                                                        }
+                                                                                                                                                                                                    }
                                                                                                                                                                                                 }
-                                                                                                                                                                                            }
-                                                                                                                                                                                        }
-                                                                                                                                                                                    });
-                                                                                                                                                                                });
+                                                                                                                                                                                            });
+                                                                                                                                                                                        });
 
-                                                                                                                                                                                this.$watch('reportTab', (tab) => {
-                                                                                                                                                                                    if (tab === 'analyse') {
-                                                                                                                                                                                        this.$nextTick(() => {
-                                                                                                                                                                                            const inputEl = document.getElementById('socius-prompt-input');
-                                                                                                                                                                                            if (inputEl) {
-                                                                                                                                                                                                inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                                                                                                                                                                                inputEl.focus();
+                                                                                                                                                                                        this.$watch('reportTab', (tab) => {
+                                                                                                                                                                                            if (tab === 'analyse') {
+                                                                                                                                                                                                this.$nextTick(() => {
+                                                                                                                                                                                                    const inputEl = document.getElementById('socius-prompt-input');
+                                                                                                                                                                                                    if (inputEl) {
+                                                                                                                                                                                                        inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                                                                                                                                                                        inputEl.focus();
+                                                                                                                                                                                                    }
+                                                                                                                                                                                                });
                                                                                                                                                                                             }
                                                                                                                                                                                         });
-                                                                                                                                                                                    }
-                                                                                                                                                                                });
-                                                                                                                                                                                if (this.reportTab === 'analyse') {
-                                                                                                                                                                                    this.$nextTick(() => {
-                                                                                                                                                                                        const inputEl = document.getElementById('socius-prompt-input');
-                                                                                                                                                                                        if (inputEl) {
-                                                                                                                                                                                            inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                                                                                                                                                                            inputEl.focus();
+                                                                                                                                                                                        if (this.reportTab === 'analyse') {
+                                                                                                                                                                                            this.$nextTick(() => {
+                                                                                                                                                                                                const inputEl = document.getElementById('socius-prompt-input');
+                                                                                                                                                                                                if (inputEl) {
+                                                                                                                                                                                                    inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                                                                                                                                                                    inputEl.focus();
+                                                                                                                                                                                                }
+                                                                                                                                                                                            });
                                                                                                                                                                                         }
-                                                                                                                                                                                    });
-                                                                                                                                                                                }
 
-                                                                                                                                                                                window.addEventListener('popstate', (e) => {
-                                                                                                                                                                                    const params = new URLSearchParams(window.location.search);
-                                                                                                                                                                                    const tabFromUrl = params.get('reportTab') || 'quantitative';
-                                                                                                                                                                                    this.reportTab = tabFromUrl;
-                                                                                                                                                                                });
-                                                                                                                                                                            },
-                                                                                                                                                                            async globalRefineAll() {
-                                                                                                                                                                                if (!this.isPremium) {
-                                                                                                                                                                                    alert('Premium subscription required for bulk refinement.');
-                                                                                                                                                                                    return;
-                                                                                                                                                                                }
-                                                                                                                                                                                if (!this.globalFeedback.trim()) return;
-                                                                                                                                                                                this.globalRefining = true;
-                                                                                                                                                                                this.globalRefineProgress = '';
-                                                                                                                                                                                const total = this.quantQuestionIds.length;
-                                                                                                                                                                                let count = 0;
+                                                                                                                                                                                        window.addEventListener('popstate', (e) => {
+                                                                                                                                                                                            const params = new URLSearchParams(window.location.search);
+                                                                                                                                                                                            const tabFromUrl = params.get('reportTab') || 'quantitative';
+                                                                                                                                                                                            this.reportTab = tabFromUrl;
+                                                                                                                                                                                        });
+                                                                                                                                                                                    },
+                                                                                                                                                                                    async globalRefineAll() {
+                                                                                                                                                                                        if (!this.isPremium) {
+                                                                                                                                                                                            alert('Premium subscription required for bulk refinement.');
+                                                                                                                                                                                            return;
+                                                                                                                                                                                        }
+                                                                                                                                                                                        if (!this.globalFeedback.trim()) return;
+                                                                                                                                                                                        this.globalRefining = true;
+                                                                                                                                                                                        this.globalRefineProgress = '';
+                                                                                                                                                                                        const total = this.quantQuestionIds.length;
+                                                                                                                                                                                        let count = 0;
 
-                                                                                                                                                                                for (const qId of this.quantQuestionIds) {
-                                                                                                                                                                                    count++;
-                                                                                                                                                                                    this.globalRefineProgress = `Refining question ${count} of ${total}...`;
-                                                                                                                                                                                    const card = window.quantInsightInstances && window.quantInsightInstances[qId];
-                                                                                                                                                                                    if (card) {
+                                                                                                                                                                                        for (const qId of this.quantQuestionIds) {
+                                                                                                                                                                                            count++;
+                                                                                                                                                                                            this.globalRefineProgress = `Refining question ${count} of ${total}...`;
+                                                                                                                                                                                            const card = window.quantInsightInstances && window.quantInsightInstances[qId];
+                                                                                                                                                                                            if (card) {
+                                                                                                                                                                                                try {
+                                                                                                                                                                                                    await card.refineFromGlobal(this.globalFeedback, this.reportingStyle);
+                                                                                                                                                                                                } catch (e) {
+                                                                                                                                                                                                    console.error(`Refinement failed for question ${qId}:`, e);
+                                                                                                                                                                                                }
+                                                                                                                                                                                                // Introduce 1000ms delay to prevent rate limits
+                                                                                                                                                                                                await new Promise(resolve => setTimeout(resolve, 1000));
+                                                                                                                                                                                            }
+                                                                                                                                                                                        }
+                                                                                                                                                                                        this.globalFeedback = '';
+                                                                                                                                                                                        this.globalRefining = false;
+                                                                                                                                                                                        this.globalRefineProgress = '';
+                                                                                                                                                                                    },
+                                                                                                                                                                                    switchReportTab(tab) {
+                                                                                                                                                                                        if (this.reportTab === tab) return;
+                                                                                                                                                                                        this.reportTab = tab;
+                                                                                                                                                                                        const url = new URL(window.location.href);
+                                                                                                                                                                                        url.searchParams.set('reportTab', tab);
+                                                                                                                                                                                        if (tab !== 'analyse') {
+                                                                                                                                                                                            url.searchParams.delete('thread');
+                                                                                                                                                                                        }
+                                                                                                                                                                                        window.history.pushState({ reportTab: tab }, '', url);
+                                                                                                                                                                                    },
+                                                                                                                                                                                    goToHumanizer(text) {
+                                                                                                                                                                                        this.humanizerOriginal = text;
+                                                                                                                                                                                        this.humanizerResult = '';
+                                                                                                                                                                                        this.customInstructions = '';
+                                                                                                                                                                                        this.originalAnalysis = null;
+                                                                                                                                                                                        this.humanizedAnalysis = null;
+                                                                                                                                                                                        this.switchReportTab('humanizer');
+                                                                                                                                                                                        this.$nextTick(() => {
+                                                                                                                                                                                            this.analyzeHumanizerText();
+                                                                                                                                                                                        });
+                                                                                                                                                                                    },
+                                                                                                                                                                                    async analyzeHumanizerText() {
+                                                                                                                                                                                        if (!this.humanizerOriginal.trim()) return;
+                                                                                                                                                                                        this.isAnalyzing = true;
                                                                                                                                                                                         try {
-                                                                                                                                                                                            await card.refineFromGlobal(this.globalFeedback, this.reportingStyle);
+                                                                                                                                                                                            const response = await fetch(`{{ route('surveys.analyse.humanize', $survey->id) }}`, {
+                                                                                                                                                                                                method: 'POST',
+                                                                                                                                                                                                headers: {
+                                                                                                                                                                                                    'Content-Type': 'application/json',
+                                                                                                                                                                                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                                                                                                                                                                                                },
+                                                                                                                                                                                                body: JSON.stringify({
+                                                                                                                                                                                                    text: this.humanizerOriginal,
+                                                                                                                                                                                                    analyze_only: true
+                                                                                                                                                                                                })
+                                                                                                                                                                                            });
+                                                                                                                                                                                            const data = await response.json();
+                                                                                                                                                                                            this.originalAnalysis = data.analysis;
                                                                                                                                                                                         } catch (e) {
-                                                                                                                                                                                            console.error(`Refinement failed for question ${qId}:`, e);
+                                                                                                                                                                                            console.error(e);
+                                                                                                                                                                                        } finally {
+                                                                                                                                                                                            this.isAnalyzing = false;
                                                                                                                                                                                         }
-                                                                                                                                                                                        // Introduce 1000ms delay to prevent rate limits
-                                                                                                                                                                                        await new Promise(resolve => setTimeout(resolve, 1000));
+                                                                                                                                                                                    },
+                                                                                                                                                                                    transferBack() {
+                                                                                                                                                                                        if (!this.humanizerResult.trim()) return;
+                                                                                                                                                                                        this.humanizerOriginal = this.humanizerResult;
+                                                                                                                                                                                        this.humanizerResult = '';
+                                                                                                                                                                                        this.humanizedAnalysis = null;
+                                                                                                                                                                                        this.originalAnalysis = null;
+                                                                                                                                                                                        this.$nextTick(() => { this.analyzeHumanizerText(); });
+                                                                                                                                                                                    },
+                                                                                                                                                                                    async humanizeAction() {
+                                                                                                                                                                                        if (!this.humanizerOriginal.trim()) return;
+                                                                                                                                                                                        this.isHumanizing = true;
+                                                                                                                                                                                        this.humanizerResult = '';
+                                                                                                                                                                                        this.humanizedAnalysis = null;
+                                                                                                                                                                                        try {
+                                                                                                                                                                                            const response = await fetch(`{{ route('surveys.analyse.humanize', $survey->id) }}`, {
+                                                                                                                                                                                                method: 'POST',
+                                                                                                                                                                                                headers: {
+                                                                                                                                                                                                    'Content-Type': 'application/json',
+                                                                                                                                                                                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                                                                                                                                                                                                },
+                                                                                                                                                                                                body: JSON.stringify({
+                                                                                                                                                                                                    text: this.humanizerOriginal,
+                                                                                                                                                                                                    mode: this.humanizerMode,
+                                                                                                                                                                                                    intensity: this.humanizerIntensity,
+                                                                                                                                                                                                    custom_instructions: this.customInstructions
+                                                                                                                                                                                                })
+                                                                                                                                                                                            });
+                                                                                                                                                                                            const data = await response.json();
+                                                                                                                                                                                            this.humanizerResult = data.humanized_text;
+                                                                                                                                                                                            this.originalAnalysis = data.original_analysis;
+                                                                                                                                                                                            this.humanizedAnalysis = data.humanized_analysis;
+                                                                                                                                                                                        } catch (e) {
+                                                                                                                                                                                            alert('Humanizer error: ' + e.message);
+                                                                                                                                                                                        } finally {
+                                                                                                                                                                                            this.isHumanizing = false;
+                                                                                                                                                                                        }
                                                                                                                                                                                     }
-                                                                                                                                                                                }
-                                                                                                                                                                                this.globalFeedback = '';
-                                                                                                                                                                                this.globalRefining = false;
-                                                                                                                                                                                this.globalRefineProgress = '';
-                                                                                                                                                                            },
-                                                                                                                                                                            switchReportTab(tab) {
-                                                                                                                                                                                if (this.reportTab === tab) return;
-                                                                                                                                                                                this.reportTab = tab;
-                                                                                                                                                                                const url = new URL(window.location.href);
-                                                                                                                                                                                url.searchParams.set('reportTab', tab);
-                                                                                                                                                                                if (tab !== 'analyse') {
-                                                                                                                                                                                    url.searchParams.delete('thread');
-                                                                                                                                                                                }
-                                                                                                                                                                                window.history.pushState({ reportTab: tab }, '', url);
-                                                                                                                                                                            },
-                                                                                                                                                                            goToHumanizer(text) {
-                                                                                                                                                                                this.humanizerOriginal = text;
-                                                                                                                                                                                this.humanizerResult = '';
-                                                                                                                                                                                this.customInstructions = '';
-                                                                                                                                                                                this.originalAnalysis = null;
-                                                                                                                                                                                this.humanizedAnalysis = null;
-                                                                                                                                                                                this.switchReportTab('humanizer');
-                                                                                                                                                                                this.$nextTick(() => {
-                                                                                                                                                                                    this.analyzeHumanizerText();
-                                                                                                                                                                                });
-                                                                                                                                                                            },
-                                                                                                                                                                            async analyzeHumanizerText() {
-                                                                                                                                                                                if (!this.humanizerOriginal.trim()) return;
-                                                                                                                                                                                this.isAnalyzing = true;
-                                                                                                                                                                                try {
-                                                                                                                                                                                    const response = await fetch(`{{ route('surveys.analyse.humanize', $survey->id) }}`, {
-                                                                                                                                                                                        method: 'POST',
-                                                                                                                                                                                        headers: {
-                                                                                                                                                                                            'Content-Type': 'application/json',
-                                                                                                                                                                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-                                                                                                                                                                                        },
-                                                                                                                                                                                        body: JSON.stringify({
-                                                                                                                                                                                            text: this.humanizerOriginal,
-                                                                                                                                                                                            analyze_only: true
-                                                                                                                                                                                        })
-                                                                                                                                                                                    });
-                                                                                                                                                                                    const data = await response.json();
-                                                                                                                                                                                    this.originalAnalysis = data.analysis;
-                                                                                                                                                                                } catch (e) {
-                                                                                                                                                                                    console.error(e);
-                                                                                                                                                                                } finally {
-                                                                                                                                                                                    this.isAnalyzing = false;
-                                                                                                                                                                                }
-                                                                                                                                                                            },
-                                                                                                                                                                            transferBack() {
-                                                                                                                                                                                if (!this.humanizerResult.trim()) return;
-                                                                                                                                                                                this.humanizerOriginal = this.humanizerResult;
-                                                                                                                                                                                this.humanizerResult = '';
-                                                                                                                                                                                this.humanizedAnalysis = null;
-                                                                                                                                                                                this.originalAnalysis = null;
-                                                                                                                                                                                this.$nextTick(() => { this.analyzeHumanizerText(); });
-                                                                                                                                                                            },
-                                                                                                                                                                            async humanizeAction() {
-                                                                                                                                                                                if (!this.humanizerOriginal.trim()) return;
-                                                                                                                                                                                this.isHumanizing = true;
-                                                                                                                                                                                this.humanizerResult = '';
-                                                                                                                                                                                this.humanizedAnalysis = null;
-                                                                                                                                                                                try {
-                                                                                                                                                                                    const response = await fetch(`{{ route('surveys.analyse.humanize', $survey->id) }}`, {
-                                                                                                                                                                                        method: 'POST',
-                                                                                                                                                                                        headers: {
-                                                                                                                                                                                            'Content-Type': 'application/json',
-                                                                                                                                                                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-                                                                                                                                                                                        },
-                                                                                                                                                                                        body: JSON.stringify({
-                                                                                                                                                                                            text: this.humanizerOriginal,
-                                                                                                                                                                                            mode: this.humanizerMode,
-                                                                                                                                                                                            intensity: this.humanizerIntensity,
-                                                                                                                                                                                            custom_instructions: this.customInstructions
-                                                                                                                                                                                        })
-                                                                                                                                                                                    });
-                                                                                                                                                                                    const data = await response.json();
-                                                                                                                                                                                    this.humanizerResult = data.humanized_text;
-                                                                                                                                                                                    this.originalAnalysis = data.original_analysis;
-                                                                                                                                                                                    this.humanizedAnalysis = data.humanized_analysis;
-                                                                                                                                                                                } catch (e) {
-                                                                                                                                                                                    alert('Humanizer error: ' + e.message);
-                                                                                                                                                                                } finally {
-                                                                                                                                                                                    this.isHumanizing = false;
-                                                                                                                                                                                }
-                                                                                                                                                                            }
-                                                                                                                                                                        }">
+                                                                                                                                                                                }">
         <!-- Sub Navigation -->
         <div x-show="reportTab !== 'analyse' && reportTab !== 'humanizer'"
             class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 border-b border-gray-100 pb-6">
@@ -584,7 +584,7 @@
                                                     </th>
                                                     <th class="py-2 sm:py-3 px-2 sm:px-4 text-right border-r border-gray-200">
                                                         <span class="hidden sm:inline">{{ __('Frequency') }}</span>
-                                                        <span class="sm:hidden">Freq</span>
+                                                        <span class="sm:hidden">{{ __("Freq") }}</span>
                                                     </th>
                                                     <th class="py-2 sm:py-3 px-2 sm:px-4 text-right border-r border-gray-200">
                                                         <span class="hidden sm:inline">{{ __('Percent') }}</span>
@@ -592,17 +592,17 @@
                                                     </th>
                                                     <th class="py-2 sm:py-3 px-2 sm:px-4 text-right border-r border-gray-200">
                                                         <span class="hidden sm:inline">{{ __('Valid Percent') }}</span>
-                                                        <span class="sm:hidden">Valid %</span>
+                                                        <span class="sm:hidden">{{ __("Valid %") }}</span>
                                                     </th>
                                                     <th class="py-2 sm:py-3 px-2 sm:px-4 text-right border-r border-gray-200">
                                                         <span class="hidden sm:inline">{{ __('Cumulative Percent') }}</span>
-                                                        <span class="sm:hidden">Cumulative %</span>
+                                                        <span class="sm:hidden">{{ __("Cumulative %") }}</span>
                                                     </th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-200">
                                                 @php 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    $totalFreq = 0;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    $totalFreq = 0;
                                                     $validFreq = 0;
                                                     // First pass to get valid total
                                                     foreach ($item['stats'] as $s) {
@@ -695,183 +695,208 @@
         </div>
 
         <div x-show="reportTab === 'qualitative'" class="space-y-12 animate-in fade-in duration-500" style="display: none;">
-            @foreach($analysis as $item)
-                @if(!$item['isChartable'])
-                    <div class="bg-white rounded-3xl p-4 sm:p-8 md:p-10 shadow-sm border border-gray-100">
-                        <div class="mb-6 sm:mb-8 flex justify-between items-center border-b border-gray-50 pb-4 sm:pb-6">
-                            <h4 class="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
-                                <span class="text-indigo-600 mr-2 opacity-30 text-base font-black">#{{ $loop->iteration }}</span>
-                                {{ $item['label'] }}
-                            </h4>
-                        </div>
-
-                        @if($item['isChartable'] && !empty($item['stats']))
-                            <div class="mb-10 p-6 bg-gray-50/50 border border-gray-100 rounded-3xl animate-in fade-in duration-300">
-                                <div class="mb-6 flex justify-between items-end">
-                                    <span
-                                        class="text-xs font-bold text-zinc-500 tracking-tight">{{ __('Frequency Distribution') }}</span>
-                                    <div class="flex gap-1 bg-gray-100 p-1 rounded-lg border border-gray-100">
-                                        @foreach(['bar', 'horizontal', 'line', 'pie', 'doughnut'] as $type)
-                                            <button @click="switchChartType('qual-{{ $item['canvasId'] }}', '{{ $type }}')"
-                                                :class="chartTypes['qual-{{ $item['canvasId'] }}'] === '{{ $type }}' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-600'"
-                                                class="p-1 px-2 rounded-md text-[10px] font-bold tracking-tight transition-all">
-                                                {{ substr($type, 0, 3) }}
-                                            </button>
-                                        @endforeach
-                                    </div>
-                                </div>
-
-                                <div class="grid md:grid-cols-2 gap-8 items-start">
-                                    <div
-                                        class="h-64 relative flex items-center justify-center bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-                                        <canvas id="qual-{{ $item['canvasId'] }}"></canvas>
-                                    </div>
-
-                                    <div
-                                        class="overflow-hidden bg-white rounded-2xl border border-gray-200 max-h-64 overflow-y-auto custom-scrollbar">
-                                        <table class="w-full text-left border border-gray-200">
-                                            <thead class="sticky top-0 bg-gray-50/70 z-10 border-b border-gray-200 shadow-sm">
-                                                <tr class="text-xs font-bold text-zinc-700 tracking-tight">
-                                                    <th class="py-3 px-4 font-bold border-r border-gray-200">{{ __('Option') }}</th>
-                                                    <th class="py-3 px-4 text-right font-bold border-r border-gray-200">
-                                                        {{ __('Frequency') }}
-                                                    </th>
-                                                    <th class="py-3 px-4 text-right font-bold border-r border-gray-200">
-                                                        {{ __('Percentage(%)') }}
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="divide-y divide-gray-200">
-                                                @foreach($item['stats'] as $stat)
-                                                    <tr class="hover:bg-gray-50/30 transition-colors border-b border-gray-100">
-                                                        <td
-                                                            class="py-3 px-4 text-[11px] font-normal text-gray-700 tracking-tight border-r border-gray-200">
-                                                            {{ $stat['value'] }}
-                                                        </td>
-                                                        <td
-                                                            class="py-3 px-4 text-right text-[11px] font-normal text-gray-900 border-r border-gray-200">
-                                                            {{ number_format($stat['count']) }}
-                                                        </td>
-                                                        <td
-                                                            class="py-3 px-4 text-right text-[11px] font-normal text-gray-900 border-r border-gray-200">
-                                                            {{ $stat['percentage'] }}%
-                                                        </td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-
-                        @if($item['isAnalyzable'])
-                            <x-ai-insight-card :question-id="$item['id']" :question-title="$item['label']"
-                                :survey-id="$item['survey_id']" :index="$loop->index" />
-                        @endif
-
-                        <div class="mt-6 bg-gray-50 rounded-3xl overflow-hidden border border-gray-100"
-                            id="qual-wrapper-{{ $loop->index }}">
-                            <div
-                                class="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-100 bg-white flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-                                <h5 class="text-xs font-bold text-zinc-500 tracking-tight">
-                                    {{ __('Detailed Responses') }}
-                                </h5>
-                                <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
-                                    <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
-                                        {{ count($item['answers'] ?? []) }} {{ __('Total Entries') }}
-                                    </span>
-                                    <div class="flex gap-2 flex-wrap" data-html2canvas-ignore>
-                                        <button onclick="window.copyTableToClipboard('qual-table-{{ $loop->index }}')"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 border border-gray-200 text-gray-600 rounded-xl text-[10px] font-bold tracking-tight transition-all shadow-sm">
-                                            <i class="fa-solid fa-copy"></i>
-                                            {{ __('Copy') }}
-                                        </button>
-                                        <button
-                                            onclick="window.exportTableToCsv('qual-table-{{ $loop->index }}', '{{ addslashes($item['label']) }}')"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-indigo-600 hover:text-white border border-gray-200 text-gray-600 hover:border-indigo-600 rounded-xl text-[10px] font-bold tracking-tight transition-all shadow-sm">
-                                            <i class="fa-solid fa-file-csv"></i>
-                                            {{ __('CSV') }}
-                                        </button>
-                                        <button
-                                            onclick="window.exportTableToPng('qual-wrapper-{{ $loop->index }}', '{{ addslashes($item['label']) }}')"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-emerald-600 hover:text-white border border-gray-200 text-gray-600 hover:border-emerald-600 rounded-xl text-[10px] font-bold tracking-tight transition-all shadow-sm">
-                                            <i class="fa-solid fa-file-image"></i>
-                                            {{ __('PNG') }}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="max-h-[350px] overflow-y-auto custom-scrollbar overflow-x-auto">
-                                <table class="w-full text-left border-collapse min-w-full" id="qual-table-{{ $loop->index }}">
-                                    <thead>
-                                        <tr
-                                            class="bg-gray-50/50 text-xs font-bold text-zinc-500 tracking-tight sticky top-0 bg-white border-b border-gray-100 z-10">
-                                            <th class="py-3 sm:py-4 px-3 sm:px-6 w-12 sm:w-16 text-center font-bold">#</th>
-                                            <th class="py-3 sm:py-4 px-3 sm:px-6 font-bold">{{ __('Response Content') }}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-gray-100 bg-white">
-                                        @forelse($item['answers'] ?? [] as $answer)
-                                            <tr class="hover:bg-indigo-50/20 transition-colors">
-                                                <td class="py-4 sm:py-6 px-3 sm:px-6 text-center text-[10px] font-black text-gray-300">
-                                                    {{ $loop->iteration }}
-                                                </td>
-                                                <td class="py-4 sm:py-6 px-3 sm:px-6">
-                                                    <div
-                                                        class="text-[13px] font-medium text-gray-700 leading-relaxed italic border-l-4 border-indigo-500 pl-4">
-                                                        @php
-                                                            $displayAnswer = '"' . $answer . '"';
-                                                            $isSignature = str_contains($answer, 'base64,');
-                                                            $isMedia = str_starts_with($answer, 'uploads/');
-                                                        @endphp
-
-                                                        @if($isSignature)
-                                                            <button
-                                                                onclick="Swal.fire({
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                title: '{{ __("Signature Preview") }}',
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                imageUrl: '{{ $answer }}',
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                imageAlt: 'Signature',
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                customClass: {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    popup: 'rounded-[3rem] border-none shadow-2xl',
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    image: 'rounded-2xl border border-gray-100 shadow-sm max-h-[400px] w-auto'
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                },
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                confirmButtonText: '{{ __("Close") }}',
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                confirmButtonColor: '#4f46e5'
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            })"
-                                                                class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl font-black text-[10px]  tracking-widest hover:bg-indigo-100 transition-all">
-                                                                <i class="fa-solid fa-signature text-sm"></i>
-                                                                {{ __('View Captured Signature') }}
-                                                            </button>
-                                                        @elseif($isMedia)
-                                                            <a href="{{ asset('storage/' . $answer) }}" target="_blank"
-                                                                class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl font-black text-[10px]  tracking-widest hover:bg-emerald-100 transition-all">
-                                                                <i class="fa-solid fa-play-circle text-sm"></i>
-                                                                {{ __('Open Media File') }}
-                                                            </a>
-                                                        @else
-                                                            "{{ $answer }}"
-                                                        @endif
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="2" class="py-20 text-center">
-                                                    <i class="fa-solid fa-comment-slash text-4xl mb-4 text-gray-200"></i>
-                                                    <p class="text-gray-400 italic text-xs  font-black tracking-widest">
-                                                        {{ __('No text data collected for this question') }}
-                                                    </p>
-                                                </td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+            @php $qualitativeQuestions = collect($analysis)->where('isChartable', false); @endphp
+            @if($qualitativeQuestions->isEmpty())
+                <div
+                    class="bg-white rounded-3xl p-12 sm:p-16 text-center border border-gray-100 shadow-sm max-w-2xl mx-auto space-y-4">
+                    <div
+                        class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl mx-auto border border-indigo-100/80">
+                        <i class="fa-solid fa-comments"></i>
                     </div>
-                @endif
-            @endforeach
+                    <div class="space-y-1">
+                        <h3 class="text-base sm:text-lg font-black text-gray-900 tracking-tight">
+                            {{ __('No Qualitative Questions Found') }}</h3>
+                        <p class="text-xs sm:text-sm text-gray-500 max-w-md mx-auto leading-relaxed">
+                            {{ __('This survey contains only structured quantitative and choice-based questions. All distributions, charts, and interpretations are available under the Quantitative tab.') }}
+                        </p>
+                    </div>
+                    <div class="pt-2">
+                        <button type="button" @click="switchReportTab('quantitative')"
+                            class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#2271b1] hover:bg-[#135e96] text-white rounded-xl text-xs font-bold transition-all shadow-xs">
+                            <i class="fa-solid fa-chart-simple"></i>
+                            <span>{{ __('View Quantitative Report') }}</span>
+                        </button>
+                    </div>
+                </div>
+            @else
+                @foreach($analysis as $item)
+                    @if(!$item['isChartable'])
+                        <div class="bg-white rounded-3xl p-4 sm:p-8 md:p-10 shadow-sm border border-gray-100">
+                            <div class="mb-6 sm:mb-8 flex justify-between items-center border-b border-gray-50 pb-4 sm:pb-6">
+                                <h4 class="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+                                    <span class="text-indigo-600 mr-2 opacity-30 text-base font-black">#{{ $loop->iteration }}</span>
+                                    {{ $item['label'] }}
+                                </h4>
+                            </div>
+
+                            @if($item['isChartable'] && !empty($item['stats']))
+                                <div class="mb-10 p-6 bg-gray-50/50 border border-gray-100 rounded-3xl animate-in fade-in duration-300">
+                                    <div class="mb-6 flex justify-between items-end">
+                                        <span
+                                            class="text-xs font-bold text-zinc-500 tracking-tight">{{ __('Frequency Distribution') }}</span>
+                                        <div class="flex gap-1 bg-gray-100 p-1 rounded-lg border border-gray-100">
+                                            @foreach(['bar', 'horizontal', 'line', 'pie', 'doughnut'] as $type)
+                                                <button @click="switchChartType('qual-{{ $item['canvasId'] }}', '{{ $type }}')"
+                                                    :class="chartTypes['qual-{{ $item['canvasId'] }}'] === '{{ $type }}' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-600'"
+                                                    class="p-1 px-2 rounded-md text-[10px] font-bold tracking-tight transition-all">
+                                                    {{ substr($type, 0, 3) }}
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                    </div>
+
+                                    <div class="grid md:grid-cols-2 gap-8 items-start">
+                                        <div
+                                            class="h-64 relative flex items-center justify-center bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+                                            <canvas id="qual-{{ $item['canvasId'] }}"></canvas>
+                                        </div>
+
+                                        <div
+                                            class="overflow-hidden bg-white rounded-2xl border border-gray-200 max-h-64 overflow-y-auto custom-scrollbar">
+                                            <table class="w-full text-left border border-gray-200">
+                                                <thead class="sticky top-0 bg-gray-50/70 z-10 border-b border-gray-200 shadow-sm">
+                                                    <tr class="text-xs font-bold text-zinc-700 tracking-tight">
+                                                        <th class="py-3 px-4 font-bold border-r border-gray-200">{{ __('Option') }}</th>
+                                                        <th class="py-3 px-4 text-right font-bold border-r border-gray-200">
+                                                            {{ __('Frequency') }}
+                                                        </th>
+                                                        <th class="py-3 px-4 text-right font-bold border-r border-gray-200">
+                                                            {{ __('Percentage(%)') }}
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="divide-y divide-gray-200">
+                                                    @foreach($item['stats'] as $stat)
+                                                        <tr class="hover:bg-gray-50/30 transition-colors border-b border-gray-100">
+                                                            <td
+                                                                class="py-3 px-4 text-[11px] font-normal text-gray-700 tracking-tight border-r border-gray-200">
+                                                                {{ $stat['value'] }}
+                                                            </td>
+                                                            <td
+                                                                class="py-3 px-4 text-right text-[11px] font-normal text-gray-900 border-r border-gray-200">
+                                                                {{ number_format($stat['count']) }}
+                                                            </td>
+                                                            <td
+                                                                class="py-3 px-4 text-right text-[11px] font-normal text-gray-900 border-r border-gray-200">
+                                                                {{ $stat['percentage'] }}%
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+
+                            @if($item['isAnalyzable'])
+                                <x-ai-insight-card :question-id="$item['id']" :question-title="$item['label']"
+                                    :survey-id="$item['survey_id']" :index="$loop->index" />
+                            @endif
+
+                            <div class="mt-6 bg-gray-50 rounded-3xl overflow-hidden border border-gray-100"
+                                id="qual-wrapper-{{ $loop->index }}">
+                                <div
+                                    class="px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-100 bg-white flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                                    <h5 class="text-xs font-bold text-zinc-500 tracking-tight">
+                                        {{ __('Detailed Responses') }}
+                                    </h5>
+                                    <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+                                        <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
+                                            {{ count($item['answers'] ?? []) }} {{ __('Total Entries') }}
+                                        </span>
+                                        <div class="flex gap-2 flex-wrap" data-html2canvas-ignore>
+                                            <button onclick="window.copyTableToClipboard('qual-table-{{ $loop->index }}')"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-gray-100 border border-gray-200 text-gray-600 rounded-xl text-[10px] font-bold tracking-tight transition-all shadow-sm">
+                                                <i class="fa-solid fa-copy"></i>
+                                                {{ __('Copy') }}
+                                            </button>
+                                            <button
+                                                onclick="window.exportTableToCsv('qual-table-{{ $loop->index }}', '{{ addslashes($item['label']) }}')"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-indigo-600 hover:text-white border border-gray-200 text-gray-600 hover:border-indigo-600 rounded-xl text-[10px] font-bold tracking-tight transition-all shadow-sm">
+                                                <i class="fa-solid fa-file-csv"></i>
+                                                {{ __('CSV') }}
+                                            </button>
+                                            <button
+                                                onclick="window.exportTableToPng('qual-wrapper-{{ $loop->index }}', '{{ addslashes($item['label']) }}')"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-emerald-600 hover:text-white border border-gray-200 text-gray-600 hover:border-emerald-600 rounded-xl text-[10px] font-bold tracking-tight transition-all shadow-sm">
+                                                <i class="fa-solid fa-file-image"></i>
+                                                {{ __('PNG') }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="max-h-[350px] overflow-y-auto custom-scrollbar overflow-x-auto">
+                                    <table class="w-full text-left border-collapse min-w-full" id="qual-table-{{ $loop->index }}">
+                                        <thead>
+                                            <tr
+                                                class="bg-gray-50/50 text-xs font-bold text-zinc-500 tracking-tight sticky top-0 bg-white border-b border-gray-100 z-10">
+                                                <th class="py-3 sm:py-4 px-3 sm:px-6 w-12 sm:w-16 text-center font-bold">#</th>
+                                                <th class="py-3 sm:py-4 px-3 sm:px-6 font-bold">{{ __('Response Content') }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100 bg-white">
+                                            @forelse($item['answers'] ?? [] as $answer)
+                                                <tr class="hover:bg-indigo-50/20 transition-colors">
+                                                    <td class="py-4 sm:py-6 px-3 sm:px-6 text-center text-[10px] font-black text-gray-300">
+                                                        {{ $loop->iteration }}
+                                                    </td>
+                                                    <td class="py-4 sm:py-6 px-3 sm:px-6">
+                                                        <div
+                                                            class="text-[13px] font-medium text-gray-700 leading-relaxed italic border-l-4 border-indigo-500 pl-4">
+                                                            @php
+                                                                $displayAnswer = '"' . $answer . '"';
+                                                                $isSignature = str_contains($answer, 'base64,');
+                                                                $isMedia = str_starts_with($answer, 'uploads/');
+                                                            @endphp
+
+                                                            @if($isSignature)
+                                                                <button
+                                                                    onclick="Swal.fire({
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            title: '{{ __("Signature Preview") }}',
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            imageUrl: '{{ $answer }}',
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            imageAlt: 'Signature',
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            customClass: {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                popup: 'rounded-[3rem] border-none shadow-2xl',
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                image: 'rounded-2xl border border-gray-100 shadow-sm max-h-[400px] w-auto'
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            },
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            confirmButtonText: '{{ __("Close") }}',
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            confirmButtonColor: '#4f46e5'
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        })"
+                                                                    class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl font-black text-[10px]  tracking-widest hover:bg-indigo-100 transition-all">
+                                                                    <i class="fa-solid fa-signature text-sm"></i>
+                                                                    {{ __('View Captured Signature') }}
+                                                                </button>
+                                                            @elseif($isMedia)
+                                                                <a href="{{ asset('storage/' . $answer) }}" target="_blank"
+                                                                    class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl font-black text-[10px]  tracking-widest hover:bg-emerald-100 transition-all">
+                                                                    <i class="fa-solid fa-play-circle text-sm"></i>
+                                                                    {{ __('Open Media File') }}
+                                                                </a>
+                                                            @else
+                                                                "{{ $answer }}"
+                                                            @endif
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="2" class="py-20 text-center">
+                                                        <i class="fa-solid fa-comment-slash text-4xl mb-4 text-gray-200"></i>
+                                                        <p class="text-gray-400 italic text-xs  font-black tracking-widest">
+                                                            {{ __('No text data collected for this question') }}
+                                                        </p>
+                                                    </td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                @endforeach
+            @endif
         </div>
 
 
@@ -1013,7 +1038,7 @@
                                                     </th>
                                                     <th class="py-2 sm:py-3 px-2 sm:px-4 text-right border-r border-gray-200">
                                                         <span class="hidden sm:inline">{{ __('Frequency') }}</span>
-                                                        <span class="sm:hidden">Freq</span>
+                                                        <span class="sm:hidden">{{ __("Freq") }}</span>
                                                     </th>
                                                     <th class="py-2 sm:py-3 px-2 sm:px-4 text-right border-r border-gray-200">
                                                         <span class="hidden sm:inline">{{ __('Percent') }}</span>
@@ -1021,17 +1046,17 @@
                                                     </th>
                                                     <th class="py-2 sm:py-3 px-2 sm:px-4 text-right border-r border-gray-200">
                                                         <span class="hidden sm:inline">{{ __('Valid Percent') }}</span>
-                                                        <span class="sm:hidden">Valid %</span>
+                                                        <span class="sm:hidden">{{ __("Valid %") }}</span>
                                                     </th>
                                                     <th class="py-2 sm:py-3 px-2 sm:px-4 text-right border-r border-gray-200">
                                                         <span class="hidden sm:inline">{{ __('Cumulative Percent') }}</span>
-                                                        <span class="sm:hidden">Cumulative %</span>
+                                                        <span class="sm:hidden">{{ __("Cumulative %") }}</span>
                                                     </th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-200">
                                                 @php 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            $totalFreq = 0;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            $totalFreq = 0;
                                                     $validFreq = 0;
                                                     foreach ($item['stats'] as $s) {
                                                         if (!isset($s['is_missing']) || !$s['is_missing']) {
@@ -2632,8 +2657,8 @@
                                                         :class="msg.role === 'user' ? 'items-end' : 'items-start'">
                                                         <div class="max-w-[85%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed font-medium"
                                                             :class="msg.role === 'user' 
-                                                                                                                                                                                                                             ? 'bg-indigo-600 text-white rounded-br-none shadow-sm' 
-                                                                                                                                                                                                                             : 'bg-white/90 text-gray-800 rounded-bl-none border border-gray-200/50 shadow-sm'">
+                                                                                                                                                                                                                                     ? 'bg-indigo-600 text-white rounded-br-none shadow-sm' 
+                                                                                                                                                                                                                                     : 'bg-white/90 text-gray-800 rounded-bl-none border border-gray-200/50 shadow-sm'">
                                                             <p class="whitespace-pre-wrap" x-text="msg.content"></p>
                                                         </div>
                                                     </div>
@@ -2780,9 +2805,9 @@
 
                                 if (areas.length > 0) {
                                     htmlContent = `<img src="${dataUrl}" usemap="#${mapName}" style="max-width:100%;height:auto;" />
-                                                                                                                                                                                                                                                                                                                                        <map name="${mapName}">
-                                                                                                                                                                                                                                                                                                                                          ${areas.join('\n  ')}
-                                                                                                                                                                                                                                                                                                                                        </map>`;
+                                                                                                                                                                                                                                                                                                                                                        <map name="${mapName}">
+                                                                                                                                                                                                                                                                                                                                                          ${areas.join('\n  ')}
+                                                                                                                                                                                                                                                                                                                                                        </map>`;
                                 }
                             }
 
@@ -4956,27 +4981,27 @@
                                                 const type = codeBlockType === 'chart.js' ? 'chartjs' : codeBlockType;
                                                 const isImage = type === 'pollinations';
                                                 blocks.push(`
-                                                                                                                                                                                                                                                                                                                                                                                <div class="socius-visual my-6 bg-white/5 rounded-2xl border border-white/10 overflow-hidden" 
-                                                                                                                                                                                                                                                                                                                                                                                     data-visual-type="${type}" 
-                                                                                                                                                                                                                                                                                                                                                                                     data-visual-id="${id}">
-                                                                                                                                                                                                                                                                                                                                                                                    <div class="visual-header flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/5">
-                                                                                                                                                                                                                                                                                                                                                                                        <div class="flex gap-2 ml-auto">
-                                                                                                                                                                                                                                                                                                                                                                                            <button onclick="window.sociusVisuals.copy('${id}', this)" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
-                                                                                                                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-copy mr-1"></i> {{ __('Copy') }}
-                                                                                                                                                                                                                                                                                                                                                                                            </button>
-                                                                                                                                                                                                                                                                                                                                                                                            <button onclick="window.sociusVisuals.download('${id}', 'png')" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
-                                                                                                                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-download mr-1"></i> {{ __('PNG') }}
-                                                                                                                                                                                                                                                                                                                                                                                            </button>
-                                                                                                                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                                                                                                                                    <div id="${id}" class="visual-body p-6 flex justify-center overflow-x-auto min-h-[100px] relative">
-                                                                                                                                                                                                                                                                                                                                                                                        <textarea class="visual-source hidden">${this.escapeHtml(content)}</textarea>
-                                                                                                                                                                                                                                                                                                                                                                                        <div class="visual-target w-full flex justify-center">
-                                                                                                                                                                                                                                                                                                                                                                                            ${isImage ? '<div class="animate-pulse flex flex-col items-center gap-3 p-8"><i class="fa-solid fa-wand-magic-sparkles text-[#3894dc] text-2xl"></i><span class="text-[10px] text-slate-500 font-bold">{{ __('Generating Image...') }}</span></div>' : ''}
-                                                                                                                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                                                                                                                                            `);
+                                                                                                                                                                                                                                                                                                                                                                                                <div class="socius-visual my-6 bg-white/5 rounded-2xl border border-white/10 overflow-hidden" 
+                                                                                                                                                                                                                                                                                                                                                                                                     data-visual-type="${type}" 
+                                                                                                                                                                                                                                                                                                                                                                                                     data-visual-id="${id}">
+                                                                                                                                                                                                                                                                                                                                                                                                    <div class="visual-header flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/5">
+                                                                                                                                                                                                                                                                                                                                                                                                        <div class="flex gap-2 ml-auto">
+                                                                                                                                                                                                                                                                                                                                                                                                            <button onclick="window.sociusVisuals.copy('${id}', this)" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
+                                                                                                                                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-copy mr-1"></i> {{ __('Copy') }}
+                                                                                                                                                                                                                                                                                                                                                                                                            </button>
+                                                                                                                                                                                                                                                                                                                                                                                                            <button onclick="window.sociusVisuals.download('${id}', 'png')" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
+                                                                                                                                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-download mr-1"></i> {{ __('PNG') }}
+                                                                                                                                                                                                                                                                                                                                                                                                            </button>
+                                                                                                                                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                                                                                                                                                    <div id="${id}" class="visual-body p-6 flex justify-center overflow-x-auto min-h-[100px] relative">
+                                                                                                                                                                                                                                                                                                                                                                                                        <textarea class="visual-source hidden">${this.escapeHtml(content)}</textarea>
+                                                                                                                                                                                                                                                                                                                                                                                                        <div class="visual-target w-full flex justify-center">
+                                                                                                                                                                                                                                                                                                                                                                                                            ${isImage ? '<div class="animate-pulse flex flex-col items-center gap-3 p-8"><i class="fa-solid fa-wand-magic-sparkles text-[#3894dc] text-2xl"></i><span class="text-[10px] text-slate-500 font-bold">{{ __('Generating Image...') }}</span></div>' : ''}
+                                                                                                                                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                                                                                                                                            `);
                                             } else {
                                                 blocks.push(`<pre class="bg-black/30 p-4 rounded-xl overflow-x-auto text-xs my-4 border border-white/5"><code>${this.escapeHtml(content)}</code></pre>`);
                                             }
@@ -5059,11 +5084,11 @@
                                             const type = codeBlockType === 'chart.js' ? 'chartjs' : codeBlockType;
                                             const isImage = type === 'pollinations';
                                             blocks.push(`
-                                                                                                                                                                                                                                                                                                                                                                            <div class="socius-visual-loading my-6 bg-white/5 rounded-2xl border border-white/10 border-dashed p-8 text-center animate-pulse">
-                                                                                                                                                                                                                                                                                                                                                                                <i class="fa-solid ${isImage ? 'fa-wand-magic-sparkles' : 'fa-chart-simple'} text-[#3894dc]/50 text-2xl mb-3"></i>
-                                                                                                                                                                                                                                                                                                                                                                                <p class="text-[10px] text-slate-500 font-bold">{{ __('Socius is generating an image...') }}</p>
-                                                                                                                                                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                                                                                                                                                        `);
+                                                                                                                                                                                                                                                                                                                                                                                            <div class="socius-visual-loading my-6 bg-white/5 rounded-2xl border border-white/10 border-dashed p-8 text-center animate-pulse">
+                                                                                                                                                                                                                                                                                                                                                                                                <i class="fa-solid ${isImage ? 'fa-wand-magic-sparkles' : 'fa-chart-simple'} text-[#3894dc]/50 text-2xl mb-3"></i>
+                                                                                                                                                                                                                                                                                                                                                                                                <p class="text-[10px] text-slate-500 font-bold">{{ __('Socius is generating an image...') }}</p>
+                                                                                                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                                                                                                        `);
                                         } else {
                                             flushCodeBlock();
                                         }
@@ -5142,36 +5167,36 @@
                                     const tableId = `socius-table-${Math.random().toString(36).slice(2, 10)}`;
 
                                     return `
-                                                                                                                                                <div class="my-4 rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e2d]/60 shadow-xl">
-                                                                                                                                                    <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-white/[0.05] border-b border-white/10">
+                                                                                                                                                                <div class="my-4 rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e2d]/60 shadow-xl">
+                                                                                                                                                                    <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-white/[0.05] border-b border-white/10">
 
-                                                                                                                                                        <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-[10px] font-bold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
-                                                                                                                                                            <i class="fa-regular fa-copy text-[10px]"></i>
-                                                                                                                                                            {{ __('Copy Table') }}
-                                                                                                                                                        </button>
-                                                                                                                                                    </div>
-                                                                                                                                                    <div class="overflow-x-auto">
-                                                                                                                                                        <table id="${tableId}" class="min-w-full text-left text-xs border-collapse">
-                                                                                                                                                            <thead>
-                                                                                                                                                                <tr class="bg-white/[0.04] border-b border-white/10">
-                                                                                                                                                                    ${header.map(cell => `<th class="px-4 py-3 text-[11px] font-bold text-blue-300 border-b border-white/10 bg-white/[0.03]">${this.inlineFormat(cell)}</th>`).join('')}
-                                                                                                                                                                </tr>
-                                                                                                                                                            </thead>
-                                                                                                                                                            <tbody>
-                                                                                                                                                                ${body.map((row, rIdx) => {
+                                                                                                                                                                        <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-[10px] font-bold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
+                                                                                                                                                                            <i class="fa-regular fa-copy text-[10px]"></i>
+                                                                                                                                                                            {{ __('Copy Table') }}
+                                                                                                                                                                        </button>
+                                                                                                                                                                    </div>
+                                                                                                                                                                    <div class="overflow-x-auto">
+                                                                                                                                                                        <table id="${tableId}" class="min-w-full text-left text-xs border-collapse">
+                                                                                                                                                                            <thead>
+                                                                                                                                                                                <tr class="bg-white/[0.04] border-b border-white/10">
+                                                                                                                                                                                    ${header.map(cell => `<th class="px-4 py-3 text-[11px] font-bold text-blue-300 border-b border-white/10 bg-white/[0.03]">${this.inlineFormat(cell)}</th>`).join('')}
+                                                                                                                                                                                </tr>
+                                                                                                                                                                            </thead>
+                                                                                                                                                                            <tbody>
+                                                                                                                                                                                ${body.map((row, rIdx) => {
                                         const isTotal = row[0] && row[0].toLowerCase().includes('total');
                                         const rowBg = isTotal ? 'bg-white/[0.08] font-bold text-blue-200' : (rIdx % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]');
                                         return `
-                                                                                                                                                                        <tr class="${rowBg}">
-                                                                                                                                                                            ${row.map(cell => `<td class="px-4 py-2.5 border-b border-white/5 ${isTotal ? 'font-bold text-blue-200 border-t border-white/10' : 'text-slate-200'}">${this.inlineFormat(cell)}</td>`).join('')}
-                                                                                                                                                                        </tr>
-                                                                                                                                                                    `;
+                                                                                                                                                                                        <tr class="${rowBg}">
+                                                                                                                                                                                            ${row.map(cell => `<td class="px-4 py-2.5 border-b border-white/5 ${isTotal ? 'font-bold text-blue-200 border-t border-white/10' : 'text-slate-200'}">${this.inlineFormat(cell)}</td>`).join('')}
+                                                                                                                                                                                        </tr>
+                                                                                                                                                                                    `;
                                     }).join('')}
-                                                                                                                                                            </tbody>
-                                                                                                                                                        </table>
-                                                                                                                                                    </div>
-                                                                                                                                                </div>
-                                                                                                                                            `;
+                                                                                                                                                                            </tbody>
+                                                                                                                                                                        </table>
+                                                                                                                                                                    </div>
+                                                                                                                                                                </div>
+                                                                                                                                                            `;
                                 },
 
                                 async renderVisuals() {
@@ -5390,9 +5415,9 @@
                                         } catch (e) {
                                             console.error(`Socius Visual Error [${type}]:`, e);
                                             target.innerHTML = `<div class="text-red-400/60 text-[10px] font-bold p-4 bg-red-500/10 rounded-xl border border-red-500/20">
-                                                                                                                                                                                                                                                                                                                                                                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
-                                                                                                                                                                                                                                                                                                                                                                            {{ __('Invalid visual syntax.') }}
-                                                                                                                                                                                                                                                                                                                                                                        </div>`;
+                                                                                                                                                                                                                                                                                                                                                                                            <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
+                                                                                                                                                                                                                                                                                                                                                                                            {{ __('Invalid visual syntax.') }}
+                                                                                                                                                                                                                                                                                                                                                                                        </div>`;
                                             el.classList.add('rendered');
                                         }
                                     }
@@ -5418,9 +5443,9 @@
                                         const { prompt, target, el } = window._sociusImageQueue.shift();
 
                                         target.innerHTML = `<div class="animate-pulse flex flex-col items-center gap-3 p-8">
-                                                                                                                                                                                                                                                                                                                                                                        <i class="fa-solid fa-wand-magic-sparkles fa-bounce text-indigo-400 text-2xl"></i>
-                                                                                                                                                                                                                                                                                                                                                                        <span class="text-[10px] text-slate-500  tracking-widest font-bold">{{ __('Visualizing Analysis...') }}</span>
-                                                                                                                                                                                                                                                                                                                                                                    </div>`;
+                                                                                                                                                                                                                                                                                                                                                                                        <i class="fa-solid fa-wand-magic-sparkles fa-bounce text-indigo-400 text-2xl"></i>
+                                                                                                                                                                                                                                                                                                                                                                                        <span class="text-[10px] text-slate-500  tracking-widest font-bold">{{ __('Visualizing Analysis...') }}</span>
+                                                                                                                                                                                                                                                                                                                                                                                    </div>`;
 
                                         await this.loadSingleImage(prompt, target, el);
                                         await new Promise(r => setTimeout(r, 1000));
@@ -5467,17 +5492,17 @@
                                                 };
                                                 img.onerror = () => {
                                                     target.innerHTML = `<div class="p-6 text-center bg-slate-800/40 rounded-xl border border-slate-700/30">
-                                                                                                                                                                                                                                                                                                                                                                                    <i class="fa-solid fa-triangle-exclamation text-amber-500/50 text-xl mb-2"></i>
-                                                                                                                                                                                                                                                                                                                                                                                    <p class="text-[10px] text-slate-400  font-bold tracking-widest">{{ __('Image Source Unreachable') }}</p>
-                                                                                                                                                                                                                                                                                                                                                                                </div>`;
+                                                                                                                                                                                                                                                                                                                                                                                                    <i class="fa-solid fa-triangle-exclamation text-amber-500/50 text-xl mb-2"></i>
+                                                                                                                                                                                                                                                                                                                                                                                                    <p class="text-[10px] text-slate-400  font-bold tracking-widest">{{ __('Image Source Unreachable') }}</p>
+                                                                                                                                                                                                                                                                                                                                                                                                </div>`;
                                                     resolve();
                                                 };
                                             }
                                         } catch (e) {
                                             console.error('Image load failed:', e);
                                             target.innerHTML = `<div class="p-6 text-center bg-slate-800/40 rounded-xl">
-                                                                                                                                                                                                                                                                                                                                                                            <p class="text-[9px] text-slate-500">{{ __('Visualization failed to render') }}</p>
-                                                                                                                                                                                                                                                                                                                                                                        </div>`;
+                                                                                                                                                                                                                                                                                                                                                                                            <p class="text-[9px] text-slate-500">{{ __('Visualization failed to render') }}</p>
+                                                                                                                                                                                                                                                                                                                                                                                        </div>`;
                                             resolve();
                                         }
                                     });
@@ -5974,35 +5999,35 @@
 
                 <!-- Floating Scroll Control Stack -->
                 <div x-show="reportTab !== 'analyse' && reportTab !== 'humanizer'" x-data="{ 
-                                                            showTop: false, 
-                                                            showBottom: true,
-                                                            getScrollContainer() {
-                                                                return document.getElementById('main-viewport') || document.querySelector('.content-pane') || document.documentElement;
-                                                            },
-                                                            check() {
-                                                                const p = this.getScrollContainer();
-                                                                const scrollTop = p.scrollTop || window.pageYOffset || 0;
-                                                                const scrollHeight = p.scrollHeight || document.documentElement.scrollHeight || 0;
-                                                                const clientHeight = p.clientHeight || window.innerHeight || 0;
+                                                                    showTop: false, 
+                                                                    showBottom: true,
+                                                                    getScrollContainer() {
+                                                                        return document.getElementById('main-viewport') || document.querySelector('.content-pane') || document.documentElement;
+                                                                    },
+                                                                    check() {
+                                                                        const p = this.getScrollContainer();
+                                                                        const scrollTop = p.scrollTop || window.pageYOffset || 0;
+                                                                        const scrollHeight = p.scrollHeight || document.documentElement.scrollHeight || 0;
+                                                                        const clientHeight = p.clientHeight || window.innerHeight || 0;
 
-                                                                this.showTop = scrollTop > 50; 
-                                                                this.showBottom = (scrollTop + clientHeight) < (scrollHeight - 100);
-                                                            },
-                                                            scrollToTop() {
-                                                                const p = this.getScrollContainer();
-                                                                p.scrollTo({ top: 0, behavior: 'smooth' });
-                                                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                                                            },
-                                                            scrollToBottom() {
-                                                                const p = this.getScrollContainer();
-                                                                p.scrollTo({ top: p.scrollHeight, behavior: 'smooth' });
-                                                                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-                                                            }
-                                                        }" x-init="$nextTick(() => {
-                                                            check();
-                                                            const p = getScrollContainer();
-                                                            if (p) p.addEventListener('scroll', () => check(), { passive: true });
-                                                        })" @scroll.window.throttle.50ms="check()"
+                                                                        this.showTop = scrollTop > 50; 
+                                                                        this.showBottom = (scrollTop + clientHeight) < (scrollHeight - 100);
+                                                                    },
+                                                                    scrollToTop() {
+                                                                        const p = this.getScrollContainer();
+                                                                        p.scrollTo({ top: 0, behavior: 'smooth' });
+                                                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                                    },
+                                                                    scrollToBottom() {
+                                                                        const p = this.getScrollContainer();
+                                                                        p.scrollTo({ top: p.scrollHeight, behavior: 'smooth' });
+                                                                        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                                                                    }
+                                                                }" x-init="$nextTick(() => {
+                                                                    check();
+                                                                    const p = getScrollContainer();
+                                                                    if (p) p.addEventListener('scroll', () => check(), { passive: true });
+                                                                })" @scroll.window.throttle.50ms="check()"
                     class="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2">
 
                     <!-- TOP BUTTON -->

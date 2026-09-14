@@ -32,7 +32,7 @@
 
             <!-- Column 2: Platform Links -->
             <div>
-                <h3 class="text-[#f0f0f1] text-xs font-semibold tracking-wider uppercase mb-4">Platform</h3>
+                <h3 class="text-[#f0f0f1] text-xs font-semibold tracking-wider uppercase mb-4">{{ __("Platform") }}</h3>
                 <ul class="space-y-2 text-xs font-semibold">
                     <li><a href="{{ url('/') }}" class="hover:text-white transition-colors">{{ __('Home') }}</a></li>
                     <li><a href="{{ route('about') }}"
@@ -44,7 +44,8 @@
 
             <!-- Column 3: Resources & Support -->
             <div>
-                <h3 class="text-[#f0f0f1] text-xs font-semibold tracking-wider uppercase mb-4">Resources</h3>
+                <h3 class="text-[#f0f0f1] text-xs font-semibold tracking-wider uppercase mb-4">{{ __("Resources") }}
+                </h3>
                 <ul class="space-y-2 text-xs font-semibold">
                     <li><a href="{{ route('faq') }}" class="hover:text-white transition-colors">{{ __('FAQ') }}</a></li>
                     <li><a href="{{ route('contact') }}"
@@ -58,7 +59,8 @@
 
             <!-- Column 4: Contact & Direct Info -->
             <div>
-                <h3 class="text-[#f0f0f1] text-xs font-semibold tracking-wider uppercase mb-4">Get in Touch</h3>
+                <h3 class="text-[#f0f0f1] text-xs font-semibold tracking-wider uppercase mb-4">{{ __("Get in Touch") }}
+                </h3>
                 <ul class="space-y-2 text-xs text-[#a7aaad]">
                     <li>+254 725 788 400</li>
                     <li>
@@ -66,8 +68,9 @@
                             class="hover:text-white transition-colors">infokdanalytiks@gmail.com</a>
                     </li>
                     <li class="pt-2">
-                        Powered by <a href="https://www.kenpro.org" target="_blank" rel="noopener noreferrer"
-                            class="font-semibold text-white hover:underline">KENPRO Data Analytiks</a>
+                        {{ __("Powered by") }} <a href="https://www.kenpro.org" target="_blank"
+                            rel="noopener noreferrer" class="font-semibold text-white hover:underline">KENPRO Data
+                            Analytiks</a>
                     </li>
                 </ul>
             </div>
@@ -82,7 +85,7 @@
                 {{ __('All rights reserved.') }}
             </div>
             <div class="text-xs text-[#a7aaad]">
-                Empowering data-driven decisions.
+                {{ __("Empowering data-driven decisions.") }}
             </div>
         </div>
 

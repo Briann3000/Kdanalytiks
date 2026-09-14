@@ -162,6 +162,27 @@
             height: calc(100vh - 4.1rem);
             overflow: visible !important;
             position: relative;
+            min-width: 0;
+            width: 100%;
+        }
+
+        /* Full-height viewport for data table, socius chat, analyse etc. — all screen sizes */
+        .workspace-layout.socius-workspace-full {
+            height: calc(100dvh - 4.1rem) !important;
+            overflow: hidden !important;
+        }
+
+        main.socius-full-viewport {
+            overflow: hidden !important;
+            height: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        /* Override content-pane's overflow-y: auto when it becomes a full-height viewport */
+        .content-pane.socius-full-viewport {
+            overflow: hidden !important;
+            overflow-y: hidden !important;
         }
 
         .sidebar-pane {
@@ -281,6 +302,8 @@
 
         .content-pane {
             flex: 1;
+            min-width: 0;
+            width: 100%;
             overflow-y: auto !important;
             padding: 0;
             position: relative;
@@ -527,7 +550,7 @@
                             <div class="flex items-center sm:hidden ml-2">
                                 <button type="button" @click="mobileNavOpen = !mobileNavOpen"
                                     class="inline-flex items-center justify-center p-2 rounded-xl text-[#a7aaad] hover:text-white hover:bg-[#101417] focus:outline-none transition-all">
-                                    <span class="sr-only">Open main menu</span>
+                                    <span class="sr-only">{{ __("Open main menu") }}</span>
                                     <i class="fa-solid"
                                         :class="mobileNavOpen ? 'fa-xmark text-xl text-white' : 'fa-bars text-xl text-[#a7aaad]'"></i>
                                 </button>
@@ -577,7 +600,7 @@
                                 <div class="flex items-center sm:hidden ml-2">
                                     <button type="button" @click="mobileNavOpen = !mobileNavOpen"
                                         class="inline-flex items-center justify-center p-2 rounded-xl text-[#a7aaad] hover:text-white hover:bg-[#101417] focus:outline-none transition-all">
-                                        <span class="sr-only">Open main menu</span>
+                                        <span class="sr-only">{{ __("Open main menu") }}</span>
                                         <i class="fa-solid"
                                             :class="mobileNavOpen ? 'fa-xmark text-xl text-white' : 'fa-bars text-xl text-[#a7aaad]'"></i>
                                     </button>
@@ -652,8 +675,8 @@
 
         @php
             // Show sidebar for all authenticated pages except specific full-width ones (like taking a survey)
-            // Also explicitly hide on landing, login, register, and email verification notice/verify pages
-            $excludedRoutes = ['login', 'register', 'login.role', 'password.request', 'password.reset', 'surveys.show', 'surveys.submit', 'verification.notice', 'verification.verify', 'admin.login', 'organization.login', 'independent.login', 'respondent.login', 'admin.register', 'organization.register', 'independent.register', 'respondent.register', 'help'];
+            // Also explicitly hide on landing, login, register, public sharing, and email verification notice/verify pages
+            $excludedRoutes = ['login', 'register', 'login.role', 'password.request', 'password.reset', 'surveys.show', 'surveys.submit', 'surveys.shared_data', 'surveys.shared_data.*', 'verification.notice', 'verification.verify', 'admin.login', 'organization.login', 'independent.login', 'respondent.login', 'admin.register', 'organization.register', 'independent.register', 'respondent.register', 'help'];
             $isWorkspace = auth()->check() && auth()->user()->hasVerifiedEmail() && !request()->routeIs($excludedRoutes);
         @endphp
 
@@ -691,10 +714,10 @@
                 @yield('sub_sidebar')
 
                 <main id="main-viewport"
-                    class="content-pane custom-scrollbar flex-1 overflow-x-hidden {{ $isSociusFullHeight ? 'socius-full-viewport' : '' }} {{ (request()->is('/') || request()->routeIs('welcome')) ? 'p-0 m-0 !bg-transparent' : '' }}"
-                    style="{{ ($isSociusFullHeight || request()->is('/') || request()->routeIs('welcome')) ? 'overflow-y: auto !important; padding: 0 !important; margin: 0 !important;' : '' }}">
+                    class="content-pane custom-scrollbar flex-1 min-w-0 overflow-x-hidden {{ $isSociusFullHeight ? 'socius-full-viewport' : '' }} {{ (request()->is('/') || request()->routeIs('welcome')) ? 'p-0 m-0 !bg-transparent' : '' }}"
+                    style="{{ $isSociusFullHeight ? 'overflow: hidden !important; padding: 0 !important; margin: 0 !important;' : ((request()->is('/') || request()->routeIs('welcome')) ? 'overflow-y: auto !important; padding: 0 !important; margin: 0 !important;' : '') }}">
                     <div
-                        class="{{ $isSociusFullHeight ? 'h-full flex flex-col p-0 m-0' : ((request()->is('/') || request()->routeIs('welcome')) ? 'flex-grow w-full' : 'flex-grow w-full p-4 sm:p-6 lg:p-8') }}">
+                        class="{{ $isSociusFullHeight ? 'h-full flex flex-col p-0 m-0 min-w-0' : ((request()->is('/') || request()->routeIs('welcome')) ? 'flex-grow w-full min-w-0' : 'flex-grow w-full min-w-0 p-4 sm:p-6 lg:p-8') }}">
                         <!-- Global Session Alerts -->
                         @if(session('success') || session('error'))
                             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
@@ -776,7 +799,9 @@
         @endif
     </div>
 
-    <x-agent-ui />
+    @auth
+        <x-agent-ui />
+    @endauth
 
     @stack('scripts')
 

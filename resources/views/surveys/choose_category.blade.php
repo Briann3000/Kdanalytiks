@@ -1,13 +1,15 @@
 @extends('layouts.app')
 
-@section('title', 'Create New Survey - Choice')
+@section('title', __('Create New Survey - Choice'))
 
 @section('content')
     <div class="w-full flex flex-col items-center py-12 px-4">
         <div class="max-w-5xl w-full">
             <div class="text-center mb-12">
-                <h1 class="text-4xl font-black text-gray-900 tracking-tight uppercase mb-4">Initialize New Survey</h1>
-                <p class="text-gray-500 font-medium text-lg">Select a research framework to begin building your survey.</p>
+                <h1 class="text-4xl font-black text-gray-900 tracking-tight uppercase mb-4">
+                    {{ __("Initialize New Survey") }}</h1>
+                <p class="text-gray-500 font-medium text-lg">
+                    {{ __("Select a research framework to begin building your survey.") }}</p>
             </div>
 
             <form action="{{ route('surveys.initialize') }}" method="POST" id="categoryForm">
@@ -19,7 +21,7 @@
                         Name</label>
                     <input type="text" name="title" id="title" required
                         class="w-full bg-white border-gray-200 rounded-2xl px-6 py-5 text-xl font-bold text-gray-900 placeholder-gray-300 focus:ring-4 focus:ring-[#2271b1]/10 focus:border-[#2271b1] transition-all shadow-sm"
-                        placeholder="Enter a descriptive title for your survey...">
+                        placeholder="{{ __("Enter a descriptive title for your survey...") }}">
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

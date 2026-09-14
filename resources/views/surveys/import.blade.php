@@ -130,7 +130,7 @@
                             : (uploadedFile ? 'border-green-400 bg-green-50/30' : 'border-gray-200 hover:border-[#2271b1] hover:bg-gray-50/50')"
                         class="border-2 border-dashed rounded-3xl p-16 text-center cursor-pointer transition-all duration-200">
 
-                        <input type="file" x-ref="fileInput" class="hidden" accept=".sav,.xlsx,.xls,.csv,.zip,.kmsurvey"
+                        <input type="file" x-ref="fileInput" class="hidden" accept=".sav,.xlsx,.xls,.csv,.zip,.kdsurvey,.kmsurvey"
                             @change="handleFileSelect($event)">
 
                         <template x-if="!uploadedFile">
@@ -495,7 +495,7 @@
 
                             const data = await res.json();
 
-                            // Handle .kmsurvey bundles (direct import)
+                            // Handle .kdsurvey bundles (direct import)
                             if (data.is_package) {
                                 await this.runPackageImport();
                                 return;

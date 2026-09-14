@@ -164,12 +164,25 @@ class SurveyImportBuilder
                 }
                 $survey->update(['json_schema' => json_encode($schemaQuestions)]);
             } else {
-                // Map var_index to existing question by position
+                // Map var_index to existing question or json_schema field
                 $existingQuestions = $survey->questions()->get();
+                $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : ($survey->json_schema ?? []);
+
                 foreach ($includedColumns as $col) {
                     $matchedQuestion = $existingQuestions->firstWhere('text', $col['label']);
                     if ($matchedQuestion) {
-                        $questionMap[$col['var_index']] = $matchedQuestion;
+                        $questionMap[$col['var_index']] = [
+                            'name' => 'question_' . $matchedQuestion->id,
+                        ];
+                    } elseif (is_array($schema)) {
+                        $matchedField = collect($schema)->first(function ($f) use ($col) {
+                            return ($f['label'] ?? '') === $col['label'] || ($f['name'] ?? '') === $col['label'];
+                        });
+                        if ($matchedField && isset($matchedField['name'])) {
+                            $questionMap[$col['var_index']] = [
+                                'name' => $matchedField['name'],
+                            ];
+                        }
                     }
                 }
             }
@@ -187,9 +200,9 @@ class SurveyImportBuilder
 
                 foreach ($includedColumns as $col) {
                     $varIndex = $col['var_index'];
-                    $question = $questionMap[$varIndex] ?? null;
+                    $fieldInfo = $questionMap[$varIndex] ?? null;
 
-                    if (!$question) {
+                    if (!$fieldInfo) {
                         continue;
                     }
 
@@ -209,12 +222,13 @@ class SurveyImportBuilder
                             : (string) $rawValue;
                     }
 
+                    $fieldName = is_array($fieldInfo) ? $fieldInfo['name'] : ('question_' . $fieldInfo->id);
+
                     // Package into JSON array element
                     $answersJson[] = [
-                        'name' => 'question_' . $question->id,
+                        'name' => $fieldName,
                         'userData' => $value,
                     ];
-
                 }
                 // Format as key-value JSON array or legacy list depending on report decoder
                 $formattedAnswers = [];

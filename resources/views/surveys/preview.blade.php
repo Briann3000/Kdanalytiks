@@ -285,13 +285,13 @@
                                 field: `<div class="ranking-wrapper bg-white p-6 rounded-2xl mb-4 border border-gray-100 shadow-sm">
                                             <div class="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Choices</span>
+                                                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{{ __("Choices") }}</span>
                                                     <div id="pool_${id}" class="rank-pool" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;">
                                                         ${options.map(opt => `<div class="rank-item" data-value="${opt.value}" style="padding:8px 12px; margin-bottom:6px; background:white; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:600;">${opt.label}</div>`).join('')}
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <span class="text-[10px] font-black text-emerald-500 uppercase tracking-widest block mb-2">Your Order</span>
+                                                    <span class="text-[10px] font-black text-emerald-500 uppercase tracking-widest block mb-2">{{ __("Your Order") }}</span>
                                                     <div id="ranked_${id}" class="rank-ordered" style="min-height:100px; padding:8px; background:#f8fafc; border:2px dashed #e2e8f0; border-radius:12px;"></div>
                                                 </div>
                                             </div>
@@ -300,34 +300,34 @@
                         },
                         'audio_recorder': function (fieldData) {
                             return {
-                                field: `<div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4"><span class="text-xs font-bold text-slate-500 mb-2 block"><i class="fa-solid fa-microphone text-[#2271b1] mr-2"></i>Audio Recording Field</span><button type="button" class="px-4 py-2 bg-sky-50 text-[#2271b1] rounded-xl text-xs font-bold border border-sky-200"><i class="fa-solid fa-microphone mr-2"></i>Record Audio</button></div>`
+                                field: `<div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4"><span class="text-xs font-bold text-slate-500 mb-2 block"><i class="fa-solid fa-microphone text-[#2271b1] mr-2"></i>{{ __("Audio Recording Field") }}</span><button type="button" class="px-4 py-2 bg-sky-50 text-[#2271b1] rounded-xl text-xs font-bold border border-sky-200"><i class="fa-solid fa-microphone mr-2"></i>{{ __("Record Audio") }}</button></div>`
                             };
                         },
                         'video_recorder': function (fieldData) {
                             return {
-                                field: `<div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4"><span class="text-xs font-bold text-slate-500 mb-2 block"><i class="fa-solid fa-video text-[#2271b1] mr-2"></i>Video Recording Field</span><button type="button" class="px-4 py-2 bg-sky-50 text-[#2271b1] rounded-xl text-xs font-bold border border-sky-200"><i class="fa-solid fa-video mr-2"></i>Record Video</button></div>`
+                                field: `<div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-4"><span class="text-xs font-bold text-slate-500 mb-2 block"><i class="fa-solid fa-video text-[#2271b1] mr-2"></i>{{ __("Video Recording Field") }}</span><button type="button" class="px-4 py-2 bg-sky-50 text-[#2271b1] rounded-xl text-xs font-bold border border-sky-200"><i class="fa-solid fa-video mr-2"></i>{{ __("Record Video") }}</button></div>`
                             };
                         },
                         'datetime_picker': function (fieldData) {
                             return { field: `<div class="form-group mb-4"><input type="datetime-local" name="${fieldData.name}" class="w-full px-4 py-3 border border-gray-200 rounded-xl font-bold text-gray-700"></div>` };
                         },
                         'acknowledge_box': function (fieldData) {
-                            return { field: `<div class="p-5 bg-amber-50/50 rounded-2xl border border-amber-100 mb-4"><label class="flex items-start cursor-pointer gap-3"><input type="checkbox" name="${fieldData.name}" value="true" class="w-5 h-5 mt-0.5 rounded border-gray-300 text-[#2271b1]"><span class="text-sm font-bold text-gray-700">${fieldData.label || 'I acknowledge'}</span></label></div>` };
+                            return { field: `<div class="p-5 bg-amber-50/50 rounded-2xl border border-amber-100 mb-4"><label class="flex items-start cursor-pointer gap-3"><input type="checkbox" name="${fieldData.name}" value="true" class="w-5 h-5 mt-0.5 rounded border-gray-300 text-[#2271b1]"><span class="text-sm font-bold text-gray-700">${fieldData.label || '{{ __('I acknowledge') }}'}</span></label></div>` };
                         },
                         'hidden_field': function (fieldData) {
                             return { field: `<div class="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 mb-4 flex items-center gap-3"><i class="fa-solid fa-eye-slash text-slate-400"></i><span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hidden Field: ${fieldData.name}</span></div>` };
                         },
                         'calculate_display': function (fieldData) {
-                            return { field: `<div class="p-5 bg-gray-50 rounded-2xl border border-gray-100 mb-4"><div class="text-2xl font-black text-[#2271b1]">&mdash;</div><p class="text-[8px] text-gray-400 uppercase mt-2">Formula: ${fieldData.formula || 'Calculated Field'}</p></div>` };
+                            return { field: `<div class="p-5 bg-gray-50 rounded-2xl border border-gray-100 mb-4"><div class="text-2xl font-black text-[#2271b1]">&mdash;</div><p class="text-[8px] text-gray-400 uppercase mt-2">Formula: ${fieldData.formula || '{{ __('Calculated Field') }}'}</p></div>` };
                         },
                         'location_picker': function (fieldData) {
-                            return { field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4"><div style="height:120px; border-radius:1rem; background:#f8fafc; border:2px dashed #e2e8f0; display:flex; align-items:center; justify-content:center;"><span class="text-gray-400 font-bold text-xs uppercase"><i class="fa-solid fa-location-dot text-[#2271b1] mr-2"></i>GPS Location Picker</span></div></div>` };
+                            return { field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4"><div style="height:120px; border-radius:1rem; background:#f8fafc; border:2px dashed #e2e8f0; display:flex; align-items:center; justify-content:center;"><span class="text-gray-400 font-bold text-xs uppercase"><i class="fa-solid fa-location-dot text-[#2271b1] mr-2"></i>{{ __("GPS Location Picker") }}</span></div></div>` };
                         },
                         'qrcode_scanner': function (fieldData) {
-                            return { field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4"><div style="height:120px; border-radius:1rem; background:#f8fafc; border:2px dashed #e2e8f0; display:flex; align-items:center; justify-content:center;"><span class="text-gray-400 font-bold text-xs uppercase"><i class="fa-solid fa-qrcode text-[#2271b1] mr-2"></i>QR / Barcode Scanner</span></div></div>` };
+                            return { field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4"><div style="height:120px; border-radius:1rem; background:#f8fafc; border:2px dashed #e2e8f0; display:flex; align-items:center; justify-content:center;"><span class="text-gray-400 font-bold text-xs uppercase"><i class="fa-solid fa-qrcode text-[#2271b1] mr-2"></i>{{ __("QR / Barcode Scanner") }}</span></div></div>` };
                         },
                         'signature_pad_input': function (fieldData) {
-                            return { field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4"><div style="height:120px; border:2px dashed #e2e8f0; border-radius:1rem; background:#f8fafc; display:flex; align-items:center; justify-content:center;"><span class="text-gray-400 font-bold text-xs uppercase"><i class="fa-solid fa-signature text-[#2271b1] mr-2"></i>Signature Input</span></div></div>` };
+                            return { field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4"><div style="height:120px; border:2px dashed #e2e8f0; border-radius:1rem; background:#f8fafc; display:flex; align-items:center; justify-content:center;"><span class="text-gray-400 font-bold text-xs uppercase"><i class="fa-solid fa-signature text-[#2271b1] mr-2"></i>{{ __("Signature Input") }}</span></div></div>` };
                         },
                         'likert_matrix_grid': function (fieldData) {
                             const rows = fieldData.rows || [{ label: 'Item 1', value: 'item-1' }, { label: 'Item 2', value: 'item-2' }];
@@ -343,7 +343,7 @@
                             return { field: `<div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4"><div style="overflow-x:auto;"><table class="likert-matrix-table"><thead><tr>${hdr}</tr></thead><tbody>${body}</tbody></table></div></div>` };
                         },
                         'repeat_container': function (fieldData) {
-                            return { field: `<div class="p-5 rounded-2xl border-2 border-dashed border-zinc-300 mb-4 bg-zinc-50"><div class="flex items-center gap-2 mb-2"><i class="fa-solid fa-repeat text-slate-500"></i><span class="text-xs font-bold text-slate-700">Repeat Section</span></div></div>` };
+                            return { field: `<div class="p-5 rounded-2xl border-2 border-dashed border-zinc-300 mb-4 bg-zinc-50"><div class="flex items-center gap-2 mb-2"><i class="fa-solid fa-repeat text-slate-500"></i><span class="text-xs font-bold text-slate-700">{{ __("Repeat Section") }}</span></div></div>` };
                         }
                     }
                 });

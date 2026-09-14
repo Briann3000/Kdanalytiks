@@ -65,9 +65,8 @@
                         class="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-1 focus:ring-[#2271b1] transition-all placeholder-gray-300"></textarea>
                     <div class="flex justify-end">
                         <button type="button" @click="polish()" :disabled="!feedback.trim() || aiPolishing"
-                            class="px-5 py-2 bg-[#7eb3d4] hover:bg-[#2271b1] text-white font-black text-[10px]  tracking-widest rounded-xl shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5">
-                            <i class="fa-solid fa-wand-magic-sparkles text-[9px]"></i>
-                            {{ __('Polish') }}
+                            class="px-5 py-2 bg-[#7eb3d4] hover:bg-[#2271b1] text-white font-black text-[10px] tracking-widest rounded-xl shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center">
+                            <span>{{ __('Polish') }}</span>
                         </button>
                     </div>
                 </div>
@@ -96,16 +95,14 @@
                         </button>
 
                         @if(auth()->user() && auth()->user()->canUseAiAnalysis())
-                            <button @click="generate()" x-show="!currentText && !loading"
-                                class="flex items-center gap-2 text-[9px] font-black text-[#2271b1] tracking-widest hover:text-[#135e96] transition-colors">
-                                <i class="fa-solid fa-chart-line"></i>
-                                {{ __('Deep Trend Analysis') }}
+                            <button type="button" @click="generate()" x-show="!currentText && !loading"
+                                class="px-4 py-2 bg-[#2271b1] hover:bg-[#135e96] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center cursor-pointer">
+                                <span>{{ __('Generate Trend Analysis') }}</span>
                             </button>
                         @else
-                            <button @click="window.location.href='{{ route('subscriptions.index') }}'"
-                                class="flex items-center gap-2 text-[9px] font-black text-gray-400  tracking-widest hover:text-zinc-2000 transition-colors">
-                                <i class="fa-solid fa-lock text-[8px]"></i>
-                                {{ __('Deep Analysis (Premium)') }}
+                            <button type="button" @click="window.location.href='{{ route('subscriptions.index') }}'"
+                                class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold rounded-xl transition-all flex items-center cursor-pointer border border-gray-200">
+                                <span>{{ __('Generate Trend Analysis (Premium)') }}</span>
                             </button>
                         @endif
                     </div>
@@ -156,18 +153,19 @@
                     window.quantInsightInstances = window.quantInsightInstances || {};
                     window.quantInsightInstances[this.qId] = this;
 
-                    // Use IntersectionObserver to lazy-load AI insights only when scrolled into view
+                    // Lazy-load when scrolled into view
                     if ('IntersectionObserver' in window) {
+                        const scrollRoot = document.querySelector('.content-pane') || null;
                         const observer = new IntersectionObserver((entries) => {
-                            if (entries[0].isIntersecting && !this.hasFetched) {
-                                this.hasFetched = true;
-                                this.generate();
-                                observer.disconnect();
-                            }
-                        }, { threshold: 0.1 });
+                            entries.forEach(entry => {
+                                if (entry.isIntersecting && !this.hasFetched) {
+                                    this.hasFetched = true;
+                                    this.generate();
+                                    observer.disconnect();
+                                }
+                            });
+                        }, { root: scrollRoot, threshold: 0.1 });
                         observer.observe(this.$el);
-                    } else {
-                        this.generate();
                     }
                 },
                 async parseJsonResponse(response) {

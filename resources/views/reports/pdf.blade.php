@@ -182,7 +182,7 @@
     </div>
 
     <div class="summary-box">
-        <h3>Survey Overview</h3>
+        <h3>{{ __("Survey Overview") }}</h3>
         <div class="summary-stats">
             <strong>{{ $responses->count() }}</strong>
             Total Responses
@@ -235,7 +235,7 @@
                     <table>
                         <thead>
                             <tr>
-                                <th rowspan="2">Value</th>
+                                <th rowspan="2">{{ __("Value") }}</th>
                                 @foreach($item['stats'] as $stat)
                                     @if(!($stat['is_missing'] ?? false))
                                         <th colspan="2" style="text-align: center;">{{ $stat['value'] }}</th>
@@ -245,7 +245,7 @@
                             <tr>
                                 @foreach($item['stats'] as $stat)
                                     @if(!($stat['is_missing'] ?? false))
-                                        <th style="text-align: center; font-size: 10px;">Frequency</th>
+                                        <th style="text-align: center; font-size: 10px;">{{ __("Frequency") }}</th>
                                         <th style="text-align: center; font-size: 10px;">%</th>
                                     @endif
                                 @endforeach
@@ -274,11 +274,11 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Value</th>
-                                <th style="text-align: right;">Frequency</th>
-                                <th style="text-align: right;">Percent</th>
-                                <th style="text-align: right;">Valid Percent</th>
-                                <th style="text-align: right;">Cumulative Percent</th>
+                                <th>{{ __("Value") }}</th>
+                                <th style="text-align: right;">{{ __("Frequency") }}</th>
+                                <th style="text-align: right;">{{ __("Percent") }}</th>
+                                <th style="text-align: right;">{{ __("Valid Percent") }}</th>
+                                <th style="text-align: right;">{{ __("Cumulative Percent") }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -322,7 +322,7 @@
                         </tbody>
                         <tfoot>
                             <tr style="background-color: #f9fafb; font-weight: bold;">
-                                <td>Total</td>
+                                <td>{{ __("Total") }}</td>
                                 <td style="text-align: right;">{{ number_format($totalFreq) }}</td>
                                 <td style="text-align: right;">100.0%</td>
                                 <td style="text-align: right;">100.0%</td>
@@ -353,7 +353,7 @@
                         <p style="font-size: 12px; color: #374151; line-height: 1.6; margin-bottom: 10px;">{{ $sentNarr }}</p>
 
                         @if(!empty($item['aiInsight']['key_themes']))
-                            <p style="font-size: 12px; font-weight: bold; color: #111827; margin-bottom: 5px;">Key themes identified in responses:</p>
+                            <p style="font-size: 12px; font-weight: bold; color: #111827; margin-bottom: 5px;">{{ __("Key themes identified in responses:") }}</p>
                             <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #374151; line-height: 1.7;">
                                 @foreach($item['aiInsight']['key_themes'] as $theme)
                                     <li><strong>{{ $theme['theme'] ?? 'Theme' }}:</strong> {{ $theme['explanation'] ?? '' }}</li>
@@ -368,15 +368,15 @@
 
     @if(isset($savedInferentialTests) && $savedInferentialTests->count() > 0)
         <div style="page-break-before: always;">
-            <h2 style="text-transform: uppercase; color: {{ $branding['brandColor'] ?? '#111827' }}; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">Inferential Analysis</h2>
-            <p style="font-size: 12px; color: #6b7280; font-style: italic; margin-bottom: 20px;">Significance tests, correlations, and regressions saved to the report.</p>
+            <h2 style="text-transform: uppercase; color: {{ $branding['brandColor'] ?? '#111827' }}; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">{{ __("Inferential Analysis") }}</h2>
+            <p style="font-size: 12px; color: #6b7280; font-style: italic; margin-bottom: 20px;">{{ __("Significance tests, correlations, and regressions saved to the report.") }}</p>
 
             @foreach($savedInferentialTests as $test)
                 <div style="margin-bottom: 40px; page-break-inside: avoid;">
                     <h3 style="color: #111827; margin-bottom: 5px;">{{ $test->title }}</h3>
                     <div style="font-size: 11px; color: #4b5563; margin-bottom: 15px;">
-                        <strong>Method:</strong> {{ strtoupper($test->method) }} | 
-                        <strong>Variables:</strong> {{ $test->variables }}
+                        <strong>{{ __("Method:") }}</strong> {{ strtoupper($test->method) }} | 
+                        <strong>{{ __("Variables:") }}</strong> {{ $test->variables }}
                     </div>
 
                     @php
@@ -401,7 +401,7 @@
                                         @foreach($cols as $col)
                                             <th style="text-align: center;">{{ $col }}</th>
                                         @endforeach
-                                        <th style="text-align: center;">Total</th>
+                                        <th style="text-align: center;">{{ __("Total") }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -417,7 +417,7 @@
                                 </tbody>
                                 <tfoot>
                                     <tr style="font-weight: bold; background-color: #f9fafb;">
-                                        <td>Total</td>
+                                        <td>{{ __("Total") }}</td>
                                         @foreach($cols as $colVal)
                                             <td style="text-align: center;">{{ number_format($colTotals[$colVal] ?? 0) }}</td>
                                         @endforeach
@@ -433,12 +433,12 @@
                                 <div style="font-size: 11px; margin-bottom: 15px; background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb;">
                                     <strong>Chi-Square Statistic (χ²):</strong> {{ number_format($chiSqVal, 4) }} | 
                                     <strong>df:</strong> {{ $data['df'] ?? 0 }} | 
-                                    <strong>p-value:</strong> {{ number_format($data['pValue'] ?? ($data['p_value'] ?? 0), 4) }}
+                                    <strong>{{ __("p-value:") }}</strong> {{ number_format($data['pValue'] ?? ($data['p_value'] ?? 0), 4) }}
                                     @if(isset($data['cramersV']))
                                         | <strong>Cramer's V:</strong> {{ number_format($data['cramersV'], 4) }}
                                     @endif
                                     <br>
-                                    <strong>Result:</strong> {{ ($data['significant'] ?? false) ? 'Statistically Significant' : 'Not Statistically Significant' }}
+                                    <strong>{{ __("Result:") }}</strong> {{ ($data['significant'] ?? false) ? 'Statistically Significant' : 'Not Statistically Significant' }}
                                 </div>
                             @endif
 
@@ -450,8 +450,8 @@
                            @endphp
                            <div style="font-size: 12px; background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
                                <strong>Cronbach's Alpha (α):</strong> {{ number_format($alpha, 3) }} <br>
-                               <strong>Number of Items Analyzed:</strong> {{ $itemsCount }} <br>
-                               <strong>Internal Consistency:</strong> {{ $interp }}
+                               <strong>{{ __("Number of Items Analyzed:") }}</strong> {{ $itemsCount }} <br>
+                               <strong>{{ __("Internal Consistency:") }}</strong> {{ $interp }}
                            </div>
 
                         @elseif($method === 'ttest')
@@ -459,11 +459,11 @@
                                <table style="font-size: 11px; margin-bottom: 15px;">
                                    <thead>
                                        <tr style="background-color: #f9fafb;">
-                                           <th>Group</th>
+                                           <th>{{ __("Group") }}</th>
                                            <th style="text-align: center;">N</th>
-                                           <th style="text-align: right;">Mean</th>
-                                           <th style="text-align: right;">Std. Deviation</th>
-                                           <th style="text-align: right;">Std. Error</th>
+                                           <th style="text-align: right;">{{ __("Mean") }}</th>
+                                           <th style="text-align: right;">{{ __("Std. Deviation") }}</th>
+                                           <th style="text-align: right;">{{ __("Std. Error") }}</th>
                                        </tr>
                                    </thead>
                                    <tbody>
@@ -483,31 +483,31 @@
                            <table style="font-size: 11px; margin-bottom: 15px;">
                                <thead>
                                    <tr style="background-color: #f9fafb;">
-                                       <th>Metric</th>
-                                       <th>Value</th>
+                                       <th>{{ __("Metric") }}</th>
+                                       <th>{{ __("Value") }}</th>
                                    </tr>
                                </thead>
                                <tbody>
-                                   <tr><td>t-Statistic</td><td>{{ number_format($data['tValue'] ?? ($data['t_stat'] ?? 0), 4) }}</td></tr>
+                                   <tr><td>{{ __("t-Statistic") }}</td><td>{{ number_format($data['tValue'] ?? ($data['t_stat'] ?? 0), 4) }}</td></tr>
                                    <tr><td>Degrees of Freedom (df)</td><td>{{ $data['df'] ?? 0 }}</td></tr>
-                                   <tr><td>p-value</td><td>{{ number_format($data['pValue'] ?? ($data['p_value'] ?? 0), 4) }}</td></tr>
-                                   <tr><td>Mean Difference</td><td>{{ number_format($data['meanDiff'] ?? ($data['mean_diff'] ?? 0), 4) }}</td></tr>
-                                   <tr style="font-weight: bold;"><td>Significant</td><td>{{ ($data['significant'] ?? false) ? 'Yes' : 'No' }}</td></tr>
+                                   <tr><td>{{ __("p-value") }}</td><td>{{ number_format($data['pValue'] ?? ($data['p_value'] ?? 0), 4) }}</td></tr>
+                                   <tr><td>{{ __("Mean Difference") }}</td><td>{{ number_format($data['meanDiff'] ?? ($data['mean_diff'] ?? 0), 4) }}</td></tr>
+                                   <tr style="font-weight: bold;"><td>{{ __("Significant") }}</td><td>{{ ($data['significant'] ?? false) ? 'Yes' : 'No' }}</td></tr>
                                </tbody>
                            </table>
 
                         @elseif($method === 'anova')
                            @if(!empty($data['groupStats']))
-                               <p style="font-size: 11px; font-weight: bold; margin-bottom: 5px;">Group Descriptives:</p>
+                               <p style="font-size: 11px; font-weight: bold; margin-bottom: 5px;">{{ __("Group Descriptives:") }}</p>
                                <table style="font-size: 11px; margin-bottom: 15px;">
                                    <thead>
                                        <tr style="background-color: #f9fafb;">
-                                           <th>Group</th>
+                                           <th>{{ __("Group") }}</th>
                                            <th style="text-align: center;">N</th>
-                                           <th style="text-align: right;">Mean</th>
-                                           <th style="text-align: right;">Std. Dev</th>
-                                           <th style="text-align: right;">95% CI Lower</th>
-                                           <th style="text-align: right;">95% CI Upper</th>
+                                           <th style="text-align: right;">{{ __("Mean") }}</th>
+                                           <th style="text-align: right;">{{ __("Std. Dev") }}</th>
+                                           <th style="text-align: right;">{{ __("95% CI Lower") }}</th>
+                                           <th style="text-align: right;">{{ __("95% CI Upper") }}</th>
                                        </tr>
                                    </thead>
                                    <tbody>
@@ -528,17 +528,17 @@
                            <table style="font-size: 11px; margin-bottom: 15px;">
                                <thead>
                                    <tr style="background-color: #f9fafb;">
-                                       <th>Source of Variation</th>
+                                       <th>{{ __("Source of Variation") }}</th>
                                        <th>SS</th>
                                        <th>df</th>
                                        <th>MS</th>
                                        <th>F</th>
-                                       <th>p-value</th>
+                                       <th>{{ __("p-value") }}</th>
                                    </tr>
                                </thead>
                                <tbody>
                                    <tr>
-                                       <td>Between Groups</td>
+                                       <td>{{ __("Between Groups") }}</td>
                                        <td>{{ number_format($data['ssb'] ?? ($data['between_ss'] ?? 0), 4) }}</td>
                                        <td>{{ $data['dfBetween'] ?? ($data['df_between'] ?? 0) }}</td>
                                        <td>{{ number_format($data['msb'] ?? ($data['ms_between'] ?? 0), 4) }}</td>
@@ -546,7 +546,7 @@
                                        <td rowspan="2" style="vertical-align: middle; text-align: center; font-weight: bold;">{{ number_format($data['pValue'] ?? ($data['p_value'] ?? 0), 4) }}</td>
                                    </tr>
                                    <tr>
-                                       <td>Within Groups</td>
+                                       <td>{{ __("Within Groups") }}</td>
                                        <td>{{ number_format($data['ssw'] ?? ($data['within_ss'] ?? 0), 4) }}</td>
                                        <td>{{ $data['dfWithin'] ?? ($data['df_within'] ?? 0) }}</td>
                                        <td>{{ number_format($data['msw'] ?? ($data['ms_within'] ?? 0), 4) }}</td>
@@ -554,7 +554,7 @@
                                </tbody>
                                <tfoot>
                                    <tr style="font-weight: bold; background-color: #f9fafb;">
-                                       <td>Total</td>
+                                       <td>{{ __("Total") }}</td>
                                        <td>{{ number_format($data['sst'] ?? ($data['total_ss'] ?? 0), 4) }}</td>
                                        <td>{{ $data['dfTotal'] ?? ($data['df_total'] ?? 0) }}</td>
                                        <td colspan="3"></td>
@@ -566,35 +566,35 @@
                            <table style="font-size: 11px; margin-bottom: 15px;">
                                <thead>
                                    <tr style="background-color: #f9fafb;">
-                                       <th>Metric</th>
-                                       <th>Value</th>
+                                       <th>{{ __("Metric") }}</th>
+                                       <th>{{ __("Value") }}</th>
                                    </tr>
                                </thead>
                                <tbody>
-                                   <tr><td>Variables</td><td>{{ ($data['labelX'] ?? 'X') . ' vs ' . ($data['labelY'] ?? 'Y') }}</td></tr>
+                                   <tr><td>{{ __("Variables") }}</td><td>{{ ($data['labelX'] ?? 'X') . ' vs ' . ($data['labelY'] ?? 'Y') }}</td></tr>
                                    <tr><td>Pearson Correlation Coefficient (r)</td><td>{{ number_format($data['r'] ?? 0, 4) }}</td></tr>
-                                   <tr><td>p-value</td><td>{{ number_format($data['pValue'] ?? ($data['p_value'] ?? 0), 4) }}</td></tr>
+                                   <tr><td>{{ __("p-value") }}</td><td>{{ number_format($data['pValue'] ?? ($data['p_value'] ?? 0), 4) }}</td></tr>
                                    <tr><td>Sample Size (N)</td><td>{{ $data['n'] ?? 0 }}</td></tr>
-                                   <tr><td>Direction</td><td>{{ $data['direction'] ?? 'None' }}</td></tr>
-                                   <tr><td>Strength</td><td>{{ $data['strength'] ?? 'None' }}</td></tr>
-                                   <tr style="font-weight: bold;"><td>Significant</td><td>{{ ($data['significant'] ?? false) ? 'Yes' : 'No' }}</td></tr>
+                                   <tr><td>{{ __("Direction") }}</td><td>{{ $data['direction'] ?? 'None' }}</td></tr>
+                                   <tr><td>{{ __("Strength") }}</td><td>{{ $data['strength'] ?? 'None' }}</td></tr>
+                                   <tr style="font-weight: bold;"><td>{{ __("Significant") }}</td><td>{{ ($data['significant'] ?? false) ? 'Yes' : 'No' }}</td></tr>
                                </tbody>
                            </table>
 
                         @elseif($method === 'regression' || $method === 'regression_multiple')
                            <div style="font-size: 11px; margin-bottom: 12px; background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb;">
                                <strong>R-Square (R²):</strong> {{ number_format($data['r2'] ?? 0, 4) }} | 
-                               <strong>Adjusted R-Square:</strong> {{ number_format($data['adjR2'] ?? ($data['adj_r2'] ?? 0), 4) }} | 
-                               <strong>Overall F-Stat:</strong> {{ number_format($data['fValue'] ?? ($data['f_stat'] ?? 0), 4) }} | 
-                               <strong>p-value:</strong> {{ number_format($data['pValue'] ?? ($data['p_value'] ?? 0), 4) }}
+                               <strong>{{ __("Adjusted R-Square:") }}</strong> {{ number_format($data['adjR2'] ?? ($data['adj_r2'] ?? 0), 4) }} | 
+                               <strong>{{ __("Overall F-Stat:") }}</strong> {{ number_format($data['fValue'] ?? ($data['f_stat'] ?? 0), 4) }} | 
+                               <strong>{{ __("p-value:") }}</strong> {{ number_format($data['pValue'] ?? ($data['p_value'] ?? 0), 4) }}
                            </div>
                            <table style="font-size: 11px; margin-bottom: 15px;">
                                <thead>
                                    <tr style="background-color: #f9fafb;">
-                                       <th>Variable</th>
-                                       <th>Coefficient</th>
-                                       <th>t-Stat</th>
-                                       <th>p-value</th>
+                                       <th>{{ __("Variable") }}</th>
+                                       <th>{{ __("Coefficient") }}</th>
+                                       <th>{{ __("t-Stat") }}</th>
+                                       <th>{{ __("p-value") }}</th>
                                    </tr>
                                </thead>
                                <tbody>
@@ -630,7 +630,7 @@
     @endif
 
     <div class="disclaimer-box">
-        <span class="disclaimer-title">Data Integrity & Validation Disclaimer</span>
+        <span class="disclaimer-title">{{ __("Data Integrity & Validation Disclaimer") }}</span>
         <p>This report has been automatically generated by KDAnalytiks. The statistics and AI insights provided are
             based on raw data collected from survey respondents. While we employ rigorous data validation protocols,
             PRC™ Consulting does not guarantee the absolute accuracy of individual qualitative interpretations provided

@@ -1,9 +1,9 @@
 @extends('layouts.app')
 
-@section('title', 'My Surveys')
+@section('title', '{{ __("My Surveys") }}')
 
 @section('content')
-    <h1>My Surveys</h1>
+    <h1>{{ __("My Surveys") }}</h1>
 
     @if(session('success'))
         <div class="w3-panel w3-green w3-round">

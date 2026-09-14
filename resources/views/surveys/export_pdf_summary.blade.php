@@ -23,21 +23,46 @@
         .header {
             background: linear-gradient(135deg, #2271b1 0%, #135e96 100%);
             color: white;
-            padding: 28px 32px;
-            margin-bottom: 24px;
+            padding: 24px 32px;
+            margin-bottom: 20px;
+        }
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .header-logo {
+            max-height: 48px;
+            max-width: 140px;
+            margin-bottom: 8px;
+            background: white;
+            padding: 4px;
+            border-radius: 6px;
         }
 
         .header h1 {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 800;
             letter-spacing: -0.5px;
+            margin-bottom: 4px;
+            color: #ffffff;
+        }
+
+        .header .org-name {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.9);
             margin-bottom: 4px;
         }
 
         .header .meta {
             font-size: 9px;
-            opacity: 0.8;
-            letter-spacing: 0.5px;
+            opacity: 0.85;
+            letter-spacing: 0.3px;
+            margin-top: 4px;
         }
 
         .badge {
@@ -51,6 +76,7 @@
             letter-spacing: 1px;
             text-transform: uppercase;
             margin-top: 8px;
+            margin-right: 4px;
         }
 
         .section {
@@ -72,7 +98,7 @@
             background: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
-            padding: 14px 16px;
+            padding: 12px 16px;
             margin-bottom: 12px;
             page-break-inside: avoid;
         }
@@ -157,8 +183,11 @@
             border-top: 1px solid #e2e8f0;
             font-size: 8px;
             color: #94a3b8;
-            display: flex;
-            justify-content: space-between;
+        }
+
+        .footer-table {
+            width: 100%;
+            border-collapse: collapse;
         }
     </style>
 </head>
@@ -166,23 +195,39 @@
 <body>
 
     <div class="header">
-        <h1>{{ $survey->title }}</h1>
-        @if($survey->description)
-            <p class="meta">{{ Str::limit($survey->description, 180) }}</p>
-        @endif
-        <span class="badge">Survey Summary Report</span>
-        <span class="badge">{{ $exportedAt }}</span>
+        <table class="header-table">
+            <tr>
+                <td style="vertical-align: top;">
+                    @if(!empty($logoBase64))
+                        <img src="{{ $logoBase64 }}" alt="Export Logo" class="header-logo">
+                    @endif
+                    @if($survey->export_org_name)
+                        <div class="org-name">{{ $survey->export_org_name }}</div>
+                    @endif
+                    <h1>{{ $survey->title }}</h1>
+                    @if($survey->description)
+                        <p class="meta">{{ Str::limit($survey->description, 180) }}</p>
+                    @endif
+                    <div style="margin-top: 6px;">
+                        <span class="badge">{{ __("Survey Summary Report") }}</span>
+                        <span class="badge">{{ $exportedAt }}</span>
+                    </div>
+                </td>
+            </tr>
+        </table>
     </div>
 
     <div class="section">
-        <div class="section-title">Question Frequency Analysis</div>
+        <div class="section-title">{{ __("Question Frequency Analysis") }}</div>
 
-        @foreach($summaryData as $i => $item)
-            @php $q = $item['question'];
-            $total = $item['total']; @endphp
+        @forelse($summaryData as $i => $item)
+            @php 
+                                                    $q = $item['question'];
+                $total = $item['total']; 
+            @endphp
             <div class="question-card">
-                <div class="question-num">Question {{ $i + 1 }} &mdash; {{ strtoupper($q->type) }}</div>
-                <div class="question-text">{{ $q->text }}</div>
+                <div class="question-num">Question {{ $i + 1 }} &mdash; {{ strtoupper($q->type ?? 'TEXT') }}</div>
+                <div class="question-text">{{ $q->text ?? 'Question' }}</div>
 
                 @if($total === 0)
                     <p class="no-data">No responses recorded for this question.</p>
@@ -190,9 +235,9 @@
                     <table class="freq-table">
                         <thead>
                             <tr>
-                                <th>Response</th>
-                                <th>Count</th>
-                                <th>Distribution</th>
+                                <th>{{ __("Response") }}</th>
+                                <th>{{ __("Count") }}</th>
+                                <th>{{ __("Distribution") }}</th>
                                 <th>%</th>
                             </tr>
                         </thead>
@@ -200,7 +245,7 @@
                             @foreach($item['frequencies'] as $value => $count)
                                 @php $pct = round(($count / $total) * 100, 1); @endphp
                                 <tr>
-                                    <td>{{ $value ?: '(blank)' }}</td>
+                                    <td>{{ $value !== '' ? $value : '(blank)' }}</td>
                                     <td>{{ $count }}</td>
                                     <td>
                                         <div class="bar-container">
@@ -211,7 +256,7 @@
                                 </tr>
                             @endforeach
                             <tr>
-                                <td style="font-weight:700;color:#0f172a;">Total</td>
+                                <td style="font-weight:700;color:#0f172a;">{{ __("Total Answers") }}</td>
                                 <td style="font-weight:700;color:#2271b1;">{{ $total }}</td>
                                 <td></td>
                                 <td class="pct">100%</td>
@@ -220,12 +265,25 @@
                     </table>
                 @endif
             </div>
-        @endforeach
+        @empty
+            <div class="question-card">
+                <p class="no-data">No questions or survey fields found to summarize.</p>
+            </div>
+        @endforelse
     </div>
 
     <div class="footer">
-        <span>{{ $survey->title }}</span>
-        <span>Generated {{ $exportedAt }} &mdash; KM Survey Tool</span>
+        <table class="footer-table">
+            <tr>
+                <td style="text-align: left;">{{ $survey->export_org_name ?: $survey->title }}</td>
+                <td style="text-align: right;">
+                    Generated {{ $exportedAt }}
+                    @if(!$survey->remove_kd_branding)
+                        &mdash; KDAnalytiks
+                    @endif
+                </td>
+            </tr>
+        </table>
     </div>
 
 </body>

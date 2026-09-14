@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 class AgentController extends Controller
 {
     /**
-     * Handle the KM Autonomous Agent Chat Proxy.
+     * Handle the KDAnalytiks Autonomous Agent Chat Proxy.
      */
     public function chat(Request $request)
     {

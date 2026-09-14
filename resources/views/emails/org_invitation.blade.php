@@ -130,7 +130,7 @@
         </p>
 
         <div style="text-align: center; margin: 32px 0;">
-            <a href="{{ $acceptUrl }}" class="btn">Accept Invitation</a>
+            <a href="{{ $acceptUrl }}" class="btn">{{ __("Accept Invitation") }}</a>
         </div>
 
         <p class="text" style="font-size: 13px; color: #64748b;">

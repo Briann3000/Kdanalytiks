@@ -14,11 +14,11 @@
 
         <p><strong>Name:</strong> {{ $contactData['name'] }}</p>
         <p><strong>Email:</strong> <a href="mailto:{{ $contactData['email'] }}">{{ $contactData['email'] }}</a></p>
-        <p><strong>Subject:</strong> {{ $contactData['subject'] }}</p>
+        <p><strong>{{ __("Subject:") }}</strong> {{ $contactData['subject'] }}</p>
 
         <div
             style="margin-top: 20px; padding: 15px; background: #f8fafc; border-left: 4px solid #2271b1; border-radius: 6px;">
-            <p style="margin: 0; font-weight: bold; color: #475569;">Message:</p>
+            <p style="margin: 0; font-weight: bold; color: #475569;">{{ __("Message:") }}</p>
             <p style="margin-top: 8px; white-space: pre-wrap;">{{ $contactData['message'] }}</p>
         </div>
 

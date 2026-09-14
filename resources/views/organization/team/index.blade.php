@@ -93,7 +93,7 @@
                             <th class="py-3.5 px-6">Role</th>
                             <th class="py-3.5 px-6">Status</th>
                             <th class="py-3.5 px-6">Joined</th>
-                            <th class="py-3.5 px-6 text-right">Actions</th>
+                            <th class="py-3.5 px-6 text-right">{{ __("Actions") }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 text-sm">
@@ -195,7 +195,7 @@
                                 <th class="py-3.5 px-6">Invited Role</th>
                                 <th class="py-3.5 px-6">Invited By</th>
                                 <th class="py-3.5 px-6">Expires</th>
-                                <th class="py-3.5 px-6 text-right">Actions</th>
+                                <th class="py-3.5 px-6 text-right">{{ __("Actions") }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
@@ -238,7 +238,7 @@
         @endif
     </div>
 
-    <!-- Invite Member Modal -->
+    <!-- {{ __("Invite Member") }} Modal -->
     <div x-show="showInviteModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
         <div @click.away="showInviteModal = false" class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-6 shadow-xl border border-slate-200">
             <div class="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -249,7 +249,7 @@
             <form action="{{ route('organization.team.invite') }}" method="POST" class="space-y-4">
                 @csrf
                 <div>
-                    <label class="block text-xs font-semibold  text-slate-600 mb-1">Email Address</label>
+                    <label class="block text-xs font-semibold  text-slate-600 mb-1">{{ __("Email Address") }}</label>
                     <input type="email" name="email" required placeholder="colleague@organization.org" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
 

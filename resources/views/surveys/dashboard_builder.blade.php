@@ -48,7 +48,7 @@
                                         <template x-if="question.isChartable">
                                             <span
                                                 class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600"><i
-                                                    class="fa-solid fa-chart-simple mr-0.5"></i> Chart</span>
+                                                    class="fa-solid fa-chart-simple mr-0.5"></i> {{ __('Chart') }}</span>
                                         </template>
                                     </div>
                                     <h5 class="text-xs font-semibold text-gray-700 truncate" x-text="question.label"></h5>

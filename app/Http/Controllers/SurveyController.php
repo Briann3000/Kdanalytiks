@@ -230,7 +230,7 @@ class SurveyController extends Controller
     public function projectSettings(\App\Models\Survey $survey)
     {
         $this->authorizeOwner($survey);
-        $survey->load('collaborators.user');
+        $survey->load(['collaborators.user', 'creator', 'groups.users']);
 
         if (!$survey->share_token) {
             $survey->update(['share_token' => Str::random(32)]);
@@ -349,16 +349,15 @@ class SurveyController extends Controller
         $this->authorizeOwner($survey);
 
         $request->validate([
-            'email' => 'required|email|exists:users,email',
+            'email' => 'required|email|max:255',
         ]);
 
-        $user = \App\Models\User::where('email', $request->email)->first();
+        $email = strtolower(trim($request->email));
 
-        if ($user->id === (int) $survey->created_by) {
-            return back()->with('error', 'Owner already has full access.');
+        if ($survey->created_by && $survey->creator && strtolower($survey->creator->email) === $email) {
+            return back()->with('error', 'The project owner already has full access.');
         }
 
-        // Available permission keys after simplification
         $permissionKeys = [
             'view_form',
             'edit_form',
@@ -372,28 +371,178 @@ class SurveyController extends Controller
 
         $permissions = [];
         foreach ($permissionKeys as $key) {
-            $permissions[$key] = $request->has($key);
+            $permissions[$key] = $request->boolean($key);
         }
 
         // Default if none provided (Basic viewer)
         if (!array_filter($permissions)) {
             $permissions['view_form'] = true;
-            $permissions['add_submissions'] = true;
+            $permissions['view_submissions'] = true;
         }
 
-        \App\Models\SurveyPermission::updateOrCreate(
-            ['survey_id' => $survey->id, 'user_id' => $user->id],
-            ['permissions' => $permissions]
-        );
+        $targetUser = \App\Models\User::where('email', $email)->first();
 
-        return back()->with('success', 'Collaborator updated with granular permissions.');
+        if ($targetUser) {
+            $permission = \App\Models\SurveyPermission::updateOrCreate(
+                ['survey_id' => $survey->id, 'user_id' => $targetUser->id],
+                [
+                    'invite_email' => $email,
+                    'status' => 'accepted',
+                    'invite_token' => null,
+                    'permissions' => $permissions
+                ]
+            );
+
+            try {
+                \Illuminate\Support\Facades\Mail::to($targetUser->email)->send(
+                    new \App\Mail\CollaboratorInvitationMail($survey, $permission, auth()->user(), $targetUser->email, route('surveys.summary', $survey))
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to send collaborator email: ' . $e->getMessage());
+            }
+
+            return back()->with('success', "Collaborator {$targetUser->name} added successfully.");
+        } else {
+            $token = \Illuminate\Support\Str::random(32);
+            $permission = \App\Models\SurveyPermission::updateOrCreate(
+                ['survey_id' => $survey->id, 'invite_email' => $email],
+                [
+                    'user_id' => null,
+                    'status' => 'pending',
+                    'invite_token' => $token,
+                    'permissions' => $permissions
+                ]
+            );
+
+            try {
+                $registerUrl = route('register', ['role' => 'independent', 'email' => $email]);
+                \Illuminate\Support\Facades\Mail::to($email)->send(
+                    new \App\Mail\CollaboratorInvitationMail($survey, $permission, auth()->user(), $email, $registerUrl)
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to send collaborator invite email: ' . $e->getMessage());
+            }
+
+            return back()->with('success', "Invitation sent to {$email}. They will have access once they register.");
+        }
+    }
+
+    public function updateCollaborator(Request $request, \App\Models\Survey $survey, \App\Models\SurveyPermission $permission)
+    {
+        $this->authorizeOwner($survey);
+
+        if ($permission->survey_id !== $survey->id) {
+            abort(404);
+        }
+
+        $permissionKeys = [
+            'view_form',
+            'edit_form',
+            'view_submissions',
+            'add_submissions',
+            'edit_submissions',
+            'validate_submissions',
+            'delete_submissions',
+            'manage_project'
+        ];
+
+        $permissions = [];
+        foreach ($permissionKeys as $key) {
+            $permissions[$key] = $request->boolean($key);
+        }
+
+        if (!array_filter($permissions)) {
+            $permissions['view_form'] = true;
+            $permissions['view_submissions'] = true;
+        }
+
+        $permission->update(['permissions' => $permissions]);
+
+        return back()->with('success', 'Collaborator permissions updated.');
+    }
+
+    public function resendCollaboratorInvite(\App\Models\Survey $survey, \App\Models\SurveyPermission $permission)
+    {
+        $this->authorizeOwner($survey);
+
+        if ($permission->survey_id !== $survey->id) {
+            abort(404);
+        }
+
+        $recipientEmail = $permission->user ? $permission->user->email : $permission->invite_email;
+        if (!$recipientEmail) {
+            return back()->with('error', 'No email address found for this invitation.');
+        }
+
+        $actionUrl = $permission->user
+            ? route('surveys.summary', $survey)
+            : route('register', ['role' => 'independent', 'email' => $recipientEmail]);
+
+        try {
+            \Illuminate\Support\Facades\Mail::to($recipientEmail)->send(
+                new \App\Mail\CollaboratorInvitationMail($survey, $permission, auth()->user(), $recipientEmail, $actionUrl)
+            );
+            return back()->with('success', "Invitation resent to {$recipientEmail}.");
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Could not send invitation email: ' . $e->getMessage());
+        }
     }
 
     public function removeCollaborator(\App\Models\Survey $survey, \App\Models\SurveyPermission $permission)
     {
         $this->authorizeOwner($survey);
+        if ($permission->survey_id !== $survey->id) {
+            abort(404);
+        }
         $permission->delete();
         return back()->with('success', 'Collaborator removed.');
+    }
+
+    public function transferOwnership(Request $request, \App\Models\Survey $survey)
+    {
+        $this->authorizePrimaryOwner($survey);
+
+        $request->validate([
+            'new_owner_email' => 'required|email|exists:users,email',
+        ]);
+
+        $newOwner = \App\Models\User::where('email', strtolower(trim($request->new_owner_email)))->firstOrFail();
+
+        if ($newOwner->id === (int) $survey->created_by) {
+            return back()->with('error', 'This user is already the owner of this project.');
+        }
+
+        $oldOwnerId = $survey->created_by;
+
+        $survey->update([
+            'created_by' => $newOwner->id,
+        ]);
+
+        \App\Models\SurveyPermission::where('survey_id', $survey->id)
+            ->where('user_id', $newOwner->id)
+            ->delete();
+
+        if ($oldOwnerId) {
+            \App\Models\SurveyPermission::updateOrCreate(
+                ['survey_id' => $survey->id, 'user_id' => $oldOwnerId],
+                [
+                    'invite_email' => auth()->user()->email,
+                    'status' => 'accepted',
+                    'permissions' => [
+                        'view_form' => true,
+                        'edit_form' => true,
+                        'view_submissions' => true,
+                        'add_submissions' => true,
+                        'edit_submissions' => true,
+                        'validate_submissions' => true,
+                        'delete_submissions' => true,
+                        'manage_project' => true,
+                    ]
+                ]
+            );
+        }
+
+        return redirect()->route('surveys.summary', $survey)->with('success', "Project ownership successfully transferred to {$newOwner->name} ({$newOwner->email}).");
     }
 
     public function archive(\App\Models\Survey $survey)
@@ -2441,6 +2590,8 @@ class SurveyController extends Controller
     public function exportSinglePdf(\App\Models\Survey $survey, \App\Models\Response $response)
     {
         $this->authorizeOwner($survey);
+        self::ensureTranscriptionsForResponses([$response]);
+        $response->refresh();
 
         $branding = $this->getBrandingContext($survey);
 
@@ -2485,6 +2636,8 @@ class SurveyController extends Controller
     public function exportSingleDocx(\App\Models\Survey $survey, \App\Models\Response $response)
     {
         $this->authorizeOwner($survey);
+        self::ensureTranscriptionsForResponses([$response]);
+        $response->refresh();
 
         $phpWord = new PhpWord();
         $section = $phpWord->addSection();
@@ -2513,7 +2666,7 @@ class SurveyController extends Controller
                 }
 
                 $section->addText($field['label'] ?? $field['name'], ['bold' => true, 'size' => 10]);
-                $this->addDocxValue($section, $this->resolveResponseValueToLabel($field, $val));
+                $this->addDocxValue($section, $this->resolveResponseValueToLabel($field, $val), $response, $val);
                 $section->addTextBreak(1);
             }
         } else {
@@ -2521,7 +2674,7 @@ class SurveyController extends Controller
                 $a = $response->answers->where('question_id', $q->id)->first();
                 $val = $a ? $a->value : '—';
                 $section->addText($q->text, ['bold' => true, 'size' => 10]);
-                $this->addDocxValue($section, $val);
+                $this->addDocxValue($section, $val, $response, $val);
                 $section->addTextBreak(1);
             }
         }
@@ -2534,15 +2687,18 @@ class SurveyController extends Controller
         return response()->download($tempFile, $filename)->deleteFileAfterSend(true);
     }
 
-    protected function addDocxValue($section, $val)
+    protected function addDocxValue($section, $val, $response = null, $rawVal = null)
     {
         if (is_array($val)) {
             foreach ($val as $v)
-                $this->addDocxValue($section, $v);
+                $this->addDocxValue($section, $v, $response, $rawVal);
             return;
         }
 
         $valStr = (string) $val;
+        $rawValStr = is_string($rawVal) ? $rawVal : $valStr;
+        $isMedia = str_starts_with($rawValStr, 'uploads/') && preg_match('/\.(mp4|webm|ogg|ogv|mov|mp3|wav|m4a|aac)$/i', $rawValStr);
+
         if (str_contains($valStr, 'base64,')) {
             try {
                 $imageData = explode('base64,', $valStr)[1];
@@ -2552,12 +2708,114 @@ class SurveyController extends Controller
             }
         } elseif (str_starts_with($valStr, 'uploads/') && in_array(strtolower(pathinfo($valStr, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
             try {
-                $section->addImage(public_path('storage/' . $valStr), ['height' => 100]);
+                $imgPath = storage_path('app/public/' . $valStr);
+                if (!file_exists($imgPath)) {
+                    $imgPath = public_path('storage/' . $valStr);
+                }
+                $section->addImage($imgPath, ['height' => 100]);
             } catch (\Exception $e) {
                 $section->addText("[Image Missing]");
             }
+        } elseif ($isMedia) {
+            $transcriptions = ($response && isset($response->ai_metadata['transcriptions'])) ? $response->ai_metadata['transcriptions'] : [];
+            $transcriptionText = $transcriptions[$rawValStr] ?? null;
+
+            if ($transcriptionText) {
+                $section->addText("Transcription:", ['bold' => true, 'size' => 9, 'color' => '4338CA']);
+                $section->addText('"' . $transcriptionText . '"', ['italic' => true, 'size' => 10, 'color' => '1F2937']);
+            } else {
+                $section->addText("[Transcription pending]", ['italic' => true, 'size' => 9, 'color' => '6B7280']);
+            }
         } else {
             $section->addText($valStr ?: '—');
+        }
+    }
+
+    public static function ensureTranscriptionsForResponses($responses)
+    {
+        $aiService = null;
+        foreach ($responses as $response) {
+            $meta = $response->ai_metadata ?? [];
+            if (!is_array($meta)) {
+                $meta = [];
+            }
+            $transcriptions = $meta['transcriptions'] ?? [];
+            if (!is_array($transcriptions)) {
+                $transcriptions = [];
+            }
+            $updated = false;
+
+            // 1. Check form builder answers
+            $jsonAnswer = $response->answers->first();
+            if ($jsonAnswer && $jsonAnswer->value) {
+                $parsedData = json_decode($jsonAnswer->value, true);
+                if (is_array($parsedData)) {
+                    foreach ($parsedData as $item) {
+                        $userData = $item['userData'] ?? null;
+                        if (is_string($userData) && str_starts_with($userData, 'uploads/') && preg_match('/\.(mp4|webm|ogg|ogv|mov|mp3|wav|m4a|aac)$/i', $userData)) {
+                            if (empty($transcriptions[$userData])) {
+                                $filePath = \Illuminate\Support\Facades\Storage::disk('public')->path($userData);
+                                if (!file_exists($filePath)) {
+                                    $filePath = storage_path('app/public/' . $userData);
+                                }
+                                if (!file_exists($filePath)) {
+                                    $filePath = public_path('storage/' . $userData);
+                                }
+                                if (file_exists($filePath)) {
+                                    if (!$aiService) {
+                                        $aiService = app(\App\Services\AiService::class);
+                                    }
+                                    try {
+                                        $trans = $aiService->transcribeMedia($filePath);
+                                        if ($trans) {
+                                            $transcriptions[$userData] = $trans;
+                                            $updated = true;
+                                        }
+                                    } catch (\Exception $e) {
+                                        \Log::error("Auto-transcription error during export: " . $e->getMessage());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Check legacy questions answers
+            foreach ($response->answers as $ans) {
+                $valStr = (string) $ans->value;
+                if (str_starts_with($valStr, 'uploads/') && preg_match('/\.(mp4|webm|ogg|ogv|mov|mp3|wav|m4a|aac)$/i', $valStr)) {
+                    if (empty($transcriptions[$valStr])) {
+                        $filePath = \Illuminate\Support\Facades\Storage::disk('public')->path($valStr);
+                        if (!file_exists($filePath)) {
+                            $filePath = storage_path('app/public/' . $valStr);
+                        }
+                        if (!file_exists($filePath)) {
+                            $filePath = public_path('storage/' . $valStr);
+                        }
+                        if (file_exists($filePath)) {
+                            if (!$aiService) {
+                                $aiService = app(\App\Services\AiService::class);
+                            }
+                            try {
+                                $trans = $aiService->transcribeMedia($filePath);
+                                if ($trans) {
+                                    $transcriptions[$valStr] = $trans;
+                                    $updated = true;
+                                }
+                            } catch (\Exception $e) {
+                                \Log::error("Auto-transcription error during export: " . $e->getMessage());
+                            }
+                        }
+                    }
+                }
+            }
+
+            if ($updated) {
+                $meta['transcriptions'] = $transcriptions;
+                $response->ai_metadata = $meta;
+                $response->save();
+            }
         }
     }
 
@@ -2715,6 +2973,139 @@ class SurveyController extends Controller
         $survey->update(['share_report_token' => $token]);
 
         return back()->with('success', 'Live Result Dashboard is now active!');
+    }
+
+    public function toggleSharedData(Request $request, \App\Models\Survey $survey)
+    {
+        $this->authorizeOwner($survey);
+
+        if ($request->has('disable')) {
+            $survey->update([
+                'public_data_enabled' => false,
+            ]);
+            return back()->with('success', 'Public read-only data sharing has been disabled.');
+        }
+
+        if (!$survey->share_data_token) {
+            $survey->share_data_token = Str::random(32);
+        }
+        $survey->public_data_enabled = true;
+        $survey->save();
+
+        return back()->with('success', 'Public read-only stakeholder data sharing is now active!');
+    }
+
+    public function sharedData($token)
+    {
+        $survey = \App\Models\Survey::where('share_data_token', $token)
+            ->where('public_data_enabled', true)
+            ->firstOrFail();
+
+        $query = $survey->responses()->with('respondent', 'answers');
+
+        if (request()->filled('search')) {
+            $search = request('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('id', 'like', "%{$search}%")
+                    ->orWhere('guest_name', 'like', "%{$search}%")
+                    ->orWhereHas('respondent', function ($rq) use ($search) {
+                        $rq->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $responses = $query->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
+        $headers = $this->getSurveyAnalysisMetadata($survey);
+
+        $allResponses = $survey->responses()->with('answers.question')->get();
+        $analyticalData = $this->getAnalyticalData($survey, $allResponses, true);
+        $analysis = $analyticalData['analysis'];
+        $chartConfigs = $analyticalData['chartConfigs'];
+        $totalResponses = $allResponses->count();
+        $branding = $this->getBrandingContext($survey);
+
+        return view('surveys.shared_data', compact('survey', 'responses', 'headers', 'analysis', 'chartConfigs', 'totalResponses', 'branding', 'token'));
+    }
+
+    public function sharedDataExport($token, $format)
+    {
+        $survey = \App\Models\Survey::where('share_data_token', $token)
+            ->where('public_data_enabled', true)
+            ->firstOrFail();
+
+        $responses = $survey->responses()->with(['answers.question', 'respondent'])->get();
+
+        if ($format === 'csv') {
+            $filename = "survey_{$survey->id}_responses.csv";
+            return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\SurveyResponsesExport($survey, $responses), $filename, \Maatwebsite\Excel\Excel::CSV);
+        } elseif ($format === 'xlsx') {
+            $filename = "survey_{$survey->id}_responses.xlsx";
+            return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\SurveyResponsesExport($survey, $responses), $filename);
+        } elseif ($format === 'docx') {
+            return $this->exportDocx($survey);
+        } elseif ($format === 'pdf') {
+            return $this->exportPdf($survey);
+        }
+
+        abort(400, 'Unsupported export format.');
+    }
+
+    public function serveMedia(Request $request, \App\Models\Survey $survey, \App\Models\Response $response)
+    {
+        $hasAccess = false;
+        $token = $request->query('token') ?? $request->header('X-Survey-Token');
+
+        if ($token && ($survey->share_data_token === $token || $survey->share_token === $token || $survey->share_report_token === $token)) {
+            $hasAccess = true;
+        } elseif ($survey->public_data_enabled && $survey->share_data_token) {
+            $hasAccess = true;
+        } elseif (auth()->check()) {
+            try {
+                $this->authorizeOwner($survey);
+                $hasAccess = true;
+            } catch (\Exception $e) {
+                $hasAccess = false;
+            }
+        }
+
+        if (!$hasAccess) {
+            abort(403, 'Unauthorized to access this media file.');
+        }
+
+        if ((int) $response->survey_id !== (int) $survey->id) {
+            abort(404, 'Response does not belong to this survey.');
+        }
+
+        $filePath = $request->query('path');
+        if (empty($filePath)) {
+            abort(400, 'File path is required.');
+        }
+
+        $filePath = ltrim(str_replace(['..', '\\'], ['', '/'], $filePath), '/');
+
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($filePath)) {
+            $absolutePath = \Illuminate\Support\Facades\Storage::disk('public')->path($filePath);
+        } elseif (file_exists(storage_path('app/public/' . $filePath))) {
+            $absolutePath = storage_path('app/public/' . $filePath);
+        } elseif (file_exists(public_path('storage/' . $filePath))) {
+            $absolutePath = public_path('storage/' . $filePath);
+        } else {
+            abort(404, 'Media file not found on server.');
+        }
+
+        $mimeType = @mime_content_type($absolutePath) ?: 'application/octet-stream';
+        $filename = basename($absolutePath);
+
+        if ($request->boolean('download')) {
+            return response()->download($absolutePath, $filename, [
+                'Content-Type' => $mimeType,
+            ]);
+        }
+
+        return response()->file($absolutePath, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+        ]);
     }
 
     public function crosstab(Request $request, \App\Models\Survey $survey)
@@ -3307,6 +3698,21 @@ class SurveyController extends Controller
         \Illuminate\Support\Facades\Gate::authorize('view', $survey);
     }
 
+    private function authorizePrimaryOwner(\App\Models\Survey $survey)
+    {
+        $user = auth()->user();
+        if (!$user) {
+            abort(403);
+        }
+        if ($user->isAdmin()) {
+            return true;
+        }
+        if ((int) $survey->created_by === (int) $user->id) {
+            return true;
+        }
+        abort(403, 'Only the project owner can perform this action.');
+    }
+
     public function getLibraryQuestions()
     {
         $questions = QuestionLibrary::where('user_id', auth()->id())
@@ -3472,7 +3878,7 @@ class SurveyController extends Controller
         if (!in_array($tier, ['pro', 'enterprise'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'AI Transcription is a Premium feature. Please upgrade to Pro or Enterprise to transcribe media submissions.'
+                'message' => 'Transcription is a Premium feature. Please upgrade to Pro or Enterprise to transcribe media submissions.'
             ], 403);
         }
 

@@ -183,35 +183,27 @@ RULES:
         $targetLang = $this->getTargetLanguage();
 
         $systemPrompt = <<<PROMPT
-You are a quantitative research analyst. Your task is to write a brief trend interpretation of survey frequency data.
+You are a senior quantitative research analyst. Write a concise, professional academic trend interpretation of the provided survey frequency data.
 
-OUTPUT FORMAT — NON-NEGOTIABLE:
-- Write EXACTLY ONE paragraph.
-- EXACTLY 3 to 4 sentences total. No more. No fewer.
-- No bullet points, no numbered lists, no headings, no Markdown of any kind.
-- No asterisks, no pound signs, no backticks, no bold, no italics.
-- Pure plain text only.
-- DO NOT reference raw code identifiers or field names like "field-1783944490217" or "question-123".
+OUTPUT REQUIREMENTS:
+- Write ONE cohesive paragraph (approximately 3 to 4 sentences).
+- Always finish the entire paragraph completely with a closing period. Never stop mid-sentence.
+- Use pure plain text only: NO Markdown, NO asterisks, NO bullet points, NO headings.
+- Base ALL insights strictly on the provided frequency numbers and percentages.
+- DO NOT reference internal field identifiers or raw IDs like "field-12345" or "question-1".
 
 TONE: {$styleTone}
-
 LANGUAGE: Write entirely in {$targetLang}.
 
-WRITING RULES:
-- Write in past tense throughout (e.g., "emerged", "indicated", "accounted for", "revealed").
-- Use plain, direct English. Replace complex academic jargon with simpler words.
-- Do not open with clichés like "Based on the provided data", "Looking at the chart", or "The data shows".
-- Use percentages only (e.g., 24.4%). Never include raw counts or sample sizes like (n = 122).
-
-STRUCTURE (do NOT produce visible labels — write it as seamless flowing prose):
-- Sentences 1–2: Report and rank the key percentage findings. Highlight the dominant choice and notable contrasts.
-- Sentences 3–4: Provide a grounded analytical conclusion. Begin naturally with an academic marker phrase (vary these — do not always use the same opener). Keep the conclusion strictly tied to the numbers. Do not speculate, invent causes, or introduce external context not present in the data.
+ANALYSIS GUIDANCE:
+- Report the dominant findings, percentages, and key distributional patterns in past tense.
+- Provide a grounded analytical observation summarizing what these proportions indicate.
 PROMPT;
 
-        $userMessage = "STATISTICAL DATA:\n{$statsText}\n\nWrite ONE paragraph, 3 to 4 sentences, plain text only.";
+        $userMessage = "STATISTICAL DATA:\n{$statsText}\n\nWrite ONE paragraph (3 to 4 sentences) of plain text trend interpretation. Ensure the text ends cleanly with a period.";
 
         try {
-            $content = $this->aiService->callAi($userMessage, $systemPrompt, false, 300, 0.3);
+            $content = $this->aiService->callAi($userMessage, $systemPrompt, false, 2048, 0.4);
             if ($content) {
                 $content = preg_replace('/\bfield-\d+\b/i', 'this question', $content);
                 $content = preg_replace('/\bquestion-\d+\b/i', 'this question', $content);
@@ -264,32 +256,27 @@ PROMPT;
         $targetLang = $this->getTargetLanguage();
 
         $systemPrompt = <<<PROMPT
-You are a quantitative research analyst interpreting a Likert Matrix survey question.
+You are a senior quantitative research analyst interpreting a Likert Matrix survey question. Write a cohesive, professional academic interpretation of the statement items.
 
-OUTPUT FORMAT — NON-NEGOTIABLE:
-- Write EXACTLY ONE paragraph.
-- EXACTLY 3 to 4 sentences total. No more. No fewer.
-- No bullet points, no numbered lists, no headings, no Markdown of any kind.
-- No asterisks, no pound signs, no backticks, no bold, no italics.
-- Pure plain text only.
-- DO NOT reference internal code identifiers or field names like "field-1783944490217" or "question-123". Refer to items by their statement text.
+OUTPUT REQUIREMENTS:
+- Write ONE cohesive paragraph (approximately 3 to 4 sentences).
+- Always finish the entire paragraph completely with a closing period. Never stop mid-sentence.
+- Use pure plain text only: NO Markdown, NO asterisks, NO bullet points, NO headings.
+- Base ALL insights strictly on the provided statement item frequencies and percentages.
+- Refer to statement items by their actual statement names, NOT internal codes or IDs.
 
 TONE: {$styleTone}
-
 LANGUAGE: Write entirely in {$targetLang}.
 
-WRITING RULES:
-- Focus your analysis on comparing and contrasting the findings across the specific statement items (rows) in the matrix.
-- Highlight which specific statement items received the highest positive agreement (Agree / Strongly Agree) and which statement items recorded higher neutral or disagree responses.
-- Write in past tense throughout (e.g., "recorded", "indicated", "revealed", "emerged").
-- Use percentages only (e.g., 60.0%). Never include raw counts or sample sizes like (n = 122).
-- Do not open with clichés like "Based on the provided data".
+ANALYSIS GUIDANCE:
+- Compare and contrast the agreement levels across the statement items in the matrix.
+- Highlight which specific statements received the strongest agreement and which had notable neutrality or disagreement.
 PROMPT;
 
-        $userMessage = "STATISTICAL DATA:\n{$statsText}\n\nWrite ONE paragraph, 3 to 4 sentences, plain text only interpreting the statement items.";
+        $userMessage = "STATISTICAL DATA:\n{$statsText}\n\nWrite ONE paragraph (3 to 4 sentences) of plain text interpreting these Likert Matrix statement items. Ensure the text ends cleanly with a period.";
 
         try {
-            $content = $this->aiService->callAi($userMessage, $systemPrompt, false, 300, 0.3);
+            $content = $this->aiService->callAi($userMessage, $systemPrompt, false, 2048, 0.4);
             if ($content) {
                 $content = preg_replace('/\bfield-\d+\b/i', 'this question', $content);
                 $content = preg_replace('/\bquestion-\d+\b/i', 'this question', $content);

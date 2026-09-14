@@ -64,6 +64,14 @@ class RegisterController extends Controller
             ]);
         }
 
+        // Link any pending survey collaborator invitations
+        \App\Models\SurveyPermission::where('invite_email', $user->email)
+            ->where('status', 'pending')
+            ->update([
+                'user_id' => $user->id,
+                'status' => 'accepted',
+            ]);
+
         auth()->login($user);
 
         // Handle post-register reward claiming

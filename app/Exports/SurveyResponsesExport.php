@@ -19,6 +19,8 @@ class SurveyResponsesExport implements FromCollection, WithHeadings, WithMapping
         $this->survey = $survey;
         $this->responses = $responses;
 
+        \App\Http\Controllers\SurveyController::ensureTranscriptionsForResponses($this->responses);
+
         if (!empty($this->survey->json_schema) && $this->survey->json_schema !== '[]') {
             $this->schemaFields = is_string($this->survey->json_schema) ? json_decode($this->survey->json_schema, true) : $this->survey->json_schema;
             $this->scanForMaxRepeats();
@@ -131,6 +133,11 @@ class SurveyResponsesExport implements FromCollection, WithHeadings, WithMapping
                                         }
                                     }
 
+                                    $innerValStr = is_array($innerVal) ? '' : (string) $innerVal;
+                                    if (str_starts_with($innerValStr, 'uploads/') && preg_match('/\.(mp4|webm|ogg|ogv|mov|mp3|wav|m4a|aac)$/i', $innerValStr)) {
+                                        $transcriptions = $response->ai_metadata['transcriptions'] ?? [];
+                                        $innerVal = $transcriptions[$innerValStr] ?? ('[Audio: ' . basename($innerValStr) . ']');
+                                    }
                                     if (is_array($innerVal))
                                         $innerVal = implode(', ', $innerVal);
                                     break;
@@ -181,6 +188,13 @@ class SurveyResponsesExport implements FromCollection, WithHeadings, WithMapping
                             $val = $opt ? ($opt['label'] ?? $val) : $val;
                         }
                     }
+
+                    $valStr = is_array($val) ? '' : (string) $val;
+                    if (str_starts_with($valStr, 'uploads/') && preg_match('/\.(mp4|webm|ogg|ogv|mov|mp3|wav|m4a|aac)$/i', $valStr)) {
+                        $transcriptions = $response->ai_metadata['transcriptions'] ?? [];
+                        $val = $transcriptions[$valStr] ?? ('[Audio: ' . basename($valStr) . ']');
+                    }
+
                     if (is_array($val))
                         $val = implode(', ', $val);
                     $row[] = $val;
@@ -189,7 +203,13 @@ class SurveyResponsesExport implements FromCollection, WithHeadings, WithMapping
         } else {
             foreach ($this->survey->questions()->orderBy('position')->get() as $q) {
                 $answer = $response->answers->where('question_id', $q->id)->first();
-                $row[] = $answer ? $answer->value : '';
+                $ansVal = $answer ? $answer->value : '';
+                $valStr = (string) $ansVal;
+                if (str_starts_with($valStr, 'uploads/') && preg_match('/\.(mp4|webm|ogg|ogv|mov|mp3|wav|m4a|aac)$/i', $valStr)) {
+                    $transcriptions = $response->ai_metadata['transcriptions'] ?? [];
+                    $ansVal = $transcriptions[$valStr] ?? ('[Audio: ' . basename($valStr) . ']');
+                }
+                $row[] = $ansVal;
             }
         }
 

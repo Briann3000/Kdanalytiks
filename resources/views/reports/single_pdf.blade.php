@@ -96,13 +96,16 @@
     <div class="meta-grid">
         <div class="meta-item"><span class="meta-label">Survey:</span> {{ $survey->title }}</div>
         <div class="meta-item"><span class="meta-label">Submitted On:</span>
-            {{ $response->created_at->format('F d, Y \a\t H:i:s') }}</div>
+            {{ $response->created_at->format('F d, Y \a\t H:i:s') }}
+        </div>
         <div class="meta-item"><span class="meta-label">Respondent:</span>
-            {{ $response->respondent ? $response->respondent->name : ($response->guest_name ?? 'Anonymous') }}</div>
+            {{ $response->respondent ? $response->respondent->name : ($response->guest_name ?? 'Anonymous') }}
+        </div>
         <div class="meta-item"><span class="meta-label">Email:</span> {{ $response->respondent->email ?? 'N/A' }}</div>
         @if($response->guest_phone || ($response->respondent && $response->respondent->phone_number))
             <div class="meta-item"><span class="meta-label">Phone:</span>
-                {{ $response->respondent ? $response->respondent->phone_number : $response->guest_phone }}</div>
+                {{ $response->respondent ? $response->respondent->phone_number : $response->guest_phone }}
+            </div>
         @endif
     </div>
 
@@ -123,7 +126,24 @@
                 @elseif($isImage)
                     <img src="{{ public_path('storage/' . $valStr) }}" class="media-img">
                 @elseif($isMedia)
-                    <span style="color: #dc2626;">[Media File: {{ $valStr }}]</span>
+                    @php
+                        $transcriptions = $response->ai_metadata['transcriptions'] ?? [];
+                        $transcription = $transcriptions[$valStr] ?? null;
+                    @endphp
+                    @if($transcription)
+                        <div
+                            style="background: #f8fafc; border-left: 3px solid #4f46e5; padding: 8px 12px; border-radius: 4px; margin-top: 4px;">
+                            <div
+                                style="font-size: 10px; font-weight: bold; color: #4f46e5; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">
+                                Transcription</div>
+                            <div style="font-size: 12px; color: #1e293b; font-style: italic;">"{{ $transcription }}"</div>
+                        </div>
+                    @else
+                        <div
+                            style="font-size: 11px; color: #64748b; font-style: italic; background: #f8fafc; padding: 6px 10px; border-radius: 4px;">
+                            [Transcription pending]
+                        </div>
+                    @endif
                 @else
                     {{ is_array($val) ? implode(', ', $val) : $val }}
                 @endif

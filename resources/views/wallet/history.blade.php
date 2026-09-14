@@ -28,7 +28,8 @@
                             <th class="px-6 py-4 text-[10px] font-black text-gray-400 tracking-widest">Description
                             </th>
                             <th class="px-6 py-4 text-[10px] font-black text-gray-400 tracking-widest text-right">
-                                Amount</th>
+                                {{ __("Amount") }}
+                            </th>
                             <th class="px-6 py-4 text-[10px] font-black text-gray-400 tracking-widest text-center">
                                 Status</th>
                         </tr>

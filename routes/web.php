@@ -227,7 +227,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/settings', [SurveyController::class, 'updateProjectSettings'])->name('settings.update');
         Route::get('/branding-logo', [SurveyController::class, 'serveBrandingLogo'])->name('branding.logo');
         Route::post('/collaborators', [SurveyController::class, 'addCollaborator'])->name('collaborators.add');
+        Route::put('/collaborators/{permission}', [SurveyController::class, 'updateCollaborator'])->name('collaborators.update');
+        Route::post('/collaborators/{permission}/resend', [SurveyController::class, 'resendCollaboratorInvite'])->name('collaborators.resend');
         Route::delete('/collaborators/{permission}', [SurveyController::class, 'removeCollaborator'])->name('collaborators.remove');
+        Route::post('/transfer-ownership', [SurveyController::class, 'transferOwnership'])->name('transfer_ownership');
         Route::post('/groups', [SurveyController::class, 'createGroup'])->name('groups.create');
         Route::delete('/groups/{group}', [SurveyController::class, 'deleteGroup'])->name('groups.destroy');
         Route::get('/group-join/{token}', [SurveyController::class, 'joinGroup'])->name('groups.join');
