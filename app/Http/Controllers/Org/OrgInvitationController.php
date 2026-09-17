@@ -143,6 +143,15 @@ class OrgInvitationController extends Controller
 
         event(new Registered($user));
 
+        // Claim any pending survey ownership transfers and collaborator invites
+        \App\Models\SurveyPermission::where('invite_email', $user->email)
+            ->where('status', 'pending')
+            ->update([
+                'user_id' => $user->id,
+                'status' => 'accepted',
+            ]);
+        \App\Models\Survey::claimPendingOwnershipForUser($user);
+
         Auth::login($user);
 
         return $this->accept($token);

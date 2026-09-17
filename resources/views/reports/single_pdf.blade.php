@@ -115,9 +115,19 @@
             <div class="answer-value">
                 @php
                     $val = $ans['value'];
-                    $valStr = is_array($val) ? json_encode($val) : (string) $val;
-                    $isSignature = str_contains($valStr, 'base64,');
-                    $isMedia = str_starts_with($valStr, 'uploads/');
+                    if (is_array($val)) {
+                        if (count($val) === 1 && is_string($val[0]) && (str_starts_with($val[0], 'data:audio/') || str_starts_with($val[0], 'data:video/') || str_starts_with($val[0], 'uploads/'))) {
+                            $val = $val[0];
+                        } else {
+                            $val = implode(', ', array_map(function ($v) {
+                                return is_array($v) ? json_encode($v) : (string) $v;
+                            }, $val));
+                        }
+                    }
+                    $valStr = is_string($val) ? trim($val) : (is_array($val) ? json_encode($val) : (string) $val);
+                    $isBase64AudioVideo = is_string($valStr) && (str_starts_with($valStr, 'data:audio/') || str_starts_with($valStr, 'data:video/'));
+                    $isSignature = is_string($valStr) && str_contains($valStr, 'base64,') && !$isBase64AudioVideo;
+                    $isMedia = is_string($valStr) && str_starts_with($valStr, 'uploads/');
                     $isImage = $isMedia && in_array(strtolower(pathinfo($valStr, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
                 @endphp
 
@@ -125,7 +135,7 @@
                     <img src="{{ $valStr }}" class="signature-img">
                 @elseif($isImage)
                     <img src="{{ public_path('storage/' . $valStr) }}" class="media-img">
-                @elseif($isMedia)
+                @elseif($isMedia || $isBase64AudioVideo)
                     @php
                         $transcriptions = $response->ai_metadata['transcriptions'] ?? [];
                         $transcription = $transcriptions[$valStr] ?? null;

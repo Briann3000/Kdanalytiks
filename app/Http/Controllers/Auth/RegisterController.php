@@ -72,6 +72,9 @@ class RegisterController extends Controller
                 'status' => 'accepted',
             ]);
 
+        // Claim any pending survey ownership transfers
+        \App\Models\Survey::claimPendingOwnershipForUser($user);
+
         auth()->login($user);
 
         // Handle post-register reward claiming

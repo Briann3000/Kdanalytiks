@@ -243,21 +243,26 @@
                                                     }
 
                                                     if (is_array($val)) {
-                                                        $val = implode(', ', array_map(function ($v) {
-                                                            return is_array($v) ? json_encode($v) : (string) $v;
-                                                        }, $val));
+                                                        if (count($val) === 1 && is_string($val[0]) && (str_starts_with($val[0], 'data:audio/') || str_starts_with($val[0], 'data:video/') || str_starts_with($val[0], 'uploads/'))) {
+                                                            $val = $val[0];
+                                                        } else {
+                                                            $val = implode(', ', array_map(function ($v) {
+                                                                return is_array($v) ? json_encode($v) : (string) $v;
+                                                            }, $val));
+                                                        }
                                                     }
 
                                                     $valStr = is_string($val) ? trim($val) : (is_array($val) ? json_encode($val) : (string) $val);
-                                                    $isMedia = is_string($valStr) && str_starts_with($valStr, 'uploads/') && preg_match('/\.(mp4|webm|ogg|ogv|mov|mp3|wav|m4a|aac)$/i', $valStr);
+                                                    $isBase64Media = is_string($valStr) && (str_starts_with($valStr, 'data:audio/') || str_starts_with($valStr, 'data:video/'));
+                                                    $isMedia = (is_string($valStr) && str_starts_with($valStr, 'uploads/') && preg_match('/\.(mp4|webm|ogg|ogv|mov|mp3|wav|m4a|aac)$/i', $valStr)) || $isBase64Media;
                                                 @endphp
 
                                                 <td
                                                     class="px-6 py-4 text-[10px] text-gray-600 font-medium whitespace-nowrap {{ $isMedia ? 'min-w-[280px] max-w-[320px]' : 'max-w-[250px] truncate' }}">
                                                     @if($isMedia)
                                                         @php
-                                                            $mediaUrl = route('surveys.responses.media', [$survey, $response, 'path' => $valStr, 'token' => $token]);
-                                                            $mediaDownloadUrl = route('surveys.responses.media', [$survey, $response, 'path' => $valStr, 'download' => 1, 'token' => $token]);
+                                                            $mediaUrl = $isBase64Media ? $valStr : route('surveys.responses.media', [$survey, $response, 'path' => $valStr, 'token' => $token]);
+                                                            $mediaDownloadUrl = $isBase64Media ? $valStr : route('surveys.responses.media', [$survey, $response, 'path' => $valStr, 'download' => 1, 'token' => $token]);
                                                             $transcriptionText = $transcriptions[$valStr] ?? null;
                                                         @endphp
                                                         <div x-data="{ showAudio: false, copied: false }" class="flex flex-col gap-2 py-1">
@@ -312,7 +317,7 @@
                                                                 </div>
                                                             @endif
                                                         </div>
-                                                    @elseif (str_contains($valStr, 'base64,'))
+                                                    @elseif (str_contains($valStr, 'base64,') && !str_starts_with($valStr, 'data:audio/') && !str_starts_with($valStr, 'data:video/'))
                                                         <a href="javascript:void(0)"
                                                             onclick="Swal.fire({title:'Signature', imageUrl:'{{ $valStr }}', imageAlt:'Signature', customClass: {image: 'rounded-xl border border-gray-100 shadow-lg'}})"
                                                             class="inline-flex items-center text-[#2271b1] hover:text-[#135e96] font-bold">

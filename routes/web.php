@@ -231,6 +231,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/collaborators/{permission}/resend', [SurveyController::class, 'resendCollaboratorInvite'])->name('collaborators.resend');
         Route::delete('/collaborators/{permission}', [SurveyController::class, 'removeCollaborator'])->name('collaborators.remove');
         Route::post('/transfer-ownership', [SurveyController::class, 'transferOwnership'])->name('transfer_ownership');
+        Route::post('/transfer-ownership/cancel', [SurveyController::class, 'cancelTransferOwnership'])->name('transfer_ownership.cancel');
+        Route::post('/transfer-ownership/resend', [SurveyController::class, 'resendTransferOwnershipInvite'])->name('transfer_ownership.resend');
         Route::post('/groups', [SurveyController::class, 'createGroup'])->name('groups.create');
         Route::delete('/groups/{group}', [SurveyController::class, 'deleteGroup'])->name('groups.destroy');
         Route::get('/group-join/{token}', [SurveyController::class, 'joinGroup'])->name('groups.join');
@@ -369,9 +371,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 // Public Survey Views
 Route::get('/surveys/{survey}', [SurveyController::class, 'show'])->name('surveys.show');
+Route::get('/surveys/{survey}/media', [SurveyController::class, 'serveSurveyMedia'])->name('surveys.media');
 Route::get('/surveys/{survey}/responses/{response}/media', [SurveyController::class, 'serveMedia'])->name('surveys.responses.media');
 Route::post('/surveys/{survey}/submit', [SurveyController::class, 'submit'])->middleware('throttle:10,1')->name('surveys.submit');
 Route::get('/surveys/{survey}/claim', [SurveyController::class, 'claimRewardPrompt'])->name('surveys.claim');
+Route::get('/surveys/{survey}/thank-you', [SurveyController::class, 'thankYou'])->name('surveys.thank_you');
 Route::get('/reports/shared/{token}', [SurveyController::class, 'sharedReport'])->name('surveys.reports.shared');
 Route::get('/surveys/shared-data/{token}', [SurveyController::class, 'sharedData'])->name('surveys.shared_data');
 Route::get('/surveys/shared-data/{token}/export/{format}', [SurveyController::class, 'sharedDataExport'])->name('surveys.shared_data.export');

@@ -237,6 +237,57 @@
                         </div>
                     </div>
 
+                    @if(!empty($survey->pending_owner_email))
+                        <!-- Pending Ownership Transfer Banner -->
+                        <div
+                            class="p-4 bg-amber-50/80 border border-amber-300 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 transition-all">
+                            <div class="flex items-start gap-3">
+                                <div
+                                    class="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center text-xs font-black uppercase flex-shrink-0 shadow-2xs">
+                                    <i class="fa-solid fa-hourglass-half text-sm"></i>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="text-xs font-bold text-amber-950">{{ __('Pending Ownership Transfer') }}</span>
+                                        <span
+                                            class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300">
+                                            {{ __('Awaiting Account Claim') }}
+                                        </span>
+                                    </div>
+                                    <p class="text-xs font-bold text-amber-900 mt-0.5">
+                                        {{ $survey->pending_owner_email }}
+                                    </p>
+                                    <p class="text-[11px] text-amber-700 font-medium mt-0.5">
+                                        {{ __('An invitation email was sent to this address. As soon as they register or log in, primary ownership will automatically transfer.') }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            @if(auth()->id() === (int) $survey->created_by || auth()->user()->isAdmin())
+                                <div class="flex items-center gap-2 self-end md:self-center flex-shrink-0">
+                                    <form action="{{ route('surveys.transfer_ownership.resend', $survey) }}" method="POST">
+                                        @csrf
+                                        <button type="submit"
+                                            class="px-3 py-1.5 bg-white hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 shadow-2xs">
+                                            <i class="fa-solid fa-paper-plane text-[9px]"></i>
+                                            <span>{{ __('Resend Invite') }}</span>
+                                        </button>
+                                    </form>
+
+                                    <form action="{{ route('surveys.transfer_ownership.cancel', $survey) }}" method="POST"
+                                        onsubmit="return confirm('{{ __('Are you sure you want to cancel the pending ownership transfer?') }}')">
+                                        @csrf
+                                        <button type="submit"
+                                            class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 shadow-2xs">
+                                            <i class="fa-solid fa-xmark text-xs"></i>
+                                            <span>{{ __('Cancel Transfer') }}</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+
                     <!-- Collaborator Rows -->
                     @php
                         $permissionLabels = [
@@ -1055,7 +1106,7 @@
                         <input type="email" name="new_owner_email" required placeholder="newowner@example.com"
                             class="w-full bg-gray-50/60 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10 transition-all">
                         <p class="text-[10px] text-gray-400 font-medium mt-1">
-                            {{ __('Must be an existing registered user on KDAnalytiks.') }}
+                            {{ __('Enter a registered user email or invite a new user. If they do not have an account, an invitation will be sent and ownership transferred when they sign up.') }}
                         </p>
                     </div>
 

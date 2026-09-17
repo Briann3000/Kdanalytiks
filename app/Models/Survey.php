@@ -26,6 +26,7 @@ class Survey extends Model
         'is_template',
         'json_schema',
         'created_by',
+        'pending_owner_email',
         'is_anonymous',
         'is_paid',
         'public_access',
@@ -135,5 +136,58 @@ class Survey extends Model
         }
 
         $query->where('created_at', '<', now()->subMinutes(5))->delete();
+    }
+
+    /**
+     * Claim any pending survey ownership transfers for a user upon registration/login.
+     */
+    public static function claimPendingOwnershipForUser(User $user): int
+    {
+        $cleanEmail = strtolower(trim($user->email));
+        $pendingSurveys = self::whereRaw('LOWER(TRIM(pending_owner_email)) = ?', [$cleanEmail])->get();
+        $transferredCount = 0;
+
+        foreach ($pendingSurveys as $survey) {
+            $oldOwnerId = $survey->created_by;
+
+            $survey->update([
+                'created_by' => $user->id,
+                'pending_owner_email' => null,
+            ]);
+
+            // Clean up any collaborator permissions for the new owner
+            \App\Models\SurveyPermission::where('survey_id', $survey->id)
+                ->where(function ($q) use ($user, $cleanEmail) {
+                    $q->where('user_id', $user->id)
+                        ->orWhereRaw('LOWER(TRIM(invite_email)) = ?', [$cleanEmail]);
+                })
+                ->delete();
+
+            // Give the original owner full collaborator access
+            if ($oldOwnerId && (int) $oldOwnerId !== (int) $user->id) {
+                $oldOwner = \App\Models\User::find($oldOwnerId);
+                \App\Models\SurveyPermission::updateOrCreate(
+                    ['survey_id' => $survey->id, 'user_id' => $oldOwnerId],
+                    [
+                        'invite_email' => $oldOwner?->email,
+                        'status' => 'accepted',
+                        'permissions' => [
+                            'view_form' => true,
+                            'edit_form' => true,
+                            'view_submissions' => true,
+                            'add_submissions' => true,
+                            'edit_submissions' => true,
+                            'validate_submissions' => true,
+                            'delete_submissions' => true,
+                            'manage_project' => true,
+                        ]
+                    ]
+                );
+            }
+
+            $transferredCount++;
+        }
+
+        return $transferredCount;
     }
 }

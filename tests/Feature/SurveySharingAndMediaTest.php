@@ -111,6 +111,8 @@ class SurveySharingAndMediaTest extends TestCase
 
     public function test_owner_can_transfer_survey_ownership(): void
     {
+        \Illuminate\Support\Facades\Mail::fake();
+
         $owner = User::factory()->create();
         $newOwner = User::factory()->create(['email' => 'futureowner@example.com']);
         $survey = Survey::factory()->create(['created_by' => $owner->id]);
@@ -123,6 +125,7 @@ class SurveySharingAndMediaTest extends TestCase
         $survey->refresh();
 
         $this->assertEquals($newOwner->id, $survey->created_by);
+        $this->assertNull($survey->pending_owner_email);
 
         // Old owner should retain full collaborator permissions
         $this->assertDatabaseHas('survey_permissions', [
@@ -130,6 +133,118 @@ class SurveySharingAndMediaTest extends TestCase
             'user_id' => $owner->id,
             'status' => 'accepted',
         ]);
+
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\SurveyOwnershipTransferredMail::class);
+    }
+
+    public function test_owner_can_invite_unregistered_user_to_transfer_ownership_and_claims_on_registration(): void
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+
+        $owner = User::factory()->create();
+        $survey = Survey::factory()->create(['created_by' => $owner->id]);
+
+        $pendingEmail = 'unregisteredowner@example.com';
+
+        $res = $this->actingAs($owner)->post(route('surveys.transfer_ownership', $survey), [
+            'new_owner_email' => $pendingEmail,
+        ]);
+
+        $res->assertRedirect();
+        $res->assertSessionHas('success');
+
+        $survey->refresh();
+        $this->assertEquals($owner->id, $survey->created_by);
+        $this->assertEquals($pendingEmail, $survey->pending_owner_email);
+
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\SurveyOwnershipTransferredMail::class, function ($mail) use ($pendingEmail) {
+            return $mail->isPending && $mail->inviteEmail === $pendingEmail;
+        });
+
+        // Settings page shows pending banner
+        $settingsRes = $this->actingAs($owner)->get(route('surveys.settings', $survey));
+        $settingsRes->assertStatus(200);
+        $settingsRes->assertSee('Pending Ownership Transfer');
+        $settingsRes->assertSee($pendingEmail);
+
+        // Log out owner before registering as new user
+        auth()->logout();
+
+        // New user registers
+        $regRes = $this->post(route('register', ['role' => 'independent']), [
+            'name' => 'Brand New Owner',
+            'email' => $pendingEmail,
+            'password' => 'Password123!',
+            'password_confirmation' => 'Password123!',
+        ]);
+
+        $regRes->assertRedirect(route('verification.notice'));
+
+        $newRegisteredUser = User::where('email', $pendingEmail)->first();
+        $this->assertNotNull($newRegisteredUser);
+
+        $survey->refresh();
+        $this->assertEquals($newRegisteredUser->id, $survey->created_by);
+        $this->assertNull($survey->pending_owner_email);
+
+        // Original owner receives full collaborator permissions
+        $this->assertDatabaseHas('survey_permissions', [
+            'survey_id' => $survey->id,
+            'user_id' => $owner->id,
+            'status' => 'accepted',
+        ]);
+    }
+
+    public function test_owner_can_cancel_pending_ownership_transfer(): void
+    {
+        $owner = User::factory()->create();
+        $survey = Survey::factory()->create([
+            'created_by' => $owner->id,
+            'pending_owner_email' => 'canceltarget@example.com',
+        ]);
+
+        $res = $this->actingAs($owner)->post(route('surveys.transfer_ownership.cancel', $survey));
+        $res->assertRedirect();
+        $res->assertSessionHas('success');
+
+        $survey->refresh();
+        $this->assertNull($survey->pending_owner_email);
+    }
+
+    public function test_owner_can_resend_pending_ownership_transfer_invite(): void
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+
+        $owner = User::factory()->create();
+        $survey = Survey::factory()->create([
+            'created_by' => $owner->id,
+            'pending_owner_email' => 'resendtarget@example.com',
+        ]);
+
+        $res = $this->actingAs($owner)->post(route('surveys.transfer_ownership.resend', $survey));
+        $res->assertRedirect();
+        $res->assertSessionHas('success');
+
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\SurveyOwnershipTransferredMail::class, function ($mail) {
+            return $mail->isPending && $mail->inviteEmail === 'resendtarget@example.com';
+        });
+    }
+
+    public function test_cannot_transfer_survey_ownership_to_self(): void
+    {
+        $owner = User::factory()->create(['email' => 'selfowner@example.com']);
+        $survey = Survey::factory()->create(['created_by' => $owner->id]);
+
+        $res = $this->actingAs($owner)->post(route('surveys.transfer_ownership', $survey), [
+            'new_owner_email' => 'selfowner@example.com',
+        ]);
+
+        $res->assertRedirect();
+        $res->assertSessionHas('error');
+
+        $survey->refresh();
+        $this->assertEquals($owner->id, $survey->created_by);
+        $this->assertNull($survey->pending_owner_email);
     }
 
     public function test_toggle_shared_data_activates_and_deactivates(): void
@@ -629,5 +744,73 @@ class SurveySharingAndMediaTest extends TestCase
 
         @unlink($tmpZipPath);
     }
+
+    public function test_submitting_survey_redirects_to_thank_you_page(): void
+    {
+        $creator = User::factory()->create();
+        $survey = Survey::factory()->create([
+            'created_by' => $creator->id,
+            'title' => 'Customer Experience 2026',
+            'is_paid' => false,
+            'json_schema' => json_encode([
+                ['name' => 'feedback', 'type' => 'text', 'label' => 'Your Feedback']
+            ])
+        ]);
+
+        // 1. Traditional POST submission
+        $res = $this->post(route('surveys.submit', $survey), [
+            'guest_name' => 'Alice Respondent',
+            'terms_and_conditions' => '1',
+            'feedback' => 'Great platform!'
+        ]);
+
+        $res->assertRedirect(route('surveys.thank_you', $survey));
+
+        // 2. JSON submission
+        $jsonRes = $this->post(route('surveys.submit', $survey), [
+            'guest_name' => 'Bob Respondent',
+            'terms_and_conditions' => '1',
+            'is_json_submission' => '1',
+            'json_data' => json_encode([
+                ['name' => 'feedback', 'userData' => 'Very intuitive and fast.']
+            ])
+        ]);
+
+        $jsonRes->assertJson([
+            'success' => true,
+            'redirect_url' => route('surveys.thank_you', $survey),
+        ]);
+    }
+
+    public function test_thank_you_page_renders_feature_showcase_and_cta(): void
+    {
+        $creator = User::factory()->create();
+        $survey = Survey::factory()->create([
+            'created_by' => $creator->id,
+            'title' => 'Academic Research Project',
+        ]);
+
+        // Guest visitor
+        $res = $this->get(route('surveys.thank_you', $survey));
+        $res->assertStatus(200);
+        $res->assertSee('Thank you for your feedback!');
+        $res->assertSee('Academic Research Project');
+        $res->assertSee('Discover KDAnalytiks');
+        $res->assertSee('Advanced Survey Builder');
+        $res->assertSee('Socius AI Statistics');
+        $res->assertSee('Plagiarism &amp; AI Check', false);
+        $res->assertSee('Research Proposal Studio');
+        $res->assertSee('Get Started Free');
+        $res->assertSee(route('register', ['role' => 'independent']));
+        $res->assertSee(route('login'));
+
+        // Authenticated user
+        $user = User::factory()->create();
+        $authRes = $this->actingAs($user)->get(route('surveys.thank_you', $survey));
+        $authRes->assertStatus(200);
+        $authRes->assertSee('Go to Dashboard');
+        $authRes->assertSee('Explore More Surveys');
+    }
 }
+
 

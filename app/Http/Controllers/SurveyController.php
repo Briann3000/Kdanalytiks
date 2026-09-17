@@ -503,46 +503,112 @@ class SurveyController extends Controller
         $this->authorizePrimaryOwner($survey);
 
         $request->validate([
-            'new_owner_email' => 'required|email|exists:users,email',
+            'new_owner_email' => 'required|email|max:255',
         ]);
 
-        $newOwner = \App\Models\User::where('email', strtolower(trim($request->new_owner_email)))->firstOrFail();
+        $cleanEmail = strtolower(trim($request->new_owner_email));
 
-        if ($newOwner->id === (int) $survey->created_by) {
-            return back()->with('error', 'This user is already the owner of this project.');
+        if (strtolower(trim(auth()->user()->email)) === $cleanEmail) {
+            return back()->with('error', 'You are already the primary owner of this project.');
         }
 
-        $oldOwnerId = $survey->created_by;
+        $newOwner = \App\Models\User::where('email', $cleanEmail)->first();
+
+        if ($newOwner) {
+            if ($newOwner->id === (int) $survey->created_by) {
+                return back()->with('error', 'This user is already the owner of this project.');
+            }
+
+            $oldOwnerId = $survey->created_by;
+
+            $survey->update([
+                'created_by' => $newOwner->id,
+                'pending_owner_email' => null,
+            ]);
+
+            \App\Models\SurveyPermission::where('survey_id', $survey->id)
+                ->where(function ($q) use ($newOwner, $cleanEmail) {
+                    $q->where('user_id', $newOwner->id)
+                        ->orWhereRaw('LOWER(TRIM(invite_email)) = ?', [$cleanEmail]);
+                })
+                ->delete();
+
+            if ($oldOwnerId) {
+                $oldOwner = \App\Models\User::find($oldOwnerId);
+                \App\Models\SurveyPermission::updateOrCreate(
+                    ['survey_id' => $survey->id, 'user_id' => $oldOwnerId],
+                    [
+                        'invite_email' => $oldOwner?->email,
+                        'status' => 'accepted',
+                        'permissions' => [
+                            'view_form' => true,
+                            'edit_form' => true,
+                            'view_submissions' => true,
+                            'add_submissions' => true,
+                            'edit_submissions' => true,
+                            'validate_submissions' => true,
+                            'delete_submissions' => true,
+                            'manage_project' => true,
+                        ]
+                    ]
+                );
+            }
+
+            try {
+                \Illuminate\Support\Facades\Mail::to($newOwner->email)->send(
+                    new \App\Mail\SurveyOwnershipTransferredMail($survey, auth()->user(), $newOwner, false)
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to send survey ownership transfer email: ' . $e->getMessage());
+            }
+
+            return redirect()->route('surveys.summary', $survey)->with('success', "Project ownership successfully transferred to {$newOwner->name} ({$newOwner->email}).");
+        } else {
+            $survey->update([
+                'pending_owner_email' => $cleanEmail,
+            ]);
+
+            try {
+                \Illuminate\Support\Facades\Mail::to($cleanEmail)->send(
+                    new \App\Mail\SurveyOwnershipTransferredMail($survey, auth()->user(), null, true, $cleanEmail)
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to send survey ownership transfer invite email: ' . $e->getMessage());
+            }
+
+            return back()->with('success', "Ownership transfer invitation sent to {$cleanEmail}. Ownership will automatically transfer once they create their account.");
+        }
+    }
+
+    public function cancelTransferOwnership(\App\Models\Survey $survey)
+    {
+        $this->authorizePrimaryOwner($survey);
 
         $survey->update([
-            'created_by' => $newOwner->id,
+            'pending_owner_email' => null,
         ]);
 
-        \App\Models\SurveyPermission::where('survey_id', $survey->id)
-            ->where('user_id', $newOwner->id)
-            ->delete();
+        return back()->with('success', 'Pending ownership transfer has been cancelled.');
+    }
 
-        if ($oldOwnerId) {
-            \App\Models\SurveyPermission::updateOrCreate(
-                ['survey_id' => $survey->id, 'user_id' => $oldOwnerId],
-                [
-                    'invite_email' => auth()->user()->email,
-                    'status' => 'accepted',
-                    'permissions' => [
-                        'view_form' => true,
-                        'edit_form' => true,
-                        'view_submissions' => true,
-                        'add_submissions' => true,
-                        'edit_submissions' => true,
-                        'validate_submissions' => true,
-                        'delete_submissions' => true,
-                        'manage_project' => true,
-                    ]
-                ]
-            );
+    public function resendTransferOwnershipInvite(\App\Models\Survey $survey)
+    {
+        $this->authorizePrimaryOwner($survey);
+
+        if (empty($survey->pending_owner_email)) {
+            return back()->with('error', 'No pending ownership transfer found for this survey.');
         }
 
-        return redirect()->route('surveys.summary', $survey)->with('success', "Project ownership successfully transferred to {$newOwner->name} ({$newOwner->email}).");
+        $email = $survey->pending_owner_email;
+
+        try {
+            \Illuminate\Support\Facades\Mail::to($email)->send(
+                new \App\Mail\SurveyOwnershipTransferredMail($survey, auth()->user(), null, true, $email)
+            );
+            return back()->with('success', "Ownership transfer invitation resent to {$email}.");
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Could not send invitation email: ' . $e->getMessage());
+        }
     }
 
     public function archive(\App\Models\Survey $survey)
@@ -795,6 +861,9 @@ class SurveyController extends Controller
         }
 
         $responses = $query->orderBy('created_at', 'desc')->paginate(15);
+        foreach ($responses as $r) {
+            $this->normalizeResponseMedia($r);
+        }
         $headers = $this->getSurveyAnalysisMetadata($survey);
         return view('surveys.data', compact('survey', 'responses', 'headers'));
     }
@@ -810,7 +879,109 @@ class SurveyController extends Controller
             abort(404, 'Response does not belong to this survey');
         }
 
+        $this->normalizeResponseMedia($response);
+
         return view('responses.detail', compact('survey', 'response'));
+    }
+
+    /**
+     * Normalize any base64 audio/video payloads in response answers into files on disk.
+     */
+    public function normalizeResponseMedia(\App\Models\Response $response): void
+    {
+        $response->loadMissing('answers');
+        foreach ($response->answers as $answer) {
+            if (empty($answer->value))
+                continue;
+            $val = $answer->value;
+            $updated = false;
+
+            if (str_starts_with($val, '[') || str_starts_with($val, '{')) {
+                $decoded = json_decode($val, true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as &$item) {
+                        if (isset($item['userData'])) {
+                            $uData = $item['userData'];
+                            $rawBase64 = null;
+                            if (is_array($uData) && count($uData) === 1 && is_string($uData[0])) {
+                                $rawBase64 = $uData[0];
+                            } elseif (is_string($uData)) {
+                                $rawBase64 = $uData;
+                            }
+
+                            if ($rawBase64 && str_starts_with($rawBase64, 'data:')) {
+                                $filePath = $this->saveBase64MediaToFile($rawBase64);
+                                if ($filePath) {
+                                    $item['userData'] = $filePath;
+                                    $updated = true;
+                                }
+                            }
+                        }
+                    }
+                    unset($item);
+                    if ($updated) {
+                        $answer->value = json_encode($decoded);
+                        $answer->save();
+                    }
+                }
+            } elseif (str_starts_with($val, 'data:')) {
+                $filePath = $this->saveBase64MediaToFile($val);
+                if ($filePath) {
+                    $answer->value = $filePath;
+                    $answer->save();
+                }
+            }
+        }
+    }
+
+    /**
+     * Decodes and saves a base64 media payload to disk.
+     */
+    public function saveBase64MediaToFile(string $dataUri, string $uploadDir = 'uploads'): ?string
+    {
+        if (!str_starts_with($dataUri, 'data:')) {
+            return null;
+        }
+
+        $parts = explode(';base64,', $dataUri, 2);
+        if (count($parts) !== 2) {
+            return null;
+        }
+
+        $header = $parts[0];
+        $base64Data = $parts[1];
+
+        if (!preg_match('/^data:(audio|video|image|application)\/([a-zA-Z0-9.+_-]+)/i', $header, $matches)) {
+            return null;
+        }
+
+        $category = strtolower($matches[1]);
+        $subType = strtolower($matches[2]);
+
+        if ($category !== 'audio' && $category !== 'video') {
+            return null;
+        }
+
+        $decoded = base64_decode($base64Data, true);
+        if ($decoded === false) {
+            return null;
+        }
+
+        $ext = match ($subType) {
+            'ogg', 'opus' => 'ogg',
+            'webm' => 'webm',
+            'mp4', 'm4a' => 'mp4',
+            'wav' => 'wav',
+            'mp3', 'mpeg' => 'mp3',
+            'aac' => 'aac',
+            default => ($category === 'audio' ? 'ogg' : 'webm')
+        };
+
+        $filename = 'res_' . bin2hex(random_bytes(16)) . '.' . $ext;
+        $relPath = $uploadDir . '/' . $filename;
+        \Illuminate\Support\Facades\Storage::disk('public')->put($relPath, $decoded);
+
+        return $relPath;
     }
 
     public function exportJson(\App\Models\Survey $survey)
@@ -1434,11 +1605,23 @@ class SurveyController extends Controller
 
                     $missingCount = $totalResponses - $answeredCount;
                     $isChartable = !in_array($field['type'], ['text', 'textarea', 'multimedia', 'signature', 'gps', 'qr', 'file', 'image', 'signature-pad', 'file-upload', 'header', 'paragraph', 'group', 'note', 'description', 'date', 'time', 'audio', 'video', 'photo', 'email']);
-                    $isAnalyzable = in_array($field['type'], ['textarea', 'text', 'radio', 'checkbox', 'select', 'select-one', 'select-multiple', 'radio-group', 'checkbox-group']);
+                    $isAnalyzable = in_array($field['type'], ['textarea', 'text', 'radio', 'checkbox', 'select', 'select-one', 'select-multiple', 'radio-group', 'checkbox-group', 'audio', 'video', 'multimedia', 'file']);
                     $canvasId = 'chart-' . $fieldId;
 
                     $stats = [];
                     $uniqueAnswers = [];
+                    $detailedResponses = [];
+                    $allTextCorpus = [];
+                    $transcribedCount = 0;
+                    $audioCount = 0;
+                    $videoCount = 0;
+                    $posSentiment = 0;
+                    $neuSentiment = 0;
+                    $negSentiment = 0;
+                    $themeCanvasId = 'qual-themes-' . $fieldId;
+                    $sentimentCanvasId = 'qual-sentiment-' . $fieldId;
+                    $topKeywords = [];
+
                     if ($isChartable) {
                         foreach ($answersList as $ans) {
                             if ($ans !== null && $ans !== '') {
@@ -1460,6 +1643,186 @@ class SurveyController extends Controller
                             'percentage' => $totalResponses > 0 ? round(($missingCount / $totalResponses) * 100, 1) : 0,
                             'is_missing' => true
                         ];
+                    } else {
+                        // Qualitative / Audio / Video / Open-ended analysis
+                        foreach ($responses as $response) {
+                            $fieldMap = $parsedResponseMap[$response->id] ?? null;
+                            $matchName = $fieldId;
+                            $rawVal = ($fieldMap && array_key_exists($matchName, $fieldMap)) ? $fieldMap[$matchName] : null;
+                            if ($rawVal === null || $rawVal === '')
+                                continue;
+
+                            $valStr = is_array($rawVal) ? (count($rawVal) === 1 && is_string($rawVal[0]) ? $rawVal[0] : json_encode($rawVal)) : (string) $rawVal;
+                            $valStr = trim($valStr);
+                            $isMediaFile = str_starts_with($valStr, 'uploads/') && preg_match('/\.(mp4|webm|ogg|ogv|mov|mp3|wav|m4a|aac)$/i', $valStr);
+                            $isAudio = $isMediaFile && preg_match('/\.(ogg|mp3|wav|m4a|aac)$/i', $valStr);
+                            $isVideo = $isMediaFile && preg_match('/\.(mp4|webm|ogv|mov)$/i', $valStr);
+                            if ($isAudio)
+                                $audioCount++;
+                            if ($isVideo)
+                                $videoCount++;
+
+                            $aiMeta = $response->ai_metadata ?? [];
+                            $transcriptions = $aiMeta['transcriptions'] ?? [];
+                            $transcription = $transcriptions[$valStr] ?? null;
+                            if ($transcription)
+                                $transcribedCount++;
+
+                            $textForAnalysis = $transcription ?: (!$isMediaFile && !str_contains($valStr, 'base64,') ? $valStr : '');
+                            if (!empty($textForAnalysis)) {
+                                $allTextCorpus[] = $textForAnalysis;
+
+                                $lower = strtolower($textForAnalysis);
+                                $posWords = ['good', 'great', 'effective', 'efficient', 'positive', 'beneficial', 'improve', 'successful', 'success', 'support', 'valuable', 'adequate', 'transparent', 'strong', 'sustainable', 'participat', 'collaborat', 'yes', 'agreed', 'sound'];
+                                $negWords = ['poor', 'bad', 'lack', 'challenge', 'difficult', 'problem', 'deficit', 'inefficient', 'insufficient', 'delay', 'weak', 'fail', 'unsustainable', 'limitation', 'corrupt', 'barrier', 'risk', 'no', 'scarce'];
+                                $posHits = 0;
+                                $negHits = 0;
+                                foreach ($posWords as $pw) {
+                                    if (str_contains($lower, $pw))
+                                        $posHits++;
+                                }
+                                foreach ($negWords as $nw) {
+                                    if (str_contains($lower, $nw))
+                                        $negHits++;
+                                }
+
+                                if ($posHits > $negHits) {
+                                    $posSentiment++;
+                                } elseif ($negHits > $posHits) {
+                                    $negSentiment++;
+                                } else {
+                                    $neuSentiment++;
+                                }
+                            }
+
+                            $detailedResponses[] = [
+                                'response_id' => $response->id,
+                                'respondent_name' => $response->respondent?->name ?? $response->guest_name ?? ('Respondent #' . $response->id),
+                                'value' => $valStr,
+                                'is_media' => $isMediaFile,
+                                'media_type' => $isVideo ? 'video' : ($isAudio ? 'audio' : 'file'),
+                                'transcription' => $transcription,
+                                'created_at' => $response->created_at?->format('M d, Y H:i') ?? null,
+                            ];
+                        }
+
+                        // Extract Key Themes / Words
+                        $stopWords = [
+                            'the',
+                            'and',
+                            'to',
+                            'of',
+                            'a',
+                            'in',
+                            'is',
+                            'that',
+                            'for',
+                            'it',
+                            'as',
+                            'was',
+                            'with',
+                            'be',
+                            'by',
+                            'on',
+                            'not',
+                            'he',
+                            'i',
+                            'this',
+                            'have',
+                            'from',
+                            'at',
+                            'which',
+                            'or',
+                            'but',
+                            'an',
+                            'they',
+                            'we',
+                            'are',
+                            'you',
+                            'were',
+                            'their',
+                            'has',
+                            'had',
+                            'will',
+                            'would',
+                            'can',
+                            'could',
+                            'should',
+                            'our',
+                            'my',
+                            'so',
+                            'if',
+                            'all',
+                            'any',
+                            'no',
+                            'do',
+                            'more',
+                            'when',
+                            'been',
+                            'there',
+                            'who',
+                            'what',
+                            'up',
+                            'out',
+                            'so',
+                            'them',
+                            'some',
+                            'me',
+                            'your',
+                            'than',
+                            'into',
+                            'about',
+                            'other',
+                            'then',
+                            'these',
+                            'its',
+                            'also',
+                            'very',
+                            'just',
+                            'probe',
+                            'how',
+                            'institution',
+                            'applied',
+                            'practices',
+                            'practices',
+                            'extent',
+                            'institutional',
+                            'resources'
+                        ];
+                        $wordFreq = [];
+                        foreach ($allTextCorpus as $txt) {
+                            $cleaned = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', mb_strtolower($txt));
+                            $words = preg_split('/\s+/', $cleaned, -1, PREG_SPLIT_NO_EMPTY);
+                            foreach ($words as $w) {
+                                if (mb_strlen($w) > 3 && !in_array($w, $stopWords)) {
+                                    $wordFreq[$w] = ($wordFreq[$w] ?? 0) + 1;
+                                }
+                            }
+                        }
+                        arsort($wordFreq);
+                        $topKeywords = array_slice($wordFreq, 0, 8, true);
+
+                        // 1. Theme Frequency Chart
+                        if (!empty($topKeywords)) {
+                            $chartConfigs[] = [
+                                'canvas_id' => $themeCanvasId,
+                                'labels' => array_map('ucfirst', array_keys($topKeywords)),
+                                'data' => array_values($topKeywords),
+                                'question_name' => 'Key Themes: ' . $label,
+                                'short_theme' => 'Themes'
+                            ];
+                        }
+
+                        // 2. Sentiment Doughnut Chart
+                        if (($posSentiment + $neuSentiment + $negSentiment) > 0) {
+                            $chartConfigs[] = [
+                                'canvas_id' => $sentimentCanvasId,
+                                'labels' => ['Positive Sentiment', 'Neutral / Factual', 'Critical / Needs Attention'],
+                                'data' => [$posSentiment, $neuSentiment, $negSentiment],
+                                'question_name' => 'Sentiment: ' . $label,
+                                'short_theme' => 'Sentiment'
+                            ];
+                        }
                     }
 
                     $isLikertLike = false;
@@ -1517,9 +1880,10 @@ class SurveyController extends Controller
                                 \Illuminate\Support\Facades\Cache::put($cacheKeyDefault, $aiInsight, 86400);
                             }
                         } elseif ($isAnalyzable) {
-                            // Qualitative Analysis - FREE (Standard)
-                            $aiInsight = \Illuminate\Support\Facades\Cache::remember("qualitative_analysis_{$survey->id}_{$fieldId}", 86400, function () use ($answersList, $label) {
-                                return app(\App\Services\QualitativeAnalysisService::class)->analyzeResponses($answersList, $label);
+                            // Qualitative Analysis - Pass text corpus or answers
+                            $analysisInput = !empty($allTextCorpus) ? $allTextCorpus : $answersList;
+                            $aiInsight = \Illuminate\Support\Facades\Cache::remember("qualitative_analysis_{$survey->id}_{$fieldId}", 86400, function () use ($analysisInput, $label) {
+                                return app(\App\Services\QualitativeAnalysisService::class)->analyzeResponses($analysisInput, $label);
                             });
                         } elseif ($isChartable && $canAnalyze) {
                             // Quantitative AI Trend Interpretation - PREMIUM
@@ -1558,7 +1922,20 @@ class SurveyController extends Controller
                     'answered_count' => $answeredCount,
                     'missing_count' => $missingCount,
                     'chartUrl' => $chartUrl,
-                    'aiInsight' => $aiInsight
+                    'aiInsight' => $aiInsight,
+                    'detailed_responses' => $detailedResponses,
+                    'is_audio_video' => ($audioCount + $videoCount) > 0 || in_array($field['type'], ['audio', 'video']),
+                    'audio_count' => $audioCount,
+                    'video_count' => $videoCount,
+                    'transcribed_count' => $transcribedCount,
+                    'top_keywords' => $topKeywords,
+                    'sentiment' => [
+                        'positive' => $posSentiment,
+                        'neutral' => $neuSentiment,
+                        'negative' => $negSentiment,
+                    ],
+                    'theme_canvas_id' => $themeCanvasId,
+                    'sentiment_canvas_id' => $sentimentCanvasId,
                 ];
             }
         } else {
@@ -3050,6 +3427,60 @@ class SurveyController extends Controller
         abort(400, 'Unsupported export format.');
     }
 
+    public function serveSurveyMedia(Request $request, \App\Models\Survey $survey)
+    {
+        $hasAccess = false;
+        $token = $request->query('token') ?? $request->header('X-Survey-Token');
+
+        if ($token && ($survey->share_data_token === $token || $survey->share_token === $token || $survey->share_report_token === $token)) {
+            $hasAccess = true;
+        } elseif ($survey->public_data_enabled && $survey->share_data_token) {
+            $hasAccess = true;
+        } elseif (auth()->check()) {
+            try {
+                $this->authorizeOwner($survey);
+                $hasAccess = true;
+            } catch (\Exception $e) {
+                $hasAccess = false;
+            }
+        }
+
+        if (!$hasAccess) {
+            abort(403, 'Unauthorized to access this media file.');
+        }
+
+        $filePath = $request->query('path');
+        if (empty($filePath)) {
+            abort(400, 'File path is required.');
+        }
+
+        $filePath = ltrim(str_replace(['..', '\\'], ['', '/'], $filePath), '/');
+
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($filePath)) {
+            $absolutePath = \Illuminate\Support\Facades\Storage::disk('public')->path($filePath);
+        } elseif (file_exists(storage_path('app/public/' . $filePath))) {
+            $absolutePath = storage_path('app/public/' . $filePath);
+        } elseif (file_exists(public_path('storage/' . $filePath))) {
+            $absolutePath = public_path('storage/' . $filePath);
+        } else {
+            abort(404, 'Media file not found on server.');
+        }
+
+        $mimeType = @mime_content_type($absolutePath) ?: 'application/octet-stream';
+        $filename = basename($absolutePath);
+
+        if ($request->boolean('download')) {
+            return response()->download($absolutePath, $filename, [
+                'Content-Type' => $mimeType,
+            ]);
+        }
+
+        return response()->file($absolutePath, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+        ]);
+    }
+
     public function serveMedia(Request $request, \App\Models\Survey $survey, \App\Models\Response $response)
     {
         $hasAccess = false;
@@ -3513,6 +3944,27 @@ class SurveyController extends Controller
                     }
                 }
 
+                // Process any base64 audio/video payloads into disk files
+                foreach ($jsonData as &$item) {
+                    if (!isset($item['userData']))
+                        continue;
+                    $uData = $item['userData'];
+                    $rawBase64 = null;
+                    if (is_array($uData) && count($uData) === 1 && is_string($uData[0])) {
+                        $rawBase64 = $uData[0];
+                    } elseif (is_string($uData)) {
+                        $rawBase64 = $uData;
+                    }
+
+                    if ($rawBase64 && str_starts_with($rawBase64, 'data:')) {
+                        $savedPath = $this->saveBase64MediaToFile($rawBase64, $uploadDir);
+                        if ($savedPath) {
+                            $item['userData'] = $savedPath;
+                        }
+                    }
+                }
+                unset($item);
+
                 $answer = new \App\Models\Answer();
                 $answer->response_id = $response->id;
                 $answer->question_id = null;
@@ -3640,12 +4092,15 @@ class SurveyController extends Controller
                 return redirect()->to($claimUrl);
             }
 
-            if ($request->has('is_json_submission')) {
+            if ($request->has('is_json_submission') || $request->wantsJson()) {
                 session()->flash('success', 'Thank you for completing the survey!' . $rewardMessage);
-                return response()->json(['success' => true]);
+                return response()->json([
+                    'success' => true,
+                    'redirect_url' => route('surveys.thank_you', $survey),
+                ]);
             }
 
-            return redirect()->back()->with('success', 'Thank you for completing the survey!' . $rewardMessage);
+            return redirect()->route('surveys.thank_you', $survey)->with('success', 'Thank you for completing the survey!' . $rewardMessage);
 
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\DB::rollBack();
@@ -3887,9 +4342,16 @@ class SurveyController extends Controller
             return response()->json(['success' => false, 'message' => 'File path is required'], 400);
         }
 
-        // Construct absolute path
+        if (str_starts_with($filePath, 'data:')) {
+            $savedFile = $this->saveBase64MediaToFile($filePath);
+            if ($savedFile) {
+                $filePath = $savedFile;
+            }
+        }
+
         $absolutePath = storage_path('app/public/' . $filePath);
-        if (!file_exists($absolutePath)) {
+
+        if (empty($absolutePath) || !file_exists($absolutePath)) {
             return response()->json(['success' => false, 'message' => 'Media file not found on server'], 404);
         }
 
@@ -5810,6 +6272,11 @@ class SurveyController extends Controller
         }
 
         return view('surveys.claim', compact('survey'));
+    }
+
+    public function thankYou(\App\Models\Survey $survey)
+    {
+        return view('surveys.thank_you', compact('survey'));
     }
 
     public static function formatResponseValue($val, $field)

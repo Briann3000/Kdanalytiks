@@ -676,7 +676,7 @@
         @php
             // Show sidebar for all authenticated pages except specific full-width ones (like taking a survey)
             // Also explicitly hide on landing, login, register, public sharing, and email verification notice/verify pages
-            $excludedRoutes = ['login', 'register', 'login.role', 'password.request', 'password.reset', 'surveys.show', 'surveys.submit', 'surveys.shared_data', 'surveys.shared_data.*', 'verification.notice', 'verification.verify', 'admin.login', 'organization.login', 'independent.login', 'respondent.login', 'admin.register', 'organization.register', 'independent.register', 'respondent.register', 'help'];
+            $excludedRoutes = ['login', 'register', 'login.role', 'password.request', 'password.reset', 'surveys.show', 'surveys.submit', 'surveys.thank_you', 'surveys.shared_data', 'surveys.shared_data.*', 'verification.notice', 'verification.verify', 'admin.login', 'organization.login', 'independent.login', 'respondent.login', 'admin.register', 'organization.register', 'independent.register', 'respondent.register', 'help'];
             $isWorkspace = auth()->check() && auth()->user()->hasVerifiedEmail() && !request()->routeIs($excludedRoutes);
         @endphp
 

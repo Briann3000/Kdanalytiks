@@ -184,13 +184,18 @@
                             }
 
                             if (is_array($val) && !$isLikert) {
-                                $val = implode(', ', array_map(function ($v) {
-                                    return is_array($v) ? json_encode($v) : (string) $v;
-                                }, $val));
+                                if (count($val) === 1 && is_string($val[0]) && (str_starts_with($val[0], 'data:audio/') || str_starts_with($val[0], 'data:video/') || str_starts_with($val[0], 'uploads/'))) {
+                                    $val = $val[0];
+                                } else {
+                                    $val = implode(', ', array_map(function ($v) {
+                                        return is_array($v) ? json_encode($v) : (string) $v;
+                                    }, $val));
+                                }
                             }
 
                             $valStr = is_string($val) ? trim($val) : (is_array($val) ? json_encode($val) : (string) $val);
-                            $isMedia = is_string($valStr) && str_starts_with($valStr, 'uploads/') && preg_match('/\.(mp4|webm|ogg|ogv|mov|mp3|wav|m4a|aac)$/i', $valStr);
+                            $isBase64Media = is_string($valStr) && (str_starts_with($valStr, 'data:audio/') || str_starts_with($valStr, 'data:video/'));
+                            $isMedia = (is_string($valStr) && str_starts_with($valStr, 'uploads/') && preg_match('/\.(mp4|webm|ogg|ogv|mov|mp3|wav|m4a|aac)$/i', $valStr)) || $isBase64Media;
                             $questionIdUnique = 'q_' . $response->id . '_' . $field['name'];
                         @endphp
 
@@ -220,8 +225,8 @@
                             <div class="pt-2 border-t border-gray-50">
                                 @if($isMedia)
                                     @php
-                                        $mediaUrl = route('surveys.responses.media', [$survey, $response, 'path' => $valStr]);
-                                        $mediaDownloadUrl = route('surveys.responses.media', [$survey, $response, 'path' => $valStr, 'download' => 1]);
+                                        $mediaUrl = $isBase64Media ? $valStr : route('surveys.responses.media', [$survey, $response, 'path' => $valStr]);
+                                        $mediaDownloadUrl = $isBase64Media ? $valStr : route('surveys.responses.media', [$survey, $response, 'path' => $valStr, 'download' => 1]);
                                         $transcriptionText = $transcriptions[$valStr] ?? null;
                                     @endphp
                                     <div x-data="{ 
@@ -419,7 +424,7 @@
                                             </tbody>
                                         </table>
                                     </div>
-                                @elseif (str_contains($valStr, 'base64,'))
+                                @elseif (str_contains($valStr, 'base64,') && !str_starts_with($valStr, 'data:audio/') && !str_starts_with($valStr, 'data:video/'))
                                     <a href="javascript:void(0)"
                                         onclick="Swal.fire({title:'Signature', imageUrl:'{{ $valStr }}', imageAlt:'Signature', customClass: {image: 'rounded-xl border border-gray-100 shadow-lg'}})"
                                         class="inline-flex items-center text-[#2271b1] hover:text-[#135e96] font-bold bg-zinc-50 px-3.5 py-2 rounded-xl border border-zinc-200 text-xs">
