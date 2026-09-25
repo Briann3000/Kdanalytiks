@@ -150,7 +150,7 @@
                     </a>
                     <a href="{{ route('surveys.import') }}" 
                        class="block px-4 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 rounded-xl transition-colors">
-                        {{ __('Import') }}
+                        {{ __('Import Data') }}
                     </a>
                 </div>
             </div>

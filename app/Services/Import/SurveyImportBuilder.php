@@ -19,38 +19,215 @@ class SurveyImportBuilder
     use CleansImportValues;
 
     /**
-     * Infer the question type from a variable definition.
-     *
-     * Rules:
-     *   - No value_labels → 'text'
-     *   - Has value_labels AND 3-7 numeric keys → 'rating' (Likert scale)
-     *   - Has value_labels AND other count → 'select_one' (MCQ / select one)
+     * Smartly infer the survey question type using:
+     * 1. Variable labels and name keywords (e.g. Rate, Age, Lat/Long, Comments)
+     * 2. Actual column data pattern analysis (numbers, decimals, dates, Likert scales, multi-select delimiters)
+     * 3. Statistical distribution & cardinality (Binary/Radio vs Select vs Textarea vs Text)
      */
-    public function inferType(array $variable): string
+    public function inferType(array $variable, array $columnValues = []): string
     {
+        $label = strtolower(trim((string) ($variable['label'] ?? '')));
+        $name = strtolower(trim((string) ($variable['name'] ?? '')));
         $valueLabels = $variable['value_labels'] ?? [];
         $typeFormat = strtolower($variable['type_format'] ?? $variable['type'] ?? '');
 
+        // 1. Check explicit format metadata (e.g. from SPSS or typed exports)
         if (str_contains($typeFormat, 'date') || str_contains($typeFormat, 'time')) {
             return 'date';
         }
 
-        if (empty($valueLabels)) {
-            if (str_contains($typeFormat, 'num') || str_contains($typeFormat, 'int') || str_contains($typeFormat, 'double') || str_contains($typeFormat, 'float')) {
-                return (str_contains($typeFormat, 'float') || str_contains($typeFormat, 'double') || str_contains($typeFormat, 'dec')) ? 'decimal' : 'number';
+        // 2. Extract non-blank column values
+        $nonBlank = array_values(array_filter($columnValues, fn($v) => $v !== null && trim((string) $v) !== ''));
+
+        // If no values provided, fallback to analyzing label & valueLabels
+        if (empty($nonBlank)) {
+            if (!empty($valueLabels)) {
+                $count = count($valueLabels);
+                $keys = array_keys($valueLabels);
+                $isNumericKeys = count(array_filter($keys, 'is_numeric')) === count($keys);
+
+                $likertPhrases = ['strongly agree', 'agree', 'neutral', 'disagree', 'strongly disagree', 'very satisfied', 'satisfied', 'dissatisfied', 'very dissatisfied', 'very good', 'good', 'fair', 'poor', 'very poor', 'excellent', 'never', 'rarely', 'sometimes', 'often', 'always'];
+                $likertHits = 0;
+                foreach ($valueLabels as $lbl) {
+                    if (in_array(strtolower(trim((string) $lbl)), $likertPhrases)) {
+                        $likertHits++;
+                    }
+                }
+
+                if (($likertHits >= 2 || $isNumericKeys) && $count >= 3 && $count <= 7) {
+                    return 'rating';
+                }
+
+                if ($count <= 6)
+                    return 'radio';
+                if ($count <= 50)
+                    return 'select';
             }
             return 'text';
         }
 
-        $keys = array_keys($valueLabels);
-        $isNumeric = count(array_filter($keys, 'is_numeric')) === count($keys);
-        $count = count($valueLabels);
+        // 3. Keyword Heuristics on Question Label / Name
+        // Geo-coordinates & Decimals
+        if (
+            preg_match('/\b(latitude|lat|longitude|long|lng|altitude|elevation|gps|coordinate|percentage|percent|margin|ratio|gpa|average|avg|rate_per)\b/i', $label) ||
+            preg_match('/^(lat|latitude|long|longitude|lng|alt|altitude|elevation|gps|percentage|gpa)$/i', $name)
+        ) {
+            return 'decimal';
+        }
 
-        if ($isNumeric && $count >= 3 && $count <= 7) {
+        // Long Text / Textarea
+        if (
+            preg_match('/\b(comment|comments|feedback|remarks|suggestion|suggestions|explain|elaborate|describe|reason|narrative|opinion|why)\b/i', $label) ||
+            preg_match('/(comment|feedback|remark|suggestion|explain|describe)/i', $name)
+        ) {
+            return 'textarea';
+        }
+
+        // Date detection by keyword
+        if (
+            preg_match('/\b(date|timestamp|dob|birthday|submission_date|start_date|end_date)\b/i', $label) ||
+            preg_match('/(date|timestamp|dob|created_at)/i', $name)
+        ) {
+            return 'date';
+        }
+
+        // 4. Data Pattern Inspection
+        $sampleCount = min(count($nonBlank), 200);
+        $sample = array_slice($nonBlank, 0, $sampleCount);
+
+        // Date inspection: test if majority of values are valid dates
+        $dateMatchCount = 0;
+        foreach ($sample as $val) {
+            $strVal = trim((string) $val);
+            if (
+                preg_match('/^\d{4}[-\/\.]\d{1,2}[-\/\.]\d{1,2}/', $strVal) ||
+                preg_match('/^\d{1,2}[-\/\.]\d{1,2}[-\/\.]\d{2,4}/', $strVal)
+            ) {
+                if (strtotime($strVal) !== false) {
+                    $dateMatchCount++;
+                }
+            }
+        }
+        if ($dateMatchCount >= count($sample) * 0.7) {
+            return 'date';
+        }
+
+        // Multi-select Checkbox detection: check for delimiters like commas / semicolons / pipes
+        $delimitedCount = 0;
+        foreach ($sample as $val) {
+            $strVal = (string) $val;
+            if (preg_match('/[,;|]/', $strVal) && !is_numeric($strVal)) {
+                $delimitedCount++;
+            }
+        }
+        if ($delimitedCount >= count($sample) * 0.4) {
+            return 'checkbox';
+        }
+
+        // Numeric Inspection
+        $numericCount = count(array_filter($sample, 'is_numeric'));
+        $isMostlyNumeric = ($numericCount >= count($sample) * 0.9);
+
+        if ($isMostlyNumeric) {
+            $numericValues = array_map('floatval', array_filter($sample, 'is_numeric'));
+            $hasDecimals = false;
+            foreach ($sample as $v) {
+                if (is_numeric($v) && str_contains((string) $v, '.') && !preg_match('/\.0+$/', (string) $v)) {
+                    $hasDecimals = true;
+                    break;
+                }
+            }
+
+            if ($hasDecimals) {
+                return 'decimal';
+            }
+
+            $min = min($numericValues);
+            $max = max($numericValues);
+            $uniqueInts = array_unique($numericValues);
+            $uniqueCount = count($uniqueInts);
+
+            // Likert rating scale check: integers with a small scale range (e.g. 1-5, 1-7, 1-10)
+            $isLikertLabel = (bool) preg_match('/\b(rate|rating|scale|satisfaction|how satisfied|extent|level of|agreement|strongly)\b/i', $label);
+            if ($isLikertLabel && $min >= 0 && $max <= 10) {
+                return 'rating';
+            }
+            if ($min >= 1 && $max <= 5 && $uniqueCount <= 5) {
+                return 'rating';
+            }
+            if ($min >= 1 && $max <= 7 && $uniqueCount <= 7) {
+                return 'rating';
+            }
+
+            // General integer: Age, count, quantity, index
+            return 'number';
+        }
+
+        // 5. Categorical String Inspection
+        $uniqueValues = array_values(array_unique(array_map('trim', $sample)));
+        $uniqueCount = count($uniqueValues);
+
+        // Check for Likert scale wording in text values (e.g. Strongly Agree, Neutral, Disagree)
+        $likertPhrases = ['strongly agree', 'agree', 'neutral', 'disagree', 'strongly disagree', 'very satisfied', 'satisfied', 'dissatisfied', 'very dissatisfied', 'very good', 'good', 'fair', 'poor', 'very poor', 'excellent', 'never', 'rarely', 'sometimes', 'often', 'always'];
+        $likertHits = 0;
+        foreach ($uniqueValues as $uVal) {
+            if (in_array(strtolower($uVal), $likertPhrases)) {
+                $likertHits++;
+            }
+        }
+        if ($likertHits >= 2 && $uniqueCount <= 7) {
             return 'rating';
         }
 
-        return 'select_one';
+        // Binary / Two options (e.g. Yes/No, Male/Female, True/False)
+        if ($uniqueCount === 2) {
+            return 'radio';
+        }
+
+        // 3 to 6 distinct options (e.g. Low/Medium/High, Wards with 3-6 items, Marital status)
+        if ($uniqueCount >= 3 && $uniqueCount <= 6) {
+            return 'radio';
+        }
+
+        // 7 to 50 distinct categorical options (e.g. 15 Wards, 47 Counties, 20 Departments)
+        if ($uniqueCount >= 7 && $uniqueCount <= 50) {
+            return 'select';
+        }
+
+        // High cardinality / Free-form text
+        // Check average string length
+        $totalLength = array_sum(array_map('strlen', $sample));
+        $avgLength = $totalLength / max(count($sample), 1);
+        if ($avgLength > 50) {
+            return 'textarea';
+        }
+
+        return 'text';
+    }
+
+    /**
+     * Determine if a column should be included by default (detect obvious metadata like system IDs/UUIDs).
+     */
+    public function shouldIncludeByDefault(array $variable): bool
+    {
+        $name = strtolower(trim((string) ($variable['name'] ?? '')));
+        $label = strtolower(trim((string) ($variable['label'] ?? '')));
+
+        // Standard metadata columns often present in survey tools (Kobo, ODK, Qualtrics, SurveyMonkey)
+        $metadataPatterns = [
+            '/^(_id|_uuid|uuid|instanceid|instance_id|submission_id)$/i',
+            '/^(_submission_time|_submitted_by|_status|_version_)$/i',
+            '/^(deviceid|phonenumber|simserial|subscriberid)$/i',
+            '/^(meta:instanceid|meta:rootuuid)$/i',
+        ];
+
+        foreach ($metadataPatterns as $pattern) {
+            if (preg_match($pattern, $name) || preg_match($pattern, $label)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -210,6 +387,11 @@ class SurveyImportBuilder
 
                     // Clean SPSS/Excel artifacts including #NULL!, SYSMIS markers, whitespace
                     $rawValue = $this->cleanValue($rawValue);
+
+                    // If question is a date, format Excel serial if needed
+                    if (($col['type'] ?? '') === 'date') {
+                        $rawValue = $this->formatCellValue($rawValue, 'date');
+                    }
 
                     // Resolve value label if available, else use raw value
                     $valueLabels = $col['value_labels'] ?? [];

@@ -851,12 +851,20 @@
                                         </div>
                                     </div>
 
-                                    {{-- Delete --}}
-                                    <button @click="deleteKbRule(rule.id)"
-                                        class="w-7 h-7 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover/rule:opacity-100 focus:opacity-100"
-                                        title="{{ __('Delete Rule') }}">
-                                        <i class="fa-solid fa-trash text-xs"></i>
-                                    </button>
+                                    {{-- Actions (Apply Now + Delete) --}}
+                                    <div class="flex items-center gap-1.5 shrink-0">
+                                        <button @click="applyKbRuleToPrompt(rule)"
+                                            class="px-2.5 py-1 rounded-xl bg-[#2271b1]/20 hover:bg-[#2271b1] text-[#2271b1] hover:text-white border border-[#2271b1]/30 text-[11px] font-bold transition-all flex items-center gap-1 shadow-xs cursor-pointer"
+                                            title="{{ __('Apply this specific instruction to prompt') }}">
+                                            <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
+                                            <span>{{ __('Apply Now') }}</span>
+                                        </button>
+                                        <button @click="deleteKbRule(rule.id)"
+                                            class="w-7 h-7 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover/rule:opacity-100 focus:opacity-100 cursor-pointer"
+                                            title="{{ __('Delete Rule') }}">
+                                            <i class="fa-solid fa-trash text-xs"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
                         </div>

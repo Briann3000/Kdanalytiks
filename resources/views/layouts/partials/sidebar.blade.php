@@ -265,8 +265,11 @@
                                 </div>
                                 <div class="relative" x-data="{ open: false }" @mouseenter="open = true"
                                     @mouseleave="open = false">
-                                    <a href="{{ route('surveys.create') }}"
-                                        class="block px-3 py-1.5 text-sm  text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-lg">{{ __('Create Survey') }}</a>
+                                    <a href="javascript:void(0)" @click.prevent="open = !open"
+                                        class="flex items-center justify-between px-3 py-1.5 text-sm text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-lg cursor-pointer">
+                                        <span>{{ __('Create Survey') }}</span>
+                                        <i class="fa-solid fa-chevron-right text-[8px] text-zinc-400 ml-2"></i>
+                                    </a>
                                     <!-- Nested Flyout -->
                                     <div class="absolute left-full top-0 ml-1 flyout-menu shadow-2xl border border-[#2c3338] p-3 min-w-[140px]"
                                         style="border-radius: 0.75rem; display: none; z-index: 100000;" x-show="open">
@@ -347,8 +350,12 @@
 
                         <div class="sidebar-item relative mt-1" @mouseenter="setFlyout($el, 'admin_create')"
                             @mouseleave="scheduleClearFlyout()">
-                            <a href="{{ route('surveys.create') }}"
-                                class="block py-1 text-xs font-bold tracking-wide {{ request()->routeIs('surveys.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Create Survey') }}</a>
+                            <a href="javascript:void(0)"
+                                @click.prevent="hoverItem === 'admin_create' ? hoverItem = null : setFlyout($el.closest('.sidebar-item'), 'admin_create')"
+                                class="flex items-center justify-between py-1 text-xs font-bold tracking-wide {{ request()->routeIs('surveys.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }} cursor-pointer hover:text-[#72aee6]">
+                                <span>{{ __('Create Survey') }}</span>
+                                <i class="fa-solid fa-chevron-right text-[8px] text-zinc-400 ml-1"></i>
+                            </a>
                             <template x-teleport="body">
                                 <div class="flyout-menu shadow-2xl border border-[#2c3338] p-3 min-w-[140px]"
                                     x-show="hoverItem === 'admin_create'"
@@ -492,8 +499,9 @@
                                             <div class="relative" x-data="{ nCreate: false, nCreateTop: 0, nCreateLeft: 0 }"
                                                 @mouseenter="const r = $el.getBoundingClientRect(); nCreateTop = r.top; nCreateLeft = r.right - 5; nCreate = true"
                                                 @mouseleave="nCreate = false">
-                                                <a href="{{ route('surveys.create') }}"
-                                                    class="flex items-center justify-between px-3 py-1.5 text-xs font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-lg">
+                                                <a href="javascript:void(0)"
+                                                    @click.prevent="const r = $el.getBoundingClientRect(); nCreateTop = r.top; nCreateLeft = r.right - 5; nCreate = !nCreate"
+                                                    class="flex items-center justify-between px-3 py-1.5 text-xs font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-lg cursor-pointer">
                                                     <span>{{ __('Create Survey') }}</span>
                                                     <i class="fa-solid fa-chevron-right text-[8px] text-zinc-400 ml-2"></i>
                                                 </a>
@@ -511,7 +519,9 @@
                                                         <a href="{{ route('library.templates') }}"
                                                             class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Template') }}</a>
                                                         <a href="{{ route('surveys.import') }}"
-                                                            class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Import') }}</a>
+                                                            class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">
+                                                            <i
+                                                                class="fa-solid fa-file-import mr-1 opacity-70"></i>{{ __('Import Data') }}</a>
                                                     </div>
                                                 </div>
                                             </div>
@@ -533,15 +543,17 @@
                                 </div>
 
                                 <div class="mb-1 mt-1">
-                                    <a href="{{ route('surveys.create') }}"
-                                        class="block py-1 text-xs font-bold tracking-wide {{ request()->routeIs('surveys.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">{{ __('Create Survey') }}</a>
+                                    <div
+                                        class="block py-1 text-xs font-bold tracking-wide {{ request()->routeIs('surveys.create') ? 'text-[#f0f0f1] font-semibold' : 'text-[#f0f0f1]' }}">
+                                        {{ __('Create Survey') }}</div>
                                     <div class="pl-4 space-y-1 my-1 border-l-2 border-[#2c3338] ml-1">
                                         <a href="{{ route('surveys.create') }}"
                                             class="block py-1 text-[10px] font-bold tracking-wider text-[#f0f0f1] hover:text-[#72aee6] transition-colors">{{ __('Blank') }}</a>
                                         <a href="{{ route('library.templates') }}"
                                             class="block py-1 text-[10px] font-bold tracking-wider text-[#f0f0f1] hover:text-[#72aee6] transition-colors">{{ __('Template') }}</a>
                                         <a href="{{ route('surveys.import') }}"
-                                            class="block py-1 text-[10px] font-bold tracking-wider text-[#f0f0f1] hover:text-[#72aee6] transition-colors">{{ __('Import') }}</a>
+                                            class="block py-1 text-[10px] font-bold tracking-wider text-[#f0f0f1] hover:text-[#72aee6] transition-colors">
+                                            <i class="fa-solid fa-file-import mr-1 opacity-70"></i>{{ __('Import Data') }}</a>
                                     </div>
                                 </div>
                             </div>
@@ -753,9 +765,11 @@
                 <div class="sidebar-item relative" @mouseenter="setFlyout($el, 'quick_create')"
                     @mouseleave="scheduleClearFlyout()">
                     @if(in_array($role, ['organization', 'independent', 'admin']))
-                        <a href="{{ route('surveys.create') }}"
-                            class="flex items-center justify-center w-full py-2.5 px-3 bg-[#2271b1] hover:bg-[#101417] hover:text-[#72aee6] text-[#f0f0f1] text-[11px] font-bold tracking-wider rounded-lg text-center shadow-md transition-all whitespace-nowrap">
+                        <a href="javascript:void(0)"
+                            @click.prevent="hoverItem === 'quick_create' ? hoverItem = null : setFlyout($el.closest('.sidebar-item'), 'quick_create')"
+                            class="flex items-center justify-center w-full py-2.5 px-3 bg-[#2271b1] hover:bg-[#101417] hover:text-[#72aee6] text-[#f0f0f1] text-[11px] font-bold tracking-wider rounded-lg text-center shadow-md transition-all whitespace-nowrap cursor-pointer">
                             <i class="fa-solid fa-plus-circle mr-1.5 shrink-0"></i> <span>{{ __('Create Survey') }}</span>
+                            <i class="fa-solid fa-chevron-right text-[8px] ml-1.5 opacity-70"></i>
                         </a>
                     @endif
                     <template x-teleport="body">
@@ -773,7 +787,8 @@
                                 <a href="{{ route('library.templates') }}"
                                     class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Template') }}</a>
                                 <a href="{{ route('surveys.import') }}"
-                                    class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">{{ __('Import') }}</a>
+                                    class="block px-3 py-1.5 text-[10px] font-bold text-[#f0f0f1] hover:bg-[#101417] hover:text-[#72aee6] rounded-md transition-colors">
+                                    <i class="fa-solid fa-file-import mr-1 opacity-70"></i>{{ __('Import Data') }}</a>
                             </div>
                         </div>
                     </template>

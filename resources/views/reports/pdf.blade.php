@@ -206,6 +206,9 @@
             if (str_contains($labelLower, 'respondent id') || str_contains($labelLower, 'respondent_id')) {
                 continue;
             }
+            if (empty($item['isChartable']) && empty($item['isAnalyzable'])) {
+                continue;
+            }
         @endphp
 
         <div class="question-section">
@@ -215,7 +218,7 @@
             @php $qNum++; @endphp
 
             @if($item['isChartable'])
-                @if(!empty($item['chartUrl']) && empty($item['isLikertLike']))
+                @if(!empty($shouldIncludeCharts) && !empty($item['chartUrl']) && empty($item['isLikertLike']))
                     <div style="text-align: center; margin-bottom: 20px;">
                         <img src="{{ $item['chartBase64'] ?? $item['chartUrl'] }}"
                             style="max-width: 100%; height: auto; max-height: 250px;">

@@ -162,7 +162,9 @@
                                         <!-- Canvas Container -->
                                         <div
                                             class="relative h-72 lg:h-80 w-full flex items-center justify-center bg-gray-50/30 rounded-2xl p-6 border border-gray-50">
-                                            <canvas id="{{ $item['canvasId'] }}"></canvas>
+                                            <div class="chart-canvas-wrapper w-full h-full flex items-center justify-center transition-all duration-300">
+                                                <canvas id="{{ $item['canvasId'] }}"></canvas>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -451,6 +453,32 @@
                 const maxPct = Math.max(...percentageData, 10);
                 const ySuggestedMax = Math.min(100, Math.ceil(maxPct * 1.15));
 
+                const origLabels = rawLabels;
+                const origPerc = percentageData;
+                const origCounts = config.data || [];
+                const origColors = isMultipleColors ? ['#4f46e5', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff', '#6366f1', '#4338ca', '#3730a3', '#312e81', '#1e1b4b', '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9'].slice(0, config.data.length) : brandColor;
+
+                const canvasWrapper = canvas.closest('.chart-canvas-wrapper') || canvas.parentElement;
+                if (canvasWrapper && canvasWrapper.classList.contains('chart-canvas-wrapper')) {
+                    if (type === 'bar') {
+                        const catCount = origLabels.length;
+                        if (catCount <= 5) {
+                            canvasWrapper.style.maxWidth = `${Math.min(800, Math.max(340, catCount * 130 + 80))}px`;
+                        } else {
+                            canvasWrapper.style.maxWidth = '100%';
+                        }
+                    } else if (['pie', 'doughnut', 'polarArea', 'radar'].includes(type)) {
+                        canvasWrapper.style.maxWidth = '380px';
+                    } else {
+                        canvasWrapper.style.maxWidth = '100%';
+                    }
+                }
+
+                let finalLabels = origLabels;
+                let finalPerc = origPerc;
+                let finalCounts = origCounts;
+                let finalColors = origColors;
+
                 // 2. Custom inline plugin to draw percentage datalabels on bars/lines
                 const datalabelsPlugin = {
                     id: 'customDatalabels',
@@ -461,10 +489,10 @@
                             const meta = chart.getDatasetMeta(i);
                             meta.data.forEach((element, index) => {
                                 const val = dataset.data[index];
-                                if (val === undefined || val === null) return;
+                                if (val === undefined || val === null || isNaN(val) || val === '') return;
                                 const text = `${val}%`;
-                                ctx.fillStyle = '#475569';
-                                ctx.font = 'bold 9px Inter, sans-serif';
+                                ctx.fillStyle = '#0f172a';
+                                ctx.font = 'bold 11px Inter, system-ui, sans-serif';
                                 ctx.textAlign = 'center';
                                 ctx.textBaseline = 'bottom';
                                 ctx.fillText(text, element.x, element.y - 4);
@@ -477,20 +505,23 @@
                 const chartConfig = {
                     type: type,
                     data: {
-                        labels: rawLabels,
+                        labels: finalLabels,
                         datasets: [{
                             label: 'Percentage (%)',
-                            data: percentageData,
-                            backgroundColor: isMultipleColors ? ['#4f46e5', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff', '#6366f1', '#4338ca', '#3730a3', '#312e81', '#1e1b4b', '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9'].slice(0, config.data.length) : brandColor,
+                            data: finalPerc,
+                            backgroundColor: finalColors,
                             borderColor: type === 'line' || type === 'radar' ? brandColor : 'transparent',
                             borderWidth: type === 'line' || type === 'radar' ? 2 : 0,
                             pointBackgroundColor: brandColor,
                             borderRadius: type === 'bar' ? 6 : 0,
+                            categoryPercentage: 0.75,
+                            barPercentage: 0.85,
                             maxBarThickness: 45,
                             fill: type === 'line' ? true : false,
                         }]
                     },
                     options: {
+                        devicePixelRatio: Math.max(window.devicePixelRatio || 1, 2.5),
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
@@ -499,11 +530,12 @@
                                 position: 'bottom',
                                 labels: {
                                     boxWidth: 10, padding: 15,
-                                    font: { family: "'Inter', sans-serif", size: 10, weight: '700' }
+                                    font: { family: "'Inter', sans-serif", size: 10, weight: '800' },
+                                    color: '#0f172a'
                                 }
                             },
                             tooltip: {
-                                backgroundColor: '#111827',
+                                backgroundColor: '#0f172a',
                                 padding: 12,
                                 titleFont: { family: "'Inter', sans-serif", weight: 'bold' },
                                 bodyFont: { family: "'Inter', sans-serif" },
@@ -532,36 +564,37 @@
                             title: {
                                 display: true,
                                 text: 'Percentage (%)',
-                                font: { weight: '800', size: 10, family: "'Inter', sans-serif" },
-                                color: '#6b7280'
+                                font: { weight: '800', size: 11, family: "'Inter', sans-serif" },
+                                color: '#0f172a'
                             },
                             ticks: {
-                                font: { weight: '600', size: 10 },
+                                font: { weight: '700', size: 11 },
+                                color: '#1e293b',
                                 callback: function(value) { return value + '%'; }
                             },
-                            grid: { color: '#f1f5f9' },
+                            grid: { color: '#e2e8f0' },
                             border: { display: false }
                         },
                         x: {
                             title: {
                                 display: true,
                                 text: 'Response Options',
-                                font: { weight: '800', size: 10, family: "'Inter', sans-serif" },
-                                color: '#6b7280'
+                                font: { weight: '800', size: 11, family: "'Inter', sans-serif" },
+                                color: '#0f172a'
                             },
                             categoryPercentage: 0.6,
                             barPercentage: 0.7,
                             grid: { display: false },
-                            ticks: { font: { weight: '600', size: 10 } },
+                            ticks: { font: { weight: '700', size: 11 }, color: '#1e293b' },
                             border: { display: false }
                         }
                     };
                 } else if (type === 'radar' || type === 'polarArea') {
                     chartConfig.options.scales = {
                         r: {
-                            grid: { color: '#f1f5f9' },
+                            grid: { color: '#e2e8f0' },
                             ticks: { display: false },
-                            pointLabels: { font: { weight: '700', size: 9 } }
+                            pointLabels: { font: { weight: '800', size: 10, family: "'Inter', sans-serif" }, color: '#0f172a' }
                         }
                     };
                 }

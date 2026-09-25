@@ -49,16 +49,35 @@ class InsightController extends Controller
         return view('reports.qualitative', compact('survey', 'questions'));
     }
 
+    protected function isHardRefresh(Request $request): bool
+    {
+        return $request->has('refresh')
+            || $request->has('clear_cache')
+            || $request->header('Cache-Control') === 'no-cache'
+            || $request->header('Pragma') === 'no-cache'
+            || str_contains($request->header('Cache-Control', ''), 'no-cache');
+    }
+
+    protected function getSurveyCacheVersion(\App\Models\Survey $survey): string
+    {
+        $count = $survey->responses()->count();
+        $latest = $survey->responses()->max('updated_at') ?? $survey->updated_at;
+        $ts = $latest ? (is_string($latest) ? strtotime($latest) : $latest->timestamp) : 0;
+        return "c{$count}_t{$ts}";
+    }
+
     /**
      * Analyze a specific question using Groq AI.
      */
     public function analyze(Request $request, \App\Models\Survey $survey, $questionId)
     {
-        $cacheKey = "qualitative_analysis_{$survey->id}_{$questionId}";
-        $forceRefresh = $request->has('refresh');
+        $ver = $this->getSurveyCacheVersion($survey);
+        $cacheKey = "qualitative_analysis_{$survey->id}_{$questionId}_{$ver}";
+        $forceRefresh = $this->isHardRefresh($request);
 
         if ($forceRefresh) {
             Cache::forget($cacheKey);
+            Cache::forget("qualitative_analysis_{$survey->id}_{$questionId}");
         }
 
         $insight = Cache::remember($cacheKey, 86400, function () use ($survey, $questionId) {
@@ -68,16 +87,62 @@ class InsightController extends Controller
             $matchName = $isVirtualLikert ? explode('___', $questionId)[0] : $questionId;
             $rowKey = $isVirtualLikert ? explode('___', $questionId)[1] : null;
 
+            $aiService = $this->aiService;
+            $surveyResponses = $survey->responses()->with('answers')->get();
+
             if (is_numeric($questionId)) {
                 $question = \App\Models\Question::find($questionId);
                 if ($question) {
                     $questionText = $question->text;
                 }
-                $responses = Answer::where('question_id', $questionId)
-                    ->whereNotNull('value')
-                    ->where('value', '!=', '')
-                    ->pluck('value')
-                    ->toArray();
+
+                foreach ($surveyResponses as $resp) {
+                    $aiMeta = $resp->ai_metadata ?? [];
+                    $transcriptions = $aiMeta['transcriptions'] ?? [];
+                    $ans = $resp->answers->firstWhere('question_id', $questionId);
+
+                    if ($ans && $ans->value !== null && $ans->value !== '') {
+                        $valStr = trim((string) $ans->value);
+                        $isMedia = (str_starts_with($valStr, 'uploads/') || str_starts_with($valStr, 'storage/') || str_starts_with($valStr, 'survey_audio/'))
+                            && preg_match('/\.(mp4|webm|ogg|ogv|mov|mp3|wav|m4a|aac)$/i', $valStr);
+
+                        if ($isMedia) {
+                            $trans = $transcriptions[$valStr] ?? null;
+                            if (!$trans) {
+                                foreach ($transcriptions as $tPath => $tText) {
+                                    if (basename($tPath) === basename($valStr)) {
+                                        $trans = $tText;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!$trans) {
+                                $filePath = public_path($valStr);
+                                if (!file_exists($filePath)) {
+                                    $filePath = storage_path('app/public/' . preg_replace('/^(storage|uploads)\//', '', $valStr));
+                                }
+                                if (file_exists($filePath)) {
+                                    try {
+                                        $trans = $aiService->transcribeMedia($filePath);
+                                        if ($trans) {
+                                            $transcriptions[$valStr] = $trans;
+                                            $aiMeta['transcriptions'] = $transcriptions;
+                                            $resp->ai_metadata = $aiMeta;
+                                            $resp->save();
+                                        }
+                                    } catch (\Exception $te) {
+                                        \Log::warning("On-demand audio transcription failed for {$valStr}: " . $te->getMessage());
+                                    }
+                                }
+                            }
+                            if ($trans) {
+                                $responses[] = $trans;
+                            }
+                        } else {
+                            $responses[] = $valStr;
+                        }
+                    }
+                }
             } else {
                 $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
                 $schema = is_array($schema) ? $schema : [];
@@ -92,48 +157,89 @@ class InsightController extends Controller
                     }
                 }
 
-                $surveyId = $survey->id;
-                $rawAnswers = Answer::whereHas('response', function ($q) use ($surveyId) {
-                    $q->where('survey_id', $surveyId);
-                })
-                    ->whereNull('question_id')
-                    ->pluck('value')
-                    ->toArray();
+                foreach ($surveyResponses as $resp) {
+                    $aiMeta = $resp->ai_metadata ?? [];
+                    $transcriptions = $aiMeta['transcriptions'] ?? [];
 
-                foreach ($rawAnswers as $jsonBlob) {
-                    $parsed = json_decode($jsonBlob, true) ?? [];
-                    foreach ($parsed as $entry) {
-                        if (isset($entry['name']) && $entry['name'] === $matchName && isset($entry['userData'])) {
-                            $val = $entry['userData'];
-                            if ($isVirtualLikert) {
-                                $matrixAnswers = is_string($val) ? json_decode($val, true) : $val;
-                                if (is_array($matrixAnswers)) {
-                                    if (isset($matrixAnswers[0])) {
-                                        if (is_string($matrixAnswers[0])) {
-                                            $decoded = json_decode($matrixAnswers[0], true);
-                                            if (is_array($decoded)) {
-                                                $matrixAnswers = $decoded;
+                    foreach ($resp->answers as $ans) {
+                        if ($ans->question_id === null && !empty($ans->value)) {
+                            $parsed = is_string($ans->value) ? json_decode($ans->value, true) : $ans->value;
+                            if (is_array($parsed)) {
+                                foreach ($parsed as $entry) {
+                                    if (isset($entry['name']) && $entry['name'] === $matchName && isset($entry['userData'])) {
+                                        $val = $entry['userData'];
+                                        if ($isVirtualLikert) {
+                                            $matrixAnswers = is_string($val) ? json_decode($val, true) : $val;
+                                            if (is_array($matrixAnswers)) {
+                                                if (isset($matrixAnswers[0])) {
+                                                    if (is_string($matrixAnswers[0])) {
+                                                        $decoded = json_decode($matrixAnswers[0], true);
+                                                        if (is_array($decoded)) {
+                                                            $matrixAnswers = $decoded;
+                                                        }
+                                                    } elseif (is_array($matrixAnswers[0])) {
+                                                        $matrixAnswers = $matrixAnswers[0];
+                                                    }
+                                                }
+                                                $val = $matrixAnswers[$rowKey] ?? null;
+                                            } else {
+                                                $val = null;
                                             }
-                                        } elseif (is_array($matrixAnswers[0])) {
-                                            $matrixAnswers = $matrixAnswers[0];
+
+                                            if ($val !== null && $val !== '' && $field && isset($field['columns']) && is_array($field['columns'])) {
+                                                $opt = collect($field['columns'])->firstWhere('value', $val);
+                                                $val = $opt ? ($opt['label'] ?? $val) : $val;
+                                            }
+                                        }
+
+                                        $valStr = is_array($val) ? (count($val) === 1 && is_string($val[0]) ? $val[0] : implode(', ', $val)) : (string) $val;
+                                        $valStr = trim($valStr);
+
+                                        $isMedia = (str_starts_with($valStr, 'uploads/') || str_starts_with($valStr, 'storage/') || str_starts_with($valStr, 'survey_audio/'))
+                                            && preg_match('/\.(mp4|webm|ogg|ogv|mov|mp3|wav|m4a|aac)$/i', $valStr);
+
+                                        if ($isMedia) {
+                                            $trans = $transcriptions[$valStr] ?? null;
+                                            if (!$trans) {
+                                                foreach ($transcriptions as $tPath => $tText) {
+                                                    if (basename($tPath) === basename($valStr)) {
+                                                        $trans = $tText;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            if (!$trans) {
+                                                $filePath = public_path($valStr);
+                                                if (!file_exists($filePath)) {
+                                                    $filePath = storage_path('app/public/' . preg_replace('/^(storage|uploads)\//', '', $valStr));
+                                                }
+                                                if (file_exists($filePath)) {
+                                                    try {
+                                                        $trans = $aiService->transcribeMedia($filePath);
+                                                        if ($trans) {
+                                                            $transcriptions[$valStr] = $trans;
+                                                            $aiMeta['transcriptions'] = $transcriptions;
+                                                            $resp->ai_metadata = $aiMeta;
+                                                            $resp->save();
+                                                        }
+                                                    } catch (\Exception $te) {
+                                                        \Log::warning("On-demand audio transcription failed for {$valStr}: " . $te->getMessage());
+                                                    }
+                                                }
+                                            }
+                                            if ($trans) {
+                                                $responses[] = $trans;
+                                            }
+                                        } else {
+                                            if ($field) {
+                                                $val = \App\Http\Controllers\SurveyController::formatResponseValue($val, $field);
+                                            }
+                                            if ($val !== null && $val !== '') {
+                                                $responses[] = is_array($val) ? implode(', ', $val) : $val;
+                                            }
                                         }
                                     }
-                                    $val = $matrixAnswers[$rowKey] ?? null;
-                                } else {
-                                    $val = null;
                                 }
-
-                                if ($val !== null && $val !== '' && $field && isset($field['columns']) && is_array($field['columns'])) {
-                                    $opt = collect($field['columns'])->firstWhere('value', $val);
-                                    $val = $opt ? ($opt['label'] ?? $val) : $val;
-                                }
-                            } else {
-                                if ($field) {
-                                    $val = \App\Http\Controllers\SurveyController::formatResponseValue($val, $field);
-                                }
-                            }
-                            if ($val !== null && $val !== '') {
-                                $responses[] = is_array($val) ? implode(', ', $val) : $val;
                             }
                         }
                     }
@@ -277,12 +383,17 @@ class InsightController extends Controller
         }
 
         $style = $request->query('style', $survey->reporting_style ?? 'apa');
+        $ver = $this->getSurveyCacheVersion($survey);
 
-        $cacheKey = "quantitative_analysis_{$survey->id}_{$questionId}_{$style}";
-        $likertCacheKey = "likert_matrix_analysis_{$survey->id}_{$questionId}_{$style}";
-        if ($request->has('refresh')) {
+        $cacheKey = "quantitative_analysis_{$survey->id}_{$questionId}_{$style}_{$ver}";
+        $likertCacheKey = "likert_matrix_analysis_{$survey->id}_{$questionId}_{$style}_{$ver}";
+        $forceRefresh = $this->isHardRefresh($request);
+
+        if ($forceRefresh) {
             Cache::forget($cacheKey);
             Cache::forget($likertCacheKey);
+            Cache::forget("quantitative_analysis_{$survey->id}_{$questionId}_{$style}");
+            Cache::forget("likert_matrix_analysis_{$survey->id}_{$questionId}_{$style}");
         }
 
         $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
@@ -363,6 +474,30 @@ class InsightController extends Controller
             return response()->json(['success' => false, 'message' => 'Premium subscription required for Statistical Intelligence.'], 403);
         }
 
+        // Fetch active KB rules for the user
+        $kbPromptSection = "";
+        if ($user) {
+            $kbRules = $user->sociusKnowledgeBases()
+                ->where('is_active', true)
+                ->pluck('content')
+                ->filter(function ($c) {
+                    if (empty($c))
+                        return false;
+                    if (str_starts_with($c, '[Qualitative]') || str_starts_with($c, '[Proposal]')) {
+                        return false;
+                    }
+                    return true;
+                })
+                ->map(function ($c) {
+                    return preg_replace('/^\[(?:Inferential|Quantitative|General)\]\s*/i', '', $c);
+                })
+                ->implode("\n- ");
+
+            if (!empty($kbRules)) {
+                $kbPromptSection = "\n\nCUSTOM USER KNOWLEDGE BASE INSTRUCTIONS:\n- " . $kbRules . "\n";
+            }
+        }
+
         $feedback = $request->input('feedback');
         $messages = $request->input('messages');
 
@@ -374,6 +509,9 @@ class InsightController extends Controller
             if (!empty($data)) {
                 $prompt .= "Here is the current statistical calculation data and variable settings of the table:\n";
                 $prompt .= json_encode($data) . "\n\n";
+            }
+            if (!empty($kbPromptSection)) {
+                $prompt .= $kbPromptSection . "\n";
             }
             $prompt .= "Here is the conversation history with the researcher:\n\n";
 
@@ -394,7 +532,8 @@ class InsightController extends Controller
             $prompt .= "6. You MUST write the entire revised analysis and response in the {$targetLang} language. Do not output it in English if the target language is different.";
 
             try {
-                $insight = $this->aiService->callAi($prompt, "You are an expert statistician and research advisor. Provide refined, strategically polished statistical interpretations.");
+                $polishSystemPrompt = "You are a senior research statistician. Refine the statistical interpretation strictly according to the researcher's instructions. Maintain APA 7 statistical precision, past tense, and plain text formatting without Markdown symbols.";
+                $insight = $this->aiService->callAi($prompt, $polishSystemPrompt, false, 2048, 0.3);
                 return response()->json(['success' => true, 'insight' => $insight]);
             } catch (\Exception $e) {
                 return response()->json(['success' => false, 'message' => 'AI Refinement Failed: ' . $e->getMessage()], 500);
@@ -408,84 +547,190 @@ class InsightController extends Controller
             return response()->json(['success' => false, 'message' => 'No data to analyze.'], 400);
         }
 
-        $prompt = "As an expert statistician and research analyst, interpret the results of a statistical test run on survey data from '{$survey->title}'.\n\n";
+        $prompt = "As an expert statistician and research analyst, interpret the empirical results of a statistical test run on survey data from '{$survey->title}'.\n\n";
 
         switch ($method) {
             case 'crosstab':
                 $prompt .= "Test: Cross-Tabulation Distribution Analysis\n";
                 $prompt .= "Variables: Row='{$data['rowLabel']}', Column='{$data['colLabel']}'\n";
-                $prompt .= "Total Responses: " . ($data['grandTotal'] ?? 0) . "\n";
-                $prompt .= "Observed Cell Frequencies: " . json_encode($data['matrix']) . "\n\n";
+                $prompt .= "Total Sample (N): " . ($data['grandTotal'] ?? 0) . "\n";
+                $prompt .= "Row Categories: " . implode(', ', (array) ($data['rows'] ?? [])) . "\n";
+                $prompt .= "Column Categories: " . implode(', ', (array) ($data['columns'] ?? [])) . "\n";
+                $prompt .= "Observed Cell Frequencies: " . json_encode($data['matrix'] ?? []) . "\n";
+                if (!empty($data['rowPercentages'])) {
+                    $prompt .= "Row Percentages (%): " . json_encode($data['rowPercentages']) . "\n";
+                }
+                $prompt .= "\n";
                 break;
+
             case 'chisquare':
                 $prompt .= "Test: Chi-Square Test of Independence\n";
                 $prompt .= "Variables: Row='{$data['rowLabel']}', Column='{$data['colLabel']}'\n";
-                $prompt .= "Chi-Square Value (χ²): " . ($data['chiSquare'] ?? 0) . ", df: " . ($data['df'] ?? 1) . ", p-value: " . ($data['pValue'] ?? 1) . "\n";
+                $prompt .= "Total Sample (N): " . ($data['grandTotal'] ?? 0) . "\n";
+                $prompt .= "Pearson Chi-Square (χ²): " . ($data['chiSquare'] ?? 0) . ", df: " . ($data['df'] ?? 1) . ", p-value: " . ($data['pValue'] ?? 1) . "\n";
                 $prompt .= "Cramer's V (Effect Size): " . ($data['cramersV'] ?? 'N/A') . " (" . ($data['effectLabel'] ?? 'N/A') . ")\n";
-                $prompt .= "Result is " . (!empty($data['significant']) ? "Statistically Significant (p < 0.05)" : "Not Statistically Significant (p >= 0.05)") . ".\n\n";
+                if (isset($data['likelihoodRatio'])) {
+                    $prompt .= "Likelihood Ratio: " . $data['likelihoodRatio'] . " (p = " . ($data['likelihoodPValue'] ?? 'N/A') . ")\n";
+                }
+                if (isset($data['linearAssociation'])) {
+                    $prompt .= "Linear-by-Linear Association: " . $data['linearAssociation'] . " (p = " . ($data['linearPValue'] ?? 'N/A') . ")\n";
+                }
+                $prompt .= "Statistical Significance: " . (!empty($data['significant']) ? "Statistically Significant (p < 0.05)" : "Not Statistically Significant (p >= 0.05)") . "\n";
+                $prompt .= "Observed Contingency Matrix: " . json_encode($data['matrix'] ?? []) . "\n\n";
                 break;
+
             case 'cronbach':
-                $prompt .= "Test: Cronbach's Alpha Reliability Analysis\n";
+                $prompt .= "Test: Cronbach's Alpha Scale Reliability Analysis\n";
+                $prompt .= "Number of Items (K): " . ($data['k_items'] ?? 0) . ", Valid Cases (N): " . ($data['valid_n'] ?? 0) . "\n";
                 $prompt .= "Cronbach's Alpha (α): " . ($data['alpha'] ?? 0) . "\n";
                 $prompt .= "Standardized Alpha (α_std): " . ($data['std_alpha'] ?? $data['alpha'] ?? 0) . "\n";
-                $prompt .= "Number of Items (K): " . ($data['k_items'] ?? 0) . ", Valid Cases (N): " . ($data['valid_n'] ?? 0) . "\n";
-                $prompt .= "Interpretation: " . ($data['interpretation'] ?? 'N/A') . "\n";
-                $prompt .= "Item-Total Statistics: " . json_encode($data['item_stats'] ?? []) . "\n\n";
+                $prompt .= "Internal Consistency Rating: " . ($data['interpretation'] ?? 'N/A') . "\n";
+                if (!empty($data['item_stats'])) {
+                    $prompt .= "Item-Total Statistics:\n";
+                    foreach ((array) $data['item_stats'] as $item) {
+                        $label = $item['label'] ?? $item['item_key'] ?? 'Item';
+                        $meanDel = $item['scale_mean_if_deleted'] ?? 'N/A';
+                        $corr = $item['item_total_corr'] ?? 'N/A';
+                        $alphaDel = $item['alpha_if_deleted'] ?? 'N/A';
+                        $prompt .= "- Item '{$label}': Mean if deleted = {$meanDel}, Corrected Item-Total Corr = {$corr}, Alpha if deleted = {$alphaDel}\n";
+                    }
+                }
+                $prompt .= "\n";
                 break;
+
             case 'ttest':
-                $prompt .= "Test: Independent Samples T-Test (Comparing 2 Group Means)\n";
-                $prompt .= "Dependent Variable: '{$data['depLabel']}', Grouping Variable: '{$data['groupLabel']}'\n";
-                $prompt .= "t-value: {$data['tValue']}, df: {$data['df']}, p-value: {$data['pValue']}\n";
-                $prompt .= "Mean Difference: {$data['meanDiff']}, Std Error of Difference: {$data['stdErrorDiff']}\n";
-                $prompt .= "Result is " . ($data['significant'] ? "Statistically Significant (p < 0.05)" : "Not Statistically Significant (p >= 0.05)") . ".\n\n";
-                $prompt .= "Group Statistics:\n" . json_encode($data['groups'], JSON_PRETTY_PRINT) . "\n\n";
+                $prompt .= "Test: Independent Samples T-Test (Comparing 2 Independent Group Means)\n";
+                $prompt .= "Dependent Variable (Outcome): '{$data['depLabel']}'\n";
+                $prompt .= "Grouping Variable (Factor): '{$data['groupLabel']}'\n";
+                if (!empty($data['groups']) && is_array($data['groups'])) {
+                    $prompt .= "Group Descriptive Statistics:\n";
+                    foreach ($data['groups'] as $g) {
+                        $name = $g['name'] ?? 'Group';
+                        $n = $g['n'] ?? 'N/A';
+                        $m = $g['mean'] ?? 'N/A';
+                        $sd = $g['stdDev'] ?? 'N/A';
+                        $se = $g['stdError'] ?? 'N/A';
+                        $prompt .= "- Group '{$name}': N = {$n}, Mean (M) = {$m}, Std Dev (SD) = {$sd}, Std Error = {$se}\n";
+                    }
+                }
+                $prompt .= "Test Results:\n";
+                $prompt .= "- t-statistic: {$data['tValue']}, df: {$data['df']}, p-value (2-tailed): {$data['pValue']}\n";
+                $prompt .= "- Mean Difference: {$data['meanDiff']}, Std Error of Difference: {$data['stdErrorDiff']}\n";
+                if (isset($data['cohensD'])) {
+                    $effect = $data['dEffectLabel'] ?? 'N/A';
+                    $prompt .= "- Cohen's d (Effect Size): {$data['cohensD']} ({$effect} effect)\n";
+                }
+                if (isset($data['ciLowerAssumed']) && isset($data['ciUpperAssumed'])) {
+                    $prompt .= "- 95% Confidence Interval of Difference: [{$data['ciLowerAssumed']}, {$data['ciUpperAssumed']}]\n";
+                }
+                $prompt .= "- Statistical Significance: " . (!empty($data['significant']) ? "Statistically Significant (p < 0.05)" : "Not Statistically Significant (p >= 0.05)") . "\n\n";
                 break;
+
             case 'correlation':
-                $prompt .= "Test: Pearson Bivariate Correlation (r)\n";
-                $prompt .= "Variables: X='{$data['labelX']}', Y='{$data['labelY']}'\n";
+                $prompt .= "Test: Pearson Bivariate Product-Moment Correlation (r)\n";
+                $prompt .= "Variables: Variable X = '{$data['labelX']}', Variable Y = '{$data['labelY']}'\n";
                 $prompt .= "Sample Size (N): {$data['n']}\n";
-                $prompt .= "Pearson r: {$data['r']}, R-squared: {$data['r2']}\n";
-                $prompt .= "t-value: {$data['tValue']}, p-value: {$data['pValue']}\n";
-                $prompt .= "Result is " . ($data['significant'] ? "Statistically Significant (p < 0.05)" : "Not Statistically Significant (p >= 0.05)") . ".\n\n";
+                $prompt .= "Pearson correlation coefficient (r): {$data['r']}, Coefficient of Determination (R²): {$data['r2']}\n";
+                $prompt .= "t-statistic: {$data['tValue']}, p-value: {$data['pValue']}\n";
+                $prompt .= "Statistical Significance: " . (!empty($data['significant']) ? "Statistically Significant (p < 0.05)" : "Not Statistically Significant (p >= 0.05)") . "\n\n";
                 break;
+
             case 'anova':
-                $prompt .= "Test: One-Way ANOVA (Comparing Multiple Group Means)\n";
-                $prompt .= "Dependent Variable: '{$data['depLabel']}', Grouping Variable: '{$data['groupLabel']}'\n";
-                $prompt .= "F-value: {$data['fValue']}, df Between: {$data['dfBetween']}, df Within: {$data['dfWithin']}, p-value: {$data['pValue']}\n";
-                $prompt .= "Sum of Squares Between: {$data['ssb']}, Within: {$data['ssw']}\n";
-                $prompt .= "Result is " . ($data['significant'] ? "Statistically Significant (p < 0.05)" : "Not Statistically Significant (p >= 0.05)") . ".\n\n";
-                $prompt .= "Group Descriptives:\n" . json_encode($data['groupStats'], JSON_PRETTY_PRINT) . "\n\n";
+                $prompt .= "Test: One-Way Analysis of Variance (ANOVA)\n";
+                $prompt .= "Dependent Variable: '{$data['depLabel']}', Grouping Factor: '{$data['groupLabel']}'\n";
+                if (!empty($data['groupStats']) && is_array($data['groupStats'])) {
+                    $prompt .= "Group Descriptive Statistics:\n";
+                    foreach ($data['groupStats'] as $g) {
+                        $name = $g['name'] ?? 'Group';
+                        $n = $g['n'] ?? 'N/A';
+                        $m = $g['mean'] ?? 'N/A';
+                        $sd = $g['stdDev'] ?? 'N/A';
+                        $se = $g['stdError'] ?? 'N/A';
+                        $prompt .= "- Group '{$name}': N = {$n}, Mean (M) = {$m}, Std Dev (SD) = {$sd}, Std Error = {$se}\n";
+                    }
+                }
+                $prompt .= "ANOVA Table Metrics:\n";
+                $prompt .= "- F-statistic: {$data['fValue']}, df Between: {$data['dfBetween']}, df Within: {$data['dfWithin']}, p-value: {$data['pValue']}\n";
+                $prompt .= "- Sum of Squares Between (SSB): {$data['ssb']}, Within (SSW): {$data['ssw']}\n";
+                if (isset($data['etaSquared'])) {
+                    $prompt .= "- Eta-Squared (η² effect size): {$data['etaSquared']}\n";
+                }
+                $prompt .= "- Statistical Significance: " . (!empty($data['significant']) ? "Statistically Significant (p < 0.05)" : "Not Statistically Significant (p >= 0.05)") . "\n\n";
                 break;
+
             case 'regression':
                 $prompt .= "Test: Simple Linear Regression\n";
-                $prompt .= "Dependent Variable (Y): '{$data['depLabel']}', Independent Variable (X): '{$data['indLabel']}'\n";
-                $prompt .= "Model: R: {$data['r']}, R-squared: {$data['r2']}, Adj. R-squared: {$data['adjR2']}, Std Error of Estimate: {$data['stdErrorEst']}\n";
-                $prompt .= "ANOVA Regression test: F-value: {$data['anova']['fValue']}, p-value: {$data['anova']['pValue']}\n";
-                $prompt .= "Coefficients:\n" . json_encode($data['coefficients'], JSON_PRETTY_PRINT) . "\n\n";
+                $prompt .= "Dependent Variable (Y): '{$data['depLabel']}', Independent Predictor (X): '{$data['indLabel']}'\n";
+                $prompt .= "Model Fit: R = {$data['r']}, R-squared (R²) = {$data['r2']}, Adjusted R² = {$data['adjR2']}, Std Error of Estimate = {$data['stdErrorEst']}\n";
+                if (!empty($data['anova'])) {
+                    $prompt .= "ANOVA Model Fit: F = {$data['anova']['fValue']}, p-value = {$data['anova']['pValue']}\n";
+                }
+                if (!empty($data['coefficients']) && is_array($data['coefficients'])) {
+                    $prompt .= "Regression Coefficients:\n";
+                    foreach ($data['coefficients'] as $c) {
+                        $var = $c['variable'] ?? 'Variable';
+                        $b = $c['b'] ?? 'N/A';
+                        $se = $c['stdError'] ?? 'N/A';
+                        $beta = $c['beta'] ?? 'N/A';
+                        $t = $c['tValue'] ?? 'N/A';
+                        $p = $c['pValue'] ?? 'N/A';
+                        $prompt .= "- Variable '{$var}': B = {$b}, Std Error = {$se}, Beta (β) = {$beta}, t = {$t}, p = {$p}\n";
+                    }
+                }
+                if (!empty($data['equation'])) {
+                    $prompt .= "Regression Equation: {$data['equation']}\n";
+                }
+                $prompt .= "\n";
                 break;
+
             case 'regression_multiple':
                 $prompt .= "Test: Multiple Linear Regression\n";
                 $prompt .= "Dependent Variable (Y): '{$data['depLabel']}'\n";
-                $prompt .= "Model Summary: R: {$data['r']}, R-squared: {$data['r2']}, Adj. R-squared: {$data['adjR2']}, Std Error of Estimate: {$data['stdErrorEst']}\n";
-                $prompt .= "Equation: {$data['equation']}\n";
-                $prompt .= "ANOVA Model Fit test: F-value: {$data['anova']['fValue']}, df Regression: {$data['anova']['dfReg']}, df Residual: {$data['anova']['dfRes']}, p-value: {$data['anova']['pValue']}\n";
-                $prompt .= "Coefficients:\n" . json_encode($data['coefficients'], JSON_PRETTY_PRINT) . "\n\n";
+                $prompt .= "Model Fit: R = {$data['r']}, R-squared (R²) = {$data['r2']}, Adjusted R² = {$data['adjR2']}, Std Error of Estimate = {$data['stdErrorEst']}\n";
+                if (!empty($data['equation'])) {
+                    $prompt .= "Regression Equation: {$data['equation']}\n";
+                }
+                if (!empty($data['anova'])) {
+                    $dfReg = $data['anova']['dfReg'] ?? 1;
+                    $dfRes = $data['anova']['dfRes'] ?? 1;
+                    $prompt .= "ANOVA Model Fit: F = {$data['anova']['fValue']}, df Regression = {$dfReg}, df Residual = {$dfRes}, p-value = {$data['anova']['pValue']}\n";
+                }
+                if (!empty($data['coefficients']) && is_array($data['coefficients'])) {
+                    $prompt .= "Regression Coefficients Table:\n";
+                    foreach ($data['coefficients'] as $c) {
+                        $var = $c['variable'] ?? 'Variable';
+                        $b = $c['b'] ?? 'N/A';
+                        $se = $c['stdError'] ?? 'N/A';
+                        $beta = $c['beta'] ?? 'N/A';
+                        $t = $c['tValue'] ?? 'N/A';
+                        $p = $c['pValue'] ?? 'N/A';
+                        $prompt .= "- Variable '{$var}': Unstandardized B = {$b}, Std Error = {$se}, Standardized Beta (β) = {$beta}, t = {$t}, p = {$p}\n";
+                    }
+                }
+                $prompt .= "\n";
                 break;
         }
 
+        if (!empty($kbPromptSection)) {
+            $prompt .= $kbPromptSection . "\n";
+        }
+
         $targetLang = $this->getTargetLanguage();
-        $prompt .= "OUTPUT FORMAT — NON-NEGOTIABLE:\n";
-        $prompt .= "- Write EXACTLY ONE paragraph.\n";
-        $prompt .= "- EXACTLY 3 to 4 sentences total. No more. No fewer.\n";
-        $prompt .= "- Plain text only. NO Markdown formatting (no asterisks, no bolding, no italics, no bullet points, no headers).\n\n";
-        $prompt .= "WRITING RULES:\n";
-        $prompt .= "- Write in past tense throughout (e.g. 'indicated', 'showed', 'revealed', 'accounted for').\n";
-        $prompt .= "- Use plain, direct English. Avoid GRE/SAT jargon.\n";
-        $prompt .= "- Explicitly state whether the test result was statistically significant and what it means for the variables.\n";
-        $prompt .= "- You MUST write the entire response in {$targetLang}.";
+        $systemPrompt = <<<PROMPT
+You are a senior research statistician and academic data analyst. Write a clear, comprehensive, and publication-ready academic statistical interpretation of the provided empirical test results.
+
+OUTPUT REQUIREMENTS:
+- Write ONE cohesive, well-developed paragraph (approximately 3 to 5 sentences).
+- Report exact sample statistics, group means (M), standard deviations (SD), test statistics (t, F, χ², r, or α), degrees of freedom (df), p-values, and effect sizes (Cohen's d, Cramer's V, R²) in standard APA 7 reporting style.
+- State whether the result is statistically significant at the α = 0.05 level and what that means for the research variables.
+- Write in formal academic past tense throughout (e.g., 'indicated', 'revealed', 'demonstrated', 'accounted for').
+- Plain text only: NO Markdown symbols, NO asterisks, NO bolding, NO bullet points, NO headings.
+- Always finish the entire paragraph completely with a closing period. Never terminate mid-sentence.
+- Write entirely in {$targetLang}.
+PROMPT;
 
         try {
-            $insight = $this->aiService->callAi($prompt, "You are an expert statistician. Write a concise, 3 to 4 sentence plain-text academic interpretation of statistical test results in past tense.", false, 300, 0.3);
+            $insight = $this->aiService->callAi($prompt, $systemPrompt, false, 2048, 0.3);
             return response()->json(['success' => true, 'insight' => $insight]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'AI Analysis Failed: ' . $e->getMessage()], 500);
@@ -502,12 +747,12 @@ class InsightController extends Controller
             return response()->json(['success' => false, 'message' => 'Premium subscription required for Trend Interpretation.'], 403);
         }
 
-        $messages = $request->input('messages');
+        $messages = $request->input('messages', []);
         $feedback = $request->input('feedback');
         $style = $request->input('style', $survey->reporting_style ?? 'apa');
 
-        if (empty($messages) || empty($feedback)) {
-            return response()->json(['success' => false, 'message' => 'Conversation history and refinement instructions are required.'], 400);
+        if (empty($feedback)) {
+            return response()->json(['success' => false, 'message' => 'Refinement instructions are required.'], 400);
         }
 
         $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
@@ -583,13 +828,14 @@ TARGET QUESTION: {$questionLabel}
 STATISTICAL FREQUENCY DATA FOR THIS QUESTION:
 {$statsText}
 
-Here is the conversation history with the researcher:
-
 ";
 
-        foreach ($messages as $msg) {
-            $roleName = $msg['role'] === 'assistant' ? 'AI' : 'Researcher';
-            $prompt .= "{$roleName}: {$msg['content']}\n\n";
+        if (!empty($messages)) {
+            $prompt .= "Here is the previous conversation history with the researcher:\n\n";
+            foreach ($messages as $msg) {
+                $roleName = ($msg['role'] ?? 'assistant') === 'assistant' ? 'AI' : 'Researcher';
+                $prompt .= "{$roleName}: " . ($msg['content'] ?? '') . "\n\n";
+            }
         }
 
         $prompt .= "Researcher's latest refinement instruction:\n";
@@ -613,7 +859,238 @@ Here is the conversation history with the researcher:
 
             return response()->json(['success' => true, 'insight' => $insight]);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'AI Refinement Failed: ' . $e->getMessage()], 500);
+            return response()->json(['success' => false, 'message' => 'Refinement Failed: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Generate narrative synthesis & thematic summary for a qualitative question.
+     */
+    public function generateQualitativeNarrative(Request $request, $questionId)
+    {
+        $surveyId = $request->input('survey_id', $request->query('survey_id'));
+        $survey = \App\Models\Survey::findOrFail($surveyId);
+
+        $style = $request->input('style', $request->query('style', $survey->reporting_style ?? 'apa'));
+        $ver = $this->getSurveyCacheVersion($survey);
+
+        $cacheKey = "qualitative_narrative_{$survey->id}_{$questionId}_{$style}_{$ver}";
+        $forceRefresh = $this->isHardRefresh($request);
+
+        if ($forceRefresh) {
+            Cache::forget($cacheKey);
+            Cache::forget("qualitative_narrative_{$survey->id}_{$questionId}_{$style}");
+        }
+
+        $result = Cache::remember($cacheKey, 86400, function () use ($survey, $questionId, $style) {
+            $responses = [];
+            $transcripts = [];
+            $questionText = $questionId;
+            $isAudioVideo = false;
+
+            $aiService = $this->aiService;
+            $surveyResponses = $survey->responses()->with('answers')->get();
+
+            if (is_numeric($questionId)) {
+                $question = \App\Models\Question::find($questionId);
+                if ($question) {
+                    $questionText = $question->text;
+                }
+
+                foreach ($surveyResponses as $resp) {
+                    $aiMeta = $resp->ai_metadata ?? [];
+                    $transcriptions = $aiMeta['transcriptions'] ?? [];
+                    $ans = $resp->answers->firstWhere('question_id', $questionId);
+
+                    if ($ans && $ans->value !== null && $ans->value !== '') {
+                        $valStr = trim((string) $ans->value);
+                        $isMedia = (str_starts_with($valStr, 'uploads/') || str_starts_with($valStr, 'storage/') || str_starts_with($valStr, 'survey_audio/'))
+                            && preg_match('/\.(mp4|webm|ogg|ogv|mov|mp3|wav|m4a|aac)$/i', $valStr);
+
+                        if ($isMedia) {
+                            $isAudioVideo = true;
+                            $trans = $transcriptions[$valStr] ?? null;
+                            if (!$trans) {
+                                foreach ($transcriptions as $tPath => $tText) {
+                                    if (basename($tPath) === basename($valStr)) {
+                                        $trans = $tText;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!$trans) {
+                                $filePath = public_path($valStr);
+                                if (!file_exists($filePath)) {
+                                    $filePath = storage_path('app/public/' . preg_replace('/^(storage|uploads)\//', '', $valStr));
+                                }
+                                if (file_exists($filePath)) {
+                                    try {
+                                        $trans = $aiService->transcribeMedia($filePath);
+                                        if ($trans) {
+                                            $transcriptions[$valStr] = $trans;
+                                            $aiMeta['transcriptions'] = $transcriptions;
+                                            $resp->ai_metadata = $aiMeta;
+                                            $resp->save();
+                                        }
+                                    } catch (\Exception $te) {
+                                        \Log::warning("On-demand transcription failed: " . $te->getMessage());
+                                    }
+                                }
+                            }
+                            if ($trans) {
+                                $transcripts[] = $trans;
+                                $responses[] = $trans;
+                            }
+                        } else {
+                            $responses[] = $valStr;
+                        }
+                    }
+                }
+            } else {
+                $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
+                $schema = is_array($schema) ? $schema : [];
+                $field = collect($schema)->firstWhere('name', $questionId);
+                if ($field) {
+                    $questionText = $field['label'] ?? $field['name'];
+                    if (in_array($field['type'] ?? '', ['audio', 'video', 'recording', 'media'])) {
+                        $isAudioVideo = true;
+                    }
+                }
+
+                foreach ($surveyResponses as $resp) {
+                    $aiMeta = $resp->ai_metadata ?? [];
+                    $transcriptions = $aiMeta['transcriptions'] ?? [];
+
+                    foreach ($resp->answers as $ans) {
+                        if ($ans->question_id === null && !empty($ans->value)) {
+                            $parsed = is_string($ans->value) ? json_decode($ans->value, true) : $ans->value;
+                            if (is_array($parsed)) {
+                                foreach ($parsed as $entry) {
+                                    if (isset($entry['name']) && $entry['name'] === $questionId && isset($entry['userData'])) {
+                                        $val = $entry['userData'];
+                                        $valStr = is_array($val) ? (count($val) === 1 && is_string($val[0]) ? $val[0] : implode(', ', $val)) : (string) $val;
+                                        $valStr = trim($valStr);
+
+                                        $isMedia = (str_starts_with($valStr, 'uploads/') || str_starts_with($valStr, 'storage/') || str_starts_with($valStr, 'survey_audio/'))
+                                            && preg_match('/\.(mp4|webm|ogg|ogv|mov|mp3|wav|m4a|aac)$/i', $valStr);
+
+                                        if ($isMedia) {
+                                            $isAudioVideo = true;
+                                            $trans = $transcriptions[$valStr] ?? null;
+                                            if (!$trans) {
+                                                foreach ($transcriptions as $tPath => $tText) {
+                                                    if (basename($tPath) === basename($valStr)) {
+                                                        $trans = $tText;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            if (!$trans) {
+                                                $filePath = public_path($valStr);
+                                                if (!file_exists($filePath)) {
+                                                    $filePath = storage_path('app/public/' . preg_replace('/^(storage|uploads)\//', '', $valStr));
+                                                }
+                                                if (file_exists($filePath)) {
+                                                    try {
+                                                        $trans = $aiService->transcribeMedia($filePath);
+                                                        if ($trans) {
+                                                            $transcriptions[$valStr] = $trans;
+                                                            $aiMeta['transcriptions'] = $transcriptions;
+                                                            $resp->ai_metadata = $aiMeta;
+                                                            $resp->save();
+                                                        }
+                                                    } catch (\Exception $te) {
+                                                        \Log::warning("On-demand transcription failed: " . $te->getMessage());
+                                                    }
+                                                }
+                                            }
+                                            if ($trans) {
+                                                $transcripts[] = $trans;
+                                                $responses[] = $trans;
+                                            }
+                                        } else {
+                                            if ($field) {
+                                                $val = \App\Http\Controllers\SurveyController::formatResponseValue($val, $field);
+                                            }
+                                            if ($val !== null && $val !== '') {
+                                                $responses[] = is_array($val) ? implode(', ', $val) : $val;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if ($isAudioVideo && !empty($transcripts)) {
+                return $this->analysisService->extractFromTranscripts($transcripts, $questionText, $style);
+            }
+
+            return $this->analysisService->synthesizeNarrative($responses, $questionText, $style);
+        });
+
+        return response()->json($result);
+    }
+
+    /**
+     * Refine qualitative narrative synthesis with user feedback.
+     */
+    public function refineQualitativeNarrative(Request $request, $questionId)
+    {
+        $surveyId = $request->input('survey_id', $request->query('survey_id'));
+        $survey = \App\Models\Survey::findOrFail($surveyId);
+
+        $user = auth()->user();
+        if (!$user || !$user->canUseAiAnalysis()) {
+            return response()->json(['success' => false, 'message' => 'Subscription required for Narrative Synthesis Refinement.'], 403);
+        }
+
+        $messages = $request->input('messages', []);
+        $feedback = $request->input('feedback', $request->input('instruction'));
+        $style = $request->input('style', $survey->reporting_style ?? 'apa');
+
+        if (empty($feedback)) {
+            return response()->json(['success' => false, 'message' => 'Refinement instructions are required.'], 400);
+        }
+
+        $targetLang = $this->getTargetLanguage();
+        $prompt = "You are a qualitative research specialist refining an academic narrative synthesis for survey question: \"{$questionId}\".\n";
+        $prompt .= "Survey Title: \"{$survey->title}\"\n\n";
+
+        if (!empty($messages)) {
+            $prompt .= "Previous narrative:\n";
+            foreach ($messages as $msg) {
+                $roleName = ($msg['role'] ?? 'assistant') === 'assistant' ? 'Narrative' : 'User Instruction';
+                $prompt .= "{$roleName}: " . ($msg['content'] ?? '') . "\n\n";
+            }
+        }
+
+        $prompt .= "User Refinement Instruction:\n\"\"\"\n{$feedback}\n\"\"\"\n\n";
+        $prompt .= "Requirements:\n";
+        $prompt .= "1. Return a refined, cohesive 3 to 4 sentence narrative synthesis in {$targetLang}.\n";
+        $prompt .= "2. Plain text only. No bullet points, no markdown formatting.\n";
+        $prompt .= "3. Past tense academic prose conforming to {$style} style conventions.";
+
+        try {
+            $narrative = $this->aiService->callAi($prompt, "You are a senior qualitative researcher. Provide refined, academic narrative synthesis.");
+
+            $cacheKey = "qualitative_narrative_{$survey->id}_{$questionId}_{$style}";
+            $cached = Cache::get($cacheKey);
+            if (is_array($cached)) {
+                $cached['narrative'] = $narrative;
+                Cache::put($cacheKey, $cached, 86400);
+            } else {
+                Cache::put($cacheKey, ['narrative' => $narrative], 86400);
+            }
+
+            return response()->json([
+                'success' => true,
+                'narrative' => $narrative
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Refinement Failed: ' . $e->getMessage()], 500);
         }
     }
 

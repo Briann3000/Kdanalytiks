@@ -902,7 +902,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js?v=5').then(registration => {
+                navigator.serviceWorker.register('/sw.js?v=6').then(registration => {
                     console.log('SW registered: ', registration);
                     registration.update(); // Force update check
                 }).catch(registrationError => {

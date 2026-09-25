@@ -10,10 +10,12 @@ class ExcelImportParser implements ToArray
 {
     use CleansImportValues;
 
+    protected array $sheets = [];
     protected array $rows = [];
 
     public function array(array $array): void
     {
+        $this->sheets[] = $array;
         $this->rows = $array;
     }
 
@@ -45,9 +47,36 @@ class ExcelImportParser implements ToArray
      *   'count'     => N,
      * ]
      */
-    public function parse(string $filePath): array
+    public function parse(UploadedFile|string $filePath, ?string $readerType = null): array
     {
-        Excel::import($this, $filePath);
+        $this->sheets = [];
+        $this->rows = [];
+        Excel::import($this, $filePath, null, $readerType);
+
+        // If multiple sheets were imported, automatically pick the sheet with the most data content
+        if (count($this->sheets) > 1) {
+            $bestSheet = [];
+            $maxScore = -1;
+
+            foreach ($this->sheets as $sheet) {
+                // Filter rows that have at least one non-blank cell
+                $nonEmptyRows = array_values(array_filter($sheet, function ($row) {
+                    return count(array_filter((array) $row, fn($cell) => $cell !== null && trim((string) $cell) !== '')) > 0;
+                }));
+
+                $colCount = !empty($nonEmptyRows) ? count((array) ($nonEmptyRows[0] ?? [])) : 0;
+                $score = count($nonEmptyRows) * $colCount;
+
+                if ($score > $maxScore) {
+                    $maxScore = $score;
+                    $bestSheet = $sheet;
+                }
+            }
+
+            $this->rows = !empty($bestSheet) ? $bestSheet : ($this->sheets[0] ?? []);
+        } elseif (!empty($this->sheets)) {
+            $this->rows = $this->sheets[0];
+        }
 
         if (empty($this->rows)) {
             return ['variables' => [], 'rows' => [], 'count' => 0];
@@ -95,13 +124,50 @@ class ExcelImportParser implements ToArray
         $dataRows = array_values(array_filter(
             $dataRows,
             fn($row) =>
-            count(array_filter($row, fn($v) => $v !== null && $v !== '')) > 0
+                count(array_filter($row, fn($v) => $v !== null && $v !== '')) > 0
         ));
 
         // Determine number of columns from data if headers were absent
         $colCount = !empty($cleanedHeaders)
             ? count($cleanedHeaders)
             : (isset($dataRows[0]) ? count($dataRows[0]) : 0);
+
+        // ── Auto-convert Excel Serial Dates in Data Rows ────────────────────────
+        for ($i = 0; $i < $colCount; $i++) {
+            $header = $cleanedHeaders[$i] ?? '';
+            $headerLower = strtolower($header);
+            $isDateHeader = (bool) preg_match('/\b(season|date|month|year|period|time|tilled|planted|harvest|dob|birthday|day|submission_date|created_at)\b/i', $headerLower);
+            $isNotMoneyOrCount = !preg_match('/\b(salary|income|revenue|cost|price|amount|fee|count|qty|quantity|weight|height|population|id|index|code)\b/i', $headerLower);
+
+            $colData = array_column($dataRows, $i);
+            $nonBlank = array_values(array_filter($colData, fn($v) => $v !== null && $v !== '-' && trim((string) $v) !== ''));
+
+            if (!empty($nonBlank)) {
+                $serialCount = 0;
+                foreach ($nonBlank as $val) {
+                    if (is_numeric($val) && $val >= 25000 && $val <= 65000) {
+                        $serialCount++;
+                    }
+                }
+
+                $isSerialDateCol = ($isDateHeader && $serialCount > 0) || ($isNotMoneyOrCount && $serialCount >= count($nonBlank) * 0.4);
+
+                if ($isSerialDateCol) {
+                    foreach ($dataRows as &$row) {
+                        $cellVal = $row[$i] ?? null;
+                        if (is_numeric($cellVal) && $cellVal >= 25000 && $cellVal <= 65000) {
+                            try {
+                                $dt = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($cellVal);
+                                $row[$i] = $dt->format('Y-m-d');
+                            } catch (\Throwable) {
+                                // keep original value if conversion fails
+                            }
+                        }
+                    }
+                    unset($row);
+                }
+            }
+        }
 
         // ── Build variables from header row (or positional fallbacks) ──────────
         $variables = [];
@@ -129,13 +195,14 @@ class ExcelImportParser implements ToArray
                 $looksLikeSpssCode = false;
             }
 
-            // Infer value_labels from the data column (≤15 distinct non-blank values)
-            $uniqueValues = array_unique(array_column($dataRows, $i));
-            $uniqueValues = array_filter($uniqueValues, fn($v) => $v !== null && $v !== '');
+            // Infer value_labels from the data column (≤50 distinct non-blank values)
+            $colData = array_column($dataRows, $i);
+            $uniqueValues = array_unique($colData);
+            $uniqueValues = array_values(array_filter($uniqueValues, fn($v) => $v !== null && trim((string) $v) !== ''));
             sort($uniqueValues);
 
             $valueLabels = [];
-            if (count($uniqueValues) <= 15 && count($uniqueValues) > 0) {
+            if (count($uniqueValues) <= 50 && count($uniqueValues) > 0) {
                 foreach ($uniqueValues as $val) {
                     $valueLabels[(string) $val] = (string) $val;
                 }

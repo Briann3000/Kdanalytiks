@@ -39,17 +39,25 @@ class SurveyImportTest extends TestCase
         ];
         $this->assertEquals('rating', $this->builder->inferType($var1));
 
-        // Non-numeric or >7 value labels -> select_one
+        // Non-numeric or >7 value labels -> select (dropdown)
         $var2 = [
             'value_labels' => array_combine(range(1, 12), array_map(fn($n) => "Option $n", range(1, 12)))
         ];
-        $this->assertEquals('select_one', $this->builder->inferType($var2));
+        $this->assertEquals('select', $this->builder->inferType($var2));
 
         // No value labels -> text
         $var3 = [
             'value_labels' => []
         ];
         $this->assertEquals('text', $this->builder->inferType($var3));
+
+        // Coordinates -> decimal
+        $varLat = ['name' => 'latitude', 'label' => 'Latitude'];
+        $this->assertEquals('decimal', $this->builder->inferType($varLat, ['0.0712', '0.0715']));
+
+        // Wards with 3 choices -> radio
+        $varWard = ['name' => 'ward', 'label' => 'Ward'];
+        $this->assertEquals('radio', $this->builder->inferType($varWard, ['Igoji East', 'Koji East', 'Mwimbi', 'Igoji East']));
     }
 
     /** @test */
@@ -142,5 +150,55 @@ class SurveyImportTest extends TestCase
         $this->assertIsArray($decoded);
         $this->assertEquals('Male', $decoded[0]['userData']);
         $this->assertEquals('Very nice survey.', $decoded[1]['userData']);
+    }
+
+    /** @test */
+    public function it_can_preview_uploaded_csv_file()
+    {
+        $this->actingAs($this->user);
+
+        $csvContent = "Gender,Age Group,Satisfaction\nMale,18-24,5\nFemale,25-34,4\n";
+        $file = \Illuminate\Http\UploadedFile::fake()->createWithContent('survey_data.csv', $csvContent);
+
+        $response = $this->postJson(route('surveys.import.preview'), [
+            'file' => $file,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'variables',
+            'row_count',
+            'source',
+            'preview_rows',
+        ]);
+        $response->assertJson([
+            'row_count' => 2,
+            'source' => 'csv',
+        ]);
+    }
+
+    /** @test */
+    public function it_converts_excel_serial_dates_properly()
+    {
+        $this->actingAs($this->user);
+
+        // 46296 is 2026-10-01 in Excel
+        $csvContent = "Plot 1 season,Ward,Income\n46296,Igoji East,50000\n46054,Koji East,45000\n";
+        $file = \Illuminate\Http\UploadedFile::fake()->createWithContent('survey_dates.csv', $csvContent);
+
+        $response = $this->postJson(route('surveys.import.preview'), [
+            'file' => $file,
+        ]);
+
+        $response->assertStatus(200);
+        $variables = $response->json('variables');
+
+        $seasonVar = collect($variables)->firstWhere('name', 'plot_1_season');
+        $this->assertNotNull($seasonVar);
+        $this->assertEquals('date', $seasonVar['inferred_type']);
+
+        // Check preview row dates are converted to YYYY-MM-DD
+        $previewRows = $response->json('preview_rows');
+        $this->assertEquals('2026-10-01', $previewRows[0][0]);
     }
 }

@@ -61,12 +61,13 @@ class SurveyImportController extends Controller
             if (in_array($extension, ['xlsx', 'xls'])) {
                 // For Excel, inject codebook to resolve headers during parse
                 $this->excelParser->setCodebook($this->parseCodebook($request->file('codebook')));
-                $parsed = $this->excelParser->parse($realPath);
+                $readerType = $extension === 'xls' ? \Maatwebsite\Excel\Excel::XLS : \Maatwebsite\Excel\Excel::XLSX;
+                $parsed = $this->excelParser->parse($file, $readerType);
                 $source = 'excel';
                 $codebookApplied = $request->hasFile('codebook');
             } elseif ($extension === 'csv') {
                 $this->excelParser->setCodebook($this->parseCodebook($request->file('codebook')));
-                $parsed = $this->excelParser->parse($realPath);
+                $parsed = $this->excelParser->parse($file, \Maatwebsite\Excel\Excel::CSV);
                 $source = 'csv';
                 $codebookApplied = $request->hasFile('codebook');
             } else {
@@ -75,9 +76,11 @@ class SurveyImportController extends Controller
 
             // Auto-infer type for each variable
             foreach ($parsed['variables'] as &$var) {
-                $var['inferred_type'] = $this->builder->inferType($var);
+                $varIndex = $var['var_index'];
+                $colValues = array_column($parsed['rows'], $varIndex);
+                $var['inferred_type'] = $this->builder->inferType($var, $colValues);
                 $var['inferred_options'] = $this->builder->buildOptions($var['value_labels']);
-                $var['include'] = true;
+                $var['include'] = $this->builder->shouldIncludeByDefault($var);
             }
             unset($var);
 
@@ -203,7 +206,8 @@ class SurveyImportController extends Controller
                         $this->rows = $array;
                     }
                 };
-                Excel::import($parser, $file->getRealPath());
+                $readerType = $ext === 'xls' ? \Maatwebsite\Excel\Excel::XLS : \Maatwebsite\Excel\Excel::XLSX;
+                Excel::import($parser, $file, null, $readerType);
                 $rows = $parser->rows;
             }
 

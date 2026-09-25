@@ -1,10 +1,11 @@
-const CACHE_NAME = 'kdanalytiks-v5';
+const CACHE_NAME = 'kdanalytiks-v6';
 const urlsToCache = [
     '/',
     '/manifest.json'
 ];
 
 self.addEventListener('install', event => {
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
@@ -24,10 +25,15 @@ self.addEventListener('fetch', event => {
 
     // 3. Skip dynamic routes that should never be handled by SW cache
     const bypassRoutes = [
-        '/research-proposal/preview/',
+        '/research-proposal/',
         '/subscriptions',
         '/wallet',
-        '/admin/'
+        '/admin/',
+        '/surveys/',
+        '/ai/',
+        '/reports/',
+        '/socius/',
+        '/api/'
     ];
 
     if (bypassRoutes.some(path => url.pathname.includes(path))) {
@@ -42,10 +48,12 @@ self.addEventListener('fetch', event => {
                 if (!response || response.status !== 200 || response.type !== 'basic') {
                     return response;
                 }
-                const responseToCache = response.clone();
-                caches.open(CACHE_NAME).then(cache => {
-                    cache.put(event.request, responseToCache);
-                });
+                try {
+                    const responseToCache = response.clone();
+                    caches.open(CACHE_NAME).then(cache => {
+                        cache.put(event.request, responseToCache).catch(() => {});
+                    }).catch(() => {});
+                } catch (e) {}
                 return response;
             })
             .catch(() => {
@@ -54,8 +62,6 @@ self.addEventListener('fetch', event => {
                     if (cachedResponse) {
                         return cachedResponse;
                     }
-                    // CRITICAL FIX: If not in cache, we MUST return a Response object or just throw
-                    // Throwing here will let the browser show its own 'Offline' page.
                     throw new Error('Network failed and no cache hit.');
                 });
             })

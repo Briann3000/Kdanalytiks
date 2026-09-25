@@ -324,8 +324,6 @@
                                                             <i class="fa-solid fa-signature mr-1.5 text-zinc-500"></i>
                                                             <span>{{ __('View Signature') }}</span>
                                                         </a>
-                                                    @elseif (preg_match('/^-?\d+\.\d+,-?\d+\.\d+$/', $valStr))
-                                                        📍 {{ $valStr }}
                                                     @elseif (str_starts_with($valStr, '[') && json_decode($valStr) !== null)
                                                         @php $decoded = json_decode($valStr, true); @endphp
                                                         {{ count($decoded) . ' ' . __('entries') }}
@@ -341,7 +339,7 @@
                                                     @elseif ($valStr === 'true') ✅
                                                     @elseif ($valStr === 'false') ❌
                                                     @else
-                                                        <span class="whitespace-pre-line">{{ $valStr }}</span>
+                                                        <span class="whitespace-pre-line">{{ \App\Http\Controllers\SurveyController::formatCoordinateValue($valStr, $header['label'] ?? '') }}</span>
                                                     @endif
                                                 </td>
                                             @endforeach

@@ -73,6 +73,8 @@
             <div
                 class="bg-white/90 backdrop-blur-md rounded-3xl p-8 sm:p-10 border border-gray-100 shadow-xl shadow-gray-200/40 space-y-8">
                 <div class="text-center max-w-2xl mx-auto">
+                    <span
+                        class="text-xs uppercase tracking-widest text-[#2271b1] font-bold block mb-1">{{ __('Discover KDAnalytiks') }}</span>
                     <h2 class="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
                         {{ __('Build, Analyze & Publish Research with AI') }}
                     </h2>

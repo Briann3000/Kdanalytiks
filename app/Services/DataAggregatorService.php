@@ -154,7 +154,7 @@ class DataAggregatorService
 
         if (!empty($frequencyCount)) {
             foreach ($frequencyCount as $option => $count) {
-                $optionLabel = ($option === '' || $option === null) ? 'Skipped' : $option;
+                $optionLabel = ($option === '' || $option === null) ? 'Missing' : $option;
                 $data['stats'][] = [
                     'option' => $optionLabel,
                     'count' => $count,

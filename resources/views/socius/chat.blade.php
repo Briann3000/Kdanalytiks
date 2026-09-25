@@ -142,10 +142,10 @@
 
 @section('content')
     <div x-data="standaloneSociusManager({
-                                                                        canAnalyze: @js($canAnalyze),
-                                                                        initialContext: @js($initialContext),
-                                                                        urls: @js($urls)
-                                                                    })" x-init="init()"
+                                                                            canAnalyze: @js($canAnalyze),
+                                                                            initialContext: @js($initialContext),
+                                                                            urls: @js($urls)
+                                                                        })" x-init="init()"
         class="socius-root-container animate-in fade-in duration-500">
 
         <div class="relative flex gap-4 w-full bg-[#1e1e1e]" style="height: calc(100dvh - 4.1rem); overflow: hidden;">
@@ -210,8 +210,8 @@
                                     <button @click="selectThread(thread.id)"
                                         class="w-full text-left rounded-2xl px-3 py-3 pr-9 border transition-all"
                                         :class="currentThreadId === thread.id
-                                                                                                        ? 'bg-white text-slate-900 border-white shadow-xl shadow-black/20'
-                                                                                                        : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-white'">
+                                                                                                            ? 'bg-white text-slate-900 border-white shadow-xl shadow-black/20'
+                                                                                                            : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.08] text-white'">
                                         <div class="flex items-center gap-1.5 overflow-hidden">
                                             <template x-if="thread.is_pinned">
                                                 <i
@@ -229,9 +229,9 @@
                                     <button @click.stop="threadMenuOpen = (threadMenuOpen === thread.id ? null : thread.id)"
                                         class="absolute right-2 top-3 w-6 h-6 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover/thread:opacity-100 focus:opacity-100"
                                         :class="[
-                                                                                                        threadMenuOpen === thread.id ? 'opacity-100' : '',
-                                                                                                        currentThreadId === thread.id ? 'hover:bg-slate-200 text-slate-600' : 'hover:bg-white/15 text-slate-400'
-                                                                                                    ]">
+                                                                                                            threadMenuOpen === thread.id ? 'opacity-100' : '',
+                                                                                                            currentThreadId === thread.id ? 'hover:bg-slate-200 text-slate-600' : 'hover:bg-white/15 text-slate-400'
+                                                                                                        ]">
                                         <i class="fa-solid fa-ellipsis-vertical text-[11px]"></i>
                                     </button>
 
@@ -428,8 +428,8 @@
                             :class="message.role === 'user' ? 'flex justify-end' : 'flex justify-start'">
                             <div class="relative w-full md:w-auto md:max-w-[80%] rounded-[2rem] px-5 py-4 border"
                                 :class="message.role === 'user'
-                                                                                                ? 'bg-[#2271b1] text-white border-[#1d629b] shadow-lg shadow-blue-500/10'
-                                                                                                : 'bg-white/[0.04] text-white border-white/10'">
+                                                                                                    ? 'bg-[#2271b1] text-white border-[#1d629b] shadow-lg shadow-blue-500/10'
+                                                                                                    : 'bg-white/[0.04] text-white border-white/10'">
                                 <div class="flex items-center gap-3 mb-3">
                                     <div class="w-9 h-9 rounded-2xl flex items-center justify-center text-sm"
                                         :class="message.role === 'user' ? 'bg-white/60' : 'bg-white/10 text-blue-300'">
@@ -832,10 +832,19 @@
                                                         x-text="formatRelativeTime(rule.created_at)"></p>
                                                 </div>
                                             </div>
-                                            <button @click="deleteKbRule(rule.id)"
-                                                class="w-7 h-7 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover/rule:opacity-100">
-                                                <i class="fa-solid fa-trash text-xs"></i>
-                                            </button>
+                                            <div class="flex items-center gap-1.5 shrink-0">
+                                                <button @click="applyKbRuleToPrompt(rule)"
+                                                    class="px-2.5 py-1 rounded-xl bg-[#2271b1]/20 hover:bg-[#2271b1] text-[#2271b1] hover:text-white border border-[#2271b1]/30 text-[11px] font-bold transition-all flex items-center gap-1 shadow-xs cursor-pointer"
+                                                    title="{{ __('Apply this specific instruction to prompt') }}">
+                                                    <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
+                                                    <span>{{ __('Apply Now') }}</span>
+                                                </button>
+                                                <button @click="deleteKbRule(rule.id)"
+                                                    class="w-7 h-7 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover/rule:opacity-100 cursor-pointer"
+                                                    title="{{ __('Delete Rule') }}">
+                                                    <i class="fa-solid fa-trash text-xs"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </template>
                                 </div>
@@ -1674,35 +1683,35 @@
                         const tableId = `socius-table-${Math.random().toString(36).slice(2, 10)}`;
 
                         return `
-                                                                                    <div class="my-4 rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e2d]/60 shadow-xl">
-                                                                                        <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-white/[0.05] border-b border-white/10">
-                                                                                            <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-[10px] font-bold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
-                                                                                                <i class="fa-regular fa-copy text-[10px]"></i>
-                                                                                                ${@js(__('Copy Table'))}
-                                                                                            </button>
-                                                                                        </div>
-                                                                                        <div class="overflow-x-auto">
-                                                                                            <table id="${tableId}" class="min-w-full text-left text-xs border-collapse">
-                                                                                                <thead>
-                                                                                                    <tr class="bg-white/[0.04] border-b border-white/10">
-                                                                                                        ${header.map(cell => `<th class="px-4 py-3 text-[11px] font-bold text-blue-300 border-b border-white/10 bg-white/[0.03]">${this.inlineFormat(cell)}</th>`).join('')}
-                                                                                                    </tr>
-                                                                                                </thead>
-                                                                                                <tbody>
-                                                                                                    ${body.map((row, rIdx) => {
+                                                                                        <div class="my-4 rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e2d]/60 shadow-xl">
+                                                                                            <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-white/[0.05] border-b border-white/10">
+                                                                                                <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-[10px] font-bold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
+                                                                                                    <i class="fa-regular fa-copy text-[10px]"></i>
+                                                                                                    ${@js(__('Copy Table'))}
+                                                                                                </button>
+                                                                                            </div>
+                                                                                            <div class="overflow-x-auto">
+                                                                                                <table id="${tableId}" class="min-w-full text-left text-xs border-collapse">
+                                                                                                    <thead>
+                                                                                                        <tr class="bg-white/[0.04] border-b border-white/10">
+                                                                                                            ${header.map(cell => `<th class="px-4 py-3 text-[11px] font-bold text-blue-300 border-b border-white/10 bg-white/[0.03]">${this.inlineFormat(cell)}</th>`).join('')}
+                                                                                                        </tr>
+                                                                                                    </thead>
+                                                                                                    <tbody>
+                                                                                                        ${body.map((row, rIdx) => {
                             const isTotal = row[0] && row[0].toLowerCase().includes('total');
                             const rowBg = isTotal ? 'bg-white/[0.08] font-bold text-blue-200' : (rIdx % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]');
                             return `
-                                                                                                            <tr class="${rowBg}">
-                                                                                                                ${row.map(cell => `<td class="px-4 py-2.5 border-b border-white/5 ${isTotal ? 'font-bold text-blue-200 border-t border-white/10' : 'text-slate-200'}">${this.inlineFormat(cell)}</td>`).join('')}
-                                                                                                            </tr>
-                                                                                                        `;
+                                                                                                                <tr class="${rowBg}">
+                                                                                                                    ${row.map(cell => `<td class="px-4 py-2.5 border-b border-white/5 ${isTotal ? 'font-bold text-blue-200 border-t border-white/10' : 'text-slate-200'}">${this.inlineFormat(cell)}</td>`).join('')}
+                                                                                                                </tr>
+                                                                                                            `;
                         }).join('')}
-                                                                                                </tbody>
-                                                                                            </table>
+                                                                                                    </tbody>
+                                                                                                </table>
+                                                                                            </div>
                                                                                         </div>
-                                                                                    </div>
-                                                                                `;
+                                                                                    `;
                     },
 
                     inlineFormat(text) {
@@ -1777,7 +1786,7 @@
                             // Clean raw text clipboard fallback (strip redundant line breaks)
                             let cleanText = (content || clone.innerText || clone.textContent || '').replace(/<!--[\s\S]*?-->/g, '').trim();
 
-                                            const rawHtml = clone.innerHTML;
+                                                const rawHtml = clone.innerHTML;
                             const blobHtml = new Blob([rawHtml], { type: 'text/html' });
                             const blobText = new Blob([cleanText], { type: 'text/plain' });
 
@@ -1948,6 +1957,30 @@
                         } finally {
                             this.uploadingKbDoc = false;
                             event.target.value = '';
+                        }
+                    },
+
+                    applyKbRuleToPrompt(rule) {
+                        if (!rule || !rule.content) return;
+                        const cleanText = rule.content.replace(/^\[(Quantitative|Qualitative|Inferential|Socius|General|Book\/Doc|Doc:[^\]]+)\]\s*/i, '');
+                        const inputEl = document.getElementById('socius-prompt-input');
+                        if (inputEl) {
+                            inputEl.value = cleanText;
+                            inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+                            inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            inputEl.focus();
+                        }
+                        this.kbModalOpen = false;
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                title: @js(__('Instruction Loaded')),
+                                text: @js(__('Instruction ready in Socius chat prompt.')),
+                                icon: 'success',
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 2000
+                            });
                         }
                     },
 

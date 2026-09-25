@@ -179,10 +179,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/surveys/{survey}/export-google-sheets', [SurveyController::class, 'exportGoogleSheets'])->name('surveys.export_google_sheets');
     Route::get('/auth/google', [\App\Http\Controllers\GoogleController::class, 'redirectToGoogle'])->name('auth.google');
     Route::get('/auth/google/callback', [\App\Http\Controllers\GoogleController::class, 'handleGoogleCallback']);
-    Route::get('/surveys/{survey}/export-pdf', [SurveyController::class, 'exportPdf'])->name('surveys.export_pdf');
-    Route::get('/surveys/{survey}/export-docx', [SurveyController::class, 'exportDocx'])->name('surveys.export_docx');
-    Route::get('/surveys/{survey}/export-compiled-pdf', [SurveyController::class, 'exportCompiledPdf'])->name('surveys.export_compiled_pdf');
-    Route::get('/surveys/{survey}/export-compiled-docx', [SurveyController::class, 'exportCompiledDocx'])->name('surveys.export_compiled_docx');
+    Route::match(['get', 'post'], '/surveys/{survey}/export-pdf', [SurveyController::class, 'exportPdf'])->name('surveys.export_pdf');
+    Route::match(['get', 'post'], '/surveys/{survey}/export-docx', [SurveyController::class, 'exportDocx'])->name('surveys.export_docx');
     Route::get('/surveys/{survey}/responses/{response}/export-pdf', [SurveyController::class, 'exportSinglePdf'])->name('surveys.responses.export_pdf');
     Route::get('/surveys/{survey}/responses/{response}/export-docx', [SurveyController::class, 'exportSingleDocx'])->name('surveys.responses.export_docx');
     Route::post('/surveys/{survey}/reporting-style', [SurveyController::class, 'updateReportingStyle'])->name('surveys.reporting-style');
@@ -242,7 +240,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/toggle-shared-report', [SurveyController::class, 'toggleSharedReport'])->name('reports.toggle-shared');
         Route::post('/toggle-shared-data', [SurveyController::class, 'toggleSharedData'])->name('toggle-shared-data');
         Route::get('/crosstab', [SurveyController::class, 'crosstab'])->name('reports.crosstab');
-        Route::get('/inferential-analysis', [SurveyController::class, 'inferentialAnalysis'])->name('reports.inferential');
+        Route::match(['get', 'post'], '/inferential-analysis', [SurveyController::class, 'inferentialAnalysis'])->name('reports.inferential');
         Route::post('/inferential-analysis/save', [SurveyController::class, 'saveInferentialAnalysis'])->name('reports.inferential.save');
         Route::delete('/inferential-analysis/{analysisId}', [SurveyController::class, 'deleteInferentialAnalysis'])->name('reports.inferential.delete');
 
@@ -523,10 +521,12 @@ Route::middleware(['auth', 'verified', 'subscribed:ai', 'throttle:5,1'])->group(
     Route::post('/ai/generate-survey', [\App\Http\Controllers\AiController::class, 'generateSchema'])->name('ai.generate');
 });
 
-Route::middleware(['auth', 'verified', 'throttle:10,1'])->group(function () {
-    Route::get('/ai/insights/question/{questionId}', [InsightController::class, 'generateQuestionInsight'])->name('ai.insights.question');
-    Route::get('/ai/insights/quantitative/{questionId}', [InsightController::class, 'generateQuantitativeInsight'])->name('ai.insights.quantitative');
+Route::middleware(['auth', 'verified', 'throttle:120,1'])->group(function () {
+    Route::match(['GET', 'POST'], '/ai/insights/question/{questionId}', [InsightController::class, 'generateQuestionInsight'])->name('ai.insights.question');
+    Route::match(['GET', 'POST'], '/ai/insights/quantitative/{questionId}', [InsightController::class, 'generateQuantitativeInsight'])->name('ai.insights.quantitative');
     Route::post('/ai/insights/quantitative/{questionId}/refine', [InsightController::class, 'refineQuantitativeInsight'])->name('ai.insights.quantitative.refine');
+    Route::match(['GET', 'POST'], '/ai/insights/qualitative/{questionId}', [InsightController::class, 'generateQualitativeNarrative'])->name('ai.insights.qualitative');
+    Route::post('/ai/insights/qualitative/{questionId}/refine', [InsightController::class, 'refineQualitativeNarrative'])->name('ai.insights.qualitative.refine');
     Route::post('/ai/insights/crosstab', [InsightController::class, 'analyzeCrosstab'])->name('ai.insights.crosstab');
     Route::post('/ai/insights/inferential', [InsightController::class, 'analyzeInferential'])->name('ai.insights.inferential');
 

@@ -430,10 +430,6 @@
                                         class="inline-flex items-center text-[#2271b1] hover:text-[#135e96] font-bold bg-zinc-50 px-3.5 py-2 rounded-xl border border-zinc-200 text-xs">
                                         <i class="fa-solid fa-signature mr-2"></i> {{ __('View Signature') }}
                                     </a>
-                                @elseif (preg_match('/^-?\d+\.\d+,-?\d+\.\d+$/', $valStr))
-                                    <div class="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                                        <span>📍</span> <span>{{ $valStr }}</span>
-                                    </div>
                                 @elseif ($valStr === 'true' || $valStr === '1')
                                     <span
                                         class="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold">✅
@@ -444,7 +440,7 @@
                                 @else
                                     <div
                                         class="text-xs sm:text-sm font-semibold text-gray-800 leading-relaxed whitespace-pre-wrap bg-gray-50/50 p-3.5 rounded-2xl border border-gray-100">
-                                        {{ $valStr }}
+                                        {{ \App\Http\Controllers\SurveyController::formatCoordinateValue($valStr, $label) }}
                                     </div>
                                 @endif
                             </div>

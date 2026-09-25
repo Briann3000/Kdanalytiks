@@ -6,29 +6,59 @@
 @section('meta_robots', 'noindex, nofollow')
 
 @section('content')
-    @if(request('reportTab') === 'analyse')
-        <style>
-            .container-fluid {
-                padding-left: 0 !important;
-                padding-right: 0 !important;
-                padding-top: 0 !important;
-                padding-bottom: 0 !important;
-                max-width: 100% !important;
-                width: 100% !important;
-                margin: 0 !important;
-            }
+    <style>
+        body:has([data-report-tab="analyse"]) #survey-hub-header,
+        body:has([data-report-tab="analyse"]) #survey-hub-nav,
+        body:has([data-report-tab="humanizer"]) #survey-hub-header,
+        body:has([data-report-tab="humanizer"]) #survey-hub-nav {
+            display: none !important;
+        }
 
-            .content-pane {
-                padding: 0 !important;
-                margin: 0 !important;
-            }
-        </style>
-    @endif
-    <div
-        class="{{ request('reportTab') === 'analyse' ? 'w-full h-full p-4 sm:p-6 flex flex-col min-w-0 max-w-full overflow-hidden' : 'container-fluid px-4 py-6 min-w-0 w-full max-w-full' }}">
-        @if((!isset($isSharedView) || !$isSharedView) && request('reportTab') !== 'analyse')
+        body:has([data-report-tab="analyse"]) #survey-hub-container,
+        body:has([data-report-tab="humanizer"]) #survey-hub-container {
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: calc(100dvh - 4.1rem) !important;
+            overflow: hidden !important;
+            background-color: #1e1e1e !important;
+        }
+
+        body:has([data-report-tab="analyse"]) #survey-hub-content-box,
+        body:has([data-report-tab="humanizer"]) #survey-hub-content-box {
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        body:has([data-report-tab="analyse"]) #main-viewport,
+        body:has([data-report-tab="humanizer"]) #main-viewport {
+            padding: 0 !important;
+            margin: 0 !important;
+            overflow: hidden !important;
+            height: calc(100dvh - 4.1rem) !important;
+            background-color: #1e1e1e !important;
+        }
+
+        body:has([data-report-tab="analyse"]) .workspace-layout,
+        body:has([data-report-tab="humanizer"]) .workspace-layout {
+            height: calc(100dvh - 4.1rem) !important;
+            overflow: hidden !important;
+        }
+
+        body:has([data-report-tab="analyse"]) footer,
+        body:has([data-report-tab="humanizer"]) footer {
+            display: none !important;
+        }
+    </style>
+    <div id="survey-hub-container"
+        class="{{ in_array(request('reportTab'), ['analyse', 'humanizer']) ? 'w-full h-full p-0 m-0 flex flex-col min-w-0 max-w-full overflow-hidden bg-[#1e1e1e]' : 'container-fluid px-4 py-6 min-w-0 w-full max-w-full' }}">
+        @if(!isset($isSharedView) || !$isSharedView)
             <!-- Survey Header -->
-            <header class="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
+            <header id="survey-hub-header"
+                class="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0 {{ in_array(request('reportTab'), ['analyse', 'humanizer']) ? 'hidden' : '' }}">
                 <div>
                     <div class="flex items-center gap-2 mb-2">
                         @php
@@ -78,7 +108,8 @@
             </header>
 
             <!-- Survey Tabs -->
-            <div class="border-b border-gray-200 mb-6 relative z-30 shrink-0">
+            <div id="survey-hub-nav"
+                class="border-b border-gray-200 mb-6 relative z-30 shrink-0 {{ in_array(request('reportTab'), ['analyse', 'humanizer']) ? 'hidden' : '' }}">
                 <nav
                     class="flex items-center gap-1.5 sm:gap-5 -mb-px py-0.5 overflow-visible w-full justify-between sm:justify-start">
                     <a href="{{ route('surveys.summary', $survey) }}"
@@ -141,19 +172,6 @@
                                     class="flex items-center gap-3 px-3 py-2.5 text-xs font-semibold text-gray-700 hover:bg-zinc-100 hover:text-[#135e96] rounded-xl transition-colors">
                                     <i class="fa-solid fa-calculator text-zinc-400 w-4 text-center"></i>
                                     {{ __('Analyze') }}
-                                </a>
-                            </div>
-
-                            <!-- Compiled Synthesis Section -->
-                            <div class="px-4 py-2 bg-gray-50 border-t border-b border-gray-100 mt-1">
-                                <span
-                                    class="text-[9px] font-black text-indigo-600 tracking-widest">{{ __('Unified Report') }}</span>
-                            </div>
-                            <div class="p-1.5 space-y-0.5">
-                                <a href="{{ route('surveys.reports', $survey) }}?reportTab=compiled"
-                                    class="flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-indigo-700 hover:bg-indigo-50 rounded-xl transition-colors">
-                                    <i class="fa-solid fa-file-contract text-indigo-500 w-4 text-center"></i>
-                                    {{ __('Compiled Report') }}
                                 </a>
                             </div>
                         </div>
@@ -229,7 +247,8 @@
         @endif
 
         <!-- Tab Content -->
-        <div class="animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div id="survey-hub-content-box"
+            class="{{ in_array(request('reportTab'), ['analyse', 'humanizer']) ? 'w-full h-full p-0 m-0 overflow-hidden' : 'animate-in fade-in slide-in-from-bottom-2 duration-500' }}">
             @yield('survey-content')
         </div>
     </div>

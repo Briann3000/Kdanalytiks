@@ -1406,16 +1406,486 @@ class SurveyController extends Controller
             }
         }
 
-        $actualOptionsCount = count(array_filter($optionsLower, fn($o) => $o !== '[missing / skipped]' && $o !== ''));
+        $actualOptionsCount = count(array_filter($optionsLower, fn($o) => !self::isMissingValue($o)));
         if ($actualOptionsCount > 0 && ($matchCount / $actualOptionsCount) >= 0.6) {
             return true;
         }
         return false;
     }
 
+    protected static function isMissingValue($val): bool
+    {
+        if ($val === null)
+            return true;
+        if (is_array($val)) {
+            if (empty($val))
+                return true;
+            foreach ($val as $v) {
+                if (!self::isMissingValue($v)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        $str = trim((string) $val);
+        if ($str === '')
+            return true;
+        $lower = strtolower($str);
+        if (in_array($lower, ['-', '--', '---', 'n/a', 'na', 'none', 'nil', '#null!', '#n/a', 'sysmis', '.', '[missing / skipped]', 'skipped', 'null'])) {
+            return true;
+        }
+        return false;
+    }
+
+    protected static function isIdentifierField(string $fieldId, string $label): bool
+    {
+        $cleanId = strtolower(trim($fieldId));
+        $cleanLabel = strtolower(trim(preg_replace('/^(?:#\d+|\d+[\.\:\-]|q\d+[\.\:\-])\s*/i', '', $label)));
+
+        $idTokens = [
+            'id',
+            '_id',
+            'uuid',
+            'guid',
+            'submission_id',
+            'case_no',
+            'case_id',
+            'case_number',
+            'respondent_id',
+            'respondent id',
+            'household_id',
+            'household id',
+            'record_id',
+            'record id',
+            'row_id',
+            'row id',
+            'entry_id',
+            'entry id',
+            'serial_no',
+            'serial_number',
+            'serial no',
+            'serial number'
+        ];
+
+        if (in_array($cleanId, $idTokens) || in_array($cleanLabel, $idTokens)) {
+            return true;
+        }
+
+        if (preg_match('/^(?:respondent|submission|household|case|record|entry|row|serial)[\s_\-]*(?:id|no|num|number)?$/i', $cleanLabel)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    protected static function isGeospatialField(string $fieldId, string $label): bool
+    {
+        $cleanId = strtolower(trim($fieldId));
+        $cleanLabel = strtolower(trim(preg_replace('/^(?:#\d+|\d+[\.\:\-]|q\d+[\.\:\-])\s*/i', '', $label)));
+
+        $geoTokens = [
+            'latitude',
+            'longitude',
+            'lat',
+            'long',
+            'lng',
+            'geopoint',
+            'coordinates',
+            'gps',
+            'gps_latitude',
+            'gps_longitude',
+            'gps_coordinates',
+            'gps_location',
+            'location_coordinates'
+        ];
+
+        if (in_array($cleanId, $geoTokens) || in_array($cleanLabel, $geoTokens)) {
+            return true;
+        }
+
+        if (preg_match('/^(?:gps[\s_\-]*)?(?:latitude|longitude|lat|long|lng|geopoint|coordinates)$/i', $cleanLabel)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    protected static function parseNumericValue($val): ?array
+    {
+        if (!is_scalar($val))
+            return null;
+        $str = trim((string) $val);
+        if ($str === '')
+            return null;
+
+        // Exclude common date patterns
+        if (preg_match('/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}$/', $str) || preg_match('/^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/', $str)) {
+            return null;
+        }
+
+        // Currency prefix matching
+        $currencyPattern = '(?:[\$\€\£\¥\₹\₦\฿\₫\₪\₩\₽]|(?:USD|EUR|GBP|KES|KSh|UGX|TZS|NGN|GHS|ZAR|CAD|AUD)\s*)';
+
+        if (preg_match('/^(' . $currencyPattern . ')?\s*([+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)\s*([^\d\s]*)$/iu', $str, $matches)) {
+            $prefix = trim($matches[1] ?? '');
+            $numStr = str_replace(',', '', $matches[2]);
+            $suffix = trim($matches[3] ?? '');
+
+            if (is_numeric($numStr)) {
+                return [
+                    'number' => (float) $numStr,
+                    'prefix' => $prefix,
+                    'suffix' => $suffix,
+                    'raw' => $str
+                ];
+            }
+        }
+        return null;
+    }
+
+    protected static function getMostFrequentString(array $items): string
+    {
+        if (empty($items))
+            return '';
+        $counts = array_count_values($items);
+        arsort($counts);
+        return (string) key($counts);
+    }
+
+    protected static function calculateSummaryStatistics(array $numbers, string $unit = '', string $prefix = ''): array
+    {
+        sort($numbers);
+        $count = count($numbers);
+        if ($count === 0) {
+            return [];
+        }
+
+        $sum = array_sum($numbers);
+        $mean = $sum / $count;
+
+        $min = $numbers[0];
+        $max = $numbers[$count - 1];
+
+        // Median
+        $mid = (int) floor($count / 2);
+        if ($count % 2 === 0) {
+            $median = ($numbers[$mid - 1] + $numbers[$mid]) / 2;
+        } else {
+            $median = $numbers[$mid];
+        }
+
+        // Percentiles (Q1 = 25th, Q3 = 75th)
+        $calcPercentile = function ($p) use ($numbers, $count) {
+            $index = ($p / 100) * ($count - 1);
+            $lower = (int) floor($index);
+            $fraction = $index - $lower;
+            if (isset($numbers[$lower + 1])) {
+                return $numbers[$lower] + $fraction * ($numbers[$lower + 1] - $numbers[$lower]);
+            }
+            return $numbers[$lower];
+        };
+
+        $q1 = $calcPercentile(25);
+        $q3 = $calcPercentile(75);
+        $iqr = $q3 - $q1;
+
+        // Standard deviation
+        if ($count > 1) {
+            $varianceSum = 0;
+            foreach ($numbers as $x) {
+                $varianceSum += pow($x - $mean, 2);
+            }
+            $stdDev = sqrt($varianceSum / ($count - 1));
+        } else {
+            $stdDev = 0;
+        }
+
+        return [
+            'count' => $count,
+            'mean' => round($mean, 2),
+            'median' => round($median, 2),
+            'std_dev' => round($stdDev, 2),
+            'min' => round($min, 2),
+            'max' => round($max, 2),
+            'q1' => round($q1, 2),
+            'q3' => round($q3, 2),
+            'iqr' => round($iqr, 2),
+            'unit' => $unit,
+            'prefix' => $prefix
+        ];
+    }
+
+    public static function formatCoordinateValue($val, string $headerLabel = ''): string
+    {
+        if (!is_scalar($val))
+            return is_array($val) ? json_encode($val) : (string) $val;
+
+        $str = trim((string) $val);
+        if ($str === '' || $str === '—' || $str === '-' || $str === 'null' || $str === 'NA') {
+            return $str;
+        }
+
+        // Already standard lat,long comma pair
+        if (preg_match('/^-?\d+\.\d+\s*,\s*-?\d+\.\d+$/', $str)) {
+            return '📍 ' . $str;
+        }
+
+        // Check if this is a single coordinate integer or float
+        $isLat = (bool) preg_match('/(?:latitude|lat)/i', $headerLabel);
+        $isLng = (bool) preg_match('/(?:longitude|long|lng)/i', $headerLabel);
+        $isCoord = $isLat || $isLng || (bool) preg_match('/(?:gps|geopoint|coordinate)/i', $headerLabel);
+
+        if (!$isCoord) {
+            return $str;
+        }
+
+        // Clean numeric check
+        if (preg_match('/^[+-]?\d+(?:\.\d+)?$/', $str)) {
+            $num = (float) $str;
+            // If it's a huge integer coordinate (e.g. 15460938 or 3768621314) with missing decimals
+            if (abs($num) > 180) {
+                $absStr = preg_replace('/^[+-]/', '', $str);
+                $sign = $num < 0 ? -1 : 1;
+                $digits = strlen($absStr);
+
+                if ($digits >= 5) {
+                    if ($isLat) {
+                        // Latitude is in [-90, 90], typically 0 to 9 degrees for Kenya/East Africa or 2 digits
+                        $div1 = pow(10, $digits - 1);
+                        $div2 = pow(10, $digits - 2);
+                        if (abs($num / $div1) <= 90) {
+                            $num = $sign * ($num / $div1);
+                        } elseif (abs($num / $div2) <= 90) {
+                            $num = $sign * ($num / $div2);
+                        }
+                    } elseif ($isLng) {
+                        // Longitude is in [-180, 180], typically 30-40 degrees for Kenya
+                        $div2 = pow(10, $digits - 2);
+                        $div3 = pow(10, $digits - 3);
+                        $div1 = pow(10, $digits - 1);
+                        if (abs($num / $div2) <= 180) {
+                            $num = $sign * ($num / $div2);
+                        } elseif (abs($num / $div3) <= 180) {
+                            $num = $sign * ($num / $div3);
+                        } elseif (abs($num / $div1) <= 180) {
+                            $num = $sign * ($num / $div1);
+                        }
+                    } else {
+                        $div2 = pow(10, $digits - 2);
+                        $div1 = pow(10, $digits - 1);
+                        if (abs($num / $div2) <= 180) {
+                            $num = $sign * ($num / $div2);
+                        } elseif (abs($num / $div1) <= 90) {
+                            $num = $sign * ($num / $div1);
+                        }
+                    }
+                }
+            }
+
+            // If parsed coordinate is within valid bounds
+            if (($isLat && abs($num) <= 90) || ($isLng && abs($num) <= 180)) {
+                $degFormatted = number_format(abs($num), 6);
+                // Trim trailing zeros after 4 decimals if redundant
+                $degFormatted = rtrim(rtrim($degFormatted, '0'), '.');
+                if (strlen(explode('.', $degFormatted)[1] ?? '') < 4) {
+                    $degFormatted = number_format(abs($num), 4);
+                }
+
+                if ($isLat) {
+                    $dir = $num < 0 ? 'S' : 'N';
+                    return "{$degFormatted}° {$dir}";
+                } elseif ($isLng) {
+                    $dir = $num < 0 ? 'W' : 'E';
+                    return "{$degFormatted}° {$dir}";
+                } else {
+                    return (string) $num;
+                }
+            }
+        }
+
+        return $str;
+    }
+
+    protected static function generateNumericBins(array $validAnswers, array $parsedNumbers, string $unit = '', string $prefix = ''): array
+    {
+        $count = count($parsedNumbers);
+        if ($count === 0)
+            return [];
+
+        $unitSuffix = $unit !== '' ? ' ' . $unit : '';
+        $pfx = $prefix !== '' ? $prefix : '';
+
+        // Sort parsed numbers
+        $sortedNumbers = $parsedNumbers;
+        sort($sortedNumbers);
+
+        $min = $sortedNumbers[0];
+        $max = $sortedNumbers[$count - 1];
+        $range = $max - $min;
+
+        if ($range <= 0) {
+            $label = "{$pfx}" . number_format($min) . "{$unitSuffix}";
+            return [$label => $count];
+        }
+
+        // Calculate Q1, Q3, and IQR to detect extreme outliers that would distort bin widths
+        $calcP = function ($p) use ($sortedNumbers, $count) {
+            $idx = ($p / 100) * ($count - 1);
+            $low = (int) floor($idx);
+            $frac = $idx - $low;
+            if (isset($sortedNumbers[$low + 1])) {
+                return $sortedNumbers[$low] + $frac * ($sortedNumbers[$low + 1] - $sortedNumbers[$low]);
+            }
+            return $sortedNumbers[$low];
+        };
+
+        $effectiveMin = $min;
+        $effectiveMax = $max;
+
+        if ($count >= 10) {
+            $q1 = $calcP(25);
+            $q3 = $calcP(75);
+            $iqr = $q3 - $q1;
+
+            if ($iqr > 0) {
+                $lowerFence = $q1 - 1.5 * $iqr;
+                $upperFence = $q3 + 1.5 * $iqr;
+
+                // Check inliers
+                $inliers = array_values(array_filter($sortedNumbers, fn($v) => $v >= $lowerFence && $v <= $upperFence));
+                if (count($inliers) >= (int) floor($count * 0.7) && count($inliers) < $count) {
+                    $effectiveMin = min($inliers);
+                    $effectiveMax = max($inliers);
+                }
+            }
+        }
+
+        $effectiveRange = $effectiveMax - $effectiveMin;
+        if ($effectiveRange <= 0) {
+            $effectiveRange = $range;
+            $effectiveMin = $min;
+            $effectiveMax = $max;
+        }
+
+        // Determine number of bins (5 to 7)
+        $k = min(7, max(5, (int) ceil(1 + log($count, 2))));
+        $rawWidth = $effectiveRange / $k;
+
+        // Nice bin width calculation
+        $magnitude = pow(10, floor(log10(max(1e-6, $rawWidth))));
+        $fraction = $rawWidth / max(1e-9, $magnitude);
+        if ($fraction <= 1.2)
+            $niceFraction = 1;
+        elseif ($fraction <= 2.5)
+            $niceFraction = 2;
+        elseif ($fraction <= 7.0)
+            $niceFraction = 5;
+        else
+            $niceFraction = 10;
+
+        $binWidth = $niceFraction * $magnitude;
+        if ($binWidth <= 0)
+            $binWidth = 1;
+
+        $start = floor($effectiveMin / $binWidth) * $binWidth;
+
+        // Create main bins
+        $bins = [];
+        $current = $start;
+
+        $maxBins = 15;
+        $binIndex = 0;
+        while ($current <= $effectiveMax && $binIndex < $maxBins) {
+            $next = $current + $binWidth;
+            $bins[] = [
+                'min' => $current,
+                'max' => $next,
+                'count' => 0
+            ];
+            $current = $next;
+            $binIndex++;
+        }
+
+        if (empty($bins)) {
+            $bins[] = ['min' => $effectiveMin, 'max' => $effectiveMax, 'count' => 0];
+        }
+
+        $underflowCount = 0;
+        $overflowCount = 0;
+        $firstBinMin = $bins[0]['min'];
+        $lastBinMax = $bins[count($bins) - 1]['max'];
+
+        // Assign values to bins
+        foreach ($parsedNumbers as $val) {
+            if ($val < $firstBinMin) {
+                $underflowCount++;
+                continue;
+            }
+            if ($val > $lastBinMax + 1e-9) {
+                $overflowCount++;
+                continue;
+            }
+
+            $placed = false;
+            $totalBins = count($bins);
+            for ($i = 0; $i < $totalBins; $i++) {
+                if ($i === $totalBins - 1) {
+                    if ($val >= $bins[$i]['min'] && $val <= $bins[$i]['max'] + 1e-9) {
+                        $bins[$i]['count']++;
+                        $placed = true;
+                        break;
+                    }
+                } else {
+                    if ($val >= $bins[$i]['min'] && $val < $bins[$i]['max']) {
+                        $bins[$i]['count']++;
+                        $placed = true;
+                        break;
+                    }
+                }
+            }
+            if (!$placed && $totalBins > 0) {
+                $bins[$totalBins - 1]['count']++;
+            }
+        }
+
+        // Format bin labels
+        $result = [];
+        $isIntegerBins = ($binWidth >= 1 && floor($binWidth) == $binWidth && floor($start) == $start);
+
+        if ($underflowCount > 0) {
+            $underMin = (int) $firstBinMin;
+            $underLbl = "Below {$pfx}" . number_format($underMin) . "{$unitSuffix}";
+            $result[$underLbl] = $underflowCount;
+        }
+
+        foreach ($bins as $bin) {
+            if ($isIntegerBins) {
+                $bMin = (int) $bin['min'];
+                $bMax = (int) ($bin['max'] - 1);
+                if ($bMax < $bMin)
+                    $bMax = $bMin;
+                $lbl = "{$pfx}" . number_format($bMin) . " – {$pfx}" . number_format($bMax) . "{$unitSuffix}";
+            } else {
+                $decimals = ($binWidth < 0.1) ? 2 : 1;
+                $lbl = "{$pfx}" . number_format($bin['min'], $decimals) . " – {$pfx}" . number_format($bin['max'], $decimals) . "{$unitSuffix}";
+            }
+            $result[$lbl] = $bin['count'];
+        }
+
+        if ($overflowCount > 0) {
+            $overMax = (int) $lastBinMax;
+            $overLbl = "Above {$pfx}" . number_format($overMax) . "{$unitSuffix}";
+            $result[$overLbl] = $overflowCount;
+        }
+
+        return $result;
+    }
+
     public function getAnalyticalData(\App\Models\Survey $survey, $responses, $includeAi = false, $forceGenerate = false)
     {
-        @set_time_limit(180);
+        @set_time_limit(600);
+        @ini_set('memory_limit', '1024M');
+        @ignore_user_abort(true);
         $isJson = !empty($survey->json_schema) && $survey->json_schema !== '[]';
         $totalResponses = $responses->count();
         $analysis = [];
@@ -1529,7 +1999,7 @@ class SurveyController extends Controller
                                         }
                                     }
                                     $selected = $matrixAnswers[$rVal] ?? null;
-                                    if ($selected !== null && $selected !== '') {
+                                    if ($selected !== null && !self::isMissingValue($selected)) {
                                         $selectedStr = (string) $selected;
                                         foreach ($colList as $col) {
                                             if (strcasecmp($col['key'], $selectedStr) === 0 || strcasecmp($col['value'], $selectedStr) === 0) {
@@ -1579,6 +2049,7 @@ class SurveyController extends Controller
                     $missingCount = $totalResponses - $answeredCount;
                     $chartUrl = null;
                     $canvasId = 'chart-' . $fieldId;
+                    $summaryStats = null;
                 } else {
                     foreach ($responses as $response) {
                         $found = false;
@@ -1591,7 +2062,7 @@ class SurveyController extends Controller
                             // Format complex structures like repeating containers or select groups
                             $val = self::formatResponseValue($val, $field);
 
-                            if ($val !== null && $val !== '') {
+                            if ($val !== null && !self::isMissingValue($val)) {
                                 $answeredCount++;
                                 $answersList[] = is_array($val) ? implode(', ', $val) : $val;
                                 $found = true;
@@ -1604,8 +2075,9 @@ class SurveyController extends Controller
                     }
 
                     $missingCount = $totalResponses - $answeredCount;
-                    $isChartable = !in_array($field['type'], ['text', 'textarea', 'multimedia', 'signature', 'gps', 'qr', 'file', 'image', 'signature-pad', 'file-upload', 'header', 'paragraph', 'group', 'note', 'description', 'date', 'time', 'audio', 'video', 'photo', 'email']);
-                    $isAnalyzable = in_array($field['type'], ['textarea', 'text', 'radio', 'checkbox', 'select', 'select-one', 'select-multiple', 'radio-group', 'checkbox-group', 'audio', 'video', 'multimedia', 'file']);
+                    $isIdField = self::isIdentifierField($fieldId, $label) || self::isGeospatialField($fieldId, $label);
+                    $isChartable = !$isIdField && !in_array($field['type'], ['text', 'textarea', 'multimedia', 'signature', 'gps', 'qr', 'file', 'image', 'signature-pad', 'file-upload', 'header', 'paragraph', 'group', 'note', 'description', 'date', 'time', 'audio', 'video', 'photo', 'email']);
+                    $isAnalyzable = !$isIdField && in_array($field['type'], ['textarea', 'text', 'radio', 'checkbox', 'select', 'select-one', 'select-multiple', 'radio-group', 'checkbox-group', 'audio', 'video', 'multimedia', 'file']);
                     $canvasId = 'chart-' . $fieldId;
 
                     $stats = [];
@@ -1621,39 +2093,91 @@ class SurveyController extends Controller
                     $themeCanvasId = 'qual-themes-' . $fieldId;
                     $sentimentCanvasId = 'qual-sentiment-' . $fieldId;
                     $topKeywords = [];
+                    $summaryStats = null;
 
                     if ($isChartable) {
+                        $validAnswers = [];
                         foreach ($answersList as $ans) {
-                            if ($ans !== null && $ans !== '') {
+                            if ($ans !== null && !self::isMissingValue($ans)) {
+                                $validAnswers[] = $ans;
+                            }
+                        }
+
+                        // Check if continuous numeric
+                        $parsedNumerics = [];
+                        $units = [];
+                        $prefixes = [];
+                        foreach ($validAnswers as $ans) {
+                            $p = self::parseNumericValue($ans);
+                            if ($p !== null) {
+                                $parsedNumerics[] = $p['number'];
+                                if ($p['suffix'] !== '')
+                                    $units[] = $p['suffix'];
+                                if ($p['prefix'] !== '')
+                                    $prefixes[] = $p['prefix'];
+                            }
+                        }
+
+                        $isNumericVar = count($validAnswers) > 0 && (count($parsedNumerics) / count($validAnswers)) >= 0.85;
+
+                        if ($isNumericVar && count($parsedNumerics) > 0) {
+                            $commonUnit = !empty($units) ? self::getMostFrequentString($units) : '';
+                            $commonPrefix = !empty($prefixes) ? self::getMostFrequentString($prefixes) : '';
+                            $summaryStats = self::calculateSummaryStatistics($parsedNumerics, $commonUnit, $commonPrefix);
+
+                            $uniqueNumCount = count(array_unique($parsedNumerics));
+                            if ($uniqueNumCount > 15) {
+                                // Auto-binning for high cardinality numeric
+                                $frequencyCount = self::generateNumericBins($validAnswers, $parsedNumerics, $commonUnit, $commonPrefix);
+                                foreach ($frequencyCount as $val => $count) {
+                                    if (!in_array($val, $uniqueAnswers)) {
+                                        $uniqueAnswers[] = $val;
+                                    }
+                                }
+                            } else {
+                                foreach ($validAnswers as $ans) {
+                                    $frequencyCount[$ans] = ($frequencyCount[$ans] ?? 0) + 1;
+                                    if (!in_array($ans, $uniqueAnswers))
+                                        $uniqueAnswers[] = $ans;
+                                }
+                            }
+                        } else {
+                            foreach ($validAnswers as $ans) {
                                 $frequencyCount[$ans] = ($frequencyCount[$ans] ?? 0) + 1;
                                 if (!in_array($ans, $uniqueAnswers))
                                     $uniqueAnswers[] = $ans;
                             }
                         }
+
                         foreach ($frequencyCount as $val => $count) {
                             $stats[] = [
-                                'value' => $val,
+                                'value' => (string) $val,
                                 'count' => $count,
                                 'percentage' => $totalResponses > 0 ? round(($count / $totalResponses) * 100, 1) : 0
                             ];
                         }
-                        $stats[] = [
-                            'value' => 'Skipped',
-                            'count' => $missingCount,
-                            'percentage' => $totalResponses > 0 ? round(($missingCount / $totalResponses) * 100, 1) : 0,
-                            'is_missing' => true
-                        ];
+                        if ($missingCount > 0) {
+                            $stats[] = [
+                                'value' => 'Missing',
+                                'count' => $missingCount,
+                                'percentage' => $totalResponses > 0 ? round(($missingCount / $totalResponses) * 100, 1) : 0,
+                                'is_missing' => true
+                            ];
+                        }
                     } else {
                         // Qualitative / Audio / Video / Open-ended analysis
                         foreach ($responses as $response) {
                             $fieldMap = $parsedResponseMap[$response->id] ?? null;
                             $matchName = $fieldId;
                             $rawVal = ($fieldMap && array_key_exists($matchName, $fieldMap)) ? $fieldMap[$matchName] : null;
-                            if ($rawVal === null || $rawVal === '')
+                            if ($rawVal === null || self::isMissingValue($rawVal))
                                 continue;
 
                             $valStr = is_array($rawVal) ? (count($rawVal) === 1 && is_string($rawVal[0]) ? $rawVal[0] : json_encode($rawVal)) : (string) $rawVal;
                             $valStr = trim($valStr);
+                            if ($valStr === '' || self::isMissingValue($valStr)) {
+                                continue;
+                            }
                             $isMediaFile = str_starts_with($valStr, 'uploads/') && preg_match('/\.(mp4|webm|ogg|ogv|mov|mp3|wav|m4a|aac)$/i', $valStr);
                             $isAudio = $isMediaFile && preg_match('/\.(ogg|mp3|wav|m4a|aac)$/i', $valStr);
                             $isVideo = $isMediaFile && preg_match('/\.(mp4|webm|ogv|mov)$/i', $valStr);
@@ -1838,6 +2362,7 @@ class SurveyController extends Controller
                             'canvas_id' => $canvasId,
                             'labels' => array_keys($frequencyCount),
                             'data' => array_values($frequencyCount),
+                            'total_responses' => $totalResponses,
                             'question_name' => $qName,
                             'short_theme' => $shortTheme
                         ];
@@ -1845,15 +2370,31 @@ class SurveyController extends Controller
                             'canvas_id' => 'qual-' . $canvasId,
                             'labels' => array_keys($frequencyCount),
                             'data' => array_values($frequencyCount),
+                            'total_responses' => $totalResponses,
                             'question_name' => $qName,
                             'short_theme' => $shortTheme
                         ];
 
+                        $origLabels = array_keys($frequencyCount);
+                        $origCounts = array_values($frequencyCount);
+                        $catCount = count($origLabels);
+                        $padCount = ($catCount === 2) ? 2 : (($catCount === 3 || $catCount === 4) ? 1 : 0);
+                        $finalLabels = $padCount > 0 ? array_merge(array_fill(0, $padCount, ''), $origLabels, array_fill(0, $padCount, '')) : $origLabels;
+                        $finalCounts = $padCount > 0 ? array_merge(array_fill(0, $padCount, null), $origCounts, array_fill(0, $padCount, null)) : $origCounts;
+
                         $qcConfig = [
                             'type' => 'bar',
                             'data' => [
-                                'labels' => array_keys($frequencyCount),
-                                'datasets' => [['data' => array_values($frequencyCount), 'backgroundColor' => '#4f46e5']]
+                                'labels' => $finalLabels,
+                                'datasets' => [
+                                    [
+                                        'data' => $finalCounts,
+                                        'backgroundColor' => '#4f46e5',
+                                        'categoryPercentage' => 0.75,
+                                        'barPercentage' => 0.85,
+                                        'maxBarThickness' => 45
+                                    ]
+                                ]
                             ],
                             'options' => ['plugins' => ['legend' => ['display' => false]]]
                         ];
@@ -1864,6 +2405,7 @@ class SurveyController extends Controller
                 $aiInsight = null;
                 if ($includeAi) {
                     try {
+                        $isBulkSurvey = count($expandedSchema) > 15;
                         if (!empty($likertMatrixRows) && $canAnalyze) {
                             $style = $survey->reporting_style ?? 'apa';
                             $cacheKeyStyle = "likert_matrix_analysis_{$survey->id}_{$fieldId}_{$style}";
@@ -1874,12 +2416,16 @@ class SurveyController extends Controller
                             } elseif (\Illuminate\Support\Facades\Cache::has($cacheKeyDefault)) {
                                 $aiInsight = \Illuminate\Support\Facades\Cache::get($cacheKeyDefault);
                                 \Illuminate\Support\Facades\Cache::put($cacheKeyStyle, $aiInsight, 86400);
+                            } elseif ($isBulkSurvey) {
+                                $aiInsight = \App\Services\QualitativeAnalysisService::generateDeterministicLikertInsight($likertMatrixRows, $label, $style);
+                                \Illuminate\Support\Facades\Cache::put($cacheKeyStyle, $aiInsight, 86400);
+                                \Illuminate\Support\Facades\Cache::put($cacheKeyDefault, $aiInsight, 86400);
                             } else {
                                 $aiInsight = app(\App\Services\QualitativeAnalysisService::class)->analyzeLikertMatrixData($likertMatrixRows, $label, $style);
                                 \Illuminate\Support\Facades\Cache::put($cacheKeyStyle, $aiInsight, 86400);
                                 \Illuminate\Support\Facades\Cache::put($cacheKeyDefault, $aiInsight, 86400);
                             }
-                        } elseif ($isAnalyzable) {
+                        } elseif ($isAnalyzable && !$isChartable) {
                             // Qualitative Analysis - Pass text corpus or answers
                             $analysisInput = !empty($allTextCorpus) ? $allTextCorpus : $answersList;
                             $aiInsight = \Illuminate\Support\Facades\Cache::remember("qualitative_analysis_{$survey->id}_{$fieldId}", 86400, function () use ($analysisInput, $label) {
@@ -1896,6 +2442,10 @@ class SurveyController extends Controller
                             } elseif (\Illuminate\Support\Facades\Cache::has($cacheKeyDefault)) {
                                 $aiInsight = \Illuminate\Support\Facades\Cache::get($cacheKeyDefault);
                                 \Illuminate\Support\Facades\Cache::put($cacheKeyStyle, $aiInsight, 86400);
+                            } elseif ($isBulkSurvey) {
+                                $aiInsight = \App\Services\QualitativeAnalysisService::generateDeterministicQuantitativeInsight($stats, $label, $style);
+                                \Illuminate\Support\Facades\Cache::put($cacheKeyStyle, $aiInsight, 86400);
+                                \Illuminate\Support\Facades\Cache::put($cacheKeyDefault, $aiInsight, 86400);
                             } else {
                                 $aiInsight = app(\App\Services\QualitativeAnalysisService::class)->analyzeQuantitativeData($stats, $label, $style);
                                 \Illuminate\Support\Facades\Cache::put($cacheKeyStyle, $aiInsight, 86400);
@@ -1918,6 +2468,7 @@ class SurveyController extends Controller
                     'canvasId' => $canvasId,
                     'answers' => $answersList,
                     'stats' => $stats,
+                    'summary_stats' => $summaryStats,
                     'likert_matrix_rows' => $likertMatrixRows,
                     'answered_count' => $answeredCount,
                     'missing_count' => $missingCount,
@@ -1949,36 +2500,97 @@ class SurveyController extends Controller
 
                 foreach ($responses as $response) {
                     $answer = $answers->where('response_id', $response->id)->first();
-                    if ($answer && $answer->value !== null && $answer->value !== '') {
+                    if ($answer && $answer->value !== null && !self::isMissingValue($answer->value)) {
                         $answeredCount++;
                         $answersList[] = $answer->value;
-                        $frequencyCount[$answer->value] = ($frequencyCount[$answer->value] ?? 0) + 1;
+                    } else {
+                        $answersList[] = null;
                     }
                 }
 
                 $missingCount = $totalResponses - $answeredCount;
-                $isChartable = !in_array($question->type, ['text', 'textarea', 'multimedia', 'signature', 'gps', 'qr', 'file', 'image', 'signature-pad', 'file-upload', 'header', 'paragraph', 'group', 'note', 'description', 'date', 'time', 'audio', 'video', 'photo', 'email']);
-                $isAnalyzable = in_array($question->type, ['textarea', 'text', 'radio', 'checkbox', 'select', 'select_one', 'select_many', 'select-one', 'select-multiple', 'radio-group', 'checkbox-group', 'likert_matrix', 'likert_matrix_grid']);
+                $isIdField = self::isIdentifierField($question->name ?? ('q_' . $question->id), $question->text) || self::isGeospatialField($question->name ?? ('q_' . $question->id), $question->text);
+                $isChartable = !$isIdField && !in_array($question->type, ['text', 'textarea', 'multimedia', 'signature', 'gps', 'qr', 'file', 'image', 'signature-pad', 'file-upload', 'header', 'paragraph', 'group', 'note', 'description', 'date', 'time', 'audio', 'video', 'photo', 'email']);
+                $isAnalyzable = !$isIdField && in_array($question->type, ['textarea', 'text', 'radio', 'checkbox', 'select', 'select_one', 'select_many', 'select-one', 'select-multiple', 'radio-group', 'checkbox-group', 'likert_matrix', 'likert_matrix_grid']);
                 $canvasId = 'chart-question_' . $question->id;
 
                 $stats = [];
-                foreach ($frequencyCount as $val => $count) {
-                    $stats[] = [
-                        'value' => $val,
-                        'count' => $count,
-                        'percentage' => $totalResponses > 0 ? round(($count / $totalResponses) * 100, 1) : 0
-                    ];
+                $summaryStats = null;
+                $uniqueAnswers = [];
+
+                if ($isChartable) {
+                    $validAnswers = [];
+                    foreach ($answersList as $ans) {
+                        if ($ans !== null && !self::isMissingValue($ans)) {
+                            $validAnswers[] = $ans;
+                        }
+                    }
+
+                    // Check if continuous numeric
+                    $parsedNumerics = [];
+                    $units = [];
+                    $prefixes = [];
+                    foreach ($validAnswers as $ans) {
+                        $p = self::parseNumericValue($ans);
+                        if ($p !== null) {
+                            $parsedNumerics[] = $p['number'];
+                            if ($p['suffix'] !== '')
+                                $units[] = $p['suffix'];
+                            if ($p['prefix'] !== '')
+                                $prefixes[] = $p['prefix'];
+                        }
+                    }
+
+                    $isNumericVar = count($validAnswers) > 0 && (count($parsedNumerics) / count($validAnswers)) >= 0.85;
+
+                    if ($isNumericVar && count($parsedNumerics) > 0) {
+                        $commonUnit = !empty($units) ? self::getMostFrequentString($units) : '';
+                        $commonPrefix = !empty($prefixes) ? self::getMostFrequentString($prefixes) : '';
+                        $summaryStats = self::calculateSummaryStatistics($parsedNumerics, $commonUnit, $commonPrefix);
+
+                        $uniqueNumCount = count(array_unique($parsedNumerics));
+                        if ($uniqueNumCount > 15) {
+                            $frequencyCount = self::generateNumericBins($validAnswers, $parsedNumerics, $commonUnit, $commonPrefix);
+                            foreach ($frequencyCount as $val => $count) {
+                                if (!in_array($val, $uniqueAnswers)) {
+                                    $uniqueAnswers[] = $val;
+                                }
+                            }
+                        } else {
+                            foreach ($validAnswers as $ans) {
+                                $frequencyCount[$ans] = ($frequencyCount[$ans] ?? 0) + 1;
+                                if (!in_array($ans, $uniqueAnswers))
+                                    $uniqueAnswers[] = $ans;
+                            }
+                        }
+                    } else {
+                        foreach ($validAnswers as $ans) {
+                            $frequencyCount[$ans] = ($frequencyCount[$ans] ?? 0) + 1;
+                            if (!in_array($ans, $uniqueAnswers))
+                                $uniqueAnswers[] = $ans;
+                        }
+                    }
+
+                    foreach ($frequencyCount as $val => $count) {
+                        $stats[] = [
+                            'value' => (string) $val,
+                            'count' => $count,
+                            'percentage' => $totalResponses > 0 ? round(($count / $totalResponses) * 100, 1) : 0
+                        ];
+                    }
+                    if ($missingCount > 0) {
+                        $stats[] = [
+                            'value' => 'Missing',
+                            'count' => $missingCount,
+                            'percentage' => $totalResponses > 0 ? round(($missingCount / $totalResponses) * 100, 1) : 0,
+                            'is_missing' => true
+                        ];
+                    }
                 }
-                $stats[] = [
-                    'value' => '[Missing / Skipped]',
-                    'count' => $missingCount,
-                    'percentage' => $totalResponses > 0 ? round(($missingCount / $totalResponses) * 100, 1) : 0,
-                    'is_missing' => true
-                ];
 
                 $isLikertLike = false;
-                if ($isChartable && !empty($frequencyCount)) {
-                    $isLikertLike = self::isLikertScale(array_keys($frequencyCount));
+                if ($isChartable && !empty($uniqueAnswers)) {
+                    $isLikertLike = self::isLikertScale($uniqueAnswers);
                 }
 
                 $chartUrl = null;
@@ -1989,6 +2601,7 @@ class SurveyController extends Controller
                         'canvas_id' => $canvasId,
                         'labels' => array_keys($frequencyCount),
                         'data' => array_values($frequencyCount),
+                        'total_responses' => $totalResponses,
                         'question_name' => $qName,
                         'short_theme' => $shortTheme
                     ];
@@ -1996,15 +2609,31 @@ class SurveyController extends Controller
                         'canvas_id' => 'qual-' . $canvasId,
                         'labels' => array_keys($frequencyCount),
                         'data' => array_values($frequencyCount),
+                        'total_responses' => $totalResponses,
                         'question_name' => $qName,
                         'short_theme' => $shortTheme
                     ];
 
+                    $origLabels = array_keys($frequencyCount);
+                    $origCounts = array_values($frequencyCount);
+                    $catCount = count($origLabels);
+                    $padCount = ($catCount === 2) ? 2 : (($catCount === 3 || $catCount === 4) ? 1 : 0);
+                    $finalLabels = $padCount > 0 ? array_merge(array_fill(0, $padCount, ''), $origLabels, array_fill(0, $padCount, '')) : $origLabels;
+                    $finalCounts = $padCount > 0 ? array_merge(array_fill(0, $padCount, null), $origCounts, array_fill(0, $padCount, null)) : $origCounts;
+
                     $qcConfig = [
                         'type' => 'bar',
                         'data' => [
-                            'labels' => array_keys($frequencyCount),
-                            'datasets' => [['data' => array_values($frequencyCount), 'backgroundColor' => '#4f46e5']]
+                            'labels' => $finalLabels,
+                            'datasets' => [
+                                [
+                                    'data' => $finalCounts,
+                                    'backgroundColor' => '#4f46e5',
+                                    'categoryPercentage' => 0.75,
+                                    'barPercentage' => 0.85,
+                                    'maxBarThickness' => 45
+                                ]
+                            ]
                         ],
                         'options' => ['plugins' => ['legend' => ['display' => false]]]
                     ];
@@ -2014,6 +2643,7 @@ class SurveyController extends Controller
                 $aiInsight = null;
                 if ($includeAi) {
                     try {
+                        $isBulkSurvey = $questions->count() > 15;
                         if ($isAnalyzable) {
                             // Qualitative Analysis - FREE (Standard)
                             $aiInsight = \Illuminate\Support\Facades\Cache::remember("qualitative_analysis_{$survey->id}_{$question->id}", 86400, function () use ($answersList, $question) {
@@ -2030,6 +2660,10 @@ class SurveyController extends Controller
                             } elseif (\Illuminate\Support\Facades\Cache::has($cacheKeyDefault)) {
                                 $aiInsight = \Illuminate\Support\Facades\Cache::get($cacheKeyDefault);
                                 \Illuminate\Support\Facades\Cache::put($cacheKeyStyle, $aiInsight, 86400);
+                            } elseif ($isBulkSurvey) {
+                                $aiInsight = \App\Services\QualitativeAnalysisService::generateDeterministicQuantitativeInsight($stats, $question->text, $style);
+                                \Illuminate\Support\Facades\Cache::put($cacheKeyStyle, $aiInsight, 86400);
+                                \Illuminate\Support\Facades\Cache::put($cacheKeyDefault, $aiInsight, 86400);
                             } else {
                                 $aiInsight = app(\App\Services\QualitativeAnalysisService::class)->analyzeQuantitativeData($stats, $question->text, $style);
                                 \Illuminate\Support\Facades\Cache::put($cacheKeyStyle, $aiInsight, 86400);
@@ -2052,6 +2686,7 @@ class SurveyController extends Controller
                     'canvasId' => $canvasId,
                     'answers' => $answersList,
                     'stats' => $stats,
+                    'summary_stats' => $summaryStats,
                     'answered_count' => $answeredCount,
                     'missing_count' => $missingCount,
                     'chartUrl' => $chartUrl,
@@ -2074,14 +2709,13 @@ class SurveyController extends Controller
 
         // AI Access Control
         $user = auth()->user();
-        $canAnalyze = $user->canUseAiAnalysis();
+        $canAnalyze = $user && $user->canUseAiAnalysis();
         $aiSummary = null;
 
         if ($canAnalyze) {
             try {
                 $aiSummary = \Illuminate\Support\Facades\Cache::remember("survey_{$survey->id}_ai_summary", 86400, function () use ($survey, $user) {
                     $summary = (new \App\Services\AiService())->generateSurveySummary($survey);
-                    // Record usage only if not Pro (Trial mode)
                     if (!$user->hasProAccess()) {
                         $user->recordAiUsage();
                     }
@@ -2096,32 +2730,108 @@ class SurveyController extends Controller
         }
 
         $groups = collect();
-        $isOwnerOrAdmin = (int) $survey->created_by === (int) $user->id || $user->isAdmin();
+        $isOwnerOrAdmin = $user && ((int) $survey->created_by === (int) $user->id || $user->isAdmin());
         if ($isOwnerOrAdmin) {
             $groups = $survey->groups()->withCount('users')->get();
         }
-        $myGroup = $user->surveyGroups()->where('survey_id', $survey->id)->first();
+        $myGroup = $user ? $user->surveyGroups()->where('survey_id', $survey->id)->first() : null;
 
         $savedInferentialTests = \App\Models\SurveyInferentialAnalysis::where('survey_id', $survey->id)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return view('surveys.reports', compact('survey', 'responses', 'analysis', 'chartConfigs', 'aiSummary', 'canAnalyze', 'groups', 'myGroup', 'savedInferentialTests'));
+        $surveysQuery = \App\Models\Survey::where('is_template', false)
+            ->where('id', '!=', $survey->id);
+
+        if ($user && !$user->isAdmin()) {
+            $activeOrg = $user->activeOrganization();
+            $role = $user->role instanceof \UnitEnum ? $user->role->value : $user->role;
+
+            $surveysQuery->where(function ($q) use ($user, $activeOrg, $role) {
+                $q->where('created_by', $user->id);
+                if ($activeOrg) {
+                    $q->orWhere('organization_id', $activeOrg->id);
+                }
+                if ($role === 'organization' && $user->organization?->id) {
+                    $q->orWhere('organization_id', $user->organization->id);
+                } elseif ($role === 'independent' && $user->independent?->id) {
+                    $q->orWhere('independent_id', $user->independent->id);
+                }
+                $q->orWhereHas('collaborators', function ($sub) use ($user) {
+                    $sub->where('user_id', $user->id);
+                });
+                $q->orWhereHas('groups.users', function ($sub) use ($user) {
+                    $sub->where('users.id', $user->id);
+                });
+            });
+        }
+
+        $userSurveys = $surveysQuery->with('questions')
+            ->select('id', 'title', 'json_schema', 'organization_id', 'created_by')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($s) {
+                $questions = [];
+                if (!empty($s->json_schema)) {
+                    $schema = is_string($s->json_schema) ? json_decode($s->json_schema, true) : $s->json_schema;
+                    foreach ((array) $schema as $f) {
+                        if (isset($f['name']) && !in_array($f['type'] ?? '', ['header', 'paragraph', 'group', 'note', 'description'])) {
+                            $isIdField = self::isIdentifierField($f['name'], $f['label'] ?? $f['title'] ?? $f['name']) || self::isGeospatialField($f['name'], $f['label'] ?? $f['title'] ?? $f['name']);
+                            $questions[] = [
+                                'id' => $f['name'],
+                                'label' => $f['label'] ?? $f['title'] ?? $f['name'],
+                                'type' => $f['type'] ?? 'text',
+                                'isChartable' => !$isIdField && !in_array($f['type'] ?? '', ['text', 'textarea', 'multimedia', 'signature', 'gps', 'qr', 'file', 'image', 'audio', 'video', 'photo', 'email'])
+                            ];
+                        }
+                    }
+                }
+                if (empty($questions) && $s->questions->isNotEmpty()) {
+                    foreach ($s->questions as $q) {
+                        $type = $q->type instanceof \UnitEnum ? $q->type->value : ($q->type ?? 'text');
+                        if (!in_array($type, ['header', 'paragraph', 'group', 'note', 'description'])) {
+                            $isIdField = self::isIdentifierField($q->name ?? ('q_' . $q->id), $q->label ?? $q->title ?? $q->name ?? ('Question ' . $q->id)) || self::isGeospatialField($q->name ?? ('q_' . $q->id), $q->label ?? $q->title ?? $q->name ?? ('Question ' . $q->id));
+                            $questions[] = [
+                                'id' => $q->name ?? ('q_' . $q->id),
+                                'label' => $q->label ?? $q->title ?? $q->name ?? ('Question ' . $q->id),
+                                'type' => $type,
+                                'isChartable' => !$isIdField && !in_array($type, ['text', 'textarea', 'multimedia', 'signature', 'gps', 'qr', 'file', 'image', 'audio', 'video', 'photo', 'email'])
+                            ];
+                        }
+                    }
+                }
+                return [
+                    'id' => $s->id,
+                    'title' => $s->title,
+                    'questions' => $questions
+                ];
+            });
+
+        return view('surveys.reports', compact('survey', 'responses', 'analysis', 'chartConfigs', 'aiSummary', 'canAnalyze', 'groups', 'myGroup', 'savedInferentialTests', 'userSurveys'));
     }
 
     public function exportPdf(\App\Models\Survey $survey)
     {
-        set_time_limit(300);
+        @set_time_limit(600);
+        @ini_set('memory_limit', '1024M');
+        @ignore_user_abort(true);
         $this->authorizeOwner($survey);
 
-        $userColors = json_decode(request('colors', '{}'), true) ?? [];
-        $userTypes = json_decode(request('types', '{}'), true) ?? [];
+        $rawColors = request('colors', '{}');
+        $userColors = is_array($rawColors) ? $rawColors : (json_decode($rawColors, true) ?? []);
+
+        $rawTypes = request('types', '{}');
+        $userTypes = is_array($rawTypes) ? $rawTypes : (json_decode($rawTypes, true) ?? []);
 
         $branding = $this->getBrandingContext($survey);
+        $rawIncludeCharts = request('include_charts');
 
         $responses = $survey->responses()->with('answers.question')->get();
         $analyticalData = $this->getAnalyticalData($survey, $responses, true, true);
         $analysis = $analyticalData['analysis'];
+
+        $totalAnalyzable = count(array_filter($analysis, fn($it) => !empty($it['isChartable']) || !empty($it['isAnalyzable'])));
+        $shouldIncludeCharts = ($rawIncludeCharts !== null) ? filter_var($rawIncludeCharts, FILTER_VALIDATE_BOOLEAN) : ($totalAnalyzable <= 25);
 
         $colorPalettes = [
             'vibrant' => ['#6366f1', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#f97316'],
@@ -2133,142 +2843,155 @@ class SurveyController extends Controller
             'greyscale' => ['#374151', '#4b5563', '#6b7280', '#9ca3af', '#d1d5db', '#e5e7eb', '#1f2937', '#111827'],
         ];
 
-        // Re-generate chart URLs matching user selected color palettes & chart types
-        foreach ($analysis as &$item) {
-            if ($item['isChartable'] && empty($item['isLikertLike']) && !empty($item['stats'])) {
-                $freqMap = [];
-                foreach ($item['stats'] as $stat) {
-                    if (!isset($stat['is_missing']) || !$stat['is_missing']) {
-                        $freqMap[$stat['value']] = $stat['count'];
+        if ($shouldIncludeCharts) {
+            // Re-generate chart URLs matching user selected color palettes & chart types
+            foreach ($analysis as &$item) {
+                if ($item['isChartable'] && empty($item['isLikertLike']) && !empty($item['stats'])) {
+                    $freqMap = [];
+                    foreach ($item['stats'] as $stat) {
+                        if (!isset($stat['is_missing']) || !$stat['is_missing']) {
+                            $freqMap[$stat['value']] = $stat['count'];
+                        }
                     }
-                }
-                if (!empty($freqMap)) {
-                    $canvasId = $item['canvasId'] ?? '';
-                    $userPaletteKey = $userColors[$canvasId] ?? 'vibrant';
-                    $userTypeKey = $userTypes[$canvasId] ?? 'bar';
+                    if (!empty($freqMap)) {
+                        $canvasId = $item['canvasId'] ?? '';
+                        $userPaletteKey = $userColors[$canvasId] ?? 'vibrant';
+                        $userTypeKey = $userTypes[$canvasId] ?? 'bar';
 
-                    $palette = $colorPalettes[$userPaletteKey] ?? $colorPalettes['vibrant'];
-                    $primaryColor = $palette[0];
-                    $labels = array_values(array_keys($freqMap));
-                    $totalCnt = array_sum($freqMap);
-                    $percData = array_map(fn($c) => $totalCnt > 0 ? round(($c / $totalCnt) * 100, 1) : 0, array_values($freqMap));
+                        $palette = $colorPalettes[$userPaletteKey] ?? $colorPalettes['vibrant'];
+                        $primaryColor = $palette[0];
+                        $labels = array_values(array_keys($freqMap));
+                        $wrappedLabels = array_map(fn($l) => self::wrapChartLabel((string) $l), $labels);
+                        $totalCnt = array_sum($freqMap);
+                        $percData = array_map(fn($c) => $totalCnt > 0 ? round(($c / $totalCnt) * 100, 1) : 0, array_values($freqMap));
 
-                    $barColors = [];
-                    foreach ($labels as $idx => $lbl) {
-                        $barColors[] = $palette[$idx % count($palette)];
-                    }
+                        $barColors = [];
+                        foreach ($labels as $idx => $lbl) {
+                            $barColors[] = $palette[$idx % count($palette)];
+                        }
 
-                    $chartType = $userTypeKey;
-                    $indexAxis = 'x';
-                    $fill = false;
-                    $showLegend = in_array($userTypeKey, ['pie', 'doughnut', 'polarArea', 'radar']);
+                        $chartType = $userTypeKey;
+                        $indexAxis = 'x';
+                        $fill = false;
+                        $showLegend = in_array($userTypeKey, ['pie', 'doughnut', 'polarArea', 'radar']);
 
-                    if ($userTypeKey === 'horizontal') {
-                        $chartType = 'bar';
-                        $indexAxis = 'y';
-                    } elseif ($userTypeKey === 'area') {
-                        $chartType = 'line';
-                        $fill = true;
-                    }
+                        if ($userTypeKey === 'horizontal') {
+                            $chartType = 'bar';
+                            $indexAxis = 'y';
+                        } elseif ($userTypeKey === 'area') {
+                            $chartType = 'line';
+                            $fill = true;
+                        }
 
-                    $isCategorical = in_array($userTypeKey, ['pie', 'doughnut', 'polarArea', 'bar', 'horizontal']);
-                    $shortTheme = self::formatShortCategoryTheme($item['label'] ?? '');
+                        $isCategorical = in_array($userTypeKey, ['pie', 'doughnut', 'polarArea', 'bar', 'horizontal']);
+                        $shortTheme = self::formatShortCategoryTheme($item['label'] ?? '');
 
-                    $maxVal = !empty($percData) ? max($percData) : 0;
-                    $suggestedMax = min(100, max(10, ceil(($maxVal * 1.25) / 5) * 5));
+                        $maxVal = !empty($percData) ? max($percData) : 0;
+                        $suggestedMax = min(100, max(10, ceil(($maxVal * 1.25) / 5) * 5));
 
-                    $labelAxisConfig = [
-                        'grid' => ['display' => false],
-                        'title' => [
-                            'display' => !$showLegend,
-                            'text' => $shortTheme,
-                            'color' => '#64748b',
-                            'font' => ['weight' => '600', 'size' => 12]
-                        ]
-                    ];
-
-                    $valueAxisConfig = [
-                        'beginAtZero' => true,
-                        'suggestedMax' => $suggestedMax,
-                        'title' => [
-                            'display' => !$showLegend,
-                            'text' => 'Percentage (%)',
-                            'color' => '#64748b',
-                            'font' => ['weight' => '600', 'size' => 12]
-                        ]
-                    ];
-
-                    $wrappedLabels = array_map(fn($lbl) => self::wrapChartLabel($lbl, 25), $labels);
-
-                    $qcConfig = [
-                        'type' => $chartType,
-                        'data' => [
-                            'labels' => $wrappedLabels,
-                            'datasets' => [
-                                [
-                                    'label' => 'Responses (%)',
-                                    'data' => $percData,
-                                    'backgroundColor' => $isCategorical ? $barColors : ($fill ? $primaryColor . '44' : $primaryColor),
-                                    'borderColor' => $isCategorical ? ($chartType === 'bar' ? $barColors : '#ffffff') : $primaryColor,
-                                    'maxBarThickness' => 45,
-                                    'borderRadius' => ($chartType === 'bar') ? 6 : 0,
-                                    'fill' => $fill
-                                ]
+                        $labelAxisConfig = [
+                            'grid' => ['display' => false],
+                            'title' => [
+                                'display' => !$showLegend,
+                                'text' => $shortTheme,
+                                'color' => '#64748b',
+                                'font' => ['weight' => '600', 'size' => 12]
                             ]
-                        ],
-                        'options' => [
-                            'indexAxis' => $indexAxis,
-                            'plugins' => [
-                                'legend' => [
-                                    'display' => $showLegend,
-                                    'position' => 'bottom'
-                                ],
-                                'datalabels' => [
-                                    'display' => !$showLegend,
-                                    'anchor' => 'end',
-                                    'align' => 'end',
-                                    'offset' => 2,
-                                    'color' => '#374151',
-                                    'font' => ['weight' => 'bold', 'size' => 10],
-                                    'formatter' => 'function(v){return v + "%";}'
+                        ];
+
+                        $valueAxisConfig = [
+                            'beginAtZero' => true,
+                            'suggestedMax' => $suggestedMax,
+                            'title' => [
+                                'display' => !$showLegend,
+                                'text' => 'Percentage (%)',
+                                'color' => '#64748b',
+                                'font' => ['weight' => '600', 'size' => 12]
+                            ]
+                        ];
+
+                        $origLabels = $wrappedLabels;
+                        $origPerc = $percData;
+                        $origColors = $isCategorical ? $barColors : ($fill ? $primaryColor . '44' : $primaryColor);
+                        $catCount = count($origLabels);
+                        $padCount = ($chartType === 'bar' && $catCount === 2) ? 2 : (($chartType === 'bar' && ($catCount === 3 || $catCount === 4)) ? 1 : 0);
+
+                        if ($padCount > 0) {
+                            $finalLabels = array_merge(array_fill(0, $padCount, ''), $origLabels, array_fill(0, $padCount, ''));
+                            $finalPerc = array_merge(array_fill(0, $padCount, null), $origPerc, array_fill(0, $padCount, null));
+                            $finalColors = is_array($origColors) ? array_merge(array_fill(0, $padCount, 'transparent'), $origColors, array_fill(0, $padCount, 'transparent')) : $origColors;
+                        } else {
+                            $finalLabels = $origLabels;
+                            $finalPerc = $origPerc;
+                            $finalColors = $origColors;
+                        }
+
+                        $qcConfig = [
+                            'type' => $chartType,
+                            'data' => [
+                                'labels' => $finalLabels,
+                                'datasets' => [
+                                    [
+                                        'label' => 'Responses (%)',
+                                        'data' => $finalPerc,
+                                        'backgroundColor' => $finalColors,
+                                        'borderColor' => $isCategorical ? ($chartType === 'bar' ? $finalColors : '#ffffff') : $primaryColor,
+                                        'categoryPercentage' => 0.75,
+                                        'barPercentage' => 0.85,
+                                        'maxBarThickness' => 45,
+                                        'borderRadius' => ($chartType === 'bar') ? 6 : 0,
+                                        'fill' => $fill
+                                    ]
                                 ]
                             ],
-                            'scales' => [
-                                'x' => $indexAxis === 'y' ? $valueAxisConfig : $labelAxisConfig,
-                                'y' => $indexAxis === 'y' ? $labelAxisConfig : $valueAxisConfig
+                            'options' => [
+                                'indexAxis' => $indexAxis,
+                                'plugins' => [
+                                    'legend' => [
+                                        'display' => $showLegend,
+                                        'position' => 'bottom'
+                                    ],
+                                    'datalabels' => [
+                                        'display' => !$showLegend,
+                                        'anchor' => 'end',
+                                        'align' => 'end',
+                                        'offset' => 2,
+                                        'color' => '#374151',
+                                        'font' => ['weight' => 'bold', 'size' => 10],
+                                        'formatter' => 'function(v){return (v === null || v === undefined) ? "" : (v + "%");}'
+                                    ]
+                                ],
+                                'scales' => [
+                                    'x' => $indexAxis === 'y' ? $valueAxisConfig : $labelAxisConfig,
+                                    'y' => $indexAxis === 'y' ? $labelAxisConfig : $valueAxisConfig
+                                ]
                             ]
-                        ]
-                    ];
-                    $qcJson = json_encode($qcConfig);
-                    $qcJson = str_replace('"function(v){return v + \"%\";}"', 'function(v){return v + "%";}', $qcJson);
-                    $qcJson = str_replace('"function(value){return value + \"%\";}"', 'function(value){return value + "%";}', $qcJson);
-                    $item['chartConfig'] = $qcConfig;
-                    $item['chartUrl'] = 'https://quickchart.io/chart?c=' . urlencode($qcJson) . '&w=600&h=300&bkg=white&version=3';
-                }
-            }
-
-            // Convert Chart URLs to Base64 for PDF reliability
-            if (!empty($item['chartUrl'])) {
-                try {
-                    $context = stream_context_create([
-                        "ssl" => [
-                            "verify_peer" => false,
-                            "verify_peer_name" => false,
-                        ],
-                        "http" => [
-                            "timeout" => 3,
-                        ],
-                    ]);
-                    $imgData = file_get_contents($item['chartUrl'], false, $context);
-                    if ($imgData) {
-                        $item['chartBase64'] = 'data:image/png;base64,' . base64_encode($imgData);
+                        ];
+                        $qcJson = json_encode($qcConfig);
+                        $qcJson = str_replace('"function(v){return (v === null || v === undefined) ? \"\" : (v + \"%\");}"', 'function(v){return (v === null || v === undefined) ? "" : (v + "%");}', $qcJson);
+                        $qcJson = str_replace('"function(value){return value + \"%\";}"', 'function(value){return value + "%";}', $qcJson);
+                        $item['chartConfig'] = $qcConfig;
+                        $item['chartUrl'] = 'https://quickchart.io/chart?c=' . urlencode($qcJson) . '&w=600&h=300&bkg=white&version=3';
                     }
-                } catch (\Exception $e) {
-                    \Log::error("Failed to fetch chart for PDF: " . $e->getMessage());
+                }
+
+                // Convert Chart URLs to Base64 for PDF reliability
+                if (!empty($item['chartConfig']) && empty($item['isLikertLike'])) {
+                    try {
+                        $chartPath = self::fetchChartImageLocalPath($item['chartConfig'], $item['chartUrl'] ?? null);
+                        if ($chartPath && file_exists($chartPath)) {
+                            $imgData = file_get_contents($chartPath);
+                            if ($imgData && strlen($imgData) > 100) {
+                                $item['chartBase64'] = 'data:image/png;base64,' . base64_encode($imgData);
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error("Failed to fetch chart for PDF: " . $e->getMessage());
+                    }
                 }
             }
+            unset($item);
         }
-        unset($item);
 
         $aiSummary = "";
         try {
@@ -2281,7 +3004,7 @@ class SurveyController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.pdf', compact('survey', 'responses', 'analysis', 'branding', 'aiSummary', 'isPremium', 'savedInferentialTests'));
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.pdf', compact('survey', 'responses', 'analysis', 'branding', 'aiSummary', 'isPremium', 'savedInferentialTests', 'shouldIncludeCharts'));
         $filename = "Analytical_Report_" . Str::slug($survey->title) . "_" . date('Ymd_His') . ".pdf";
 
         // Save for History
@@ -2290,16 +3013,6 @@ class SurveyController extends Controller
             mkdir($exportDir, 0755, true);
         $output = $pdf->output();
         return $pdf->download($filename);
-    }
-
-    public function exportCompiledPdf(Survey $survey)
-    {
-        return $this->exportPdf($survey);
-    }
-
-    public function exportCompiledDocx(Survey $survey)
-    {
-        return $this->exportDocx($survey);
     }
 
     public function updateReportingStyle(\Illuminate\Http\Request $request, \App\Models\Survey $survey)
@@ -2325,10 +3038,19 @@ class SurveyController extends Controller
 
     public function exportDocx(\App\Models\Survey $survey)
     {
+        @set_time_limit(600);
+        @ini_set('memory_limit', '1024M');
+        @ignore_user_abort(true);
+        \PhpOffice\PhpWord\Settings::setOutputEscapingEnabled(true);
         $this->authorizeOwner($survey);
 
-        $userColors = json_decode(request('colors', '{}'), true) ?? [];
-        $userTypes = json_decode(request('types', '{}'), true) ?? [];
+        $rawColors = request('colors', '{}');
+        $userColors = is_array($rawColors) ? $rawColors : (json_decode($rawColors, true) ?? []);
+
+        $rawTypes = request('types', '{}');
+        $userTypes = is_array($rawTypes) ? $rawTypes : (json_decode($rawTypes, true) ?? []);
+
+        $rawIncludeCharts = request('include_charts');
 
         $phpWord = new \PhpOffice\PhpWord\PhpWord();
         $branding = $this->getBrandingContext($survey);
@@ -2413,121 +3135,143 @@ class SurveyController extends Controller
             'greyscale' => ['#374151', '#4b5563', '#6b7280', '#9ca3af', '#d1d5db', '#e5e7eb', '#1f2937', '#111827'],
         ];
 
-        // Re-generate chart URLs matching user selected color palettes & chart types
-        foreach ($analysis as &$item) {
-            if ($item['isChartable'] && empty($item['isLikertLike']) && !empty($item['stats'])) {
-                $freqMap = [];
-                foreach ($item['stats'] as $stat) {
-                    if (!isset($stat['is_missing']) || !$stat['is_missing']) {
-                        $freqMap[$stat['value']] = $stat['count'];
+        $totalAnalyzable = count(array_filter($analysis, fn($it) => !empty($it['isChartable']) || !empty($it['isAnalyzable'])));
+        $shouldIncludeCharts = ($rawIncludeCharts !== null) ? filter_var($rawIncludeCharts, FILTER_VALIDATE_BOOLEAN) : ($totalAnalyzable <= 25);
+
+        if ($shouldIncludeCharts) {
+            // Re-generate chart URLs matching user selected color palettes & chart types
+            foreach ($analysis as &$item) {
+                if ($item['isChartable'] && empty($item['isLikertLike']) && !empty($item['stats'])) {
+                    $freqMap = [];
+                    foreach ($item['stats'] as $stat) {
+                        if (!isset($stat['is_missing']) || !$stat['is_missing']) {
+                            $freqMap[$stat['value']] = $stat['count'];
+                        }
                     }
-                }
-                if (!empty($freqMap)) {
-                    $canvasId = $item['canvasId'] ?? '';
-                    $userPaletteKey = $userColors[$canvasId] ?? 'vibrant';
-                    $userTypeKey = $userTypes[$canvasId] ?? 'bar';
+                    if (!empty($freqMap)) {
+                        $canvasId = $item['canvasId'] ?? '';
+                        $userPaletteKey = $userColors[$canvasId] ?? 'vibrant';
+                        $userTypeKey = $userTypes[$canvasId] ?? 'bar';
 
-                    $palette = $colorPalettes[$userPaletteKey] ?? $colorPalettes['vibrant'];
-                    $primaryColor = $palette[0];
-                    $labels = array_values(array_keys($freqMap));
-                    $totalCnt = array_sum($freqMap);
-                    $percData = array_map(fn($c) => $totalCnt > 0 ? round(($c / $totalCnt) * 100, 1) : 0, array_values($freqMap));
+                        $palette = $colorPalettes[$userPaletteKey] ?? $colorPalettes['vibrant'];
+                        $primaryColor = $palette[0];
+                        $labels = array_values(array_keys($freqMap));
+                        $wrappedLabels = array_map(fn($l) => self::wrapChartLabel((string) $l), $labels);
+                        $totalCnt = array_sum($freqMap);
+                        $percData = array_map(fn($c) => $totalCnt > 0 ? round(($c / $totalCnt) * 100, 1) : 0, array_values($freqMap));
 
-                    $barColors = [];
-                    foreach ($labels as $idx => $lbl) {
-                        $barColors[] = $palette[$idx % count($palette)];
-                    }
+                        $barColors = [];
+                        foreach ($labels as $idx => $lbl) {
+                            $barColors[] = $palette[$idx % count($palette)];
+                        }
 
-                    $chartType = $userTypeKey;
-                    $indexAxis = 'x';
-                    $fill = false;
-                    $showLegend = in_array($userTypeKey, ['pie', 'doughnut', 'polarArea', 'radar']);
+                        $chartType = $userTypeKey;
+                        $indexAxis = 'x';
+                        $fill = false;
+                        $showLegend = in_array($userTypeKey, ['pie', 'doughnut', 'polarArea', 'radar']);
 
-                    if ($userTypeKey === 'horizontal') {
-                        $chartType = 'bar';
-                        $indexAxis = 'y';
-                    } elseif ($userTypeKey === 'area') {
-                        $chartType = 'line';
-                        $fill = true;
-                    }
+                        if ($userTypeKey === 'horizontal') {
+                            $chartType = 'bar';
+                            $indexAxis = 'y';
+                        } elseif ($userTypeKey === 'area') {
+                            $chartType = 'line';
+                            $fill = true;
+                        }
 
-                    $isCategorical = in_array($userTypeKey, ['pie', 'doughnut', 'polarArea', 'bar', 'horizontal']);
-                    $shortTheme = self::formatShortCategoryTheme($item['label'] ?? '');
+                        $isCategorical = in_array($userTypeKey, ['pie', 'doughnut', 'polarArea', 'bar', 'horizontal']);
+                        $shortTheme = self::formatShortCategoryTheme($item['label'] ?? '');
 
-                    $maxVal = !empty($percData) ? max($percData) : 0;
-                    $suggestedMax = min(100, max(10, ceil(($maxVal * 1.25) / 5) * 5));
+                        $maxVal = !empty($percData) ? max($percData) : 0;
+                        $suggestedMax = min(100, max(10, ceil(($maxVal * 1.25) / 5) * 5));
 
-                    $labelAxisConfig = [
-                        'grid' => ['display' => false],
-                        'title' => [
-                            'display' => !$showLegend,
-                            'text' => $shortTheme,
-                            'color' => '#64748b',
-                            'font' => ['weight' => '600', 'size' => 14]
-                        ]
-                    ];
-
-                    $valueAxisConfig = [
-                        'beginAtZero' => true,
-                        'suggestedMax' => $suggestedMax,
-                        'title' => [
-                            'display' => !$showLegend,
-                            'text' => 'Percentage (%)',
-                            'color' => '#64748b',
-                            'font' => ['weight' => '600', 'size' => 14]
-                        ]
-                    ];
-
-                    $wrappedLabels = array_map(fn($lbl) => self::wrapChartLabel($lbl, 25), $labels);
-
-                    $qcConfig = [
-                        'type' => $chartType,
-                        'data' => [
-                            'labels' => $wrappedLabels,
-                            'datasets' => [
-                                [
-                                    'label' => 'Responses (%)',
-                                    'data' => $percData,
-                                    'backgroundColor' => $isCategorical ? $barColors : ($fill ? $primaryColor . '44' : $primaryColor),
-                                    'borderColor' => $isCategorical ? ($chartType === 'bar' ? $barColors : '#ffffff') : $primaryColor,
-                                    'maxBarThickness' => 45,
-                                    'borderRadius' => ($chartType === 'bar') ? 6 : 0,
-                                    'fill' => $fill
-                                ]
+                        $labelAxisConfig = [
+                            'grid' => ['display' => false],
+                            'title' => [
+                                'display' => !$showLegend,
+                                'text' => $shortTheme,
+                                'color' => '#64748b',
+                                'font' => ['weight' => '600', 'size' => 14]
                             ]
-                        ],
-                        'options' => [
-                            'indexAxis' => $indexAxis,
-                            'plugins' => [
-                                'legend' => [
-                                    'display' => $showLegend,
-                                    'position' => 'bottom'
-                                ],
-                                'datalabels' => [
-                                    'display' => !$showLegend,
-                                    'anchor' => 'end',
-                                    'align' => 'end',
-                                    'offset' => 2,
-                                    'color' => '#374151',
-                                    'font' => ['weight' => 'bold', 'size' => 10],
-                                    'formatter' => 'function(v){return v + "%";}'
+                        ];
+
+                        $valueAxisConfig = [
+                            'beginAtZero' => true,
+                            'suggestedMax' => $suggestedMax,
+                            'title' => [
+                                'display' => !$showLegend,
+                                'text' => 'Percentage (%)',
+                                'color' => '#64748b',
+                                'font' => ['weight' => '600', 'size' => 14]
+                            ]
+                        ];
+
+                        $origLabels = $wrappedLabels;
+                        $origPerc = $percData;
+                        $origColors = $isCategorical ? $barColors : ($fill ? $primaryColor . '44' : $primaryColor);
+                        $catCount = count($origLabels);
+                        $padCount = ($chartType === 'bar' && $catCount === 2) ? 2 : (($chartType === 'bar' && ($catCount === 3 || $catCount === 4)) ? 1 : 0);
+
+                        if ($padCount > 0) {
+                            $finalLabels = array_merge(array_fill(0, $padCount, ''), $origLabels, array_fill(0, $padCount, ''));
+                            $finalPerc = array_merge(array_fill(0, $padCount, null), $origPerc, array_fill(0, $padCount, null));
+                            $finalColors = is_array($origColors) ? array_merge(array_fill(0, $padCount, 'transparent'), $origColors, array_fill(0, $padCount, 'transparent')) : $origColors;
+                        } else {
+                            $finalLabels = $origLabels;
+                            $finalPerc = $origPerc;
+                            $finalColors = $origColors;
+                        }
+
+                        $qcConfig = [
+                            'type' => $chartType,
+                            'data' => [
+                                'labels' => $finalLabels,
+                                'datasets' => [
+                                    [
+                                        'label' => 'Responses (%)',
+                                        'data' => $finalPerc,
+                                        'backgroundColor' => $finalColors,
+                                        'borderColor' => $isCategorical ? ($chartType === 'bar' ? $finalColors : '#ffffff') : $primaryColor,
+                                        'categoryPercentage' => 0.75,
+                                        'barPercentage' => 0.85,
+                                        'maxBarThickness' => 45,
+                                        'borderRadius' => ($chartType === 'bar') ? 6 : 0,
+                                        'fill' => $fill
+                                    ]
                                 ]
                             ],
-                            'scales' => [
-                                'x' => $indexAxis === 'y' ? $valueAxisConfig : $labelAxisConfig,
-                                'y' => $indexAxis === 'y' ? $labelAxisConfig : $valueAxisConfig
+                            'options' => [
+                                'indexAxis' => $indexAxis,
+                                'plugins' => [
+                                    'legend' => [
+                                        'display' => $showLegend,
+                                        'position' => 'bottom'
+                                    ],
+                                    'datalabels' => [
+                                        'display' => !$showLegend,
+                                        'anchor' => 'end',
+                                        'align' => 'end',
+                                        'offset' => 2,
+                                        'color' => '#374151',
+                                        'font' => ['weight' => 'bold', 'size' => 10],
+                                        'formatter' => 'function(v){return (v === null || v === undefined) ? "" : (v + "%");}'
+                                    ]
+                                ],
+                                'scales' => [
+                                    'x' => $indexAxis === 'y' ? $valueAxisConfig : $labelAxisConfig,
+                                    'y' => $indexAxis === 'y' ? $labelAxisConfig : $valueAxisConfig
+                                ]
                             ]
-                        ]
-                    ];
-                    $qcJson = json_encode($qcConfig);
-                    $qcJson = str_replace('"function(v){return v + \"%\";}"', 'function(v){return v + "%";}', $qcJson);
-                    $qcJson = str_replace('"function(value){return value + \"%\";}"', 'function(value){return value + "%";}', $qcJson);
-                    $item['chartConfig'] = $qcConfig;
-                    $item['chartUrl'] = 'https://quickchart.io/chart?c=' . urlencode($qcJson) . '&w=600&h=300&bkg=white&version=3';
+                        ];
+                        $qcJson = json_encode($qcConfig);
+                        $qcJson = str_replace('"function(v){return (v === null || v === undefined) ? \"\" : (v + \"%\");}"', 'function(v){return (v === null || v === undefined) ? "" : (v + "%");}', $qcJson);
+                        $qcJson = str_replace('"function(value){return value + \"%\";}"', 'function(value){return value + "%";}', $qcJson);
+                        $item['chartConfig'] = $qcConfig;
+                        $item['chartUrl'] = 'https://quickchart.io/chart?c=' . urlencode($qcJson) . '&w=600&h=300&bkg=white&version=3';
+                    }
                 }
             }
+            unset($item);
         }
-        unset($item);
 
         $section->addText("This document provides a comprehensive statistical and qualitative interpretation of gathered data, utilizing AI-driven thematic mapping and sentiment analysis to reveal core respondent trends.", 'Italic', ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
         $section->addPageBreak();
@@ -2537,6 +3281,10 @@ class SurveyController extends Controller
         foreach ($analysis as $index => $item) {
             $labelLower = strtolower($item['label'] ?? '');
             if (str_contains($labelLower, 'respondent id') || str_contains($labelLower, 'respondent_id')) {
+                continue;
+            }
+
+            if (empty($item['isChartable']) && empty($item['isAnalyzable'])) {
                 continue;
             }
 
@@ -2634,25 +3382,22 @@ class SurveyController extends Controller
                 }
 
                 // Add Chart Image
-                if (!empty($item['chartUrl']) && empty($item['isLikertLike'])) {
-                    $section->addTextBreak(1);
-                    try {
-                        $context = stream_context_create([
-                            "ssl" => [
-                                "verify_peer" => false,
-                                "verify_peer_name" => false,
-                            ],
-                            "http" => [
-                                "timeout" => 3,
-                            ],
-                        ]);
-                        $img = file_get_contents($item['chartUrl'], false, $context);
-                        if ($img) {
-                            $tempFile = tempnam(sys_get_temp_dir(), 'chart_') . '.png';
-                            file_put_contents($tempFile, $img);
-                            $section->addImage($tempFile, ['width' => 350, 'alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
+                if ($shouldIncludeCharts && !empty($item['chartConfig']) && empty($item['isLikertLike'])) {
+                    $isBulkDoc = count($analysis) > 10;
+                    $chartPath = self::getExistingCachedChartPath($item['chartConfig']);
+                    if (!$chartPath && !$isBulkDoc) {
+                        $chartPath = self::fetchChartImageLocalPath($item['chartConfig'], $item['chartUrl'] ?? null);
+                    }
+                    if ($chartPath && file_exists($chartPath) && @filesize($chartPath) > 100) {
+                        $imgInfo = @getimagesize($chartPath);
+                        if ($imgInfo !== false && in_array($imgInfo[2] ?? 0, [IMAGETYPE_PNG, IMAGETYPE_JPEG, IMAGETYPE_GIF])) {
+                            $section->addTextBreak(1);
+                            try {
+                                $section->addImage($chartPath, ['width' => 350, 'alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
+                            } catch (\Throwable $e) {
+                                \Log::warning("Could not embed chart into DOCX: " . $e->getMessage());
+                            }
                         }
-                    } catch (\Exception $e) {
                     }
                 }
 
@@ -2690,6 +3435,9 @@ class SurveyController extends Controller
                             $section->addListItem($tName . ": " . $tExpl, 0, 'Normal', \PhpOffice\PhpWord\Style\ListItem::TYPE_BULLET_FILLED);
                         }
                     }
+                } elseif (!empty($item['aiInsight']) && is_string($item['aiInsight'])) {
+                    $section->addTextBreak(1);
+                    $addAiParagraphs($section, $item['aiInsight']);
                 }
             }
             $section->addTextBreak(1);
@@ -4652,7 +5400,7 @@ class SurveyController extends Controller
     {
         $this->authorizeOwner($survey);
 
-        $method = $request->query('method');
+        $method = $request->input('method', $request->query('method'));
         $isJson = !empty($survey->json_schema) && $survey->json_schema !== '[]';
         $responses = $survey->responses()->with('answers')->get();
 
@@ -4696,10 +5444,55 @@ class SurveyController extends Controller
         }
     }
 
-    private function convertValueToNumeric($val, array &$uniqueValues)
+    private function getSurveyFieldMap($survey, $isJson)
+    {
+        $fieldMap = [];
+        if ($isJson && !empty($survey->json_schema)) {
+            $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
+            foreach ((array) $schema as $f) {
+                if (isset($f['name'])) {
+                    $fieldMap[$f['name']] = $f;
+                }
+            }
+        }
+        return $fieldMap;
+    }
+
+    private function resolveOptionLabel($val, $field = null)
+    {
+        if ($val === null || $val === '')
+            return $val;
+        if ($field && isset($field['values']) && is_array($field['values'])) {
+            if (is_array($val)) {
+                $mapped = [];
+                foreach ($val as $v) {
+                    $opt = collect($field['values'])->firstWhere('value', (string) $v);
+                    $mapped[] = ($opt && !empty($opt['label'])) ? $opt['label'] : $v;
+                }
+                return implode(', ', $mapped);
+            } else {
+                $opt = collect($field['values'])->firstWhere('value', (string) $val);
+                if ($opt && !empty($opt['label'])) {
+                    return $opt['label'];
+                }
+            }
+        }
+        return is_array($val) ? implode(', ', $val) : (string) $val;
+    }
+
+    private function convertValueToNumeric($val, array &$uniqueValues, $field = null)
     {
         if ($val === null || $val === '')
             return null;
+
+        // If value is an option key like 'option-1', resolve choice label first
+        if ($field && isset($field['values']) && is_array($field['values'])) {
+            $opt = collect($field['values'])->firstWhere('value', (string) $val);
+            if ($opt && !empty($opt['label'])) {
+                $val = $opt['label'];
+            }
+        }
+
         if (is_numeric($val))
             return (float) $val;
 
@@ -4708,33 +5501,73 @@ class SurveyController extends Controller
         $likertMap = [
             'strongly_agree' => 5,
             'strongly agree' => 5,
+            'strongly_approve' => 5,
+            'strongly approve' => 5,
             'certain' => 5,
             'definitely' => 5,
             'excellent' => 5,
             'very_high' => 5,
+            'very high' => 5,
+            'always' => 5,
+            'to a very great extent' => 5,
+            'to a very large extent' => 5,
+            'to the greatest extent' => 5,
+            'very great extent' => 5,
+            'very large extent' => 5,
             'agree' => 4,
+            'approve' => 4,
             'very_likely' => 4,
             'very likely' => 4,
             'probably' => 4,
             'good' => 4,
             'high' => 4,
+            'often' => 4,
+            'frequently' => 4,
+            'to a great extent' => 4,
+            'to a greater extent' => 4,
+            'to a large extent' => 4,
+            'great extent' => 4,
+            'large extent' => 4,
             'neutral' => 3,
+            'undecided' => 3,
             'moderate' => 3,
             'not_sure' => 3,
+            'not sure' => 3,
             'sometimes' => 3,
             'average' => 3,
+            'to a moderate extent' => 3,
+            'to a reasonable extent' => 3,
+            'moderate extent' => 3,
+            'medium extent' => 3,
             'disagree' => 2,
+            'disapprove' => 2,
             'unlikely' => 2,
             'probably_not' => 2,
             'rarely' => 2,
+            'seldom' => 2,
             'poor' => 2,
             'low' => 2,
+            'to a small extent' => 2,
+            'to some extent' => 2,
+            'to a low extent' => 2,
+            'to a lesser extent' => 2,
+            'small extent' => 2,
+            'some extent' => 2,
+            'low extent' => 2,
             'strongly_disagree' => 1,
             'strongly disagree' => 1,
+            'strongly_disapprove' => 1,
+            'strongly disapprove' => 1,
             'very_unlikely' => 1,
+            'very unlikely' => 1,
             'definitely_not' => 1,
+            'definitely not' => 1,
             'never' => 1,
-            'very_poor' => 1
+            'very_poor' => 1,
+            'very poor' => 1,
+            'to no extent' => 1,
+            'no extent' => 1,
+            'not at all' => 1
         ];
 
         if (isset($likertMap[$cleanVal])) {
@@ -4749,30 +5582,19 @@ class SurveyController extends Controller
 
     private function handleCrosstab($request, $survey, $responses, $isJson)
     {
-        $rowId = $request->query('row');
-        $colId = $request->query('col');
+        $rowId = $request->input('row', $request->query('row'));
+        $colId = $request->input('col', $request->query('col'));
 
         if (!$rowId || !$colId) {
             return response()->json(['success' => false, 'message' => 'Row and Column variables are required.'], 400);
         }
 
-        $rowLabel = "Variable A";
-        $colLabel = "Variable B";
+        $fieldMap = $this->getSurveyFieldMap($survey, $isJson);
+        $fieldRow = $fieldMap[$rowId] ?? null;
+        $fieldCol = $fieldMap[$colId] ?? null;
 
-        if ($isJson) {
-            $schema = json_decode($survey->json_schema, true);
-            foreach ($schema as $f) {
-                if (isset($f['name'])) {
-                    if ($f['name'] === $rowId)
-                        $rowLabel = $f['label'] ?? $rowId;
-                    if ($f['name'] === $colId)
-                        $colLabel = $f['label'] ?? $colId;
-                }
-            }
-        } else {
-            $rowLabel = \App\Models\Question::find($rowId)?->text ?? $rowId;
-            $colLabel = \App\Models\Question::find($colId)?->text ?? $colId;
-        }
+        $rowLabel = $fieldRow['label'] ?? (\App\Models\Question::find($rowId)?->text ?? $rowId);
+        $colLabel = $fieldCol['label'] ?? (\App\Models\Question::find($colId)?->text ?? $colId);
 
         $matrix = [];
         $rows = [];
@@ -4782,16 +5604,11 @@ class SurveyController extends Controller
         $grandTotal = 0;
 
         foreach ($responses as $resp) {
-            $rowVal = $this->getAnswerValue($resp, $rowId, $isJson);
-            $colVal = $this->getAnswerValue($resp, $colId, $isJson);
+            $rawRow = $this->getAnswerValue($resp, $rowId, $isJson);
+            $rawCol = $this->getAnswerValue($resp, $colId, $isJson);
 
-            if ($rowVal === null)
-                $rowVal = "[Missing]";
-            if ($colVal === null)
-                $colVal = "[Missing]";
-
-            $rowVal = (string) $rowVal;
-            $colVal = (string) $colVal;
+            $rowVal = $rawRow !== null ? (string) $this->resolveOptionLabel($rawRow, $fieldRow) : "[Missing]";
+            $colVal = $rawCol !== null ? (string) $this->resolveOptionLabel($rawCol, $fieldCol) : "[Missing]";
 
             if (!in_array($rowVal, $rows))
                 $rows[] = $rowVal;
@@ -4851,30 +5668,19 @@ class SurveyController extends Controller
 
     private function handleChiSquare($request, $survey, $responses, $isJson)
     {
-        $rowId = $request->query('row');
-        $colId = $request->query('col');
+        $rowId = $request->input('row', $request->query('row'));
+        $colId = $request->input('col', $request->query('col'));
 
         if (!$rowId || !$colId) {
             return response()->json(['success' => false, 'message' => 'Row and Column variables are required.'], 400);
         }
 
-        $rowLabel = "Variable A";
-        $colLabel = "Variable B";
+        $fieldMap = $this->getSurveyFieldMap($survey, $isJson);
+        $fieldRow = $fieldMap[$rowId] ?? null;
+        $fieldCol = $fieldMap[$colId] ?? null;
 
-        if ($isJson) {
-            $schema = json_decode($survey->json_schema, true);
-            foreach ($schema as $f) {
-                if (isset($f['name'])) {
-                    if ($f['name'] === $rowId)
-                        $rowLabel = $f['label'] ?? $rowId;
-                    if ($f['name'] === $colId)
-                        $colLabel = $f['label'] ?? $colId;
-                }
-            }
-        } else {
-            $rowLabel = \App\Models\Question::find($rowId)?->text ?? $rowId;
-            $colLabel = \App\Models\Question::find($colId)?->text ?? $colId;
-        }
+        $rowLabel = $fieldRow['label'] ?? (\App\Models\Question::find($rowId)?->text ?? $rowId);
+        $colLabel = $fieldCol['label'] ?? (\App\Models\Question::find($colId)?->text ?? $colId);
 
         $matrix = [];
         $rows = [];
@@ -4884,16 +5690,11 @@ class SurveyController extends Controller
         $grandTotal = 0;
 
         foreach ($responses as $resp) {
-            $rowVal = $this->getAnswerValue($resp, $rowId, $isJson);
-            $colVal = $this->getAnswerValue($resp, $colId, $isJson);
+            $rawRow = $this->getAnswerValue($resp, $rowId, $isJson);
+            $rawCol = $this->getAnswerValue($resp, $colId, $isJson);
 
-            if ($rowVal === null)
-                $rowVal = "[Missing]";
-            if ($colVal === null)
-                $colVal = "[Missing]";
-
-            $rowVal = (string) $rowVal;
-            $colVal = (string) $colVal;
+            $rowVal = $rawRow !== null ? (string) $this->resolveOptionLabel($rawRow, $fieldRow) : "[Missing]";
+            $colVal = $rawCol !== null ? (string) $this->resolveOptionLabel($rawCol, $fieldCol) : "[Missing]";
 
             if (!in_array($rowVal, $rows))
                 $rows[] = $rowVal;
@@ -4975,8 +5776,10 @@ class SurveyController extends Controller
 
         $sumX = $sumY = $sumX2 = $sumY2 = $sumXY = $N_valid = 0;
         foreach ($responses as $resp) {
-            $rowVal = (string) $this->getAnswerValue($resp, $rowId, $isJson);
-            $colVal = (string) $this->getAnswerValue($resp, $colId, $isJson);
+            $rawRow = $this->getAnswerValue($resp, $rowId, $isJson);
+            $rawCol = $this->getAnswerValue($resp, $colId, $isJson);
+            $rowVal = $rawRow !== null ? (string) $this->resolveOptionLabel($rawRow, $fieldRow) : "[Missing]";
+            $colVal = $rawCol !== null ? (string) $this->resolveOptionLabel($rawCol, $fieldCol) : "[Missing]";
             if (isset($rowScores[$rowVal]) && isset($colScores[$colVal])) {
                 $x = $rowScores[$rowVal];
                 $y = $colScores[$colVal];
@@ -5056,7 +5859,7 @@ class SurveyController extends Controller
             'cramersV' => $cramersV,
             'phi' => $phi,
             'effectLabel' => $effectLabel,
-            'validCases' => $N_valid,
+            'validCases' => $grandTotal,
             'footnote' => $footnote,
             'aiSummary' => $aiSummary
         ]);
@@ -5064,7 +5867,8 @@ class SurveyController extends Controller
 
     private function handleCronbachAlpha($request, $survey, $responses, $isJson)
     {
-        $selectedItems = array_filter(explode(',', $request->query('items', '')));
+        $rawItems = $request->input('items', $request->query('items', ''));
+        $selectedItems = is_array($rawItems) ? array_filter($rawItems) : array_filter(explode(',', (string) $rawItems));
         if (count($selectedItems) < 2) {
             return response()->json([
                 'success' => false,
@@ -5262,50 +6066,97 @@ class SurveyController extends Controller
 
     private function handleTTest($request, $survey, $responses, $isJson)
     {
-        $depVar = $request->query('dep');
-        $groupVar = $request->query('group');
+        $depVar = $request->input('dep', $request->query('dep'));
+        $scope = $request->input('scope', $request->query('scope', 'within'));
+        $fieldMap = $this->getSurveyFieldMap($survey, $isJson);
 
-        if (!$depVar || !$groupVar) {
-            return response()->json(['success' => false, 'message' => 'Dependent and Grouping variables are required.'], 400);
-        }
+        if ($scope === 'cross_survey') {
+            $targetSurveyId = $request->input('target_survey_id', $request->query('target_survey_id'));
+            $targetDepVar = $request->input('target_dep', $request->query('target_dep', $depVar));
 
-        $depLabel = "Dependent Variable";
-        $groupLabel = "Grouping Variable";
-
-        if ($isJson) {
-            $schema = json_decode($survey->json_schema, true);
-            foreach ($schema as $f) {
-                if (isset($f['name'])) {
-                    if ($f['name'] === $depVar)
-                        $depLabel = $f['label'] ?? $depVar;
-                    if ($f['name'] === $groupVar)
-                        $groupLabel = $f['label'] ?? $groupVar;
-                }
+            if (!$depVar || !$targetSurveyId) {
+                return response()->json(['success' => false, 'message' => 'Both baseline question and target comparison survey are required.'], 400);
             }
+
+            $targetSurvey = \App\Models\Survey::findOrFail($targetSurveyId);
+            $targetResponses = $targetSurvey->responses()->with('answers')->get();
+            $targetIsJson = !empty($targetSurvey->json_schema) && $targetSurvey->json_schema !== '[]';
+            $targetFieldMap = $this->getSurveyFieldMap($targetSurvey, $targetIsJson);
+
+            $depLabel = $fieldMap[$depVar]['label'] ?? (\App\Models\Question::find($depVar)?->text ?? $depVar);
+            $targetDepLabel = $targetFieldMap[$targetDepVar]['label'] ?? (\App\Models\Question::find($targetDepVar)?->text ?? $targetDepVar);
+
+            $g1Name = $survey->title ?: "Survey A";
+            $g2Name = $targetSurvey->title ?: "Survey B";
+            $groupLabel = "Cross-Survey Comparison ({$g1Name} vs {$g2Name})";
+
+            $uVals1 = [];
+            $g1Vals = [];
+            foreach ($responses as $resp) {
+                $raw = $this->getAnswerValue($resp, $depVar, $isJson);
+                $num = $this->convertValueToNumeric($raw, $uVals1, $fieldMap[$depVar] ?? null);
+                if ($num !== null)
+                    $g1Vals[] = (float) $num;
+            }
+
+            $uVals2 = [];
+            $g2Vals = [];
+            foreach ($targetResponses as $resp) {
+                $raw = $this->getAnswerValue($resp, $targetDepVar, $targetIsJson);
+                $num = $this->convertValueToNumeric($raw, $uVals2, $targetFieldMap[$targetDepVar] ?? null);
+                if ($num !== null)
+                    $g2Vals[] = (float) $num;
+            }
+        } elseif ($scope === 'upload') {
+            $datasetLabel = $request->input('dataset_label', 'Uploaded Dataset');
+            $datasetValues = $request->input('dataset_values', []);
+            if (is_string($datasetValues)) {
+                $datasetValues = json_decode($datasetValues, true) ?: [];
+            }
+            if (!$depVar || empty($datasetValues)) {
+                return response()->json(['success' => false, 'message' => 'Survey metric and uploaded numeric dataset values are required.'], 400);
+            }
+
+            $depLabel = $fieldMap[$depVar]['label'] ?? (\App\Models\Question::find($depVar)?->text ?? $depVar);
+            $g1Name = $survey->title ?: "Survey Responses";
+            $g2Name = $datasetLabel;
+            $groupLabel = "Benchmark Dataset Comparison";
+
+            $uVals1 = [];
+            $g1Vals = [];
+            foreach ($responses as $resp) {
+                $raw = $this->getAnswerValue($resp, $depVar, $isJson);
+                $num = $this->convertValueToNumeric($raw, $uVals1, $fieldMap[$depVar] ?? null);
+                if ($num !== null)
+                    $g1Vals[] = (float) $num;
+            }
+
+            $g2Vals = array_values(array_filter(array_map('floatval', (array) $datasetValues), 'is_numeric'));
         } else {
-            $depLabel = \App\Models\Question::find($depVar)?->text ?? $depVar;
-            $groupLabel = \App\Models\Question::find($groupVar)?->text ?? $groupVar;
+            $groupVar = $request->input('group', $request->query('group'));
+            if (!$depVar || !$groupVar) {
+                return response()->json(['success' => false, 'message' => 'Dependent and Grouping variables are required.'], 400);
+            }
+
+            $depLabel = $fieldMap[$depVar]['label'] ?? (\App\Models\Question::find($depVar)?->text ?? $depVar);
+            $groupLabel = $fieldMap[$groupVar]['label'] ?? (\App\Models\Question::find($groupVar)?->text ?? $groupVar);
+
+            $grouped = $this->getGroupedValues($responses, $depVar, $groupVar, $isJson, $fieldMap[$depVar] ?? null, $fieldMap[$groupVar] ?? null);
+            $grouped = array_filter($grouped, fn($vals) => count($vals) > 0);
+
+            $groupKeys = array_keys($grouped);
+            if (count($groupKeys) < 2) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Grouping variable must have at least 2 distinct groups with valid responses. Found ' . count($groupKeys) . '.'
+                ], 400);
+            }
+
+            $g1Name = (string) $groupKeys[0];
+            $g2Name = (string) $groupKeys[1];
+            $g1Vals = $grouped[$g1Name];
+            $g2Vals = $grouped[$g2Name];
         }
-
-        $grouped = $this->getGroupedValues($responses, $depVar, $groupVar, $isJson);
-        $grouped = array_filter($grouped, function ($vals) {
-            return count($vals) > 0;
-        });
-
-        $groupKeys = array_keys($grouped);
-
-        if (count($groupKeys) < 2) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Grouping variable must have at least 2 distinct groups with numeric values. Found ' . count($groupKeys) . '.'
-            ], 400);
-        }
-
-        $g1Name = (string) $groupKeys[0];
-        $g2Name = (string) $groupKeys[1];
-
-        $g1Vals = $grouped[$g1Name];
-        $g2Vals = $grouped[$g2Name];
 
         $n1 = count($g1Vals);
         $n2 = count($g2Vals);
@@ -5313,7 +6164,7 @@ class SurveyController extends Controller
         if ($n1 < 2 || $n2 < 2) {
             return response()->json([
                 'success' => false,
-                'message' => 'Each group must have at least 2 data points.'
+                'message' => 'Each comparison group must have at least 2 valid numeric data points (found ' . $n1 . ' and ' . $n2 . ').'
             ], 400);
         }
 
@@ -5336,15 +6187,20 @@ class SurveyController extends Controller
 
         // 1. Equal Variances Assumed (Pooled T-Test)
         $dfAssumed = $n1 + $n2 - 2;
-        $pooledVar = (($n1 - 1) * $var1 + ($n2 - 1) * $var2) / $dfAssumed;
-        $pooledSd = sqrt($pooledVar);
+        $pooledVar = (($n1 - 1) * $var1 + ($n2 - 1) * $var2) / max(1, $dfAssumed);
+        $pooledSd = sqrt(max(0, $pooledVar));
         $seAssumed = $pooledSd * sqrt(1 / $n1 + 1 / $n2);
         $tAssumed = $seAssumed > 0 ? ($m1 - $m2) / $seAssumed : 0.0;
         $pAssumed = $this->tProbability($tAssumed, $dfAssumed);
 
-        $tCritAssumed = 1.96 + (2.38 / $dfAssumed) + (2.71 / pow($dfAssumed, 2));
+        $tCritAssumed = 1.96 + (2.38 / max(1, $dfAssumed)) + (2.71 / pow(max(1, $dfAssumed), 2));
         $ciLowerAssumed = ($m1 - $m2) - ($tCritAssumed * $seAssumed);
         $ciUpperAssumed = ($m1 - $m2) + ($tCritAssumed * $seAssumed);
+
+        // Cohen's d (Effect Size)
+        $cohensD = $pooledSd > 0 ? ($m1 - $m2) / $pooledSd : 0.0;
+        $dAbs = abs($cohensD);
+        $dEffectLabel = $dAbs >= 0.8 ? 'Large' : ($dAbs >= 0.5 ? 'Medium' : ($dAbs >= 0.2 ? 'Small' : 'Negligible'));
 
         // 2. Equal Variances Not Assumed (Welch T-Test)
         $seWelch = sqrt(max(1e-12, ($var1 / $n1) + ($var2 / $n2)));
@@ -5387,11 +6243,19 @@ class SurveyController extends Controller
         $mswZ = $dfWithinZ > 0 ? $sswZ / $dfWithinZ : 0.0;
         $leveneF = $mswZ > 0 ? $msbZ / $mswZ : 0.0;
         $leveneSig = $this->fProbability($leveneF, $dfBetweenZ, $dfWithinZ);
+        $equalVarAssumed = $leveneSig >= 0.05;
+
+        $chosenT = $equalVarAssumed ? $tAssumed : $tWelch;
+        $chosenDf = $equalVarAssumed ? $dfAssumed : $dfWelch;
+        $chosenP = $equalVarAssumed ? $pAssumed : $pWelch;
+
+        $aiSummary = "An Independent Samples T-Test was conducted to evaluate differences in '{$depLabel}' between {$g1Name} (M = " . number_format($m1, 2) . ", SD = " . number_format($sd1, 2) . ") and {$g2Name} (M = " . number_format($m2, 2) . ", SD = " . number_format($sd2, 2) . "). The difference was " . ($chosenP < 0.05 ? "statistically significant" : "not statistically significant") . ", t(" . number_format($chosenDf, 2) . ") = " . number_format($chosenT, 3) . ", p = " . number_format($chosenP, 4) . " (p " . ($chosenP < 0.05 ? "< 0.05" : "≥ 0.05") . "). Cohen's d = " . number_format($cohensD, 3) . " indicates a {$dEffectLabel} effect size. 95% CI of the difference is [" . number_format($ciLowerAssumed, 3) . ", " . number_format($ciUpperAssumed, 3) . "].";
 
         return response()->json([
             'success' => true,
+            'scope' => $scope,
             'depVar' => $depVar,
-            'groupVar' => $groupVar,
+            'groupVar' => $groupVar ?? 'cross_survey',
             'depLabel' => $depLabel,
             'groupLabel' => $groupLabel,
             'groups' => [
@@ -5412,6 +6276,9 @@ class SurveyController extends Controller
             ],
             'leveneF' => round($leveneF, 4),
             'leveneSig' => round($leveneSig, 4),
+            'equalVarAssumed' => $equalVarAssumed,
+            'cohensD' => round($cohensD, 4),
+            'cohensDEffect' => $dEffectLabel,
             // assumed
             'tValue' => round($tAssumed, 4),
             'df' => $dfAssumed,
@@ -5428,47 +6295,38 @@ class SurveyController extends Controller
             'stdErrorDiffWelch' => round($seWelch, 4),
             'ciLowerWelch' => round($ciLowerWelch, 4),
             'ciUpperWelch' => round($ciUpperWelch, 4),
-            'significantWelch' => $pWelch < 0.05
+            'significantWelch' => $pWelch < 0.05,
+            'aiSummary' => $aiSummary
         ]);
     }
 
     private function handleCorrelation($request, $survey, $responses, $isJson)
     {
-        $varX = $request->query('varX');
-        $varY = $request->query('varY');
+        $varX = $request->input('varX', $request->query('varX'));
+        $varY = $request->input('varY', $request->query('varY'));
 
         if (!$varX || !$varY) {
             return response()->json(['success' => false, 'message' => 'Both numeric variables are required.'], 400);
         }
 
-        $labelX = "Variable X";
-        $labelY = "Variable Y";
-
-        if ($isJson) {
-            $schema = json_decode($survey->json_schema, true);
-            foreach ($schema as $f) {
-                if (isset($f['name'])) {
-                    if ($f['name'] === $varX)
-                        $labelX = $f['label'] ?? $varX;
-                    if ($f['name'] === $varY)
-                        $labelY = $f['label'] ?? $varY;
-                }
-            }
-        } else {
-            $labelX = \App\Models\Question::find($varX)?->text ?? $varX;
-            $labelY = \App\Models\Question::find($varY)?->text ?? $varY;
-        }
+        $fieldMap = $this->getSurveyFieldMap($survey, $isJson);
+        $labelX = $fieldMap[$varX]['label'] ?? (\App\Models\Question::find($varX)?->text ?? $varX);
+        $labelY = $fieldMap[$varY]['label'] ?? (\App\Models\Question::find($varY)?->text ?? $varY);
 
         $xVals = [];
         $yVals = [];
+        $uX = [];
+        $uY = [];
 
         foreach ($responses as $resp) {
-            $valX = $this->getAnswerValue($resp, $varX, $isJson);
-            $valY = $this->getAnswerValue($resp, $varY, $isJson);
+            $rawX = $this->getAnswerValue($resp, $varX, $isJson);
+            $rawY = $this->getAnswerValue($resp, $varY, $isJson);
+            $numX = $this->convertValueToNumeric($rawX, $uX, $fieldMap[$varX] ?? null);
+            $numY = $this->convertValueToNumeric($rawY, $uY, $fieldMap[$varY] ?? null);
 
-            if ($valX !== null && is_numeric($valX) && $valY !== null && is_numeric($valY)) {
-                $xVals[] = (float) $valX;
-                $yVals[] = (float) $valY;
+            if ($numX !== null && $numY !== null) {
+                $xVals[] = (float) $numX;
+                $yVals[] = (float) $numY;
             }
         }
 
@@ -5534,6 +6392,8 @@ class SurveyController extends Controller
 
         $sigMarker = $pValue < 0.01 ? '**' : ($pValue < 0.05 ? '*' : '');
 
+        $aiSummary = "A Pearson Correlation was calculated to examine the association between '{$labelX}' and '{$labelY}'. The correlation was " . ($pValue < 0.05 ? "statistically significant" : "not statistically significant") . ", r({$df}) = " . number_format($r, 3) . ", p = " . number_format($pValue, 4) . " (R² = " . number_format($r * $r, 3) . "). 95% CI [" . number_format($rLower, 3) . ", " . number_format($rUpper, 3) . "].";
+
         return response()->json([
             'success' => true,
             'varX' => $varX,
@@ -5555,47 +6415,81 @@ class SurveyController extends Controller
             'covariance' => round($covariance, 4),
             'stdErrorR' => round($seR, 4),
             'ciLower' => round($rLower, 4),
-            'ciUpper' => round($rUpper, 4)
+            'ciUpper' => round($rUpper, 4),
+            'aiSummary' => $aiSummary
         ]);
     }
 
     private function handleAnova($request, $survey, $responses, $isJson)
     {
-        $depVar = $request->query('dep');
-        $groupVar = $request->query('group');
+        $scope = $request->input('scope', $request->query('scope', 'within'));
+        $fieldMap = $this->getSurveyFieldMap($survey, $isJson);
+        $depVar = $request->input('dep', $request->query('dep'));
 
-        if (!$depVar || !$groupVar) {
-            return response()->json(['success' => false, 'message' => 'Dependent and Grouping variables are required.'], 400);
-        }
+        $grouped = [];
 
-        $depLabel = "Dependent Variable";
-        $groupLabel = "Grouping Variable";
+        if ($scope === 'cross_survey') {
+            $targetSurveyIds = $request->input('target_survey_ids', $request->query('target_survey_ids'));
+            if (is_string($targetSurveyIds)) {
+                $targetSurveyIds = explode(',', $targetSurveyIds);
+            }
+            $targetSurveyIds = array_filter((array) $targetSurveyIds);
 
-        if ($isJson) {
-            $schema = json_decode($survey->json_schema, true);
-            foreach ($schema as $f) {
-                if (isset($f['name'])) {
-                    if ($f['name'] === $depVar)
-                        $depLabel = $f['label'] ?? $depVar;
-                    if ($f['name'] === $groupVar)
-                        $groupLabel = $f['label'] ?? $groupVar;
+            if (!$depVar || count($targetSurveyIds) < 1) {
+                return response()->json(['success' => false, 'message' => 'Please select questions and at least 1 other comparison survey.'], 400);
+            }
+
+            $depLabel = $fieldMap[$depVar]['label'] ?? (\App\Models\Question::find($depVar)?->text ?? $depVar);
+            $groupLabel = "Cross-Survey Cohorts / Waves";
+
+            // Group 1 = Current survey
+            $uVals = [];
+            $g1Vals = [];
+            foreach ($responses as $resp) {
+                $raw = $this->getAnswerValue($resp, $depVar, $isJson);
+                $num = $this->convertValueToNumeric($raw, $uVals, $fieldMap[$depVar] ?? null);
+                if ($num !== null)
+                    $g1Vals[] = (float) $num;
+            }
+            $grouped[$survey->title ?: "Survey 1"] = $g1Vals;
+
+            foreach ($targetSurveyIds as $tId) {
+                $tSurvey = \App\Models\Survey::find($tId);
+                if (!$tSurvey)
+                    continue;
+                $tIsJson = !empty($tSurvey->json_schema) && $tSurvey->json_schema !== '[]';
+                $tFieldMap = $this->getSurveyFieldMap($tSurvey, $tIsJson);
+                $tDepVar = $request->input('target_dep_' . $tId, $request->query('target_dep_' . $tId, $depVar));
+                $tResps = $tSurvey->responses()->with('answers')->get();
+
+                $tUVals = [];
+                $tVals = [];
+                foreach ($tResps as $resp) {
+                    $raw = $this->getAnswerValue($resp, $tDepVar, $tIsJson);
+                    $num = $this->convertValueToNumeric($raw, $tUVals, $tFieldMap[$tDepVar] ?? null);
+                    if ($num !== null)
+                        $tVals[] = (float) $num;
                 }
+                $grouped[$tSurvey->title ?: ("Survey " . $tId)] = $tVals;
             }
         } else {
-            $depLabel = \App\Models\Question::find($depVar)?->text ?? $depVar;
-            $groupLabel = \App\Models\Question::find($groupVar)?->text ?? $groupVar;
+            $groupVar = $request->input('group', $request->query('group'));
+            if (!$depVar || !$groupVar) {
+                return response()->json(['success' => false, 'message' => 'Dependent and Grouping variables are required.'], 400);
+            }
+
+            $depLabel = $fieldMap[$depVar]['label'] ?? (\App\Models\Question::find($depVar)?->text ?? $depVar);
+            $groupLabel = $fieldMap[$groupVar]['label'] ?? (\App\Models\Question::find($groupVar)?->text ?? $groupVar);
+
+            $grouped = $this->getGroupedValues($responses, $depVar, $groupVar, $isJson, $fieldMap[$depVar] ?? null, $fieldMap[$groupVar] ?? null);
         }
 
-        $grouped = $this->getGroupedValues($responses, $depVar, $groupVar, $isJson);
-        $grouped = array_filter($grouped, function ($vals) {
-            return count($vals) > 0;
-        });
-
+        $grouped = array_filter($grouped, fn($vals) => count($vals) > 0);
         $k = count($grouped);
         if ($k < 2) {
             return response()->json([
                 'success' => false,
-                'message' => 'One-Way ANOVA requires a grouping variable with at least 2 distinct groups containing numeric values.'
+                'message' => 'One-Way ANOVA requires at least 2 distinct comparison groups with valid numeric responses (found ' . $k . ').'
             ], 400);
         }
 
@@ -5608,7 +6502,7 @@ class SurveyController extends Controller
         foreach ($grouped as $gName => $vals) {
             $gn = count($vals);
             $gSum = array_sum($vals);
-            $gMean = $gSum / $gn;
+            $gMean = $gn > 0 ? $gSum / $gn : 0.0;
 
             $allVals = array_merge($allVals, $vals);
             $nTotal += $gn;
@@ -5626,9 +6520,7 @@ class SurveyController extends Controller
             $minVal = count($vals) > 0 ? min($vals) : 0.0;
             $maxVal = count($vals) > 0 ? max($vals) : 0.0;
 
-            $dfG = $gn - 1;
-            if ($dfG <= 0)
-                $dfG = 1;
+            $dfG = max(1, $gn - 1);
             $tCrit = 1.96 + (2.38 / $dfG) + (2.71 / pow($dfG, 2));
             $seMean = $gn > 0 ? $gSd / sqrt($gn) : 0.0;
             $ciLower = $gMean - ($tCrit * $seMean);
@@ -5671,9 +6563,9 @@ class SurveyController extends Controller
         if ($ssw < 0)
             $ssw = 0.0;
 
-        $dfBetween = $k - 1;
-        $dfWithin = $nTotal - $k;
-        $dfTotal = $nTotal - 1;
+        $dfBetween = max(1, $k - 1);
+        $dfWithin = max(1, $nTotal - $k);
+        $dfTotal = max(1, $nTotal - 1);
 
         $msb = $dfBetween > 0 ? $ssb / $dfBetween : 0.0;
         $msw = $dfWithin > 0 ? $ssw / $dfWithin : 0.0;
@@ -5681,12 +6573,28 @@ class SurveyController extends Controller
         $fValue = $msw > 0 ? $msb / $msw : 0.0;
         $pValue = $this->fProbability($fValue, $dfBetween, $dfWithin);
 
+        // Eta-Squared (Effect Size)
+        $etaSquared = $sst > 0 ? $ssb / $sst : 0.0;
+        $etaSquared = round($etaSquared, 4);
+        $etaEffectLabel = $etaSquared >= 0.14 ? 'Large' : ($etaSquared >= 0.06 ? 'Medium' : ($etaSquared >= 0.01 ? 'Small' : 'Negligible'));
+
+        $significant = $pValue < 0.05;
+
+        if ($significant) {
+            $aiSummary = "A One-Way ANOVA was conducted to compare the effect of '{$groupLabel}' on '{$depLabel}' across {$k} distinct groups (N = {$nTotal}). There was a statistically significant difference between group means, F({$dfBetween}, {$dfWithin}) = " . number_format($fValue, 3) . ", p = " . number_format($pValue, 4) . " (p < 0.05). Eta-squared (η² = {$etaSquared}) indicates a {$etaEffectLabel} effect size. We reject the null hypothesis (H₀) of equal population means.";
+        } else {
+            $aiSummary = "A One-Way ANOVA was conducted to compare the effect of '{$groupLabel}' on '{$depLabel}' across {$k} distinct groups (N = {$nTotal}). The difference between group means was not statistically significant, F({$dfBetween}, {$dfWithin}) = " . number_format($fValue, 3) . ", p = " . number_format($pValue, 4) . " (p ≥ 0.05). Eta-squared (η² = {$etaSquared}) indicates a {$etaEffectLabel} effect size. We fail to reject the null hypothesis (H₀); there is no evidence that group means differ significantly.";
+        }
+
         return response()->json([
             'success' => true,
+            'scope' => $scope,
             'depVar' => $depVar,
-            'groupVar' => $groupVar,
+            'groupVar' => $groupVar ?? 'cross_survey',
             'depLabel' => $depLabel,
             'groupLabel' => $groupLabel,
+            'k' => $k,
+            'nTotal' => $nTotal,
             'groupStats' => array_values($groupStats),
             'ssb' => round($ssb, 4),
             'ssw' => round($ssw, 4),
@@ -5698,47 +6606,40 @@ class SurveyController extends Controller
             'msw' => round($msw, 4),
             'fValue' => round($fValue, 4),
             'pValue' => round($pValue, 4),
-            'significant' => $pValue < 0.05
+            'etaSquared' => $etaSquared,
+            'etaEffect' => $etaEffectLabel,
+            'significant' => $significant,
+            'aiSummary' => $aiSummary
         ]);
     }
 
     private function handleRegression($request, $survey, $responses, $isJson)
     {
-        $depVar = $request->query('dep');
-        $indVar = $request->query('ind');
+        $depVar = $request->input('dep', $request->query('dep'));
+        $indVar = $request->input('ind', $request->query('ind'));
 
         if (!$depVar || !$indVar) {
             return response()->json(['success' => false, 'message' => 'Dependent and Independent variables are required.'], 400);
         }
 
-        $depLabel = "Dependent Variable (Y)";
-        $indLabel = "Independent Variable (X)";
-
-        if ($isJson) {
-            $schema = json_decode($survey->json_schema, true);
-            foreach ($schema as $f) {
-                if (isset($f['name'])) {
-                    if ($f['name'] === $depVar)
-                        $depLabel = $f['label'] ?? $depVar;
-                    if ($f['name'] === $indVar)
-                        $indLabel = $f['label'] ?? $indVar;
-                }
-            }
-        } else {
-            $depLabel = \App\Models\Question::find($depVar)?->text ?? $depVar;
-            $indLabel = \App\Models\Question::find($indVar)?->text ?? $indVar;
-        }
+        $fieldMap = $this->getSurveyFieldMap($survey, $isJson);
+        $depLabel = $fieldMap[$depVar]['label'] ?? (\App\Models\Question::find($depVar)?->text ?? $depVar);
+        $indLabel = $fieldMap[$indVar]['label'] ?? (\App\Models\Question::find($indVar)?->text ?? $indVar);
 
         $xVals = [];
         $yVals = [];
+        $uX = [];
+        $uY = [];
 
         foreach ($responses as $resp) {
-            $valX = $this->getAnswerValue($resp, $indVar, $isJson);
-            $valY = $this->getAnswerValue($resp, $depVar, $isJson);
+            $rawX = $this->getAnswerValue($resp, $indVar, $isJson);
+            $rawY = $this->getAnswerValue($resp, $depVar, $isJson);
+            $numX = $this->convertValueToNumeric($rawX, $uX, $fieldMap[$indVar] ?? null);
+            $numY = $this->convertValueToNumeric($rawY, $uY, $fieldMap[$depVar] ?? null);
 
-            if ($valX !== null && is_numeric($valX) && $valY !== null && is_numeric($valY)) {
-                $xVals[] = (float) $valX;
-                $yVals[] = (float) $valY;
+            if ($numX !== null && $numY !== null) {
+                $xVals[] = (float) $numX;
+                $yVals[] = (float) $numY;
             }
         }
 
@@ -5812,7 +6713,7 @@ class SurveyController extends Controller
         $ciLowerSlope = $slope - ($tCrit * $seSlope);
         $ciUpperSlope = $slope + ($tCrit * $seSlope);
 
-        // Standardized beta for simple regression is just r (with sign matching slope)
+        // Standardized beta for simple regression
         $betaSlope = $slope >= 0 ? abs($r) : -abs($r);
 
         return response()->json([
@@ -5824,7 +6725,7 @@ class SurveyController extends Controller
             'n' => $n,
             'r' => round($r, 4),
             'r2' => round($r * $r, 4),
-            'adjR2' => round(1 - (1 - $r * $r) * ($n - 1) / ($n - 2), 4),
+            'adjR2' => round(1 - (1 - $r * $r) * ($n - 1) / max(1, $n - 2), 4),
             'stdErrorEst' => round($stdErrorEst, 4),
             'anova' => [
                 'ssr' => round($ssr, 4),
@@ -5864,14 +6765,19 @@ class SurveyController extends Controller
         ]);
     }
 
-    private function getGroupedValues($responses, $depVar, $groupVar, $isJson)
+    private function getGroupedValues($responses, $depVar, $groupVar, $isJson, $fieldDep = null, $fieldGroup = null)
     {
         $grouped = [];
+        $uniqueVals = [];
         foreach ($responses as $resp) {
-            $depVal = $this->getAnswerValue($resp, $depVar, $isJson);
-            $groupVal = $this->getAnswerValue($resp, $groupVar, $isJson);
-            if ($depVal !== null && is_numeric($depVal) && $groupVal !== null) {
-                $grouped[$groupVal][] = (float) $depVal;
+            $rawDep = $this->getAnswerValue($resp, $depVar, $isJson);
+            $rawGroup = $this->getAnswerValue($resp, $groupVar, $isJson);
+
+            $groupLabel = $rawGroup !== null ? $this->resolveOptionLabel($rawGroup, $fieldGroup) : null;
+            $numDep = $this->convertValueToNumeric($rawDep, $uniqueVals, $fieldDep);
+
+            if ($numDep !== null && $groupLabel !== null && $groupLabel !== '') {
+                $grouped[(string) $groupLabel][] = (float) $numDep;
             }
         }
         return $grouped;
@@ -5949,8 +6855,8 @@ class SurveyController extends Controller
 
     private function handleMultipleRegression($request, $survey, $responses, $isJson)
     {
-        $depVar = $request->query('dep');
-        $indVars = $request->query('ind');
+        $depVar = $request->input('dep', $request->query('dep'));
+        $indVars = $request->input('ind', $request->query('ind'));
 
         if (is_string($indVars)) {
             $indVars = explode(',', $indVars);
@@ -5982,28 +6888,36 @@ class SurveyController extends Controller
             }
         }
 
+        $fieldMap = $this->getSurveyFieldMap($survey, $isJson);
+
         // Gather paired data points
         $yVals = [];
         $xVals = []; // Array of arrays: row-indexed [ [X1, X2, ...], [X1, X2, ...] ]
+        $uY = [];
+        $uXMap = [];
 
         foreach ($responses as $resp) {
-            $valY = $this->getAnswerValue($resp, $depVar, $isJson);
-            if ($valY === null || !is_numeric($valY))
+            $rawY = $this->getAnswerValue($resp, $depVar, $isJson);
+            $numY = $this->convertValueToNumeric($rawY, $uY, $fieldMap[$depVar] ?? null);
+            if ($numY === null)
                 continue;
 
             $rowX = [];
             $valid = true;
             foreach ($indVars as $id) {
-                $valX = $this->getAnswerValue($resp, $id, $isJson);
-                if ($valX === null || !is_numeric($valX)) {
+                if (!isset($uXMap[$id]))
+                    $uXMap[$id] = [];
+                $rawX = $this->getAnswerValue($resp, $id, $isJson);
+                $numX = $this->convertValueToNumeric($rawX, $uXMap[$id], $fieldMap[$id] ?? null);
+                if ($numX === null) {
                     $valid = false;
                     break;
                 }
-                $rowX[] = (float) $valX;
+                $rowX[] = (float) $numX;
             }
 
             if ($valid) {
-                $yVals[] = (float) $valY;
+                $yVals[] = (float) $numY;
                 $xVals[] = $rowX;
             }
         }
@@ -6546,6 +7460,85 @@ class SurveyController extends Controller
         }
 
         return ucfirst(implode(' ', $formattedWords));
+    }
+
+    /**
+     * Check if a chart image is already locally cached on disk without performing any network call.
+     */
+    public static function getExistingCachedChartPath(array $qcConfig): ?string
+    {
+        try {
+            $cacheDir = storage_path('app/chart_cache');
+            $hashKey = md5(json_encode($qcConfig));
+            $cacheFile = $cacheDir . DIRECTORY_SEPARATOR . 'chart_' . $hashKey . '.png';
+            if (file_exists($cacheFile) && @filesize($cacheFile) > 100) {
+                $imgInfo = @getimagesize($cacheFile);
+                if ($imgInfo !== false && in_array($imgInfo[2] ?? 0, [IMAGETYPE_PNG, IMAGETYPE_JPEG, IMAGETYPE_GIF])) {
+                    return $cacheFile;
+                }
+            }
+        } catch (\Throwable $e) {
+        }
+        return null;
+    }
+
+    /**
+     * Helper to safely fetch or retrieve cached QuickChart images locally for DOCX/PDF generation.
+     */
+    public static function fetchChartImageLocalPath(array $qcConfig, ?string $fallbackUrl = null): ?string
+    {
+        try {
+            $cacheDir = storage_path('app/chart_cache');
+            if (!file_exists($cacheDir)) {
+                @mkdir($cacheDir, 0777, true);
+            }
+
+            $hashKey = md5(json_encode($qcConfig));
+            $cacheFile = $cacheDir . DIRECTORY_SEPARATOR . 'chart_' . $hashKey . '.png';
+
+            if (file_exists($cacheFile) && @filesize($cacheFile) > 100) {
+                $imgInfo = @getimagesize($cacheFile);
+                if ($imgInfo !== false && in_array($imgInfo[2] ?? 0, [IMAGETYPE_PNG, IMAGETYPE_JPEG, IMAGETYPE_GIF])) {
+                    return $cacheFile;
+                }
+                // Corrupted cache file, remove it
+                @unlink($cacheFile);
+            }
+
+            // POST to QuickChart ensures large configs do not get truncated by URL length limits
+            $response = \Illuminate\Support\Facades\Http::timeout(5)->post('https://quickchart.io/chart', [
+                'chart' => $qcConfig,
+                'width' => 600,
+                'height' => 300,
+                'backgroundColor' => 'white',
+                'format' => 'png',
+                'version' => '3'
+            ]);
+
+            if ($response->successful()) {
+                $body = $response->body();
+                if (strlen($body) > 100 && (str_starts_with($body, "\x89PNG") || @getimagesizefromstring($body) !== false)) {
+                    file_put_contents($cacheFile, $body);
+                    return $cacheFile;
+                }
+            }
+
+            // Fallback to GET if fallbackUrl provided
+            if (!empty($fallbackUrl)) {
+                $getResponse = \Illuminate\Support\Facades\Http::timeout(4)->get($fallbackUrl);
+                if ($getResponse->successful()) {
+                    $getBody = $getResponse->body();
+                    if (strlen($getBody) > 100 && (str_starts_with($getBody, "\x89PNG") || @getimagesizefromstring($getBody) !== false)) {
+                        file_put_contents($cacheFile, $getBody);
+                        return $cacheFile;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::warning("fetchChartImageLocalPath failed: " . $e->getMessage());
+        }
+
+        return null;
     }
 }
 

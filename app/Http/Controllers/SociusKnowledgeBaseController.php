@@ -13,10 +13,21 @@ class SociusKnowledgeBaseController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $rules = $request->user()
+        $query = $request->user()
             ->sociusKnowledgeBases()
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->orderBy('created_at', 'desc');
+
+        $scope = $request->query('scope');
+        if ($scope === 'quantitative') {
+            $query->where('content', 'LIKE', '[Quantitative]%');
+        } elseif ($scope === 'qualitative') {
+            $query->where('content', 'LIKE', '[Qualitative]%');
+        } elseif ($scope === 'socius') {
+            $query->where('content', 'NOT LIKE', '[Quantitative]%')
+                ->where('content', 'NOT LIKE', '[Qualitative]%');
+        }
+
+        $rules = $query->get();
 
         return response()->json([
             'rules' => $rules,
@@ -31,10 +42,19 @@ class SociusKnowledgeBaseController extends Controller
         $validated = $request->validate([
             'content' => ['required', 'string', 'max:5000'],
             'is_active' => ['sometimes', 'boolean'],
+            'scope' => ['sometimes', 'nullable', 'string', 'in:quantitative,qualitative,socius,all'],
         ]);
 
+        $content = $validated['content'];
+        $scope = $request->input('scope');
+        if ($scope === 'quantitative' && !str_starts_with($content, '[Quantitative]')) {
+            $content = '[Quantitative] ' . $content;
+        } elseif ($scope === 'qualitative' && !str_starts_with($content, '[Qualitative]')) {
+            $content = '[Qualitative] ' . $content;
+        }
+
         $rule = $request->user()->sociusKnowledgeBases()->create([
-            'content' => $validated['content'],
+            'content' => $content,
             'is_active' => $validated['is_active'] ?? true,
         ]);
 

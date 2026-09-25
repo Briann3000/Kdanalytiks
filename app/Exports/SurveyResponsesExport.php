@@ -197,7 +197,9 @@ class SurveyResponsesExport implements FromCollection, WithHeadings, WithMapping
 
                     if (is_array($val))
                         $val = implode(', ', $val);
-                    $row[] = $val;
+
+                    $headerLabel = $field['label'] ?? $field['name'] ?? '';
+                    $row[] = \App\Http\Controllers\SurveyController::formatCoordinateValue($val, $headerLabel);
                 }
             }
         } else {
@@ -209,7 +211,7 @@ class SurveyResponsesExport implements FromCollection, WithHeadings, WithMapping
                     $transcriptions = $response->ai_metadata['transcriptions'] ?? [];
                     $ansVal = $transcriptions[$valStr] ?? ('[Audio: ' . basename($valStr) . ']');
                 }
-                $row[] = $ansVal;
+                $row[] = \App\Http\Controllers\SurveyController::formatCoordinateValue($ansVal, $q->text ?? '');
             }
         }
 

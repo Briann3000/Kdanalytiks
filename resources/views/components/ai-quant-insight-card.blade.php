@@ -11,8 +11,8 @@
                 <h5 class="text-xs font-bold text-[#2271b1] flex items-center gap-2">
                     <span>{{ __('Trend Interpretation') }}</span>
                     <span x-show="isUpdated"
-                        class="text-[9px] font-black bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200 shadow-xs"
-                        style="display: none;">Updated ✓</span>
+                        class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200"
+                        style="display: none;">{{ __('Updated') }}</span>
                 </h5>
             </div>
 
@@ -56,7 +56,7 @@
 
             {{-- Refine / Polish Section --}}
             <div x-show="currentText && !loading" class="mt-4" style="display: none;">
-                <p class="text-[10px] font-black text-gray-400  tracking-widest mb-2">
+                <p class="text-xs font-bold text-gray-500 mb-2">
                     {{ __('Refine this analysis') }}
                 </p>
                 <div class="flex flex-col gap-2">
@@ -65,8 +65,8 @@
                         class="w-full text-xs p-3 bg-white border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-1 focus:ring-[#2271b1] transition-all placeholder-gray-300"></textarea>
                     <div class="flex justify-end">
                         <button type="button" @click="polish()" :disabled="!feedback.trim() || aiPolishing"
-                            class="px-5 py-2 bg-[#7eb3d4] hover:bg-[#2271b1] text-white font-black text-[10px] tracking-widest rounded-xl shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center">
-                            <span>{{ __('Polish') }}</span>
+                            class="px-5 py-2 bg-[#2271b1] hover:bg-[#135e96] text-white font-bold text-xs rounded-xl shadow-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center">
+                            <span>{{ __('Apply') }}</span>
                         </button>
                     </div>
                 </div>
@@ -177,18 +177,26 @@
                     }
                 },
                 async generate(forceRefresh = false) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const shouldForce = forceRefresh || urlParams.has('force_ai_refresh');
+
                     this.loading = true;
                     this.error = null;
                     try {
                         const style = window.currentReportingStyle || 'apa';
-                        const url = `/ai/insights/quantitative/${this.qId}?survey_id=${this.sId}&style=${style}` + (forceRefresh ? '&refresh=1' : '');
+                        const headers = { 'Accept': 'application/json' };
+                        if (shouldForce) {
+                            headers['Cache-Control'] = 'no-cache';
+                            headers['Pragma'] = 'no-cache';
+                        }
+                        const url = `/ai/insights/quantitative/${this.qId}?survey_id=${this.sId}&style=${style}` + (shouldForce ? '&refresh=1' : '');
                         const response = await fetch(url, {
-                            headers: { 'Accept': 'application/json' }
+                            headers,
+                            cache: shouldForce ? 'no-cache' : 'default'
                         });
                         if (response.status === 429) {
-                            this.retryCount++;
-                            this.error = @js(__('Rate limit reached. Retrying automatically in 5 seconds...'));
-                            setTimeout(() => this.generate(forceRefresh), 5000);
+                            this.error = @js(__('Rate limit reached. Click Regenerate to retry.'));
+                            this.loading = false;
                             return;
                         }
                         const data = await this.parseJsonResponse(response);
@@ -200,9 +208,7 @@
                     } catch (err) {
                         this.error = err.message;
                     } finally {
-                        if (this.retryCount === 0 || this.currentText) {
-                            this.loading = false;
-                        }
+                        this.loading = false;
                     }
                 },
                 async polish() {
@@ -251,7 +257,23 @@
                     }
                 },
                 async refineFromGlobal(feedbackText, style) {
-                    if (this.aiPolishing || this.loading) return;
+                    // Wait for any in-progress generation with a safe max timeout
+                    let waitCount = 0;
+                    while ((this.loading || this.aiPolishing) && waitCount < 25) {
+                        await new Promise(r => setTimeout(r, 200));
+                        waitCount++;
+                    }
+                    if (this.loading || this.aiPolishing) {
+                        this.loading = false;
+                        this.aiPolishing = false;
+                    }
+
+                    // Generate first if card has never been rendered
+                    if (!this.currentText) {
+                        await this.generate();
+                        if (!this.currentText) return;
+                    }
+
                     this.aiPolishing = true;
                     this.error = null;
 
