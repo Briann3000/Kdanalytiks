@@ -714,8 +714,27 @@
                 @yield('sub_sidebar')
 
                 <main id="main-viewport"
-                    class="content-pane custom-scrollbar flex-1 min-w-0 overflow-x-hidden {{ $isSociusFullHeight ? 'socius-full-viewport' : '' }} {{ (request()->is('/') || request()->routeIs('welcome')) ? 'p-0 m-0 !bg-transparent' : '' }}"
+                    class="content-pane custom-scrollbar flex-1 min-w-0 overflow-x-hidden relative {{ $isSociusFullHeight ? 'socius-full-viewport' : '' }} {{ (request()->is('/') || request()->routeIs('welcome')) ? 'p-0 m-0 !bg-transparent' : '' }}"
                     style="{{ $isSociusFullHeight ? 'overflow: hidden !important; padding: 0 !important; margin: 0 !important;' : ((request()->is('/') || request()->routeIs('welcome')) ? 'overflow-y: auto !important; padding: 0 !important; margin: 0 !important;' : '') }}">
+
+                    <!-- Global Page Navigation Skeleton Overlay -->
+                    <div id="global-page-skeleton"
+                        class="hidden absolute inset-0 bg-[#f0f2f5] z-50 p-4 sm:p-6 lg:p-8 overflow-y-auto space-y-6 pointer-events-none transition-opacity duration-150">
+                        <div class="max-w-7xl mx-auto space-y-6">
+                            <x-skeletons.page-header />
+                            <x-skeletons.stat-grid count="4" />
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div class="lg:col-span-2">
+                                    <x-skeletons.chart height="h-80" />
+                                </div>
+                                <div class="lg:col-span-1">
+                                    <x-skeletons.card :lines="5" :hasFooter="true" />
+                                </div>
+                            </div>
+                            <x-skeletons.table :rows="5" :cols="5" />
+                        </div>
+                    </div>
+
                     <div
                         class="{{ $isSociusFullHeight ? 'h-full flex flex-col p-0 m-0 min-w-0' : ((request()->is('/') || request()->routeIs('welcome')) ? 'flex-grow w-full min-w-0' : 'flex-grow w-full min-w-0 p-4 sm:p-6 lg:p-8') }}">
                         <!-- Global Session Alerts -->
@@ -896,6 +915,59 @@
         }
 
         // 2. Pull-to-Refresh Disabled for smooth scrolling
+
+        // --- Global Page Navigation Skeleton Controller ---
+        window.showGlobalSkeleton = function () {
+            const skel = document.getElementById('global-page-skeleton');
+            if (skel) {
+                skel.classList.remove('hidden');
+                skel.style.opacity = '1';
+            }
+        };
+
+        window.hideGlobalSkeleton = function () {
+            const skel = document.getElementById('global-page-skeleton');
+            if (skel) {
+                skel.style.opacity = '0';
+                setTimeout(() => {
+                    if (skel.style.opacity === '0') {
+                        skel.classList.add('hidden');
+                    }
+                }, 150);
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Dismiss skeleton when new page DOM is ready
+            window.hideGlobalSkeleton();
+
+            // Intercept internal page link clicks for instant skeleton transition
+            document.addEventListener('click', (e) => {
+                const link = e.target.closest('a');
+                if (!link) return;
+
+                const href = link.getAttribute('href');
+                const target = link.getAttribute('target');
+                const download = link.hasAttribute('download');
+                const isAction = link.getAttribute('role') === 'button' || link.getAttribute('onclick') || href === '#' || href?.startsWith('#') || href?.startsWith('javascript:');
+
+                if (!href || isAction || target === '_blank' || download || link.hasAttribute('data-no-skeleton')) {
+                    return;
+                }
+
+                try {
+                    const url = new URL(link.href, window.location.origin);
+                    if (url.origin === window.location.origin && (url.pathname !== window.location.pathname || url.search !== window.location.search)) {
+                        window.showGlobalSkeleton();
+                    }
+                } catch (err) { }
+            });
+
+            // Handle back/forward cache restore
+            window.addEventListener('pageshow', (event) => {
+                window.hideGlobalSkeleton();
+            });
+        });
     </script>
 
     <!-- PWA Service Worker Registration -->

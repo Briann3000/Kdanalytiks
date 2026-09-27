@@ -279,7 +279,11 @@
                     </div>
                 </div>
 
-                <div class="p-8 flex-grow">
+                    <!-- Loading Skeleton -->
+                    <div x-show="loading && exports.length === 0">
+                        <x-skeletons.table :rows="4" :cols="3" :hasHeader="false" :hasPagination="false" class="border-0 shadow-none" />
+                    </div>
+
                     <template x-if="exports.length > 0">
                         <div class="overflow-x-auto rounded-[2rem] border border-gray-100 shadow-sm bg-gray-50/30">
                             <table class="min-w-full divide-y divide-gray-100">
@@ -342,7 +346,7 @@
                         </div>
                     </template>
 
-                    <template x-if="exports.length === 0">
+                    <template x-if="!loading && exports.length === 0">
                         <div
                             class="flex flex-col items-center justify-center py-20 bg-gray-50/50 rounded-[2rem] border border-dashed border-gray-200">
                             <div
