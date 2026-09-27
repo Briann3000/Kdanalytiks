@@ -2740,6 +2740,8 @@ class SurveyController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        $inferentialVariables = self::getInferentialVariables($survey, $analysis);
+
         $surveysQuery = \App\Models\Survey::where('is_template', false)
             ->where('id', '!=', $survey->id);
 
@@ -2771,43 +2773,115 @@ class SurveyController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($s) {
-                $questions = [];
-                if (!empty($s->json_schema)) {
-                    $schema = is_string($s->json_schema) ? json_decode($s->json_schema, true) : $s->json_schema;
-                    foreach ((array) $schema as $f) {
-                        if (isset($f['name']) && !in_array($f['type'] ?? '', ['header', 'paragraph', 'group', 'note', 'description'])) {
-                            $isIdField = self::isIdentifierField($f['name'], $f['label'] ?? $f['title'] ?? $f['name']) || self::isGeospatialField($f['name'], $f['label'] ?? $f['title'] ?? $f['name']);
-                            $questions[] = [
-                                'id' => $f['name'],
-                                'label' => $f['label'] ?? $f['title'] ?? $f['name'],
-                                'type' => $f['type'] ?? 'text',
-                                'isChartable' => !$isIdField && !in_array($f['type'] ?? '', ['text', 'textarea', 'multimedia', 'signature', 'gps', 'qr', 'file', 'image', 'audio', 'video', 'photo', 'email'])
-                            ];
-                        }
-                    }
-                }
-                if (empty($questions) && $s->questions->isNotEmpty()) {
-                    foreach ($s->questions as $q) {
-                        $type = $q->type instanceof \UnitEnum ? $q->type->value : ($q->type ?? 'text');
-                        if (!in_array($type, ['header', 'paragraph', 'group', 'note', 'description'])) {
-                            $isIdField = self::isIdentifierField($q->name ?? ('q_' . $q->id), $q->label ?? $q->title ?? $q->name ?? ('Question ' . $q->id)) || self::isGeospatialField($q->name ?? ('q_' . $q->id), $q->label ?? $q->title ?? $q->name ?? ('Question ' . $q->id));
-                            $questions[] = [
-                                'id' => $q->name ?? ('q_' . $q->id),
-                                'label' => $q->label ?? $q->title ?? $q->name ?? ('Question ' . $q->id),
-                                'type' => $type,
-                                'isChartable' => !$isIdField && !in_array($type, ['text', 'textarea', 'multimedia', 'signature', 'gps', 'qr', 'file', 'image', 'audio', 'video', 'photo', 'email'])
-                            ];
-                        }
-                    }
-                }
                 return [
                     'id' => $s->id,
                     'title' => $s->title,
-                    'questions' => $questions
+                    'questions' => self::getInferentialVariables($s)
                 ];
             });
 
-        return view('surveys.reports', compact('survey', 'responses', 'analysis', 'chartConfigs', 'aiSummary', 'canAnalyze', 'groups', 'myGroup', 'savedInferentialTests', 'userSurveys'));
+        return view('surveys.reports', compact('survey', 'responses', 'analysis', 'inferentialVariables', 'chartConfigs', 'aiSummary', 'canAnalyze', 'groups', 'myGroup', 'savedInferentialTests', 'userSurveys'));
+    }
+
+    public static function getInferentialVariables(\App\Models\Survey $survey, array $analysis = []): array
+    {
+        $variables = [];
+        $isJson = !empty($survey->json_schema) && $survey->json_schema !== '[]';
+
+        if ($isJson) {
+            $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
+            $qIdx = 0;
+            foreach ((array) $schema as $f) {
+                if (!isset($f['name']) || in_array($f['type'] ?? '', ['header', 'paragraph', 'group', 'note', 'description'])) {
+                    continue;
+                }
+                $qIdx++;
+                $fName = $f['name'];
+                $fLabel = $f['label'] ?? ($f['title'] ?? ($f['question'] ?? $fName));
+                $fType = $f['type'] ?? 'text';
+                $isIdField = self::isIdentifierField($fName, $fLabel) || self::isGeospatialField($fName, $fLabel);
+                $isChartable = !$isIdField && !in_array($fType, ['text', 'textarea', 'multimedia', 'signature', 'gps', 'qr', 'file', 'image', 'audio', 'video', 'photo', 'email']);
+                $isScaleItem = in_array($fType, ['likert', 'rating', 'scale', 'slider', 'number', 'range', 'star_rating', 'nps', 'likert_item']) && !in_array($fType, ['radio', 'select', 'select_one', 'select_many', 'checkbox', 'date', 'text', 'textarea', 'email']);
+
+                $rows = $f['rows'] ?? [];
+                if (in_array($fType, ['likert_matrix', 'likert_matrix_grid', 'matrix', 'rating_matrix']) && !empty($rows) && is_array($rows)) {
+                    $optgroupLabel = "Q{$qIdx}: " . \Illuminate\Support\Str::limit(self::formatShortCategoryTheme($fLabel), 60);
+                    $subCount = 0;
+                    foreach ($rows as $r) {
+                        $subCount++;
+                        $rVal = is_array($r) ? ($r['value'] ?? ($r['id'] ?? ($r['key'] ?? ($r['name'] ?? '')))) : (string) $r;
+                        $rLbl = is_array($r) ? ($r['label'] ?? ($r['text'] ?? ($r['title'] ?? ($r['name'] ?? $rVal)))) : (string) $r;
+                        if ($rVal !== '') {
+                            $subId = $fName . '__' . $rVal;
+                            $cleanSubText = preg_replace('/^(\d+[\.\:\)\s]+|\([a-zA-Z0-9]+\)\s*|[a-zA-Z][\.\:\)\s]+)\s*/', '', $rLbl);
+                            $variables[] = [
+                                'id' => $subId,
+                                'label' => $fLabel . ' - ' . $rLbl,
+                                'display_label' => "Q{$qIdx}.{$subCount}: " . \Illuminate\Support\Str::limit($cleanSubText, 80),
+                                'optgroup' => $optgroupLabel,
+                                'subItemText' => $rLbl,
+                                'cleanSubText' => $cleanSubText,
+                                'parentLabel' => $fLabel,
+                                'parentFieldName' => $fName,
+                                'type' => 'likert_item',
+                                'isChartable' => true,
+                                'isMatrixItem' => true,
+                                'isScaleItem' => true,
+                                'canvasId' => 'chart-' . $subId,
+                            ];
+                        }
+                    }
+                } else {
+                    $variables[] = [
+                        'id' => $fName,
+                        'label' => $fLabel,
+                        'display_label' => "Q{$qIdx}: " . \Illuminate\Support\Str::limit($fLabel, 80),
+                        'optgroup' => null,
+                        'type' => $fType,
+                        'isChartable' => $isChartable,
+                        'isScaleItem' => $isScaleItem,
+                        'canvasId' => 'chart-' . $fName,
+                    ];
+                }
+            }
+        } else {
+            $qIdx = 0;
+            if (!empty($analysis)) {
+                foreach ($analysis as $item) {
+                    $qIdx++;
+                    $variables[] = [
+                        'id' => $item['id'],
+                        'label' => $item['label'],
+                        'display_label' => "Q{$qIdx}: " . \Illuminate\Support\Str::limit($item['label'], 80),
+                        'optgroup' => null,
+                        'type' => $item['type'] ?? 'text',
+                        'isChartable' => $item['isChartable'] ?? true,
+                        'canvasId' => $item['canvasId'] ?? ('chart-' . $item['id']),
+                    ];
+                }
+            } elseif ($survey->relationLoaded('questions') || $survey->questions()->exists()) {
+                foreach ($survey->questions as $q) {
+                    $type = $q->type instanceof \UnitEnum ? $q->type->value : ($q->type ?? 'text');
+                    if (!in_array($type, ['header', 'paragraph', 'group', 'note', 'description'])) {
+                        $qIdx++;
+                        $qId = $q->name ?? ('q_' . $q->id);
+                        $qLbl = $q->label ?? ($q->title ?? ($q->text ?? ('Question ' . $q->id)));
+                        $isIdField = self::isIdentifierField($qId, $qLbl) || self::isGeospatialField($qId, $qLbl);
+                        $variables[] = [
+                            'id' => $qId,
+                            'label' => $qLbl,
+                            'display_label' => "Q{$qIdx}: " . \Illuminate\Support\Str::limit($qLbl, 80),
+                            'optgroup' => null,
+                            'type' => $type,
+                            'isChartable' => !$isIdField && !in_array($type, ['text', 'textarea', 'multimedia', 'signature', 'gps', 'qr', 'file', 'image', 'audio', 'video', 'photo', 'email']),
+                            'canvasId' => 'chart-' . $qId,
+                        ];
+                    }
+                }
+            }
+        }
+
+        return $variables;
     }
 
     public function exportPdf(\App\Models\Survey $survey)
@@ -3001,6 +3075,7 @@ class SurveyController extends Controller
 
         $isPremium = auth()->user()->hasActiveSubscription();
         $savedInferentialTests = \App\Models\SurveyInferentialAnalysis::where('survey_id', $survey->id)
+            ->where('is_included_in_report', true)
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -3445,6 +3520,7 @@ class SurveyController extends Controller
 
         // Inferential Saved Analysis Section
         $savedInferentialTests = \App\Models\SurveyInferentialAnalysis::where('survey_id', $survey->id)
+            ->where('is_included_in_report', true)
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -4076,13 +4152,9 @@ class SurveyController extends Controller
         $analyticalData = $this->getAnalyticalData($survey, $responses, true);
 
         $analysis = $analyticalData['analysis'];
-        $chartConfigs = $analyticalData['chartConfigs'];
-        $totalResponses = $responses->count();
-        $isSharedView = true;
-        $canAnalyze = false;
-        $aiSummary = null;
+        $inferentialVariables = self::getInferentialVariables($survey, $analysis);
 
-        return view('surveys.reports', compact('survey', 'analysis', 'chartConfigs', 'totalResponses', 'isSharedView', 'canAnalyze', 'aiSummary'));
+        return view('surveys.reports', compact('survey', 'analysis', 'inferentialVariables', 'chartConfigs', 'totalResponses', 'isSharedView', 'canAnalyze', 'aiSummary'));
     }
 
     public function toggleSharedReport(\App\Models\Survey $survey)
@@ -4373,15 +4445,74 @@ class SurveyController extends Controller
         if ($isJson) {
             $firstAnswer = $response->answers->first();
             $data = json_decode($firstAnswer ? $firstAnswer->value : '[]', true);
+
+            $targetId = preg_replace('/^(qual-)?chart-/', '', (string) $questionId);
+            $rowKey = null;
+            if (str_contains($targetId, '__')) {
+                $parts = explode('__', $targetId, 2);
+                $targetId = $parts[0];
+                $rowKey = $parts[1];
+            }
+
             foreach ((array) $data as $entry) {
-                if (isset($entry['name']) && $entry['name'] === $questionId) {
+                if (isset($entry['name']) && $entry['name'] === $targetId) {
                     $val = $entry['userData'] ?? null;
-                    return is_array($val) ? implode(', ', $val) : $val;
+                    if ($rowKey !== null) {
+                        // Recursively unwrap string/array wrapping
+                        while (true) {
+                            if (is_string($val)) {
+                                $trimmed = trim($val);
+                                if ((str_starts_with($trimmed, '{') && str_ends_with($trimmed, '}')) || (str_starts_with($trimmed, '[') && str_ends_with($trimmed, ']'))) {
+                                    $decoded = json_decode($trimmed, true);
+                                    if (json_last_error() === JSON_ERROR_NONE) {
+                                        $val = $decoded;
+                                        continue;
+                                    }
+                                }
+                            }
+                            if (is_array($val) && count($val) === 1 && isset($val[0])) {
+                                $val = $val[0];
+                                continue;
+                            }
+                            break;
+                        }
+
+                        if (is_array($val)) {
+                            $res = null;
+                            if (array_key_exists($rowKey, $val)) {
+                                $res = $val[$rowKey];
+                            } else {
+                                foreach ($val as $k => $v) {
+                                    if ((string) $k === (string) $rowKey || strcasecmp((string) $k, (string) $rowKey) === 0) {
+                                        $res = $v;
+                                        break;
+                                    }
+                                }
+                            }
+                            if ($res !== null) {
+                                while (is_array($res) && count($res) === 1 && isset($res[0])) {
+                                    $res = $res[0];
+                                }
+                                if (is_array($res) && isset($res['value'])) {
+                                    $res = $res['value'];
+                                }
+                                if (is_array($res) && isset($res['label']) && !isset($res['value'])) {
+                                    $res = $res['label'];
+                                }
+                                return $res;
+                            }
+                        }
+                        return null;
+                    }
+                    return $val;
                 }
             }
             return null;
         } else {
-            $a = $response->answers->where('question_id', $questionId)->first();
+            $cleanQId = preg_replace('/^q_/', '', (string) $questionId);
+            $a = $response->answers->first(function ($ans) use ($questionId, $cleanQId) {
+                return (string) $ans->question_id === (string) $questionId || (string) $ans->question_id === (string) $cleanQId;
+            });
             return $a ? $a->value : null;
         }
     }
@@ -5380,20 +5511,52 @@ class SurveyController extends Controller
             'title' => $validated['title'],
             'variables' => $validated['variables'],
             'ai_summary' => $validated['ai_summary'],
+            'is_included_in_report' => $request->boolean('is_included_in_report', false),
             'payload' => $validated['payload']
         ]);
 
         return response()->json(['success' => true, 'analysis' => $analysis]);
     }
 
-    public function deleteInferentialAnalysis(Request $request, $analysisId)
+    public function toggleInferentialReportInclusion(Request $request, \App\Models\Survey $survey, $analysisId)
     {
-        $analysis = \App\Models\SurveyInferentialAnalysis::findOrFail($analysisId);
-        $this->authorizeOwner($analysis->survey);
+        $this->authorizeOwner($survey);
 
-        $analysis->delete();
+        $analysis = \App\Models\SurveyInferentialAnalysis::find($analysisId);
+        if (!$analysis) {
+            return response()->json(['success' => false, 'message' => 'Analysis not found.'], 404);
+        }
 
-        return response()->json(['success' => true]);
+        if ($analysis->survey_id != $survey->id && $analysis->survey?->user_id != auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+        }
+
+        $analysis->is_included_in_report = !$analysis->is_included_in_report;
+        $analysis->save();
+
+        return response()->json([
+            'success' => true,
+            'is_included_in_report' => (bool) $analysis->is_included_in_report,
+            'message' => $analysis->is_included_in_report ? 'Test added to final report.' : 'Test excluded from final report.'
+        ]);
+    }
+
+    public function deleteInferentialAnalysis(Request $request, \App\Models\Survey $survey, $analysisId)
+    {
+        $this->authorizeOwner($survey);
+
+        $analysis = \App\Models\SurveyInferentialAnalysis::find($analysisId);
+        if (!$analysis) {
+            return response()->json(['success' => true, 'message' => 'Analysis not found or already deleted.']);
+        }
+
+        // Verify the analysis belongs to this survey or to a survey owned by the current user
+        if ($analysis->survey_id == $survey->id || $analysis->survey?->user_id == auth()->id()) {
+            $analysis->delete();
+            return response()->json(['success' => true]);
+        }
+
+        return response()->json(['success' => false, 'message' => 'Unauthorized to delete this analysis.'], 403);
     }
 
     public function inferentialAnalysis(Request $request, \App\Models\Survey $survey)
@@ -5444,15 +5607,111 @@ class SurveyController extends Controller
         }
     }
 
+    public static function findOptionInList($list, $search)
+    {
+        if (empty($list) || !is_array($list) || $search === null || $search === '' || is_array($search)) {
+            return null;
+        }
+
+        $s = trim((string) $search);
+
+        foreach ($list as $item) {
+            if (!is_array($item)) {
+                if ((string) $item === $s) {
+                    return ['label' => (string) $item, 'value' => (string) $item];
+                }
+                continue;
+            }
+
+            $id = isset($item['id']) ? trim((string) $item['id']) : null;
+            $val = isset($item['value']) ? trim((string) $item['value']) : null;
+            $key = isset($item['key']) ? trim((string) $item['key']) : null;
+            $name = isset($item['name']) ? trim((string) $item['name']) : null;
+            $label = $item['label'] ?? ($item['text'] ?? ($item['title'] ?? null));
+            $lblStr = $label !== null ? trim((string) $label) : null;
+
+            if (
+                ($id !== null && $id === $s) ||
+                ($val !== null && $val === $s) ||
+                ($key !== null && $key === $s) ||
+                ($name !== null && $name === $s) ||
+                ($lblStr !== null && strcasecmp($lblStr, $s) === 0)
+            ) {
+                return [
+                    'label' => !empty($lblStr) ? $lblStr : ($val ?? ($key ?? ($name ?? ($id ?? $s)))),
+                    'value' => $val ?? ($id ?? ($key ?? ($name ?? $s))),
+                    'id' => $id,
+                    'raw' => $item
+                ];
+            }
+        }
+
+        return null;
+    }
+
     private function getSurveyFieldMap($survey, $isJson)
     {
         $fieldMap = [];
         if ($isJson && !empty($survey->json_schema)) {
             $schema = is_string($survey->json_schema) ? json_decode($survey->json_schema, true) : $survey->json_schema;
             foreach ((array) $schema as $f) {
-                if (isset($f['name'])) {
-                    $fieldMap[$f['name']] = $f;
+                if (!isset($f['name']))
+                    continue;
+                $fName = $f['name'];
+                $fieldMap[$fName] = $f;
+                $fieldMap['chart-' . $fName] = $f;
+                $fieldMap['qual-chart-' . $fName] = $f;
+
+                $rows = $f['rows'] ?? [];
+                $cols = $f['columns'] ?? ($f['values'] ?? ($f['options'] ?? []));
+                if (!empty($rows) && is_array($rows)) {
+                    foreach ($rows as $r) {
+                        $rVal = is_array($r) ? ($r['value'] ?? ($r['id'] ?? ($r['key'] ?? ($r['name'] ?? '')))) : (string) $r;
+                        $rLbl = is_array($r) ? ($r['label'] ?? ($r['text'] ?? ($r['title'] ?? ($r['name'] ?? $rVal)))) : (string) $r;
+                        if ($rVal !== '') {
+                            $subKey = $fName . '__' . $rVal;
+                            $subDef = [
+                                'name' => $subKey,
+                                'parent_name' => $fName,
+                                'parent_label' => ($f['label'] ?? ($f['title'] ?? ($f['question'] ?? $fName))),
+                                'sub_label' => $rLbl,
+                                'short_label' => $rLbl,
+                                'row_key' => $rVal,
+                                'label' => ($f['label'] ?? ($f['title'] ?? ($f['question'] ?? $fName))) . ' - ' . $rLbl,
+                                'type' => 'likert_item',
+                                'values' => $cols,
+                                'columns' => $cols,
+                                'options' => $cols,
+                            ];
+                            $fieldMap[$subKey] = $subDef;
+                            $fieldMap['chart-' . $subKey] = $subDef;
+                            $fieldMap['qual-chart-' . $subKey] = $subDef;
+                        }
+                    }
                 }
+            }
+        } else {
+            foreach ($survey->questions()->with('options')->get() as $q) {
+                $opts = [];
+                foreach ($q->options as $opt) {
+                    $opts[] = [
+                        'id' => (string) $opt->id,
+                        'value' => (string) ($opt->value ?? $opt->id),
+                        'label' => $opt->label ?? ($opt->option_text ?? (string) $opt->id),
+                    ];
+                }
+                $qDef = [
+                    'id' => (string) $q->id,
+                    'name' => (string) $q->id,
+                    'label' => $q->text ?? ($q->label ?? 'Q' . $q->id),
+                    'type' => $q->type ?? 'question',
+                    'values' => $opts,
+                    'columns' => $opts,
+                    'options' => $opts,
+                ];
+                $fieldMap[(string) $q->id] = $qDef;
+                $fieldMap['chart-' . $q->id] = $qDef;
+                $fieldMap['qual-chart-' . $q->id] = $qDef;
             }
         }
         return $fieldMap;
@@ -5462,21 +5721,121 @@ class SurveyController extends Controller
     {
         if ($val === null || $val === '')
             return $val;
-        if ($field && isset($field['values']) && is_array($field['values'])) {
+
+        // If $val is a JSON string of a matrix answer or array:
+        if (is_string($val) && (str_starts_with(trim($val), '{') || str_starts_with(trim($val), '['))) {
+            $decoded = json_decode($val, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $val = $decoded;
+            }
+        }
+
+        // Unwrap single-item wrapper arrays e.g. [ {"r1":"scale-..."} ] or [ "scale-..." ]
+        while (is_array($val) && count($val) === 1 && isset($val[0])) {
+            $inner = $val[0];
+            if (is_string($inner) && (str_starts_with(trim($inner), '{') || str_starts_with(trim($inner), '['))) {
+                $decoded = json_decode($inner, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $val = $decoded;
+                    continue;
+                }
+            }
+            if (is_array($inner)) {
+                $val = $inner;
+                continue;
+            }
+            break;
+        }
+
+        // If $val is an associative array of row->scale answers (e.g. whole matrix answered)
+        if (is_array($val) && !empty($val) && !isset($val[0])) {
+            $rowsDef = $field['rows'] ?? [];
+            $colsDef = $field['columns'] ?? ($field['values'] ?? ($field['options'] ?? []));
+
+            // If only 1 row/item answered in the matrix, return that scale label directly
+            if (count($val) === 1) {
+                $firstVal = reset($val);
+                $colMatch = self::findOptionInList($colsDef, $firstVal);
+                return $colMatch ? $colMatch['label'] : (string) $firstVal;
+            }
+
+            // For multi-item Likert matrices, categorize into composite construct rating levels:
+            $dummyUnique = [];
+            $numMean = $this->convertValueToNumeric($val, $dummyUnique, $field);
+            if ($numMean !== null && is_numeric($numMean)) {
+                $meanScore = round((float) $numMean, 2);
+                $numCols = count($colsDef);
+                if ($numCols >= 2) {
+                    $clampedIndex = max(0, min($numCols - 1, (int) round($meanScore) - 1));
+                    $targetCol = $colsDef[$clampedIndex] ?? null;
+                    $colLabel = is_array($targetCol) ? ($targetCol['label'] ?? ($targetCol['text'] ?? ($targetCol['title'] ?? 'Level ' . ($clampedIndex + 1)))) : (string) $targetCol;
+                    return "{$colLabel} (Composite: {$meanScore})";
+                }
+                if ($meanScore >= 4.2)
+                    return "High Extent / Agreement (Composite: {$meanScore})";
+                if ($meanScore >= 3.4)
+                    return "Above Average (Composite: {$meanScore})";
+                if ($meanScore >= 2.6)
+                    return "Moderate Extent (Composite: {$meanScore})";
+                if ($meanScore >= 1.8)
+                    return "Low Extent (Composite: {$meanScore})";
+                return "Not at all / Disagree (Composite: {$meanScore})";
+            }
+
+            $pairs = [];
+            foreach ($val as $rk => $cv) {
+                $rowMatch = self::findOptionInList($rowsDef, $rk);
+                $rowLabel = $rowMatch ? $rowMatch['label'] : $rk;
+
+                if (is_array($cv)) {
+                    $colLabels = [];
+                    foreach ($cv as $cSub) {
+                        $colMatch = self::findOptionInList($colsDef, $cSub);
+                        $colLabels[] = $colMatch ? $colMatch['label'] : $cSub;
+                    }
+                    $colLabel = implode(', ', $colLabels);
+                } else {
+                    $colMatch = self::findOptionInList($colsDef, $cv);
+                    $colLabel = $colMatch ? $colMatch['label'] : $cv;
+                }
+
+                $pairs[] = "$rowLabel: $colLabel";
+            }
+            return implode(' | ', $pairs);
+        }
+
+        $choiceList = [];
+        if ($field) {
+            if (isset($field['columns']) && is_array($field['columns'])) {
+                $choiceList = array_merge($choiceList, $field['columns']);
+            }
+            if (isset($field['values']) && is_array($field['values'])) {
+                $choiceList = array_merge($choiceList, $field['values']);
+            }
+            if (isset($field['options']) && is_array($field['options'])) {
+                $choiceList = array_merge($choiceList, $field['options']);
+            }
+            if (isset($field['rows']) && is_array($field['rows'])) {
+                $choiceList = array_merge($choiceList, $field['rows']);
+            }
+        }
+
+        if (!empty($choiceList)) {
             if (is_array($val)) {
                 $mapped = [];
                 foreach ($val as $v) {
-                    $opt = collect($field['values'])->firstWhere('value', (string) $v);
-                    $mapped[] = ($opt && !empty($opt['label'])) ? $opt['label'] : $v;
+                    $match = self::findOptionInList($choiceList, $v);
+                    $mapped[] = $match ? $match['label'] : $v;
                 }
                 return implode(', ', $mapped);
             } else {
-                $opt = collect($field['values'])->firstWhere('value', (string) $val);
-                if ($opt && !empty($opt['label'])) {
-                    return $opt['label'];
+                $match = self::findOptionInList($choiceList, $val);
+                if ($match && !empty($match['label'])) {
+                    return $match['label'];
                 }
             }
         }
+
         return is_array($val) ? implode(', ', $val) : (string) $val;
     }
 
@@ -5485,11 +5844,81 @@ class SurveyController extends Controller
         if ($val === null || $val === '')
             return null;
 
-        // If value is an option key like 'option-1', resolve choice label first
-        if ($field && isset($field['values']) && is_array($field['values'])) {
-            $opt = collect($field['values'])->firstWhere('value', (string) $val);
-            if ($opt && !empty($opt['label'])) {
-                $val = $opt['label'];
+        if (is_string($val) && (str_starts_with(trim($val), '{') || str_starts_with(trim($val), '['))) {
+            $decoded = json_decode($val, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $val = $decoded;
+            }
+        }
+
+        while (is_array($val) && count($val) === 1 && isset($val[0])) {
+            $inner = $val[0];
+            if (is_string($inner) && (str_starts_with(trim($inner), '{') || str_starts_with(trim($inner), '['))) {
+                $decoded = json_decode($inner, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $val = $decoded;
+                    continue;
+                }
+            }
+            if (is_array($inner)) {
+                $val = $inner;
+                continue;
+            }
+            break;
+        }
+
+        // If $val is an array of responses or multiple matrix row ratings (composite construct):
+        if (is_array($val)) {
+            if (empty($val)) {
+                return null;
+            }
+            $numVals = [];
+            foreach ($val as $subVal) {
+                $n = $this->convertValueToNumeric($subVal, $uniqueValues, $field);
+                if ($n !== null && is_numeric($n)) {
+                    $numVals[] = (float) $n;
+                }
+            }
+            return !empty($numVals) ? (array_sum($numVals) / count($numVals)) : null;
+        }
+
+        $choiceList = [];
+        if ($field) {
+            if (isset($field['columns']) && is_array($field['columns'])) {
+                $choiceList = array_merge($choiceList, $field['columns']);
+            }
+            if (isset($field['values']) && is_array($field['values'])) {
+                $choiceList = array_merge($choiceList, $field['values']);
+            }
+            if (isset($field['options']) && is_array($field['options'])) {
+                $choiceList = array_merge($choiceList, $field['options']);
+            }
+            if (isset($field['rows']) && is_array($field['rows'])) {
+                $choiceList = array_merge($choiceList, $field['rows']);
+            }
+        }
+
+        if (!empty($choiceList)) {
+            $foundIndex = null;
+            $foundOpt = null;
+            foreach ($choiceList as $idx => $opt) {
+                if (self::findOptionInList([$opt], $val) !== null) {
+                    $foundIndex = $idx;
+                    $foundOpt = is_array($opt) ? $opt : ['value' => $opt, 'label' => $opt];
+                    break;
+                }
+            }
+            if ($foundOpt) {
+                $vVal = $foundOpt['value'] ?? null;
+                if ($vVal !== null && is_numeric($vVal)) {
+                    return (float) $vVal;
+                }
+                $lbl = $foundOpt['label'] ?? ($foundOpt['text'] ?? '');
+                if ($lbl !== '') {
+                    $val = $lbl;
+                } else {
+                    return (float) ($foundIndex + 1);
+                }
             }
         }
 
@@ -5580,6 +6009,165 @@ class SurveyController extends Controller
         return (float) (array_search($val, $uniqueValues) + 1);
     }
 
+    private function parseCategorySortWeight(string $str): ?float
+    {
+        $clean = strtolower(trim($str));
+
+        // Academic year / grade / level
+        if (preg_match('/(?:year|grade|level|class|stage)\s*(\d+)/i', $clean, $m)) {
+            return (float) $m[1];
+        }
+        if (preg_match('/(\d+)(?:st|nd|rd|th)\s*year/i', $clean, $m)) {
+            return (float) $m[1];
+        }
+
+        // Age ranges: "Below 18", "< 18", "Under 18"
+        if (preg_match('/(?:below|under|<|less than)\s*(\d+)/i', $clean, $m)) {
+            return (float) $m[1] - 0.5;
+        }
+        // "25 and above", "25+", "> 25", "over 25", "25 years and above"
+        if (preg_match('/(\d+)\s*(?:\+|and above|and older|plus|years and above)/i', $clean, $m) || preg_match('/(?:above|over|>|more than)\s*(\d+)/i', $clean, $m)) {
+            return (float) $m[1] + 0.5;
+        }
+        // "18–20", "18-20", "18 to 20"
+        if (preg_match('/(\d+)\s*(?:–|-|to)\s*(\d+)/u', $clean, $m)) {
+            return (float) $m[1];
+        }
+        // Plain number
+        if (preg_match('/^\s*(\d+(?:\.\d+)?)/', $clean, $m)) {
+            return (float) $m[1];
+        }
+
+        return null;
+    }
+
+    private function isOtherCategory(string $str): bool
+    {
+        $clean = strtolower(trim($str));
+        return str_starts_with($clean, 'other') ||
+            str_starts_with($clean, 'none') ||
+            str_starts_with($clean, 'prefer not') ||
+            str_contains($clean, 'specify');
+    }
+
+    private function sortCategoriesBySchema(array $categories, $field): array
+    {
+        if (empty($categories)) {
+            return [];
+        }
+
+        $schemaOrder = [];
+        if ($field && is_array($field)) {
+            $pool = [];
+            foreach (['columns', 'values', 'options', 'rows', 'choices'] as $key) {
+                if (isset($field[$key]) && is_array($field[$key])) {
+                    $pool = array_merge($pool, $field[$key]);
+                }
+            }
+            foreach ($pool as $opt) {
+                if (is_array($opt)) {
+                    $lbl = $opt['label'] ?? ($opt['text'] ?? ($opt['title'] ?? ($opt['value'] ?? '')));
+                    if ($lbl !== '' && !in_array((string) $lbl, $schemaOrder, true)) {
+                        $schemaOrder[] = (string) $lbl;
+                    }
+                    $val = $opt['value'] ?? '';
+                    if ($val !== '' && (string) $val !== (string) $lbl && !in_array((string) $val, $schemaOrder, true)) {
+                        $schemaOrder[] = (string) $val;
+                    }
+                } elseif ($opt !== null && $opt !== '') {
+                    if (!in_array((string) $opt, $schemaOrder, true)) {
+                        $schemaOrder[] = (string) $opt;
+                    }
+                }
+            }
+        }
+
+        $likertHierarchy = [
+            'strongly disagree',
+            'disagree',
+            'neutral',
+            'neither agree nor disagree',
+            'undecided',
+            'agree',
+            'strongly agree',
+            'very low',
+            'low',
+            'moderate',
+            'high',
+            'very high',
+            'to no extent',
+            'to a small extent',
+            'to some extent',
+            'to a moderate extent',
+            'to a great extent',
+            'to a very great extent',
+            'not at all',
+            'rarely',
+            'sometimes',
+            'often',
+            'always',
+            'never',
+            'seldom',
+            'frequently',
+            'very poor',
+            'poor',
+            'average',
+            'good',
+            'excellent'
+        ];
+
+        usort($categories, function ($a, $b) use ($schemaOrder, $likertHierarchy) {
+            $aStr = (string) $a;
+            $bStr = (string) $b;
+
+            // 1. "Other / Specify" always goes to the very end
+            $isOtherA = $this->isOtherCategory($aStr);
+            $isOtherB = $this->isOtherCategory($bStr);
+            if ($isOtherA && !$isOtherB)
+                return 1;
+            if (!$isOtherA && $isOtherB)
+                return -1;
+
+            // 2. Schema order exact match
+            if (!empty($schemaOrder)) {
+                $idxA = array_search($aStr, $schemaOrder, true);
+                $idxB = array_search($bStr, $schemaOrder, true);
+                if ($idxA !== false && $idxB !== false) {
+                    return $idxA <=> $idxB;
+                }
+                if ($idxA !== false)
+                    return -1;
+                if ($idxB !== false)
+                    return 1;
+            }
+
+            // 3. Likert hierarchy
+            $cleanA = strtolower(trim(preg_replace('/\(composite:.*?\)/i', '', $aStr)));
+            $cleanB = strtolower(trim(preg_replace('/\(composite:.*?\)/i', '', $bStr)));
+            $likA = array_search($cleanA, $likertHierarchy, true);
+            $likB = array_search($cleanB, $likertHierarchy, true);
+            if ($likA !== false && $likB !== false) {
+                return $likA <=> $likB;
+            }
+            if ($likA !== false)
+                return -1;
+            if ($likB !== false)
+                return 1;
+
+            // 4. Numeric / Ordinal range parser
+            $weightA = $this->parseCategorySortWeight($aStr);
+            $weightB = $this->parseCategorySortWeight($bStr);
+            if ($weightA !== null && $weightB !== null && $weightA !== $weightB) {
+                return $weightA <=> $weightB;
+            }
+
+            // 5. Fallback natural case-insensitive comparison
+            return strnatcasecmp($aStr, $bStr);
+        });
+
+        return array_values($categories);
+    }
+
     private function handleCrosstab($request, $survey, $responses, $isJson)
     {
         $rowId = $request->input('row', $request->query('row'));
@@ -5602,18 +6190,39 @@ class SurveyController extends Controller
         $rowTotals = [];
         $colTotals = [];
         $grandTotal = 0;
+        $totalCases = count($responses);
 
         foreach ($responses as $resp) {
             $rawRow = $this->getAnswerValue($resp, $rowId, $isJson);
             $rawCol = $this->getAnswerValue($resp, $colId, $isJson);
 
-            $rowVal = $rawRow !== null ? (string) $this->resolveOptionLabel($rawRow, $fieldRow) : "[Missing]";
-            $colVal = $rawCol !== null ? (string) $this->resolveOptionLabel($rawCol, $fieldCol) : "[Missing]";
+            // Listwise deletion: skip cases where either variable is unrecorded/empty
+            if ($rawRow === null || $rawRow === '' || $rawCol === null || $rawCol === '') {
+                continue;
+            }
+            if (is_array($rawRow) && empty($rawRow)) {
+                continue;
+            }
+            if (is_array($rawCol) && empty($rawCol)) {
+                continue;
+            }
 
-            if (!in_array($rowVal, $rows))
+            $rowVal = (string) $this->resolveOptionLabel($rawRow, $fieldRow);
+            $colVal = (string) $this->resolveOptionLabel($rawCol, $fieldCol);
+
+            $rowVal = trim($rowVal);
+            $colVal = trim($colVal);
+
+            if ($rowVal === '' || $rowVal === '[Missing]' || $colVal === '' || $colVal === '[Missing]') {
+                continue;
+            }
+
+            if (!in_array($rowVal, $rows, true)) {
                 $rows[] = $rowVal;
-            if (!in_array($colVal, $cols))
+            }
+            if (!in_array($colVal, $cols, true)) {
                 $cols[] = $colVal;
+            }
 
             if (!isset($matrix[$rowVal][$colVal])) {
                 $matrix[$rowVal][$colVal] = 0;
@@ -5623,6 +6232,17 @@ class SurveyController extends Controller
             $rowTotals[$rowVal] = ($rowTotals[$rowVal] ?? 0) + 1;
             $colTotals[$colVal] = ($colTotals[$colVal] ?? 0) + 1;
             $grandTotal++;
+        }
+
+        $rows = $this->sortCategoriesBySchema($rows, $fieldRow);
+        $cols = $this->sortCategoriesBySchema($cols, $fieldCol);
+
+        if ($grandTotal === 0 || count($rows) < 2 || count($cols) < 2) {
+            return response()->json([
+                'success' => false,
+                'status' => 'INSUFFICIENT_DATA',
+                'message' => 'Cannot compute cross-tabulation: No valid overlapping responses (N = 0) or one of the variables has fewer than 2 categories. If analyzing a matrix question, please select a specific sub-statement row.'
+            ], 422);
         }
 
         foreach ($rows as $r) {
@@ -5635,6 +6255,15 @@ class SurveyController extends Controller
 
         $rowPercentages = [];
         $colPercentages = [];
+        $totalPercentages = [];
+        $expectedMatrix = [];
+        $residuals = [];
+        $stdResiduals = [];
+
+        $cellsWithExpectedLessThan5 = 0;
+        $minExpected = null;
+        $totalCells = count($rows) * count($cols);
+
         foreach ($rows as $r) {
             foreach ($cols as $c) {
                 $count = $matrix[$r][$c];
@@ -5642,10 +6271,84 @@ class SurveyController extends Controller
                 $cTot = $colTotals[$c] ?? 1;
                 $rowPercentages[$r][$c] = round(($count / $rTot) * 100, 1);
                 $colPercentages[$r][$c] = round(($count / $cTot) * 100, 1);
+                $totalPercentages[$r][$c] = $grandTotal > 0 ? round(($count / $grandTotal) * 100, 1) : 0.0;
+                $exp = $grandTotal > 0 ? ($rTot * $cTot) / $grandTotal : 0.0;
+                $expectedMatrix[$r][$c] = round($exp, 4);
+                $residuals[$r][$c] = round($count - $exp, 1);
+                $stdResiduals[$r][$c] = $exp > 0 ? round(($count - $exp) / sqrt($exp), 2) : 0.0;
+
+                if ($exp < 5) {
+                    $cellsWithExpectedLessThan5++;
+                }
+                if ($minExpected === null || $exp < $minExpected) {
+                    $minExpected = $exp;
+                }
             }
         }
 
-        $aiSummary = "Cross-tabulation analysis of '{$rowLabel}' across '{$colLabel}' (N = {$grandTotal} responses). The contingency table highlights the observed response joint distributions and marginal proportions across sub-groups.";
+        $colTotalPercentages = [];
+        foreach ($cols as $c) {
+            $cTot = $colTotals[$c] ?? 0;
+            $colTotalPercentages[$c] = $grandTotal > 0 ? round(($cTot / $grandTotal) * 100, 1) : 0.0;
+        }
+
+        $cleanRow = self::formatShortCategoryTheme($rowLabel);
+        $cleanCol = self::formatShortCategoryTheme($colLabel);
+
+        $maxCount = 0;
+        $topR = '';
+        $topC = '';
+        foreach ($rows as $r) {
+            foreach ($cols as $c) {
+                if (($matrix[$r][$c] ?? 0) > $maxCount) {
+                    $maxCount = $matrix[$r][$c];
+                    $topR = $r;
+                    $topC = $c;
+                }
+            }
+        }
+        $topCellPercent = $grandTotal > 0 ? round(($maxCount / $grandTotal) * 100, 1) : 0;
+
+        $topColName = '';
+        $topColCount = 0;
+        foreach ($colTotals as $cName => $cCount) {
+            if ($cCount > $topColCount) {
+                $topColCount = $cCount;
+                $topColName = $cName;
+            }
+        }
+        $topColPct = $grandTotal > 0 ? round(($topColCount / $grandTotal) * 100, 1) : 0;
+
+        $pctExpectedLessThan5 = $totalCells > 0 ? round(($cellsWithExpectedLessThan5 / $totalCells) * 100, 1) : 0.0;
+        $isCochranViolated = ($pctExpectedLessThan5 > 20.0 || ($minExpected !== null && $minExpected < 1.0));
+        $minExpFormatted = $minExpected !== null ? number_format($minExpected, 2) : '0.00';
+
+        $assumptionWarning = [
+            'cells_less_than_5' => $cellsWithExpectedLessThan5,
+            'total_cells' => $totalCells,
+            'percent_less_than_5' => $pctExpectedLessThan5,
+            'min_expected' => $minExpected !== null ? round($minExpected, 2) : 0.0,
+            'is_violated' => $isCochranViolated,
+            'message' => __("a. :cells cells (:percent%) have expected count less than 5. The minimum expected count is :min.", [
+                'cells' => $cellsWithExpectedLessThan5,
+                'percent' => $pctExpectedLessThan5,
+                'min' => $minExpFormatted
+            ])
+        ];
+
+        $aiSummary = "Cross-tabulation of {$cleanRow} across {$cleanCol} (Valid N = {$grandTotal}). The highest joint concentration is observed for '{$topR}' within '{$topC}' (n = {$maxCount}, {$topCellPercent}% of valid sample). Overall, the dominant response category for {$cleanCol} is '{$topColName}' ({$topColPct}%).";
+
+        $validCases = $grandTotal;
+        $validPct = $totalCases > 0 ? round(($validCases / $totalCases) * 100, 1) : 0.0;
+        $missingCases = $totalCases - $validCases;
+        $missingPct = $totalCases > 0 ? round(($missingCases / $totalCases) * 100, 1) : 0.0;
+        $caseSummary = [
+            'valid_n' => $validCases,
+            'valid_pct' => $validPct,
+            'missing_n' => $missingCases,
+            'missing_pct' => $missingPct,
+            'total_n' => $totalCases,
+        ];
 
         return response()->json([
             'success' => true,
@@ -5657,11 +6360,20 @@ class SurveyController extends Controller
             'matrix' => $matrix,
             'rowPercentages' => $rowPercentages,
             'colPercentages' => $colPercentages,
+            'totalPercentages' => $totalPercentages,
+            'colTotalPercentages' => $colTotalPercentages,
+            'expectedMatrix' => $expectedMatrix,
+            'residuals' => $residuals,
+            'stdResiduals' => $stdResiduals,
             'rows' => $rows,
             'columns' => $cols,
             'rowTotals' => $rowTotals,
             'colTotals' => $colTotals,
             'grandTotal' => $grandTotal,
+            'validCases' => $validCases,
+            'case_summary' => $caseSummary,
+            'footnote' => $assumptionWarning['message'],
+            'assumptionWarning' => $assumptionWarning,
             'aiSummary' => $aiSummary
         ]);
     }
@@ -5688,18 +6400,41 @@ class SurveyController extends Controller
         $rowTotals = [];
         $colTotals = [];
         $grandTotal = 0;
+        $totalCases = count($responses);
+
+        $validPairResponses = [];
 
         foreach ($responses as $resp) {
             $rawRow = $this->getAnswerValue($resp, $rowId, $isJson);
             $rawCol = $this->getAnswerValue($resp, $colId, $isJson);
 
-            $rowVal = $rawRow !== null ? (string) $this->resolveOptionLabel($rawRow, $fieldRow) : "[Missing]";
-            $colVal = $rawCol !== null ? (string) $this->resolveOptionLabel($rawCol, $fieldCol) : "[Missing]";
+            // Listwise deletion: skip cases where either variable is unrecorded/empty
+            if ($rawRow === null || $rawRow === '' || $rawCol === null || $rawCol === '') {
+                continue;
+            }
+            if (is_array($rawRow) && empty($rawRow)) {
+                continue;
+            }
+            if (is_array($rawCol) && empty($rawCol)) {
+                continue;
+            }
 
-            if (!in_array($rowVal, $rows))
+            $rowVal = (string) $this->resolveOptionLabel($rawRow, $fieldRow);
+            $colVal = (string) $this->resolveOptionLabel($rawCol, $fieldCol);
+
+            $rowVal = trim($rowVal);
+            $colVal = trim($colVal);
+
+            if ($rowVal === '' || $rowVal === '[Missing]' || $colVal === '' || $colVal === '[Missing]') {
+                continue;
+            }
+
+            if (!in_array($rowVal, $rows, true)) {
                 $rows[] = $rowVal;
-            if (!in_array($colVal, $cols))
+            }
+            if (!in_array($colVal, $cols, true)) {
                 $cols[] = $colVal;
+            }
 
             if (!isset($matrix[$rowVal][$colVal])) {
                 $matrix[$rowVal][$colVal] = 0;
@@ -5709,6 +6444,19 @@ class SurveyController extends Controller
             $rowTotals[$rowVal] = ($rowTotals[$rowVal] ?? 0) + 1;
             $colTotals[$colVal] = ($colTotals[$colVal] ?? 0) + 1;
             $grandTotal++;
+
+            $validPairResponses[] = ['r' => $rowVal, 'c' => $colVal];
+        }
+
+        $rows = $this->sortCategoriesBySchema($rows, $fieldRow);
+        $cols = $this->sortCategoriesBySchema($cols, $fieldCol);
+
+        if ($grandTotal === 0 || count($rows) < 2 || count($cols) < 2) {
+            return response()->json([
+                'success' => false,
+                'status' => 'INSUFFICIENT_DATA',
+                'message' => 'Cannot compute Chi-Square test: No valid overlapping responses (N = 0) or one of the variables has fewer than 2 categories. If analyzing a matrix question, please select a specific sub-statement row.'
+            ], 422);
         }
 
         foreach ($rows as $r) {
@@ -5721,18 +6469,48 @@ class SurveyController extends Controller
 
         $chiSquare = 0.0;
         $expectedMatrix = [];
+        $rowPercentages = [];
+        $colPercentages = [];
+        $totalPercentages = [];
+        $residuals = [];
+        $stdResiduals = [];
+
+        $cellsWithExpectedLessThan5 = 0;
+        $minExpected = null;
+        $totalCells = count($rows) * count($cols);
+
         foreach ($rows as $r) {
             foreach ($cols as $c) {
+                $count = $matrix[$r][$c];
                 $rowTot = $rowTotals[$r] ?? 0;
                 $colTot = $colTotals[$c] ?? 0;
                 $expected = $grandTotal > 0 ? ($rowTot * $colTot) / $grandTotal : 0;
-                $expectedMatrix[$r][$c] = round($expected, 2);
+                $expectedMatrix[$r][$c] = round($expected, 4);
+
+                $rowPercentages[$r][$c] = $rowTot > 0 ? round(($count / $rowTot) * 100, 1) : 0.0;
+                $colPercentages[$r][$c] = $colTot > 0 ? round(($count / $colTot) * 100, 1) : 0.0;
+                $totalPercentages[$r][$c] = $grandTotal > 0 ? round(($count / $grandTotal) * 100, 1) : 0.0;
+                $residuals[$r][$c] = round($count - $expected, 1);
+                $stdResiduals[$r][$c] = $expected > 0 ? round(($count - $expected) / sqrt($expected), 2) : 0.0;
+
+                if ($expected < 5) {
+                    $cellsWithExpectedLessThan5++;
+                }
+                if ($minExpected === null || $expected < $minExpected) {
+                    $minExpected = $expected;
+                }
 
                 if ($expected > 0) {
                     $observed = $matrix[$r][$c];
                     $chiSquare += pow($observed - $expected, 2) / $expected;
                 }
             }
+        }
+
+        $colTotalPercentages = [];
+        foreach ($cols as $c) {
+            $cTot = $colTotals[$c] ?? 0;
+            $colTotalPercentages[$c] = $grandTotal > 0 ? round(($cTot / $grandTotal) * 100, 1) : 0.0;
         }
 
         $numRows = count($rows);
@@ -5742,20 +6520,10 @@ class SurveyController extends Controller
 
         // Likelihood Ratio
         $likelihoodRatio = 0.0;
-        $cellsWithExpectedLessThan5 = 0;
-        $minExpected = null;
-        $totalCells = $numRows * $numCols;
-
         foreach ($rows as $r) {
             foreach ($cols as $c) {
                 $observed = $matrix[$r][$c];
                 $expected = $expectedMatrix[$r][$c];
-                if ($expected < 5) {
-                    $cellsWithExpectedLessThan5++;
-                }
-                if ($minExpected === null || $expected < $minExpected) {
-                    $minExpected = $expected;
-                }
                 if ($observed > 0 && $expected > 0) {
                     $likelihoodRatio += $observed * log($observed / $expected);
                 }
@@ -5775,11 +6543,9 @@ class SurveyController extends Controller
         }
 
         $sumX = $sumY = $sumX2 = $sumY2 = $sumXY = $N_valid = 0;
-        foreach ($responses as $resp) {
-            $rawRow = $this->getAnswerValue($resp, $rowId, $isJson);
-            $rawCol = $this->getAnswerValue($resp, $colId, $isJson);
-            $rowVal = $rawRow !== null ? (string) $this->resolveOptionLabel($rawRow, $fieldRow) : "[Missing]";
-            $colVal = $rawCol !== null ? (string) $this->resolveOptionLabel($rawCol, $fieldCol) : "[Missing]";
+        foreach ($validPairResponses as $pair) {
+            $rowVal = $pair['r'];
+            $colVal = $pair['c'];
             if (isset($rowScores[$rowVal]) && isset($colScores[$colVal])) {
                 $x = $rowScores[$rowVal];
                 $y = $colScores[$colVal];
@@ -5802,13 +6568,64 @@ class SurveyController extends Controller
             $linearPValue = $this->chiSquareProbability($linearAssociation, 1);
         }
 
-        // Effect Size: Cramer's V & Phi Coefficient
+        // Effect Size: Cramer's V, Phi & Contingency Coefficient
         $minDim = max(1, min($numRows - 1, $numCols - 1));
         $cramersV = $grandTotal > 0 ? sqrt($chiSquare / ($grandTotal * $minDim)) : 0;
         $cramersV = round(min(1.0, max(0.0, $cramersV)), 4);
 
         $phi = $grandTotal > 0 ? sqrt($chiSquare / $grandTotal) : 0;
         $phi = round($phi, 4);
+
+        $contingencyCoeff = ($chiSquare + $grandTotal) > 0 ? sqrt($chiSquare / ($chiSquare + $grandTotal)) : 0;
+        $contingencyCoeff = round($contingencyCoeff, 4);
+
+        // 2x2 specific computations: Continuity Correction (Yates) and Fisher's Exact Test
+        $isTwoByTwo = ($numRows === 2 && $numCols === 2);
+        $yatesChiSquare = null;
+        $yatesPValue = null;
+        $fisherExact2Sided = null;
+        $fisherExact1Sided = null;
+
+        if ($isTwoByTwo && $grandTotal > 0) {
+            $yatesSum = 0.0;
+            foreach ($rows as $r) {
+                foreach ($cols as $c) {
+                    $obs = $matrix[$r][$c];
+                    $exp = $expectedMatrix[$r][$c];
+                    if ($exp > 0) {
+                        $diff = max(0.0, abs($obs - $exp) - 0.5);
+                        $yatesSum += pow($diff, 2) / $exp;
+                    }
+                }
+            }
+            $yatesChiSquare = round($yatesSum, 4);
+            $yatesPValue = round($this->chiSquareProbability($yatesSum, 1), 4);
+
+            $fisher = $this->calculateFisherExact2x2($matrix, $rows, $cols, $grandTotal);
+            $fisherExact2Sided = $fisher['twoSided'];
+            $fisherExact1Sided = $fisher['oneSided'];
+        }
+
+        $symmetricMeasures = [
+            [
+                'category' => 'Nominal by Nominal',
+                'measure' => 'Phi',
+                'value' => $phi,
+                'approxSig' => round($pValue, 4)
+            ],
+            [
+                'category' => 'Nominal by Nominal',
+                'measure' => "Cramer's V",
+                'value' => $cramersV,
+                'approxSig' => round($pValue, 4)
+            ],
+            [
+                'category' => 'Nominal by Nominal',
+                'measure' => 'Contingency Coefficient',
+                'value' => $contingencyCoeff,
+                'approxSig' => round($pValue, 4)
+            ]
+        ];
 
         $effectLabel = "Negligible";
         if ($cramersV >= 0.50)
@@ -5819,18 +6636,50 @@ class SurveyController extends Controller
             $effectLabel = "Moderate";
 
         $footnotePercent = $totalCells > 0 ? round(($cellsWithExpectedLessThan5 / $totalCells) * 100, 1) : 0.0;
+        $minExpFormatted = $minExpected !== null ? number_format($minExpected, 2) : '0.00';
         $footnote = __("a. :cells cells (:percent%) have expected count less than 5. The minimum expected count is :min.", [
             'cells' => $cellsWithExpectedLessThan5,
             'percent' => $footnotePercent,
-            'min' => number_format($minExpected, 2)
+            'min' => $minExpFormatted
         ]);
 
+        $isCochranViolated = ($footnotePercent > 20.0 || ($minExpected !== null && $minExpected < 1.0));
+        $assumptionWarning = [
+            'cells_less_than_5' => $cellsWithExpectedLessThan5,
+            'cells_under_5' => $cellsWithExpectedLessThan5,
+            'total_cells' => $totalCells,
+            'percent_less_than_5' => $footnotePercent,
+            'cells_under_5_pct' => $footnotePercent,
+            'min_expected' => $minExpected !== null ? round($minExpected, 2) : 0.0,
+            'is_violated' => $isCochranViolated,
+            'message' => $footnote
+        ];
+
         $significant = $pValue < 0.05;
+        $cleanRow = self::formatShortCategoryTheme($rowLabel);
+        $cleanCol = self::formatShortCategoryTheme($colLabel);
+
+        $formattedPVal = $pValue < 0.001 ? '< .001' : '= ' . ltrim(number_format($pValue, 3), '0');
+        $formattedChiSq = number_format($chiSquare, 3);
+        $formattedV = ltrim(number_format($cramersV, 3), '0');
+
         if ($significant) {
-            $aiSummary = "A Chi-Square Test of Independence was conducted to evaluate the relationship between '{$rowLabel}' and '{$colLabel}'. The relationship was statistically significant, χ²({$df}, N = {$grandTotal}) = " . number_format($chiSquare, 4) . ", p = " . number_format($pValue, 4) . " (p < 0.05). We reject the null hypothesis (H₀) of independence. Cramer's V = {$cramersV} indicates a {$effectLabel} association between the two variables.";
+            $aiSummary = "A Chi-Square Test of Independence was conducted to evaluate the relationship between {$cleanRow} and {$cleanCol}. The relationship was statistically significant, χ²({$df}, N = {$grandTotal}) = {$formattedChiSq}, p {$formattedPVal}. We reject the null hypothesis (H₀) of independence. Cramer's V = {$formattedV} indicates a {$effectLabel} association between the two variables.";
         } else {
-            $aiSummary = "A Chi-Square Test of Independence was conducted to evaluate the relationship between '{$rowLabel}' and '{$colLabel}'. The relationship was not statistically significant, χ²({$df}, N = {$grandTotal}) = " . number_format($chiSquare, 4) . ", p = " . number_format($pValue, 4) . " (p ≥ 0.05). We fail to reject the null hypothesis (H₀); there is no evidence of a systematic association between '{$rowLabel}' and '{$colLabel}'.";
+            $aiSummary = "A Chi-Square Test of Independence was conducted to evaluate the relationship between {$cleanRow} and {$cleanCol}. The relationship was not statistically significant, χ²({$df}, N = {$grandTotal}) = {$formattedChiSq}, p {$formattedPVal}. We fail to reject the null hypothesis (H₀); there is no evidence of a systematic association between {$cleanRow} and {$cleanCol}.";
         }
+
+        $validCases = $grandTotal;
+        $validPct = $totalCases > 0 ? round(($validCases / $totalCases) * 100, 1) : 0.0;
+        $missingCases = $totalCases - $validCases;
+        $missingPct = $totalCases > 0 ? round(($missingCases / $totalCases) * 100, 1) : 0.0;
+        $caseSummary = [
+            'valid_n' => $validCases,
+            'valid_pct' => $validPct,
+            'missing_n' => $missingCases,
+            'missing_pct' => $missingPct,
+            'total_n' => $totalCases,
+        ];
 
         return response()->json([
             'success' => true,
@@ -5841,11 +6690,19 @@ class SurveyController extends Controller
             'colLabel' => $colLabel,
             'matrix' => $matrix,
             'expectedMatrix' => $expectedMatrix,
+            'rowPercentages' => $rowPercentages,
+            'colPercentages' => $colPercentages,
+            'totalPercentages' => $totalPercentages,
+            'colTotalPercentages' => $colTotalPercentages,
+            'residuals' => $residuals,
+            'stdResiduals' => $stdResiduals,
             'rows' => $rows,
             'columns' => $cols,
             'rowTotals' => $rowTotals,
             'colTotals' => $colTotals,
             'grandTotal' => $grandTotal,
+            'validCases' => $validCases,
+            'case_summary' => $caseSummary,
             'chiSquare' => round($chiSquare, 4),
             'df' => $df,
             'pValue' => round($pValue, 4),
@@ -5856,11 +6713,18 @@ class SurveyController extends Controller
             'linearAssociation' => round($linearAssociation, 4),
             'linearPValue' => round($linearPValue, 4),
             'linearSignificant' => $linearPValue < 0.05,
+            'isTwoByTwo' => $isTwoByTwo,
+            'yatesChiSquare' => $yatesChiSquare,
+            'yatesPValue' => $yatesPValue,
+            'fisherExact2Sided' => $fisherExact2Sided,
+            'fisherExact1Sided' => $fisherExact1Sided,
             'cramersV' => $cramersV,
             'phi' => $phi,
+            'contingencyCoeff' => $contingencyCoeff,
+            'symmetricMeasures' => $symmetricMeasures,
             'effectLabel' => $effectLabel,
-            'validCases' => $grandTotal,
             'footnote' => $footnote,
+            'assumptionWarning' => $assumptionWarning,
             'aiSummary' => $aiSummary
         ]);
     }
@@ -5876,22 +6740,22 @@ class SurveyController extends Controller
             ], 400);
         }
 
+        $fieldMap = $this->getSurveyFieldMap($survey, $isJson);
         $itemLabels = [];
-        if ($isJson) {
-            $schema = json_decode($survey->json_schema, true);
-            foreach ($schema as $f) {
-                if (isset($f['name']) && in_array($f['name'], $selectedItems)) {
-                    $itemLabels[$f['name']] = $f['label'] ?? $f['name'];
-                }
-            }
-        } else {
-            foreach ($selectedItems as $itemKey) {
-                $itemLabels[$itemKey] = \App\Models\Question::find($itemKey)?->text ?? $itemKey;
-            }
-        }
+        $itemShortLabels = [];
+        $itemIndex = 1;
         foreach ($selectedItems as $itemKey) {
-            if (!isset($itemLabels[$itemKey]))
-                $itemLabels[$itemKey] = $itemKey;
+            $def = $fieldMap[$itemKey] ?? null;
+            $rawLabel = $def['label'] ?? (\App\Models\Question::find($itemKey)?->text ?? $itemKey);
+            $subText = $def['subItemText'] ?? null;
+            if (!$subText && str_contains($rawLabel, ' - ')) {
+                $parts = explode(' - ', $rawLabel, 2);
+                $subText = trim($parts[1]);
+            }
+            $cleanLabel = $subText ?: $rawLabel;
+            $itemLabels[$itemKey] = $cleanLabel;
+            $itemShortLabels[$itemKey] = 'Item ' . $itemIndex;
+            $itemIndex++;
         }
 
         $dataMatrix = [];
@@ -5903,7 +6767,7 @@ class SurveyController extends Controller
                 if (!isset($uniqueValuesPerItem[$itemKey]))
                     $uniqueValuesPerItem[$itemKey] = [];
                 $rawVal = $this->getAnswerValue($resp, $itemKey, $isJson);
-                $numVal = $this->convertValueToNumeric($rawVal, $uniqueValuesPerItem[$itemKey]);
+                $numVal = $this->convertValueToNumeric($rawVal, $uniqueValuesPerItem[$itemKey], $fieldMap[$itemKey] ?? null);
                 if ($numVal !== null) {
                     $row[$itemKey] = $numVal;
                 }
@@ -5915,6 +6779,19 @@ class SurveyController extends Controller
 
         $N = count($dataMatrix);
         $K = count($selectedItems);
+        $totalN = count($responses);
+        $excludedN = max(0, $totalN - $N);
+        $validPct = $totalN > 0 ? round(($N / $totalN) * 100, 1) : 100.0;
+        $excludedPct = $totalN > 0 ? round(($excludedN / $totalN) * 100, 1) : 0.0;
+
+        $caseSummary = [
+            'valid_n' => $N,
+            'valid_pct' => $validPct,
+            'excluded_n' => $excludedN,
+            'excluded_pct' => $excludedPct,
+            'total_n' => $totalN,
+            'total_pct' => 100.0
+        ];
 
         if ($K < 2 || $N < 2) {
             return response()->json([
@@ -5962,9 +6839,7 @@ class SurveyController extends Controller
         $alpha = round(max(0, min(1, $alpha)), 4);
 
         $itemStats = [];
-        $sumCorr = 0;
-        $corrCount = 0;
-
+        $idxCounter = 1;
         foreach ($selectedItems as $itemKey) {
             $subTotalScores = [];
             foreach ($dataMatrix as $row) {
@@ -5998,9 +6873,6 @@ class SurveyController extends Controller
             $denom = sqrt(max(1e-12, $denX * $denY));
             $itemTotalCorr = $denom > 0 ? round($num / $denom, 4) : 0.0;
 
-            $sumCorr += $itemTotalCorr;
-            $corrCount++;
-
             $subItemVariances = 0;
             foreach ($selectedItems as $otherKey) {
                 if ($otherKey !== $itemKey) {
@@ -6014,22 +6886,86 @@ class SurveyController extends Controller
             }
             $alphaIfDeleted = round(max(0, min(1, $alphaIfDeleted)), 4);
 
+            $smc = $this->computeSquaredMultipleCorrelation($dataMatrix, $selectedItems, $itemKey);
+
             $itemStats[] = [
                 'item_key' => $itemKey,
+                'short_label' => 'Item ' . $idxCounter,
                 'label' => $itemLabels[$itemKey] ?? $itemKey,
                 'scale_mean_if_deleted' => round($subMean, 2),
                 'scale_var_if_deleted' => round($subVar, 2),
                 'item_total_corr' => $itemTotalCorr,
+                'squared_multiple_corr' => $smc,
                 'alpha_if_deleted' => $alphaIfDeleted
             ];
+            $idxCounter++;
         }
 
-        $meanInterItemCorr = $corrCount > 0 ? $sumCorr / $corrCount : 0;
+        // Item Descriptives
+        $itemDescriptives = [];
+        $idxCounter = 1;
+        foreach ($selectedItems as $itemKey) {
+            $itemDescriptives[] = [
+                'item_key' => $itemKey,
+                'short_label' => 'Item ' . $idxCounter,
+                'label' => $itemLabels[$itemKey] ?? $itemKey,
+                'mean' => round($itemMeans[$itemKey], 4),
+                'stdDev' => round(sqrt($itemVariances[$itemKey]), 4),
+                'n' => $N
+            ];
+            $idxCounter++;
+        }
+
+        // Inter-Item Correlation Matrix
+        $interItemMatrix = [];
+        foreach ($selectedItems as $iKey) {
+            $interItemMatrix[$iKey] = [];
+            $iVals = array_column($dataMatrix, $iKey);
+            $iMean = $itemMeans[$iKey];
+            $iVar = $itemVariances[$iKey];
+            foreach ($selectedItems as $jKey) {
+                if ($iKey === $jKey) {
+                    $interItemMatrix[$iKey][$jKey] = 1.0;
+                } else {
+                    $jVals = array_column($dataMatrix, $jKey);
+                    $jMean = $itemMeans[$jKey];
+                    $jVar = $itemVariances[$jKey];
+                    $cov = 0.0;
+                    for ($idx = 0; $idx < $N; $idx++) {
+                        $cov += ($iVals[$idx] - $iMean) * ($jVals[$idx] - $jMean);
+                    }
+                    $cov = $cov / max(1, $N - 1);
+                    $denom = sqrt(max(1e-12, $iVar * $jVar));
+                    $interItemMatrix[$iKey][$jKey] = $denom > 0 ? round($cov / $denom, 4) : 0.0;
+                }
+            }
+        }
+
+        // Standardized Cronbach's Alpha computed strictly from unique off-diagonal pairs (k*(k-1)/2)
+        $sumInterCorr = 0.0;
+        $pairCount = 0;
+        $keysArr = array_values($selectedItems);
+        for ($i = 0; $i < $K; $i++) {
+            for ($j = $i + 1; $j < $K; $j++) {
+                $rVal = $interItemMatrix[$keysArr[$i]][$keysArr[$j]] ?? 0.0;
+                $sumInterCorr += $rVal;
+                $pairCount++;
+            }
+        }
+        $meanInterItemCorr = $pairCount > 0 ? $sumInterCorr / $pairCount : 0.0;
         $stdAlpha = 0.0;
-        if ($K > 1) {
+        if ($K > 1 && $meanInterItemCorr > -1 / ($K - 1)) {
             $stdAlpha = ($K * $meanInterItemCorr) / (1 + ($K - 1) * $meanInterItemCorr);
         }
         $stdAlpha = round(max(0, min(1, $stdAlpha)), 4);
+
+        // Scale Statistics
+        $scaleStatistics = [
+            'mean' => round($totalMean, 4),
+            'variance' => round($totalVariance, 4),
+            'stdDev' => round(sqrt($totalVariance), 4),
+            'k_items' => $K
+        ];
 
         $interpretation = "Poor Internal Consistency (Tool needs revision)";
         if ($alpha >= 0.90) {
@@ -6042,11 +6978,17 @@ class SurveyController extends Controller
             $interpretation = "Questionable Reliability (Borderline consistency)";
         }
 
-        $aiSummary = "Cronbach's Alpha (α) for the {$K} evaluated scale items was calculated as " . number_format($alpha, 4) . " (Standardized α = " . number_format($stdAlpha, 4) . ") across N = {$N} valid responses. This indicates {$interpretation}. ";
+        $rawAlphaFmt = ltrim(number_format($alpha, 4), '0');
+        if ($rawAlphaFmt === '' || $rawAlphaFmt === '.')
+            $rawAlphaFmt = '.0000';
+        $stdAlphaFmt = ltrim(number_format($stdAlpha, 4), '0');
+        if ($stdAlphaFmt === '' || $stdAlphaFmt === '.')
+            $stdAlphaFmt = '.0000';
+        $aiSummary = "Cronbach's Alpha (α) for the {$K} evaluated scale items was calculated as {$rawAlphaFmt} (standardized α<sub>std</sub> = {$stdAlphaFmt}) across N = {$N} valid responses. This indicates {$interpretation}. ";
         if ($alpha >= 0.70) {
             $aiSummary .= "The scale items show strong cohesion and internal validity, suitable for research measurement.";
         } else {
-            $aiSummary .= "Item-total statistics indicate that removing items with low corrected item-total correlation (< 0.30) will improve overall scale reliability.";
+            $aiSummary .= "Item-total statistics indicate that removing items with low corrected item-total correlation (< .30) will improve overall scale reliability.";
         }
 
         return response()->json([
@@ -6056,8 +6998,16 @@ class SurveyController extends Controller
             'std_alpha' => $stdAlpha,
             'k_items' => $K,
             'valid_n' => $N,
+            'sample_n' => $N,
+            'case_summary' => $caseSummary,
+            'mean_inter_item_corr' => round($meanInterItemCorr, 4),
             'interpretation' => $interpretation,
+            'item_descriptives' => $itemDescriptives,
+            'inter_item_matrix' => $interItemMatrix,
+            'item_labels' => $itemLabels,
+            'item_short_labels' => $itemShortLabels,
             'item_stats' => $itemStats,
+            'scale_statistics' => $scaleStatistics,
             'sumItemVariances' => round($sumItemVariances, 4),
             'totalVariance' => round($totalVariance, 4),
             'aiSummary' => $aiSummary
@@ -6069,7 +7019,6 @@ class SurveyController extends Controller
         $depVar = $request->input('dep', $request->query('dep'));
         $scope = $request->input('scope', $request->query('scope', 'within'));
         $fieldMap = $this->getSurveyFieldMap($survey, $isJson);
-
         if ($scope === 'cross_survey') {
             $targetSurveyId = $request->input('target_survey_id', $request->query('target_survey_id'));
             $targetDepVar = $request->input('target_dep', $request->query('target_dep', $depVar));
@@ -6082,6 +7031,7 @@ class SurveyController extends Controller
             $targetResponses = $targetSurvey->responses()->with('answers')->get();
             $targetIsJson = !empty($targetSurvey->json_schema) && $targetSurvey->json_schema !== '[]';
             $targetFieldMap = $this->getSurveyFieldMap($targetSurvey, $targetIsJson);
+            $totalCases = count($responses) + count($targetResponses);
 
             $depLabel = $fieldMap[$depVar]['label'] ?? (\App\Models\Question::find($depVar)?->text ?? $depVar);
             $targetDepLabel = $targetFieldMap[$targetDepVar]['label'] ?? (\App\Models\Question::find($targetDepVar)?->text ?? $targetDepVar);
@@ -6131,8 +7081,15 @@ class SurveyController extends Controller
                     $g1Vals[] = (float) $num;
             }
 
-            $g2Vals = array_values(array_filter(array_map('floatval', (array) $datasetValues), 'is_numeric'));
+            $g2Vals = [];
+            foreach ((array) $datasetValues as $rawV) {
+                if (is_numeric(trim((string) $rawV))) {
+                    $g2Vals[] = (float) trim((string) $rawV);
+                }
+            }
+            $totalCases = count($responses) + count($g2Vals);
         } else {
+            $totalCases = count($responses);
             $groupVar = $request->input('group', $request->query('group'));
             if (!$depVar || !$groupVar) {
                 return response()->json(['success' => false, 'message' => 'Dependent and Grouping variables are required.'], 400);
@@ -6152,10 +7109,39 @@ class SurveyController extends Controller
                 ], 400);
             }
 
-            $g1Name = (string) $groupKeys[0];
-            $g2Name = (string) $groupKeys[1];
-            $g1Vals = $grouped[$g1Name];
-            $g2Vals = $grouped[$g2Name];
+            $groupVal1 = $request->input('group1', $request->query('group1'));
+            $groupVal2 = $request->input('group2', $request->query('group2'));
+
+            if ($groupVal1 !== null && $groupVal2 !== null && $groupVal1 !== '' && $groupVal2 !== '') {
+                $groupVal1 = (string) $groupVal1;
+                $groupVal2 = (string) $groupVal2;
+                $res1 = (string) $this->resolveOptionLabel($groupVal1, $fieldMap[$groupVar] ?? null);
+                $res2 = (string) $this->resolveOptionLabel($groupVal2, $fieldMap[$groupVar] ?? null);
+
+                $k1 = isset($grouped[$groupVal1]) ? $groupVal1 : (isset($grouped[$res1]) ? $res1 : null);
+                $k2 = isset($grouped[$groupVal2]) ? $groupVal2 : (isset($grouped[$res2]) ? $res2 : null);
+
+                if ($k1 !== null && $k2 !== null) {
+                    $g1Name = ($res1 !== '' && $res1 !== $groupVal1) ? $res1 : (string) $k1;
+                    $g2Name = ($res2 !== '' && $res2 !== $groupVal2) ? $res2 : (string) $k2;
+                    $g1Vals = $grouped[$k1];
+                    $g2Vals = $grouped[$k2];
+                }
+            }
+
+            if (!isset($g1Vals) || !isset($g2Vals)) {
+                if (count($groupKeys) === 2) {
+                    $g1Name = (string) $groupKeys[0];
+                    $g2Name = (string) $groupKeys[1];
+                    $g1Vals = $grouped[$g1Name];
+                    $g2Vals = $grouped[$g2Name];
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'The selected grouping variable contains ' . count($groupKeys) . ' categories (' . implode(', ', array_slice($groupKeys, 0, 4)) . (count($groupKeys) > 4 ? '...' : '') . '). An Independent Samples T-Test strictly compares 2 groups. Please select a binary variable, specify 2 comparison groups, or use One-Way ANOVA to analyze all groups simultaneously.'
+                    ], 400);
+                }
+            }
         }
 
         $n1 = count($g1Vals);
@@ -6185,6 +7171,13 @@ class SurveyController extends Controller
         $var2 = $var2 / ($n2 - 1);
         $sd2 = sqrt($var2);
 
+        if ($var1 <= 1e-12 && $var2 <= 1e-12 && abs($m1 - $m2) <= 1e-12) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Both comparison groups have identical constant responses with zero within-group variance (s² = 0). A t-test cannot be computed on invariant data.'
+            ], 400);
+        }
+
         // 1. Equal Variances Assumed (Pooled T-Test)
         $dfAssumed = $n1 + $n2 - 2;
         $pooledVar = (($n1 - 1) * $var1 + ($n2 - 1) * $var2) / max(1, $dfAssumed);
@@ -6192,15 +7185,21 @@ class SurveyController extends Controller
         $seAssumed = $pooledSd * sqrt(1 / $n1 + 1 / $n2);
         $tAssumed = $seAssumed > 0 ? ($m1 - $m2) / $seAssumed : 0.0;
         $pAssumed = $this->tProbability($tAssumed, $dfAssumed);
+        $pValue1Tailed = round($pAssumed / 2.0, 4);
 
-        $tCritAssumed = 1.96 + (2.38 / max(1, $dfAssumed)) + (2.71 / pow(max(1, $dfAssumed), 2));
+        $tCritAssumed = $this->invTDistribution(0.05, $dfAssumed);
         $ciLowerAssumed = ($m1 - $m2) - ($tCritAssumed * $seAssumed);
         $ciUpperAssumed = ($m1 - $m2) + ($tCritAssumed * $seAssumed);
 
-        // Cohen's d (Effect Size)
+        // Cohen's d & Hedges' g (Effect Size)
         $cohensD = $pooledSd > 0 ? ($m1 - $m2) / $pooledSd : 0.0;
         $dAbs = abs($cohensD);
         $dEffectLabel = $dAbs >= 0.8 ? 'Large' : ($dAbs >= 0.5 ? 'Medium' : ($dAbs >= 0.2 ? 'Small' : 'Negligible'));
+
+        $jFactor = 1.0 - (3.0 / max(1.0, (4.0 * ($n1 + $n2) - 9.0)));
+        $hedgesG = round($cohensD * $jFactor, 4);
+        $gAbs = abs($hedgesG);
+        $gEffectLabel = $gAbs >= 0.8 ? 'Large' : ($gAbs >= 0.5 ? 'Medium' : ($gAbs >= 0.2 ? 'Small' : 'Negligible'));
 
         // 2. Equal Variances Not Assumed (Welch T-Test)
         $seWelch = sqrt(max(1e-12, ($var1 / $n1) + ($var2 / $n2)));
@@ -6212,8 +7211,9 @@ class SurveyController extends Controller
         if ($dfWelch <= 0)
             $dfWelch = 1;
         $pWelch = $this->tProbability($tWelch, $dfWelch);
+        $pValueWelch1Tailed = round($pWelch / 2.0, 4);
 
-        $tCritWelch = 1.96 + (2.38 / $dfWelch) + (2.71 / pow($dfWelch, 2));
+        $tCritWelch = $this->invTDistribution(0.05, $dfWelch);
         $ciLowerWelch = ($m1 - $m2) - ($tCritWelch * $seWelch);
         $ciUpperWelch = ($m1 - $m2) + ($tCritWelch * $seWelch);
 
@@ -6249,7 +7249,137 @@ class SurveyController extends Controller
         $chosenDf = $equalVarAssumed ? $dfAssumed : $dfWelch;
         $chosenP = $equalVarAssumed ? $pAssumed : $pWelch;
 
-        $aiSummary = "An Independent Samples T-Test was conducted to evaluate differences in '{$depLabel}' between {$g1Name} (M = " . number_format($m1, 2) . ", SD = " . number_format($sd1, 2) . ") and {$g2Name} (M = " . number_format($m2, 2) . ", SD = " . number_format($sd2, 2) . "). The difference was " . ($chosenP < 0.05 ? "statistically significant" : "not statistically significant") . ", t(" . number_format($chosenDf, 2) . ") = " . number_format($chosenT, 3) . ", p = " . number_format($chosenP, 4) . " (p " . ($chosenP < 0.05 ? "< 0.05" : "≥ 0.05") . "). Cohen's d = " . number_format($cohensD, 3) . " indicates a {$dEffectLabel} effect size. 95% CI of the difference is [" . number_format($ciLowerAssumed, 3) . ", " . number_format($ciUpperAssumed, 3) . "].";
+        $validCases = $n1 + $n2;
+        if ($scope === 'cross_survey') {
+            $totalG1 = count($responses);
+            $totalG2 = count($targetResponses);
+            $missingG1 = max(0, $totalG1 - $n1);
+            $missingG2 = max(0, $totalG2 - $n2);
+            $totalCases = $totalG1 + $totalG2;
+            $missingCases = $missingG1 + $missingG2;
+            $caseSummary = [
+                'valid_n' => $validCases,
+                'valid_pct' => $totalCases > 0 ? round(($validCases / $totalCases) * 100, 1) : 0.0,
+                'missing_n' => $missingCases,
+                'missing_pct' => $totalCases > 0 ? round(($missingCases / $totalCases) * 100, 1) : 0.0,
+                'total_n' => $totalCases,
+                'group1' => [
+                    'name' => $g1Name,
+                    'valid_n' => $n1,
+                    'valid_pct' => $totalG1 > 0 ? round(($n1 / $totalG1) * 100, 1) : 0.0,
+                    'missing_n' => $missingG1,
+                    'missing_pct' => $totalG1 > 0 ? round(($missingG1 / $totalG1) * 100, 1) : 0.0,
+                    'total_n' => $totalG1,
+                ],
+                'group2' => [
+                    'name' => $g2Name,
+                    'valid_n' => $n2,
+                    'valid_pct' => $totalG2 > 0 ? round(($n2 / $totalG2) * 100, 1) : 0.0,
+                    'missing_n' => $missingG2,
+                    'missing_pct' => $totalG2 > 0 ? round(($missingG2 / $totalG2) * 100, 1) : 0.0,
+                    'total_n' => $totalG2,
+                ],
+                'total' => [
+                    'valid_n' => $validCases,
+                    'valid_pct' => $totalCases > 0 ? round(($validCases / $totalCases) * 100, 1) : 0.0,
+                    'missing_n' => $missingCases,
+                    'missing_pct' => $totalCases > 0 ? round(($missingCases / $totalCases) * 100, 1) : 0.0,
+                    'total_n' => $totalCases,
+                ]
+            ];
+        } elseif ($scope === 'upload') {
+            $totalG1 = count($responses);
+            $totalG2 = count((array) $datasetValues);
+            $missingG1 = max(0, $totalG1 - $n1);
+            $missingG2 = max(0, $totalG2 - $n2);
+            $totalCases = $totalG1 + $totalG2;
+            $missingCases = $missingG1 + $missingG2;
+            $caseSummary = [
+                'valid_n' => $validCases,
+                'valid_pct' => $totalCases > 0 ? round(($validCases / $totalCases) * 100, 1) : 0.0,
+                'missing_n' => $missingCases,
+                'missing_pct' => $totalCases > 0 ? round(($missingCases / $totalCases) * 100, 1) : 0.0,
+                'total_n' => $totalCases,
+                'group1' => [
+                    'name' => $g1Name,
+                    'valid_n' => $n1,
+                    'valid_pct' => $totalG1 > 0 ? round(($n1 / $totalG1) * 100, 1) : 0.0,
+                    'missing_n' => $missingG1,
+                    'missing_pct' => $totalG1 > 0 ? round(($missingG1 / $totalG1) * 100, 1) : 0.0,
+                    'total_n' => $totalG1,
+                ],
+                'group2' => [
+                    'name' => $g2Name,
+                    'valid_n' => $n2,
+                    'valid_pct' => $totalG2 > 0 ? round(($n2 / $totalG2) * 100, 1) : 0.0,
+                    'missing_n' => $missingG2,
+                    'missing_pct' => $totalG2 > 0 ? round(($missingG2 / $totalG2) * 100, 1) : 0.0,
+                    'total_n' => $totalG2,
+                ],
+                'total' => [
+                    'valid_n' => $validCases,
+                    'valid_pct' => $totalCases > 0 ? round(($validCases / $totalCases) * 100, 1) : 0.0,
+                    'missing_n' => $missingCases,
+                    'missing_pct' => $totalCases > 0 ? round(($missingCases / $totalCases) * 100, 1) : 0.0,
+                    'total_n' => $totalCases,
+                ]
+            ];
+        } else {
+            $missingCases = max(0, $totalCases - $validCases);
+            $validPct = $totalCases > 0 ? round(($validCases / $totalCases) * 100, 1) : 0.0;
+            $missingPct = $totalCases > 0 ? round(($missingCases / $totalCases) * 100, 1) : 0.0;
+            $caseSummary = [
+                'valid_n' => $validCases,
+                'valid_pct' => $validPct,
+                'missing_n' => $missingCases,
+                'missing_pct' => $missingPct,
+                'total_n' => $totalCases,
+            ];
+        }
+
+        $chosenSe = $equalVarAssumed ? $seAssumed : $seWelch;
+        $chosenCiLower = $equalVarAssumed ? $ciLowerAssumed : $ciLowerWelch;
+        $chosenCiUpper = $equalVarAssumed ? $ciUpperAssumed : $ciUpperWelch;
+
+        // Effect Sizes Table (SPSS v27+ Standard: Cohen's d, Hedges' correction, Glass's delta with 95% CIs)
+        $seCohensD = sqrt(($n1 + $n2) / max(1, ($n1 * $n2)) + pow($cohensD, 2) / max(1, (2 * ($n1 + $n2))));
+        $ciLowerD = $cohensD - 1.96 * $seCohensD;
+        $ciUpperD = $cohensD + 1.96 * $seCohensD;
+
+        $seHedgesG = $seCohensD * $jFactor;
+        $ciLowerG = $hedgesG - 1.96 * $seHedgesG;
+        $ciUpperG = $hedgesG + 1.96 * $seHedgesG;
+
+        $glassDelta = $sd2 > 0 ? ($m1 - $m2) / $sd2 : 0.0;
+        $seGlassDelta = sqrt(1 / max(1, $n1) + 1 / max(1, $n2) + pow($glassDelta, 2) / max(1, (2 * max(1, $n2 - 1))));
+        $ciLowerDelta = $glassDelta - 1.96 * $seGlassDelta;
+        $ciUpperDelta = $glassDelta + 1.96 * $seGlassDelta;
+
+        $effectSizes = [
+            [
+                'name' => "Cohen's d",
+                'standardizer' => round($pooledSd, 4),
+                'point_estimate' => round($cohensD, 3),
+                'ci_lower' => round($ciLowerD, 3),
+                'ci_upper' => round($ciUpperD, 3),
+            ],
+            [
+                'name' => "Hedges' correction",
+                'standardizer' => round($pooledSd, 4),
+                'point_estimate' => round($hedgesG, 3),
+                'ci_lower' => round($ciLowerG, 3),
+                'ci_upper' => round($ciUpperG, 3),
+            ],
+            [
+                'name' => "Glass's delta",
+                'standardizer' => round($sd2, 4),
+                'point_estimate' => round($glassDelta, 3),
+                'ci_lower' => round($ciLowerDelta, 3),
+                'ci_upper' => round($ciUpperDelta, 3),
+            ]
+        ];
+
+        $aiSummary = "An Independent Samples T-Test was conducted to evaluate differences in '{$depLabel}' between {$g1Name} (M = " . number_format($m1, 2) . ", SD = " . number_format($sd1, 2) . ") and {$g2Name} (M = " . number_format($m2, 2) . ", SD = " . number_format($sd2, 2) . "). Levene's Test for Equality of Variances indicated " . ($equalVarAssumed ? "equal variances were assumed (F = " . number_format($leveneF, 2) . ", p = " . number_format($leveneSig, 3) . ")" : "a violation of the equal variances assumption (F = " . number_format($leveneF, 2) . ", p = " . number_format($leveneSig, 3) . "), so Welch's adjusted t-test is reported") . ". Results indicated a " . ($chosenP < 0.05 ? "statistically significant" : "not statistically significant") . " difference, t(" . number_format($chosenDf, 2) . ") = " . number_format($chosenT, 3) . ", p = " . number_format($chosenP, 4) . " (p " . ($chosenP < 0.05 ? "< 0.05" : "≥ 0.05") . "), with a mean difference of " . number_format($m1 - $m2, 2) . " (SE = " . number_format($chosenSe, 2) . "). Cohen's d = " . number_format($cohensD, 3) . " indicates a {$dEffectLabel} effect size (Hedges' g = " . number_format($hedgesG, 3) . "). 95% CI of the difference is [" . number_format($chosenCiLower, 3) . ", " . number_format($chosenCiUpper, 3) . "].";
 
         return response()->json([
             'success' => true,
@@ -6258,6 +7388,8 @@ class SurveyController extends Controller
             'groupVar' => $groupVar ?? 'cross_survey',
             'depLabel' => $depLabel,
             'groupLabel' => $groupLabel,
+            'case_summary' => $caseSummary,
+            'validCases' => $validCases,
             'groups' => [
                 [
                     'name' => $g1Name,
@@ -6279,10 +7411,16 @@ class SurveyController extends Controller
             'equalVarAssumed' => $equalVarAssumed,
             'cohensD' => round($cohensD, 4),
             'cohensDEffect' => $dEffectLabel,
+            'dEffectLabel' => $dEffectLabel,
+            'hedgesG' => $hedgesG,
+            'hedgesGEffect' => $gEffectLabel,
+            'gEffectLabel' => $gEffectLabel,
+            'effect_sizes' => $effectSizes,
             // assumed
             'tValue' => round($tAssumed, 4),
             'df' => $dfAssumed,
             'pValue' => round($pAssumed, 4),
+            'pValue1Tailed' => $pValue1Tailed,
             'meanDiff' => round($m1 - $m2, 4),
             'stdErrorDiff' => round($seAssumed, 4),
             'ciLower' => round($ciLowerAssumed, 4),
@@ -6292,6 +7430,7 @@ class SurveyController extends Controller
             'tValueWelch' => round($tWelch, 4),
             'dfWelch' => round($dfWelch, 2),
             'pValueWelch' => round($pWelch, 4),
+            'pValueWelch1Tailed' => $pValueWelch1Tailed,
             'stdErrorDiffWelch' => round($seWelch, 4),
             'ciLowerWelch' => round($ciLowerWelch, 4),
             'ciUpperWelch' => round($ciUpperWelch, 4),
@@ -6392,7 +7531,47 @@ class SurveyController extends Controller
 
         $sigMarker = $pValue < 0.01 ? '**' : ($pValue < 0.05 ? '*' : '');
 
-        $aiSummary = "A Pearson Correlation was calculated to examine the association between '{$labelX}' and '{$labelY}'. The correlation was " . ($pValue < 0.05 ? "statistically significant" : "not statistically significant") . ", r({$df}) = " . number_format($r, 3) . ", p = " . number_format($pValue, 4) . " (R² = " . number_format($r * $r, 3) . "). 95% CI [" . number_format($rLower, 3) . ", " . number_format($rUpper, 3) . "].";
+        // Spearman's Rank Correlation
+        $spearman = $this->calculateSpearmanRankCorrelation($xVals, $yVals);
+
+        $sdX = sqrt($ssX / ($n - 1));
+        $sdY = sqrt($ssY / ($n - 1));
+        $shortLabelX = $fieldMap[$varX]['sub_label'] ?? ($fieldMap[$varX]['short_label'] ?? $labelX);
+        $shortLabelY = $fieldMap[$varY]['sub_label'] ?? ($fieldMap[$varY]['short_label'] ?? $labelY);
+        $descriptives = [
+            [
+                'variable' => $varX,
+                'label' => $labelX,
+                'short_label' => $shortLabelX,
+                'mean' => round($meanX, 4),
+                'stdDev' => round($sdX, 4),
+                'n' => $n
+            ],
+            [
+                'variable' => $varY,
+                'label' => $labelY,
+                'short_label' => $shortLabelY,
+                'mean' => round($meanY, 4),
+                'stdDev' => round($sdY, 4),
+                'n' => $n
+            ]
+        ];
+
+        // Scatter plot points and regression trendline
+        $scatterPoints = [];
+        for ($i = 0; $i < $n; $i++) {
+            $scatterPoints[] = ['x' => round($xVals[$i], 2), 'y' => round($yVals[$i], 2)];
+        }
+        $minX = min($xVals);
+        $maxX = max($xVals);
+        $slope = $ssX > 0 ? $sp / $ssX : 0.0;
+        $intercept = $meanY - $slope * $meanX;
+        $trendline = [
+            ['x' => round($minX, 2), 'y' => round($intercept + $slope * $minX, 2)],
+            ['x' => round($maxX, 2), 'y' => round($intercept + $slope * $maxX, 2)]
+        ];
+
+        $aiSummary = "A Pearson Correlation was calculated to examine the association between '{$labelX}' and '{$labelY}'. The correlation was " . ($pValue < 0.05 ? "statistically significant" : "not statistically significant") . ", r({$df}) = " . number_format($r, 3) . ", p = " . number_format($pValue, 4) . " (R² = " . number_format($r * $r, 3) . "). Spearman's ρ = " . number_format($spearman['rho'], 3) . " (p = " . number_format($spearman['pValue'], 4) . "). 95% CI [" . number_format($rLower, 3) . ", " . number_format($rUpper, 3) . "].";
 
         return response()->json([
             'success' => true,
@@ -6400,6 +7579,8 @@ class SurveyController extends Controller
             'varY' => $varY,
             'labelX' => $labelX,
             'labelY' => $labelY,
+            'shortLabelX' => $shortLabelX,
+            'shortLabelY' => $shortLabelY,
             'n' => $n,
             'r' => round($r, 4),
             'r2' => round($r * $r, 4),
@@ -6408,10 +7589,17 @@ class SurveyController extends Controller
             'pValue' => round($pValue, 4),
             'significant' => $pValue < 0.05,
             'sigMarker' => $sigMarker,
+            'spearmanRho' => $spearman['rho'],
+            'spearmanPValue' => $spearman['pValue'],
+            'spearmanSignificant' => $spearman['significant'],
+            'spearmanSigMarker' => $spearman['sigMarker'],
+            'descriptives' => $descriptives,
+            'scatterPoints' => $scatterPoints,
+            'trendline' => $trendline,
             'meanX' => round($meanX, 4),
             'meanY' => round($meanY, 4),
-            'stdDevX' => round(sqrt($ssX / ($n - 1)), 4),
-            'stdDevY' => round(sqrt($ssY / ($n - 1)), 4),
+            'stdDevX' => round($sdX, 4),
+            'stdDevY' => round($sdY, 4),
             'covariance' => round($covariance, 4),
             'stdErrorR' => round($seR, 4),
             'ciLower' => round($rLower, 4),
@@ -6429,18 +7617,41 @@ class SurveyController extends Controller
         $grouped = [];
 
         if ($scope === 'cross_survey') {
+            $targetSurveysInput = $request->input('target_surveys', $request->query('target_surveys'));
+            if (is_string($targetSurveysInput)) {
+                $targetSurveysInput = json_decode($targetSurveysInput, true) ?: [];
+            }
+            $targetSurveyId = $request->input('target_survey_id', $request->query('target_survey_id'));
             $targetSurveyIds = $request->input('target_survey_ids', $request->query('target_survey_ids'));
-            if (is_string($targetSurveyIds)) {
+            if ($targetSurveyId && empty($targetSurveyIds) && empty($targetSurveysInput)) {
+                $targetSurveyIds = [$targetSurveyId];
+            } elseif (is_string($targetSurveyIds)) {
                 $targetSurveyIds = explode(',', $targetSurveyIds);
             }
             $targetSurveyIds = array_filter((array) $targetSurveyIds);
 
-            if (!$depVar || count($targetSurveyIds) < 1) {
+            $targetItems = [];
+            if (!empty($targetSurveysInput) && is_array($targetSurveysInput)) {
+                foreach ($targetSurveysInput as $ts) {
+                    $tsId = $ts['survey_id'] ?? ($ts['id'] ?? null);
+                    $tsDep = $ts['dep'] ?? ($ts['target_dep'] ?? $depVar);
+                    if ($tsId) {
+                        $targetItems[] = ['id' => $tsId, 'dep' => $tsDep];
+                    }
+                }
+            } elseif (!empty($targetSurveyIds)) {
+                foreach ($targetSurveyIds as $tId) {
+                    $tDepVar = $request->input('target_dep', $request->input('target_dep_' . $tId, $request->query('target_dep_' . $tId, $depVar)));
+                    $targetItems[] = ['id' => $tId, 'dep' => $tDepVar];
+                }
+            }
+
+            if (!$depVar || count($targetItems) < 1) {
                 return response()->json(['success' => false, 'message' => 'Please select questions and at least 1 other comparison survey.'], 400);
             }
 
             $depLabel = $fieldMap[$depVar]['label'] ?? (\App\Models\Question::find($depVar)?->text ?? $depVar);
-            $groupLabel = "Cross-Survey Cohorts / Waves";
+            $groupLabel = "Cross-Survey Comparison";
 
             // Group 1 = Current survey
             $uVals = [];
@@ -6453,13 +7664,14 @@ class SurveyController extends Controller
             }
             $grouped[$survey->title ?: "Survey 1"] = $g1Vals;
 
-            foreach ($targetSurveyIds as $tId) {
+            foreach ($targetItems as $tItem) {
+                $tId = $tItem['id'];
+                $tDepVar = $tItem['dep'] ?: $depVar;
                 $tSurvey = \App\Models\Survey::find($tId);
                 if (!$tSurvey)
                     continue;
                 $tIsJson = !empty($tSurvey->json_schema) && $tSurvey->json_schema !== '[]';
                 $tFieldMap = $this->getSurveyFieldMap($tSurvey, $tIsJson);
-                $tDepVar = $request->input('target_dep_' . $tId, $request->query('target_dep_' . $tId, $depVar));
                 $tResps = $tSurvey->responses()->with('answers')->get();
 
                 $tUVals = [];
@@ -6470,7 +7682,11 @@ class SurveyController extends Controller
                     if ($num !== null)
                         $tVals[] = (float) $num;
                 }
-                $grouped[$tSurvey->title ?: ("Survey " . $tId)] = $tVals;
+                $gKey = $tSurvey->title ?: ("Survey " . $tId);
+                if (isset($grouped[$gKey])) {
+                    $gKey .= " (#" . $tId . ")";
+                }
+                $grouped[$gKey] = $tVals;
             }
         } else {
             $groupVar = $request->input('group', $request->query('group'));
@@ -6521,7 +7737,7 @@ class SurveyController extends Controller
             $maxVal = count($vals) > 0 ? max($vals) : 0.0;
 
             $dfG = max(1, $gn - 1);
-            $tCrit = 1.96 + (2.38 / $dfG) + (2.71 / pow($dfG, 2));
+            $tCrit = $this->invTDistribution(0.05, $dfG);
             $seMean = $gn > 0 ? $gSd / sqrt($gn) : 0.0;
             $ciLower = $gMean - ($tCrit * $seMean);
             $ciUpper = $gMean + ($tCrit * $seMean);
@@ -6578,12 +7794,263 @@ class SurveyController extends Controller
         $etaSquared = round($etaSquared, 4);
         $etaEffectLabel = $etaSquared >= 0.14 ? 'Large' : ($etaSquared >= 0.06 ? 'Medium' : ($etaSquared >= 0.01 ? 'Small' : 'Negligible'));
 
+        // Levene's Test for Homogeneity of Variances
+        $zAll = [];
+        $zGroupMeans = [];
+        $zGrandSum = 0.0;
+        foreach ($grouped as $gName => $vals) {
+            $gMean = $groupStats[$gName]['mean'];
+            $zVals = [];
+            foreach ($vals as $v) {
+                $zv = abs($v - $gMean);
+                $zVals[] = $zv;
+                $zAll[] = $zv;
+                $zGrandSum += $zv;
+            }
+            $zGroupMeans[$gName] = count($zVals) > 0 ? array_sum($zVals) / count($zVals) : 0.0;
+        }
+        $zGrandMean = $nTotal > 0 ? $zGrandSum / $nTotal : 0.0;
+        $ssbZ = 0.0;
+        $sswZ = 0.0;
+        foreach ($grouped as $gName => $vals) {
+            $gn = count($vals);
+            $zm = $zGroupMeans[$gName];
+            $ssbZ += $gn * pow($zm - $zGrandMean, 2);
+            $gMean = $groupStats[$gName]['mean'];
+            foreach ($vals as $v) {
+                $sswZ += pow(abs($v - $gMean) - $zm, 2);
+            }
+        }
+        $msbZ = $dfBetween > 0 ? $ssbZ / $dfBetween : 0.0;
+        $mswZ = $dfWithin > 0 ? $sswZ / $dfWithin : 0.0;
+        $leveneF = $mswZ > 0 ? $msbZ / $mswZ : 0.0;
+        $leveneP = $this->fProbability($leveneF, $dfBetween, $dfWithin);
+
+        $levene = [
+            'statistic' => round($leveneF, 4),
+            'df1' => $dfBetween,
+            'df2' => $dfWithin,
+            'sig' => round($leveneP, 4),
+            'equalVarAssumed' => $leveneP >= 0.05
+        ];
+
+        // Post-Hoc Multiple Comparisons (Tukey HSD / Bonferroni)
+        $postHoc = [];
+        $groupNames = array_keys($grouped);
+        $numComparisons = ($k * ($k - 1)) / 2.0;
+
+        foreach ($groupNames as $g1) {
+            foreach ($groupNames as $g2) {
+                if ($g1 === $g2)
+                    continue;
+                $m1 = $groupStats[$g1]['mean'];
+                $m2 = $groupStats[$g2]['mean'];
+                $n1 = $groupStats[$g1]['n'];
+                $n2 = $groupStats[$g2]['n'];
+                $diff = $m1 - $m2;
+                $seDiff = sqrt(max(1e-12, $msw * ((1.0 / $n1) + (1.0 / $n2))));
+                $t = abs($diff) / $seDiff;
+                $q = $t * sqrt(2.0);
+                $pTukey = $this->tukeyQProbability($q, $k, $dfWithin);
+                $pBonferroni = min(1.0, round($this->tProbability($t, $dfWithin) * $numComparisons, 4));
+
+                $tCritBonf = $this->invTDistribution(0.05 / max(1, $numComparisons), $dfWithin);
+                $ciLower = round($diff - ($tCritBonf * $seDiff), 4);
+                $ciUpper = round($diff + ($tCritBonf * $seDiff), 4);
+
+                $postHoc[] = [
+                    'groupI' => $g1,
+                    'groupJ' => $g2,
+                    'meanDiff' => round($diff, 4),
+                    'stdError' => round($seDiff, 4),
+                    'sig' => round($pTukey, 4),
+                    'sigBonferroni' => round($pBonferroni, 4),
+                    'significant' => $pTukey < 0.05,
+                    'ciLower' => $ciLower,
+                    'ciUpper' => $ciUpper
+                ];
+            }
+        }
+
+        // 1. Robust Tests of Equality of Means (Welch & Brown-Forsythe ANOVA)
+        $weights = [];
+        $sumW = 0.0;
+        $sumWMean = 0.0;
+        foreach ($grouped as $gName => $vals) {
+            $gn = count($vals);
+            $gVar = pow($groupStats[$gName]['stdDev'], 2);
+            $w = $gVar > 1e-12 ? $gn / $gVar : 0.0;
+            $weights[$gName] = $w;
+            $sumW += $w;
+            $sumWMean += $w * $groupStats[$gName]['mean'];
+        }
+        $wPrime = $sumW > 0 ? $sumWMean / $sumW : $grandMean;
+
+        $welchNum = 0.0;
+        $welchLambda = 0.0;
+        foreach ($grouped as $gName => $vals) {
+            $gn = count($vals);
+            $w = $weights[$gName];
+            $welchNum += $w * pow($groupStats[$gName]['mean'] - $wPrime, 2);
+            if ($sumW > 0 && $gn > 1) {
+                $welchLambda += pow(1 - ($w / $sumW), 2) / ($gn - 1);
+            }
+        }
+        $df1Welch = max(1, $k - 1);
+        $welchDenomTerm = 1 + (2 * ($k - 2) / max(1, pow($k, 2) - 1)) * $welchLambda;
+        $fWelch = ($df1Welch > 0 && $welchDenomTerm > 0) ? ($welchNum / $df1Welch) / $welchDenomTerm : 0.0;
+        $df2Welch = $welchLambda > 0 ? (pow($k, 2) - 1) / (3 * $welchLambda) : max(1, $nTotal - $k);
+        $pWelch = $this->fProbability($fWelch, $df1Welch, $df2Welch);
+
+        // Brown-Forsythe ANOVA
+        $bfNumerator = 0.0;
+        $dWeights = [];
+        $sumD = 0.0;
+        foreach ($grouped as $gName => $vals) {
+            $gn = count($vals);
+            $gMean = $groupStats[$gName]['mean'];
+            $bfNumerator += $gn * pow($gMean - $grandMean, 2);
+            $gVar = pow($groupStats[$gName]['stdDev'], 2);
+            $d = (1 - ($gn / max(1, $nTotal))) * $gVar;
+            $dWeights[$gName] = $d;
+            $sumD += $d;
+        }
+        $df1BF = max(1, $k - 1);
+        $fBF = $sumD > 0 ? $bfNumerator / $sumD : 0.0;
+        $bfDenomSum = 0.0;
+        foreach ($grouped as $gName => $vals) {
+            $gn = count($vals);
+            $d = $dWeights[$gName];
+            if ($gn > 1) {
+                $bfDenomSum += pow($d, 2) / ($gn - 1);
+            }
+        }
+        $df2BF = $bfDenomSum > 0 ? pow($sumD, 2) / $bfDenomSum : max(1, $nTotal - $k);
+        $pBF = $this->fProbability($fBF, $df1BF, $df2BF);
+
+        $robustTests = [
+            'welch' => [
+                'name' => 'Welch',
+                'statistic' => round($fWelch, 3),
+                'df1' => round($df1Welch, 2),
+                'df2' => round($df2Welch, 3),
+                'sig' => round($pWelch, 4),
+                'significant' => $pWelch < 0.05
+            ],
+            'brown_forsythe' => [
+                'name' => 'Brown-Forsythe',
+                'statistic' => round($fBF, 3),
+                'df1' => round($df1BF, 2),
+                'df2' => round($df2BF, 3),
+                'sig' => round($pBF, 4),
+                'significant' => $pBF < 0.05
+            ]
+        ];
+
+        // 2. Games-Howell Post-Hoc Comparisons (Unequal Variances)
+        $postHocGamesHowell = [];
+        foreach ($groupNames as $g1) {
+            foreach ($groupNames as $g2) {
+                if ($g1 === $g2)
+                    continue;
+                $m1 = $groupStats[$g1]['mean'];
+                $m2 = $groupStats[$g2]['mean'];
+                $n1 = $groupStats[$g1]['n'];
+                $n2 = $groupStats[$g2]['n'];
+                $v1 = pow($groupStats[$g1]['stdDev'], 2);
+                $v2 = pow($groupStats[$g2]['stdDev'], 2);
+                $diff = $m1 - $m2;
+                $seGH = sqrt(max(1e-12, ($v1 / $n1) + ($v2 / $n2)));
+                $dfGHNum = pow(($v1 / $n1) + ($v2 / $n2), 2);
+                $dfGHDen = (pow($v1 / $n1, 2) / max(1, $n1 - 1)) + (pow($v2 / $n2, 2) / max(1, $n2 - 1));
+                $dfGH = $dfGHDen > 0 ? $dfGHNum / $dfGHDen : $dfWithin;
+                if ($dfGH <= 0)
+                    $dfGH = 1;
+                $tGH = $seGH > 0 ? abs($diff) / $seGH : 0.0;
+                $qGH = $tGH * sqrt(2.0);
+                $pGH = $this->tukeyQProbability($qGH, $k, $dfGH);
+                $tCritGH = $this->invTDistribution(0.05 / max(1, $numComparisons), $dfGH);
+                $ciLowerGH = round($diff - ($tCritGH * $seGH), 4);
+                $ciUpperGH = round($diff + ($tCritGH * $seGH), 4);
+
+                $postHocGamesHowell[] = [
+                    'groupI' => $g1,
+                    'groupJ' => $g2,
+                    'meanDiff' => round($diff, 4),
+                    'stdError' => round($seGH, 4),
+                    'df' => round($dfGH, 2),
+                    'sig' => round($pGH, 4),
+                    'significant' => $pGH < 0.05,
+                    'ciLower' => $ciLowerGH,
+                    'ciUpper' => $ciUpperGH
+                ];
+            }
+        }
+
+        // 3. Homogeneous Subsets Table (SPSS Convention)
+        $sortedGroupNames = array_keys($grouped);
+        usort($sortedGroupNames, function ($a, $b) use ($groupStats) {
+            return $groupStats[$a]['mean'] <=> $groupStats[$b]['mean'];
+        });
+
+        $sumInvN = 0.0;
+        foreach ($sortedGroupNames as $gName) {
+            $sumInvN += 1.0 / max(1, $groupStats[$gName]['n']);
+        }
+        $harmonicN = $k / max(1e-12, $sumInvN);
+
+        $subsetList = [];
+        for ($i = 0; $i < count($sortedGroupNames); $i++) {
+            $g1 = $sortedGroupNames[$i];
+            $addedToExisting = false;
+            for ($s = 0; $s < count($subsetList); $s++) {
+                $canFit = true;
+                foreach ($subsetList[$s] as $member) {
+                    $diff = abs($groupStats[$g1]['mean'] - $groupStats[$member]['mean']);
+                    $seDiff = sqrt(max(1e-12, $msw * ((1.0 / $groupStats[$g1]['n']) + (1.0 / $groupStats[$member]['n']))));
+                    $q = ($seDiff > 0) ? ($diff / $seDiff) * sqrt(2.0) : 0.0;
+                    $pVal = $this->tukeyQProbability($q, $k, $dfWithin);
+                    if ($pVal < 0.05) {
+                        $canFit = false;
+                        break;
+                    }
+                }
+                if ($canFit) {
+                    $subsetList[$s][] = $g1;
+                    $addedToExisting = true;
+                }
+            }
+            if (!$addedToExisting) {
+                $subsetList[] = [$g1];
+            }
+        }
+
+        $subsetRows = [];
+        foreach ($sortedGroupNames as $gName) {
+            $row = [
+                'name' => $gName,
+                'n' => $groupStats[$gName]['n'],
+                'mean' => $groupStats[$gName]['mean'],
+                'subsets' => []
+            ];
+            for ($s = 0; $s < count($subsetList); $s++) {
+                $row['subsets'][$s] = in_array($gName, $subsetList[$s]) ? $groupStats[$gName]['mean'] : null;
+            }
+            $subsetRows[] = $row;
+        }
+
+        $homogeneousSubsets = [
+            'harmonicN' => round($harmonicN, 3),
+            'numSubsets' => max(1, count($subsetList)),
+            'rows' => $subsetRows
+        ];
+
         $significant = $pValue < 0.05;
 
         if ($significant) {
-            $aiSummary = "A One-Way ANOVA was conducted to compare the effect of '{$groupLabel}' on '{$depLabel}' across {$k} distinct groups (N = {$nTotal}). There was a statistically significant difference between group means, F({$dfBetween}, {$dfWithin}) = " . number_format($fValue, 3) . ", p = " . number_format($pValue, 4) . " (p < 0.05). Eta-squared (η² = {$etaSquared}) indicates a {$etaEffectLabel} effect size. We reject the null hypothesis (H₀) of equal population means.";
+            $aiSummary = "A One-Way ANOVA was conducted to compare the effect of '{$groupLabel}' on '{$depLabel}' across {$k} distinct groups (N = {$nTotal}). There was a statistically significant difference between group means, F({$dfBetween}, {$dfWithin}) = " . number_format($fValue, 3) . ", p = " . number_format($pValue, 4) . " (p < 0.05). Eta-squared (η² = {$etaSquared}) indicates a {$etaEffectLabel} effect size. Levene's Test of Equal Variances: F = " . number_format($leveneF, 3) . ", p = " . number_format($leveneP, 4) . ".";
         } else {
-            $aiSummary = "A One-Way ANOVA was conducted to compare the effect of '{$groupLabel}' on '{$depLabel}' across {$k} distinct groups (N = {$nTotal}). The difference between group means was not statistically significant, F({$dfBetween}, {$dfWithin}) = " . number_format($fValue, 3) . ", p = " . number_format($pValue, 4) . " (p ≥ 0.05). Eta-squared (η² = {$etaSquared}) indicates a {$etaEffectLabel} effect size. We fail to reject the null hypothesis (H₀); there is no evidence that group means differ significantly.";
+            $aiSummary = "A One-Way ANOVA was conducted to compare the effect of '{$groupLabel}' on '{$depLabel}' across {$k} distinct groups (N = {$nTotal}). The difference between group means was not statistically significant, F({$dfBetween}, {$dfWithin}) = " . number_format($fValue, 3) . ", p = " . number_format($pValue, 4) . " (p ≥ 0.05). Eta-squared (η² = {$etaSquared}) indicates a {$etaEffectLabel} effect size.";
         }
 
         return response()->json([
@@ -6608,6 +8075,11 @@ class SurveyController extends Controller
             'pValue' => round($pValue, 4),
             'etaSquared' => $etaSquared,
             'etaEffect' => $etaEffectLabel,
+            'levene' => $levene,
+            'postHoc' => $postHoc,
+            'postHocGamesHowell' => $postHocGamesHowell,
+            'robust_tests' => $robustTests,
+            'homogeneousSubsets' => $homogeneousSubsets,
             'significant' => $significant,
             'aiSummary' => $aiSummary
         ]);
@@ -6625,6 +8097,8 @@ class SurveyController extends Controller
         $fieldMap = $this->getSurveyFieldMap($survey, $isJson);
         $depLabel = $fieldMap[$depVar]['label'] ?? (\App\Models\Question::find($depVar)?->text ?? $depVar);
         $indLabel = $fieldMap[$indVar]['label'] ?? (\App\Models\Question::find($indVar)?->text ?? $indVar);
+        $shortDepLabel = $fieldMap[$depVar]['sub_label'] ?? ($fieldMap[$depVar]['short_label'] ?? $depLabel);
+        $shortIndLabel = $fieldMap[$indVar]['sub_label'] ?? ($fieldMap[$indVar]['short_label'] ?? $indLabel);
 
         $xVals = [];
         $yVals = [];
@@ -6707,14 +8181,46 @@ class SurveyController extends Controller
             $r = $sp / $denom;
         }
 
-        $tCrit = 1.96 + (2.38 / $dfRes) + (2.71 / pow($dfRes, 2));
+        $tCrit = $this->invTDistribution(0.05, $dfRes);
         $ciLowerIntercept = $intercept - ($tCrit * $seIntercept);
         $ciUpperIntercept = $intercept + ($tCrit * $seIntercept);
         $ciLowerSlope = $slope - ($tCrit * $seSlope);
         $ciUpperSlope = $slope + ($tCrit * $seSlope);
 
         // Standardized beta for simple regression
-        $betaSlope = $slope >= 0 ? abs($r) : -abs($r);
+        $sdX = $this->sampleStdDev($xVals, $meanX);
+        $sdY = $this->sampleStdDev($yVals, $meanY);
+        $betaSlope = ($sdX > 0 && $sdY > 0) ? round($slope * ($sdX / $sdY), 4) : ($slope >= 0 ? abs($r) : -abs($r));
+
+        // Durbin-Watson & Residuals Statistics
+        $yHat = [];
+        $residuals = [];
+        $dwNum = 0.0;
+        $dwDen = 0.0;
+        for ($i = 0; $i < $n; $i++) {
+            $predY = $slope * $xVals[$i] + $intercept;
+            $resY = $yVals[$i] - $predY;
+            $yHat[] = $predY;
+            $residuals[] = $resY;
+            $dwDen += pow($resY, 2);
+            if ($i > 0) {
+                $dwNum += pow($resY - $residuals[$i - 1], 2);
+            }
+        }
+        $durbinWatson = $dwDen > 0 ? round($dwNum / $dwDen, 4) : 2.0;
+        $residualsStats = $this->calculateResidualsStats($yHat, $residuals);
+
+        // Scatter points and regression trendline
+        $scatterPoints = [];
+        for ($i = 0; $i < $n; $i++) {
+            $scatterPoints[] = ['x' => round($xVals[$i], 2), 'y' => round($yVals[$i], 2)];
+        }
+        $minX = min($xVals);
+        $maxX = max($xVals);
+        $trendline = [
+            ['x' => round($minX, 2), 'y' => round($intercept + $slope * $minX, 2)],
+            ['x' => round($maxX, 2), 'y' => round($intercept + $slope * $maxX, 2)]
+        ];
 
         return response()->json([
             'success' => true,
@@ -6727,6 +8233,10 @@ class SurveyController extends Controller
             'r2' => round($r * $r, 4),
             'adjR2' => round(1 - (1 - $r * $r) * ($n - 1) / max(1, $n - 2), 4),
             'stdErrorEst' => round($stdErrorEst, 4),
+            'durbinWatson' => $durbinWatson,
+            'residualsStats' => $residualsStats,
+            'scatterPoints' => $scatterPoints,
+            'trendline' => $trendline,
             'anova' => [
                 'ssr' => round($ssr, 4),
                 'sse' => round($sse, 4),
@@ -6740,8 +8250,13 @@ class SurveyController extends Controller
                 'pValue' => round($fPValue, 4),
                 'significant' => $fPValue < 0.05
             ],
+            'shortDepLabel' => $shortDepLabel,
+            'shortIndLabel' => $shortIndLabel,
             'coefficients' => [
                 'intercept' => [
+                    'variable' => '(Constant)',
+                    'label' => '(Constant)',
+                    'short_label' => '(Constant)',
                     'coef' => round($intercept, 4),
                     'stdError' => round($seIntercept, 4),
                     'tValue' => round($tIntercept, 4),
@@ -6752,6 +8267,9 @@ class SurveyController extends Controller
                     'ciUpper' => round($ciUpperIntercept, 4)
                 ],
                 'slope' => [
+                    'variable' => $indVar,
+                    'label' => $indLabel,
+                    'short_label' => $shortIndLabel,
                     'coef' => round($slope, 4),
                     'stdError' => round($seSlope, 4),
                     'tValue' => round($tSlope, 4),
@@ -6783,73 +8301,125 @@ class SurveyController extends Controller
         return $grouped;
     }
 
+    private function logGamma($x)
+    {
+        if ($x <= 0.0)
+            return 0.0;
+        $p = [
+            1.000000000190015,
+            76.18009172947146,
+            -86.50532032941677,
+            24.01409824083091,
+            -1.231739572450155,
+            0.1208650973866179e-2,
+            -0.5395239384953e-5
+        ];
+
+        $y = $x;
+        $tmp = $x + 5.5;
+        $tmp -= ($x + 0.5) * log($tmp);
+        $ser = $p[0];
+        for ($j = 1; $j <= 6; $j++) {
+            $y += 1.0;
+            $ser += $p[$j] / $y;
+        }
+        return -$tmp + log(2.5066282746310005 * $ser / $x);
+    }
+
+    private function regularizedIncompleteBeta($x, $a, $b)
+    {
+        if ($x <= 0.0)
+            return 0.0;
+        if ($x >= 1.0)
+            return 1.0;
+        if ($a <= 0.0 || $b <= 0.0)
+            return 0.0;
+
+        // Use symmetry relation if x > (a + 1)/(a + b + 2)
+        if ($x > ($a + 1.0) / ($a + $b + 2.0)) {
+            return 1.0 - $this->regularizedIncompleteBeta(1.0 - $x, $b, $a);
+        }
+
+        // Front factor: exp(a * ln(x) + b * ln(1-x) - ln(Beta(a,b))) / a
+        $lbeta = $this->logGamma($a) + $this->logGamma($b) - $this->logGamma($a + $b);
+        $front = exp($a * log($x) + $b * log(1.0 - $x) - $lbeta) / $a;
+
+        // Lentz's method for continued fraction
+        $f = 1.0;
+        $c = 1.0;
+        $d = 0.0;
+        $tiny = 1e-30;
+
+        for ($i = 1; $i <= 200; $i++) {
+            if ($i % 2 === 0) {
+                $m = $i / 2;
+                $numerator = ($m * ($b - $m) * $x) / (($a + 2.0 * $m - 1.0) * ($a + 2.0 * $m));
+            } else {
+                $m = ($i - 1) / 2;
+                $numerator = -(($a + $m) * ($a + $b + $m) * $x) / (($a + 2.0 * $m) * ($a + 2.0 * $m + 1.0));
+            }
+
+            $d = 1.0 + $numerator * $d;
+            if (abs($d) < $tiny)
+                $d = $tiny;
+            $d = 1.0 / $d;
+
+            $c = 1.0 + $numerator / $c;
+            if (abs($c) < $tiny)
+                $c = $tiny;
+
+            $delta = $c * $d;
+            $f *= $delta;
+
+            if (abs($delta - 1.0) < 1e-14) {
+                break;
+            }
+        }
+
+        $val = $front * (1.0 / $f);
+        return max(0.0, min(1.0, $val));
+    }
+
     private function tProbability($t, $df)
     {
-        $t = abs($t);
         if ($df <= 0)
             return 1.0;
-        $w = $t / sqrt($df);
-        $th = atan($w);
-        if ($df == 1) {
-            return 1.0 - $th / (M_PI / 2.0);
-        }
-        $sin_th = sin($th);
-        $cos_th = cos($th);
-        $p = 0.0;
-        if ($df % 2 == 1) {
-            $p = $sin_th;
-            $c = $cos_th;
-            for ($i = 3; $i <= $df - 2; $i += 2) {
-                $p += $p * $c * $c * ($i - 1) / $i;
-            }
-            return 1.0 - ($th + $p * $cos_th) / (M_PI / 2.0);
-        } else {
-            $p = 1.0;
-            $c = $cos_th;
-            for ($i = 2; $i <= $df - 2; $i += 2) {
-                $p += $p * $c * $c * ($i - 1) / $i;
-            }
-            return 1.0 - $p * $sin_th;
-        }
+        $t = (float) abs($t);
+        if ($t < 1e-15)
+            return 1.0;
+
+        $x = $df / ($df + $t * $t);
+        $p = $this->regularizedIncompleteBeta($x, $df / 2.0, 0.5);
+        return max(0.0, min(1.0, $p));
     }
 
     private function fProbability($F, $df1, $df2)
     {
-        if ($F <= 0)
+        if ($F <= 0 || $df1 <= 0 || $df2 <= 0)
             return 1.0;
-        if ($df1 <= 0 || $df2 <= 0)
-            return 1.0;
-        $x = pow($df2 / ($df2 + $df1 * $F), 1 / 3);
-        $mean = 1 - 2 / (9 * $df1);
-        $var = 2 / (9 * $df1);
-        if ($x == 0)
-            return 0.0;
-        $num = $mean - $x * (1 - 2 / (9 * $df2));
-        $den = sqrt($var + $x * $x * 2 / (9 * $df2));
-        $z = $num / $den;
-        return 1 - $this->normalCdf($z);
+        $x = $df2 / ($df2 + $df1 * (float) $F);
+        $p = $this->regularizedIncompleteBeta($x, $df2 / 2.0, $df1 / 2.0);
+        return max(0.0, min(1.0, $p));
     }
 
     private function chiSquareProbability($chi2, $df)
     {
-        if ($chi2 <= 0)
-            return 1.0;
-        if ($df <= 0)
+        if ($chi2 <= 0 || $df <= 0)
             return 1.0;
         $x = $chi2 / $df;
-        $mean = 1 - 2 / (9 * $df);
-        $var = 2 / (9 * $df);
-        $z = (pow($x, 1 / 3) - $mean) / sqrt($var);
-        return 1 - $this->normalCdf($z);
+        $mean = 1.0 - 2.0 / (9.0 * $df);
+        $var = 2.0 / (9.0 * $df);
+        $z = (pow($x, 1.0 / 3.0) - $mean) / sqrt($var);
+        return max(0.0, min(1.0, 1.0 - $this->normalCdf($z)));
     }
 
     private function normalCdf($z)
     {
-        $t = 1 / (1 + 0.2316419 * abs($z));
-        $d = 0.3989423 * exp(-$z * $z / 2);
+        $t = 1.0 / (1.0 + 0.2316419 * abs($z));
+        $d = 0.3989423 * exp(-$z * $z / 2.0);
         $p = $d * $t * (0.3193815 + $t * (-0.3565638 + $t * (1.781478 + $t * (-1.821256 + $t * 1.330274))));
         if ($z > 0)
-            return 1 - $p;
+            return 1.0 - $p;
         return $p;
     }
 
@@ -6867,28 +8437,18 @@ class SurveyController extends Controller
             return response()->json(['success' => false, 'message' => 'Dependent and at least one Independent variable are required.'], 400);
         }
 
-        $depLabel = "Dependent Variable (Y)";
-        $indLabels = [];
-
-        if ($isJson) {
-            $schema = json_decode($survey->json_schema, true);
-            foreach ($schema as $f) {
-                if (isset($f['name'])) {
-                    if ($f['name'] === $depVar)
-                        $depLabel = $f['label'] ?? $depVar;
-                    if (in_array($f['name'], $indVars)) {
-                        $indLabels[$f['name']] = $f['label'] ?? $f['name'];
-                    }
-                }
-            }
-        } else {
-            $depLabel = \App\Models\Question::find($depVar)?->text ?? $depVar;
-            foreach ($indVars as $id) {
-                $indLabels[$id] = \App\Models\Question::find($id)?->text ?? $id;
-            }
-        }
-
         $fieldMap = $this->getSurveyFieldMap($survey, $isJson);
+        $depLabel = $fieldMap[$depVar]['label'] ?? (\App\Models\Question::find($depVar)?->text ?? $depVar);
+        $shortDepLabel = $fieldMap[$depVar]['sub_label'] ?? ($fieldMap[$depVar]['short_label'] ?? $depLabel);
+        $indLabels = [];
+        $indShortLabels = [];
+
+        foreach ($indVars as $id) {
+            $fullL = $fieldMap[$id]['label'] ?? (\App\Models\Question::find($id)?->text ?? $id);
+            $shortL = $fieldMap[$id]['sub_label'] ?? ($fieldMap[$id]['short_label'] ?? $fullL);
+            $indLabels[$id] = $fullL;
+            $indShortLabels[$id] = $shortL;
+        }
 
         // Gather paired data points
         $yVals = [];
@@ -7035,9 +8595,57 @@ class SurveyController extends Controller
             $sdX[$j] = $this->sampleStdDev($colVals, $meanCol);
         }
 
-        // Calculate Coefficient SEs, t-values, p-values, Beta, and 95% CI
+        // Calculate Coefficient SEs, t-values, p-values, Beta, VIF, Tolerance, and 95% CI
         $coefficients = [];
-        $tCrit = 1.96 + (2.38 / $dfRes) + (2.71 / pow($dfRes, 2));
+        $tCrit = $this->invTDistribution(0.05, $dfRes);
+
+        // Compute VIF and Tolerance via inverse correlation matrix of predictors
+        $vifs = array_fill(0, $p, 1.0);
+        $tolerances = array_fill(0, $p, 1.0);
+        $hasMulticollinearity = false;
+
+        if ($p > 1) {
+            $Rxx = [];
+            for ($i = 0; $i < $p; $i++) {
+                $Rxx[$i] = [];
+                $ciVals = array_column($xVals, $i);
+                $ciMean = array_sum($ciVals) / $n;
+                $ciSd = $sdX[$i];
+                for ($j = 0; $j < $p; $j++) {
+                    if ($i === $j) {
+                        $Rxx[$i][$j] = 1.0;
+                    } else {
+                        $cjVals = array_column($xVals, $j);
+                        $cjMean = array_sum($cjVals) / $n;
+                        $cjSd = $sdX[$j];
+                        $cov = 0.0;
+                        for ($m = 0; $m < $n; $m++) {
+                            $cov += ($ciVals[$m] - $ciMean) * ($cjVals[$m] - $cjMean);
+                        }
+                        $denom = ($n - 1) * $ciSd * $cjSd;
+                        $Rxx[$i][$j] = $denom > 0 ? $cov / $denom : 0.0;
+                    }
+                }
+            }
+
+            try {
+                $Rxx_inv = $this->matrixInverse($Rxx);
+                for ($j = 0; $j < $p; $j++) {
+                    $v = max(1.0, abs($Rxx_inv[$j][$j]));
+                    $vifs[$j] = round($v, 3);
+                    $tolerances[$j] = round(1.0 / $v, 4);
+                    if ($vifs[$j] >= 5.0) {
+                        $hasMulticollinearity = true;
+                    }
+                }
+            } catch (\Throwable $e) {
+                for ($j = 0; $j < $p; $j++) {
+                    $vifs[$j] = 99.0;
+                    $tolerances[$j] = 0.01;
+                    $hasMulticollinearity = true;
+                }
+            }
+        }
 
         // Intercept (Constant)
         $seIntercept = sqrt(abs($mse * $XTX_inv[0][0]));
@@ -7055,6 +8663,8 @@ class SurveyController extends Controller
             'pValue' => round($pIntercept, 4),
             'significant' => $pIntercept < 0.05,
             'beta' => 'N/A',
+            'tolerance' => 'N/A',
+            'vif' => 'N/A',
             'ciLower' => round($ciLowerIntercept, 4),
             'ciUpper' => round($ciUpperIntercept, 4)
         ];
@@ -7072,23 +8682,62 @@ class SurveyController extends Controller
             $coefficients[] = [
                 'variable' => $varId,
                 'label' => $indLabels[$varId] ?? $varId,
+                'short_label' => $indShortLabels[$varId] ?? ($indLabels[$varId] ?? $varId),
                 'coef' => round($b[$j], 4),
                 'stdError' => round($seSlope, 4),
                 'tValue' => round($tSlope, 4),
                 'pValue' => round($pSlope, 4),
                 'significant' => $pSlope < 0.05,
                 'beta' => round($beta, 4),
+                'tolerance' => $tolerances[$j - 1],
+                'vif' => $vifs[$j - 1],
                 'ciLower' => round($ciLowerSlope, 4),
                 'ciUpper' => round($ciUpperSlope, 4)
             ];
         }
 
-        // Formulate Dynamic Algebraic Regression Equation
-        $equation = 'Y = ' . round($b[0], 3);
+        // Durbin-Watson & Residuals Statistics
+        $dwNum = 0.0;
+        $dwDen = 0.0;
+        for ($i = 0; $i < $n; $i++) {
+            $dwDen += pow($residuals[$i], 2);
+            if ($i > 0) {
+                $dwNum += pow($residuals[$i] - $residuals[$i - 1], 2);
+            }
+        }
+        $durbinWatson = $dwDen > 0 ? round($dwNum / $dwDen, 4) : 2.0;
+        $residualsStats = $this->calculateResidualsStats($yHat, $residuals);
+
+        // Formulate Dynamic Algebraic Regression Equation with clean tokens & legend
+        $depCode = 'Y';
+        if (preg_match('/^(Q\d+(\.\d+)?)/i', $shortDepLabel, $m)) {
+            $depCode = $m[1];
+        } elseif (preg_match('/^(Q\d+(\.\d+)?)/i', $depLabel, $m)) {
+            $depCode = $m[1];
+        }
+
+        $equationKey = [];
+        $equation = 'ŷ(' . $depCode . ') = ' . round($b[0], 3);
+
         for ($j = 1; $j <= $p; $j++) {
+            $varId = $indVars[$j - 1];
+            $fullL = $indLabels[$varId] ?? ("X" . $j);
+            $shortL = $indShortLabels[$varId] ?? $fullL;
+            $code = 'X' . $j;
+            if (preg_match('/^(Q\d+(\.\d+)?)/i', $shortL, $m)) {
+                $code = $m[1];
+            } elseif (preg_match('/^(Q\d+(\.\d+)?)/i', $fullL, $m)) {
+                $code = $m[1];
+            }
+
+            $equationKey[] = [
+                'code' => $code,
+                'label' => $shortL
+            ];
+
             $coefVal = round($b[$j], 3);
             $sign = $coefVal >= 0 ? ' + ' : ' - ';
-            $equation .= $sign . abs($coefVal) . ' * (X' . $j . ')';
+            $equation .= $sign . abs($coefVal) . '(' . $code . ')';
         }
 
         return response()->json([
@@ -7096,13 +8745,19 @@ class SurveyController extends Controller
             'depVar' => $depVar,
             'indVars' => $indVars,
             'depLabel' => $depLabel,
+            'shortDepLabel' => $shortDepLabel,
             'indLabels' => array_values($indLabels),
+            'indShortLabels' => array_values($indShortLabels),
             'n' => $n,
             'r' => round(sqrt($r2), 4),
             'r2' => round($r2, 4),
             'adjR2' => round($adjR2, 4),
             'stdErrorEst' => round($stdErrorEst, 4),
+            'durbinWatson' => $durbinWatson,
+            'residualsStats' => $residualsStats,
+            'hasMulticollinearity' => $hasMulticollinearity,
             'equation' => $equation,
+            'equationKey' => $equationKey,
             'anova' => [
                 'ssr' => round($ssr, 4),
                 'sse' => round($sse, 4),
@@ -7179,6 +8834,318 @@ class SurveyController extends Controller
         return $I;
     }
 
+    private function invTDistribution($alpha, $df)
+    {
+        if ($df <= 0)
+            return 1.96;
+        if ($alpha <= 0.0)
+            return 50.0;
+        if ($alpha >= 1.0)
+            return 0.0;
+
+        $low = 0.0;
+        $high = 50.0;
+        for ($i = 0; $i < 40; $i++) {
+            $mid = ($low + $high) / 2.0;
+            $p = $this->tProbability($mid, $df);
+            if ($p > $alpha) {
+                $low = $mid;
+            } else {
+                $high = $mid;
+            }
+        }
+        return round(($low + $high) / 2.0, 4);
+    }
+
+    private function calculateFisherExact2x2($matrix, $rows, $cols, $grandTotal)
+    {
+        if (count($rows) !== 2 || count($cols) !== 2 || $grandTotal <= 0) {
+            return ['twoSided' => null, 'oneSided' => null];
+        }
+
+        $a = $matrix[$rows[0]][$cols[0]] ?? 0;
+        $b = $matrix[$rows[0]][$cols[1]] ?? 0;
+        $c = $matrix[$rows[1]][$cols[0]] ?? 0;
+        $d = $matrix[$rows[1]][$cols[1]] ?? 0;
+
+        $r1 = $a + $b;
+        $r2 = $c + $d;
+        $c1 = $a + $c;
+        $c2 = $b + $d;
+        $n = $grandTotal;
+
+        $logFact = function ($num) {
+            static $cache = [0 => 0.0, 1 => 0.0];
+            if (isset($cache[$num]))
+                return $cache[$num];
+            $count = count($cache);
+            $sum = $cache[$count - 1];
+            for ($i = $count; $i <= $num; $i++) {
+                $sum += log($i);
+                $cache[$i] = $sum;
+            }
+            return $cache[$num];
+        };
+
+        $prob = function ($x) use ($r1, $r2, $c1, $c2, $n, $logFact) {
+            $val = $logFact($r1) + $logFact($r2) + $logFact($c1) + $logFact($c2)
+                - ($logFact($n) + $logFact($x) + $logFact($r1 - $x) + $logFact($c1 - $x) + $logFact($r2 - $c1 + $x));
+            return exp($val);
+        };
+
+        $minX = max(0, $c1 - $r2);
+        $maxX = min($r1, $c1);
+        $observedP = $prob($a);
+
+        $twoSidedP = 0.0;
+        $oneSidedP = 0.0;
+        $expectedA = ($r1 * $c1) / $n;
+
+        for ($x = $minX; $x <= $maxX; $x++) {
+            $p = $prob($x);
+            if ($p <= $observedP + 1e-11) {
+                $twoSidedP += $p;
+            }
+            if ($a <= $expectedA) {
+                if ($x <= $a)
+                    $oneSidedP += $p;
+            } else {
+                if ($x >= $a)
+                    $oneSidedP += $p;
+            }
+        }
+
+        return [
+            'twoSided' => round(min(1.0, $twoSidedP), 4),
+            'oneSided' => round(min(1.0, $oneSidedP), 4),
+        ];
+    }
+
+    private function calculateSpearmanRankCorrelation($xVals, $yVals)
+    {
+        $n = count($xVals);
+        if ($n < 3) {
+            return ['rho' => 0.0, 'pValue' => 1.0, 'significant' => false, 'sigMarker' => ''];
+        }
+
+        $rank = function ($arr) use ($n) {
+            $indexed = [];
+            foreach ($arr as $i => $v) {
+                $indexed[] = ['idx' => $i, 'val' => (float) $v];
+            }
+            usort($indexed, fn($a, $b) => $a['val'] <=> $b['val']);
+
+            $ranks = array_fill(0, $n, 0.0);
+            $i = 0;
+            while ($i < $n) {
+                $j = $i;
+                while ($j + 1 < $n && $indexed[$j + 1]['val'] == $indexed[$i]['val']) {
+                    $j++;
+                }
+                $avgRank = ($i + $j + 2) / 2.0; // 1-based ranks
+                for ($k = $i; $k <= $j; $k++) {
+                    $ranks[$indexed[$k]['idx']] = $avgRank;
+                }
+                $i = $j + 1;
+            }
+            return $ranks;
+        };
+
+        $ranksX = $rank($xVals);
+        $ranksY = $rank($yVals);
+
+        $meanX = array_sum($ranksX) / $n;
+        $meanY = array_sum($ranksY) / $n;
+        $ssX = 0.0;
+        $ssY = 0.0;
+        $sp = 0.0;
+        for ($i = 0; $i < $n; $i++) {
+            $dx = $ranksX[$i] - $meanX;
+            $dy = $ranksY[$i] - $meanY;
+            $ssX += $dx * $dx;
+            $ssY += $dy * $dy;
+            $sp += $dx * $dy;
+        }
+
+        $denom = sqrt(max(1e-12, $ssX * $ssY));
+        $rho = $denom > 0 ? round($sp / $denom, 4) : 0.0;
+        $df = $n - 2;
+        $t = (abs($rho) < 1.0) ? $rho * sqrt($df / max(1e-12, 1.0 - $rho * $rho)) : 99999.0;
+        $p = $this->tProbability($t, $df);
+
+        return [
+            'rho' => $rho,
+            'pValue' => round($p, 4),
+            'significant' => $p < 0.05,
+            'sigMarker' => $p < 0.01 ? '**' : ($p < 0.05 ? '*' : '')
+        ];
+    }
+
+    private function tukeyQProbability($q, $k, $df)
+    {
+        if ($q <= 0 || $df <= 0 || $k < 2)
+            return 1.0;
+        $t = $q / sqrt(2.0);
+        $pT = $this->tProbability($t, $df);
+        $comparisons = ($k * ($k - 1)) / 2.0;
+        $pAdj = 1.0 - pow(max(0.0, 1.0 - $pT), $comparisons);
+        return round(min(1.0, max(0.0, $pAdj)), 4);
+    }
+
+    private function calculateResidualsStats($yHat, $residuals)
+    {
+        $n = count($yHat);
+        if ($n === 0)
+            return [];
+        $meanPred = array_sum($yHat) / $n;
+        $sdPred = $this->sampleStdDev($yHat, $meanPred);
+        $meanRes = array_sum($residuals) / $n;
+        $sdRes = $this->sampleStdDev($residuals, $meanRes);
+
+        $stdPred = [];
+        if ($sdPred > 1e-12) {
+            foreach ($yHat as $val) {
+                $stdPred[] = ($val - $meanPred) / $sdPred;
+            }
+        }
+        $stdRes = [];
+        if ($sdRes > 1e-12) {
+            foreach ($residuals as $val) {
+                $stdRes[] = $val / $sdRes;
+            }
+        }
+
+        $stats = [
+            [
+                'statistic' => 'Predicted Value',
+                'min' => round(min($yHat), 4),
+                'max' => round(max($yHat), 4),
+                'mean' => round($meanPred, 4),
+                'stdDev' => round($sdPred, 4),
+                'n' => $n
+            ]
+        ];
+
+        if (!empty($stdPred)) {
+            $stats[] = [
+                'statistic' => 'Std. Predicted Value',
+                'min' => round(min($stdPred), 3),
+                'max' => round(max($stdPred), 3),
+                'mean' => round(array_sum($stdPred) / count($stdPred), 3),
+                'stdDev' => round($this->sampleStdDev($stdPred, 0), 3),
+                'n' => $n
+            ];
+        }
+
+        $stats[] = [
+            'statistic' => 'Residual',
+            'min' => round(min($residuals), 4),
+            'max' => round(max($residuals), 4),
+            'mean' => round($meanRes, 4),
+            'stdDev' => round($sdRes, 4),
+            'n' => $n
+        ];
+
+        if (!empty($stdRes)) {
+            $stats[] = [
+                'statistic' => 'Std. Residual',
+                'min' => round(min($stdRes), 3),
+                'max' => round(max($stdRes), 3),
+                'mean' => round(array_sum($stdRes) / count($stdRes), 3),
+                'stdDev' => round($this->sampleStdDev($stdRes, 0), 3),
+                'n' => $n
+            ];
+        }
+
+        return $stats;
+    }
+
+    private function computeSquaredMultipleCorrelation($dataMatrix, $selectedItems, $targetKey)
+    {
+        $n = count($dataMatrix);
+        $k = count($selectedItems);
+        if ($n < 3 || $k < 2)
+            return 0.0;
+        if ($k === 2) {
+            $otherKey = $selectedItems[0] === $targetKey ? $selectedItems[1] : $selectedItems[0];
+            $y = array_column($dataMatrix, $targetKey);
+            $x = array_column($dataMatrix, $otherKey);
+            $my = array_sum($y) / $n;
+            $mx = array_sum($x) / $n;
+            $sxy = 0;
+            $sxx = 0;
+            $syy = 0;
+            for ($i = 0; $i < $n; $i++) {
+                $dx = $x[$i] - $mx;
+                $dy = $y[$i] - $my;
+                $sxy += $dx * $dy;
+                $sxx += $dx * $dx;
+                $syy += $dy * $dy;
+            }
+            $denom = $sxx * $syy;
+            return $denom > 0 ? round(pow($sxy, 2) / $denom, 4) : 0.0;
+        }
+
+        $y = array_column($dataMatrix, $targetKey);
+        $meanY = array_sum($y) / $n;
+        $otherKeys = array_values(array_filter($selectedItems, fn($item) => $item !== $targetKey));
+        $p = count($otherKeys);
+        if ($n <= $p + 1)
+            return 0.0;
+
+        $X = [];
+        for ($i = 0; $i < $n; $i++) {
+            $row = [1.0];
+            foreach ($otherKeys as $ok) {
+                $row[] = (float) $dataMatrix[$i][$ok];
+            }
+            $X[] = $row;
+        }
+
+        try {
+            $XTX = [];
+            for ($i = 0; $i <= $p; $i++) {
+                for ($j = 0; $j <= $p; $j++) {
+                    $sum = 0.0;
+                    for ($m = 0; $m < $n; $m++) {
+                        $sum += $X[$m][$i] * $X[$m][$j];
+                    }
+                    $XTX[$i][$j] = $sum;
+                }
+            }
+            $XTX_inv = $this->matrixInverse($XTX);
+            $XTY = [];
+            for ($i = 0; $i <= $p; $i++) {
+                $sum = 0.0;
+                for ($m = 0; $m < $n; $m++) {
+                    $sum += $X[$m][$i] * $y[$m];
+                }
+                $XTY[$i] = $sum;
+            }
+            $b = [];
+            for ($i = 0; $i <= $p; $i++) {
+                $sum = 0.0;
+                for ($j = 0; $j <= $p; $j++) {
+                    $sum += $XTX_inv[$i][$j] * $XTY[$j];
+                }
+                $b[$i] = $sum;
+            }
+            $sst = 0.0;
+            $sse = 0.0;
+            for ($i = 0; $i < $n; $i++) {
+                $pred = $b[0];
+                for ($j = 1; $j <= $p; $j++) {
+                    $pred += $b[$j] * $X[$i][$j];
+                }
+                $sst += pow($y[$i] - $meanY, 2);
+                $sse += pow($y[$i] - $pred, 2);
+            }
+            return $sst > 0 ? round(max(0.0, min(1.0, 1.0 - ($sse / $sst))), 4) : 0.0;
+        } catch (\Throwable $e) {
+            return 0.0;
+        }
+    }
+
     public function claimRewardPrompt(\App\Models\Survey $survey)
     {
         if (!session()->has('pending_claim_response_id') || auth()->check()) {
@@ -7220,13 +9187,14 @@ class SurveyController extends Controller
                 }
                 $pairs = [];
                 $rowsDef = $field['rows'] ?? [];
-                $colsDef = $field['columns'] ?? [];
+                $colsDef = $field['columns'] ?? ($field['values'] ?? ($field['options'] ?? []));
                 foreach ($rowsDef as $r) {
-                    $rk = $r['value'] ?? '';
-                    $rowLabel = $r['label'] ?? $rk;
+                    $rk = is_array($r) ? ($r['value'] ?? ($r['id'] ?? ($r['key'] ?? ($r['name'] ?? '')))) : (string) $r;
+                    $rowLabel = is_array($r) ? ($r['label'] ?? ($r['text'] ?? ($r['title'] ?? ($r['name'] ?? $rk)))) : (string) $r;
                     if (isset($matrixAnswers[$rk]) && $matrixAnswers[$rk] !== null && $matrixAnswers[$rk] !== '') {
                         $cv = $matrixAnswers[$rk];
-                        $colLabel = collect($colsDef)->firstWhere('value', $cv)['label'] ?? $cv;
+                        $colMatch = self::findOptionInList($colsDef, $cv);
+                        $colLabel = $colMatch ? $colMatch['label'] : $cv;
                         $pairs[] = "$rowLabel: $colLabel";
                     } else {
                         $pairs[] = "$rowLabel: —";
@@ -7267,16 +9235,27 @@ class SurveyController extends Controller
         }
 
         // Resolve select/checkbox/radio option values to their labels if present
+        $choiceList = [];
         if (isset($field['values']) && is_array($field['values'])) {
+            $choiceList = array_merge($choiceList, $field['values']);
+        }
+        if (isset($field['columns']) && is_array($field['columns'])) {
+            $choiceList = array_merge($choiceList, $field['columns']);
+        }
+        if (isset($field['options']) && is_array($field['options'])) {
+            $choiceList = array_merge($choiceList, $field['options']);
+        }
+
+        if (!empty($choiceList)) {
             if (is_array($val)) {
                 $mapped = [];
                 foreach ($val as $v) {
-                    $opt = collect($field['values'])->firstWhere('value', $v);
+                    $opt = self::findOptionInList($choiceList, $v);
                     $mapped[] = $opt ? ($opt['label'] ?? $v) : $v;
                 }
                 return implode(', ', $mapped);
             } else {
-                $opt = collect($field['values'])->firstWhere('value', $val);
+                $opt = self::findOptionInList($choiceList, $val);
                 return $opt ? ($opt['label'] ?? $val) : $val;
             }
         }
@@ -7413,6 +9392,9 @@ class SurveyController extends Controller
         // G) General prompt prefix stripping:
         else {
             $prefixes = [
+                '/^to\s+what\s+extent,?\s*(based\s+on\s+your\s+experience(\s+as\s+a\s+[a-z0-9\s]+)?,?\s*)?(do\s+you\s+agree|do\s+you\s+feel|does|is|are|do|have|has|would|can|should)?\s*(that\s+)?(you|the|your|students)?\s*/i',
+                '/^based\s+on\s+your\s+experience(\s+as\s+a\s+[a-z0-9\s]+)?,?\s*(to\s+what\s+extent|how\s+much|how\s+would\s+you|how\s+far)?\s*(do|does|are|is)?\s*/i',
+                '/^in\s+your\s+opinion\s*(or\s+experience)?,?\s*(to\s+what\s+extent|how)?\s*/i',
                 '/^please\s+indicate\s+(whether\s+you\s+)?(strongly\s+disagree[^\-\:]*[\-\:])?\s*(your\s+|the\s+)?/i',
                 '/^please\s+(specify|select|state|provide|rate|choose|enter)\s+(your\s+|the\s+)?/i',
                 '/^indicate\s+(whether\s+you\s+)?(strongly\s+disagree[^\-\:]*[\-\:])?\s*(your\s+|the\s+)?/i',
@@ -7426,7 +9408,9 @@ class SurveyController extends Controller
                 '/^how\s+(often|long)\s+do\s+you\s+/i',
                 '/^to\s+what\s+extent\s+(do\s+you\s+agree|do\s+you\s+feel)?\s*(that\s+)?(the\s+|your\s+)?/i',
                 '/^do\s+you\s+agree\s+(or\s+disagree\s+)?(that\s+)?(the\s+|your\s+)?/i',
-                '/^kindly\s+(indicate|state|specify|select)\s+(your\s+|the\s+)?/i'
+                '/^kindly\s+(indicate|state|specify|select)\s+(your\s+|the\s+)?/i',
+                '/^regarding\s+(the\s+|your\s+)?/i',
+                '/^with\s+respect\s+to\s+(the\s+|your\s+)?/i'
             ];
 
             foreach ($prefixes as $pattern) {

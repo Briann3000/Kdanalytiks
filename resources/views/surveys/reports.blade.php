@@ -1196,7 +1196,7 @@
                                             </thead>
                                             <tbody class="divide-y divide-gray-200">
                                                 @php 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    $totalFreq = 0;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    $totalFreq = 0;
                                                     $validFreq = 0;
                                                     // First pass to get valid total
                                                     foreach ($item['stats'] as $s) {
@@ -1448,6 +1448,149 @@
 
         <!-- Inferential Content -->
         <div x-show="reportTab === 'inferential'" class="space-y-6 animate-in fade-in duration-500" style="display: none;">
+            @php
+                $infQuestions = $inferentialVariables ?? $analysis;
+                $likertStandardLabels = [
+                    '1' => '1 - Strongly Disagree',
+                    '2' => '2 - Disagree',
+                    '3' => '3 - Neutral',
+                    '4' => '4 - Agree',
+                    '5' => '5 - Strongly Agree',
+                ];
+                $questionsMap = [];
+                foreach ($analysis ?? [] as $q) {
+                    $qId = (string) ($q['id'] ?? '');
+                    $categories = [];
+                    $categoryOptions = [];
+                    if (!empty($q['stats'])) {
+                        foreach ($q['stats'] as $st) {
+                            $valStr = trim((string) ($st['value'] ?? ''));
+                            $labelStr = trim((string) ($st['label'] ?? ($st['option'] ?? '')));
+                            if (empty($st['is_missing']) && !in_array($valStr, ['Missing', '[Missing / Skipped]', 'Skipped', ''], true) && ($st['count'] ?? 0) > 0) {
+                                $categories[] = $valStr;
+                                $displayLabel = ($labelStr !== '' && $labelStr !== $valStr) ? ($valStr . ' - ' . $labelStr) : ($likertStandardLabels[$valStr] ?? $valStr);
+                                $categoryOptions[] = [
+                                    'value' => $valStr,
+                                    'label' => $displayLabel,
+                                ];
+                            }
+                        }
+                    }
+                    $qDef = [
+                        'id' => $qId,
+                        'label' => $q['label'] ?? '',
+                        'type' => $q['type'] ?? 'question',
+                        'answered_count' => $q['answered_count'] ?? null,
+                        'categories' => $categories,
+                        'category_options' => $categoryOptions,
+                    ];
+                    $questionsMap[$qId] = $qDef;
+                    $cleanId = preg_replace('/^(qual-)?chart-/', '', $qId);
+                    $questionsMap[$cleanId] = $qDef;
+                    $questionsMap['chart-' . $cleanId] = $qDef;
+
+                    if (!empty($q['likert_matrix_rows'])) {
+                        foreach ($q['likert_matrix_rows'] as $subIdx => $subRow) {
+                            $rKey = $subRow['value'] ?? '';
+                            $subId = $qId . '__' . $rKey;
+                            $cleanSubId = $cleanId . '__' . $rKey;
+                            $rawSubLabel = $subRow['label'] ?? '';
+                            $cleanSubText = preg_replace('/^(\d+[\.\:\)\s]+|\([a-zA-Z0-9]+\)\s*|[a-zA-Z][\.\:\)\s]+)\s*/', '', $rawSubLabel);
+
+                            $subCategories = [];
+                            $subCategoryOptions = [];
+                            if (!empty($subRow['stats'])) {
+                                foreach ($subRow['stats'] as $rst) {
+                                    $rv = trim((string) ($rst['value'] ?? ''));
+                                    $rl = trim((string) ($rst['label'] ?? ''));
+                                    if ($rv !== '') {
+                                        $subCategories[] = $rv;
+                                        $optTxt = ($rl !== '' && $rl !== $rv) ? ($rv . ' - ' . $rl) : ($likertStandardLabels[$rv] ?? $rv);
+                                        $subCategoryOptions[] = [
+                                            'value' => $rv,
+                                            'label' => $optTxt,
+                                        ];
+                                    }
+                                }
+                            }
+                            if (empty($subCategories)) {
+                                $subCategories = ['1', '2', '3', '4', '5'];
+                                $subCategoryOptions = [
+                                    ['value' => '1', 'label' => '1 - Strongly Disagree'],
+                                    ['value' => '2', 'label' => '2 - Disagree'],
+                                    ['value' => '3', 'label' => '3 - Neutral'],
+                                    ['value' => '4', 'label' => '4 - Agree'],
+                                    ['value' => '5', 'label' => '5 - Strongly Agree'],
+                                ];
+                            }
+
+                            $subDef = [
+                                'id' => $subId,
+                                'label' => ($q['label'] ?? '') . ' - ' . $rawSubLabel,
+                                'parent_label' => $q['label'] ?? '',
+                                'sub_label' => $rawSubLabel,
+                                'clean_sub_label' => $cleanSubText,
+                                'type' => 'likert_item',
+                                'answered_count' => $subRow['answered_count'] ?? ($q['answered_count'] ?? null),
+                                'categories' => $subCategories,
+                                'category_options' => $subCategoryOptions,
+                            ];
+                            $questionsMap[$subId] = $subDef;
+                            $questionsMap[$cleanSubId] = $subDef;
+                            $questionsMap['chart-' . $cleanSubId] = $subDef;
+                        }
+                    }
+                }
+                $scaleItemsMap = collect($inferentialVariables ?? [])->keyBy('id')->map(function ($q) {
+                    return [
+                        'id' => (string) ($q['id'] ?? ''),
+                        'label' => $q['label'] ?? '',
+                        'type' => $q['type'] ?? 'scale_item',
+                    ];
+                })->toArray();
+
+                $scaleGroups = [];
+                $standaloneScaleItems = [];
+                $allEligibleScaleIds = [];
+
+                foreach ($inferentialVariables ?? [] as $item) {
+                    $type = strtolower($item['type'] ?? '');
+                    $isScale = !empty($item['isMatrixItem'])
+                        || !empty($item['isScaleItem'])
+                        || in_array($type, ['likert', 'rating', 'scale', 'slider', 'number', 'range', 'star_rating', 'nps', 'likert_item', 'matrix_item'])
+                        || str_contains($type, 'likert')
+                        || str_contains($type, 'rating')
+                        || str_contains($type, 'scale');
+
+                    if (empty($item['isChartable']) || !empty($item['isMatrixParent']) || !$isScale) {
+                        continue;
+                    }
+
+                    $allEligibleScaleIds[] = (string) $item['id'];
+
+                    if (!empty($item['isMatrixItem']) && !empty($item['parentLabel'])) {
+                        $parentKey = $item['parentFieldName'] ?? $item['parentLabel'];
+                        if (!isset($scaleGroups[$parentKey])) {
+                            $scaleGroups[$parentKey] = [
+                                'label' => $item['parentLabel'],
+                                'items' => []
+                            ];
+                        }
+                        $scaleGroups[$parentKey]['items'][] = $item;
+                    } else {
+                        $standaloneScaleItems[] = $item;
+                    }
+                }
+
+                if (empty($scaleGroups) && empty($standaloneScaleItems)) {
+                    foreach ($inferentialVariables ?? [] as $item) {
+                        if (!empty($item['isChartable']) && empty($item['isMatrixParent'])) {
+                            $standaloneScaleItems[] = $item;
+                            $allEligibleScaleIds[] = (string) $item['id'];
+                        }
+                    }
+                }
+            @endphp
             <div x-data="inferentialManager({{ $savedInferentialTests->toJson() }})" class="space-y-6">
 
                 <div class="flex flex-col lg:flex-row gap-6 items-start">
@@ -1461,7 +1604,8 @@
                             <div>
                                 <h4 class="text-xs font-black text-indigo-900 tracking-tight">{{ __('Saved Analyses') }}
                                 </h4>
-                                <p class="text-[10px] text-gray-500 font-bold">{{ __('Auto-included in report') }}</p>
+                                <p class="text-[10px] text-gray-500 font-bold"
+                                    x-text="'In Report: ' + (savedTests.filter(t => t.is_included_in_report).length) + ' / ' + savedTests.length"></p>
                             </div>
                             <div class="flex items-center gap-1">
                                 <button @click="resetForm()"
@@ -1480,7 +1624,7 @@
                             <template x-if="savedTests.length === 0">
                                 <div class="text-center py-8 opacity-60">
                                     <i class="fa-solid fa-flask text-xl text-gray-300 mb-2"></i>
-                                    <p class="text-[10px] font-black text-gray-500  tracking-widest">
+                                    <p class="text-[10px] font-black text-gray-500 tracking-widest">
                                         {{ __('No tests saved yet') }}
                                     </p>
                                 </div>
@@ -1489,18 +1633,29 @@
                                 <div class="bg-white border border-gray-200 rounded-2xl p-3 shadow-sm hover:border-indigo-300 transition-all cursor-pointer group"
                                     @click="loadTest(test)"
                                     :class="{'border-indigo-500 ring-2 ring-indigo-100 bg-indigo-50/10': loadedTestId === test.id}">
-                                    <div class="flex justify-between items-start mb-1.5">
+                                    <div class="flex justify-between items-center mb-1.5 gap-1.5">
                                         <span
                                             class="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[8px] font-black uppercase tracking-widest rounded-md"
                                             x-text="formatMethod(test.method)"></span>
-                                        <button @click.stop="deleteSavedTest(test.id)"
-                                            class="text-gray-300 hover:text-red-500 transition-colors p-1">
-                                            <i class="fa-solid fa-trash-alt text-[10px]"></i>
-                                        </button>
+                                        <div class="flex items-center gap-1">
+                                            <button type="button" @click.stop="toggleReportInclusion(test)"
+                                                class="text-[8px] font-extrabold px-1.5 py-0.5 rounded transition-all flex items-center gap-1 shadow-2xs cursor-pointer"
+                                                :class="test.is_included_in_report ? 'bg-[#2271b1] text-white border border-[#1b5b8d]' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200'"
+                                                :title="test.is_included_in_report ? '{{ __('Included in published report (Click to exclude)') }}' : '{{ __('Draft only (Click to include in report)') }}'">
+                                                <i :class="test.is_included_in_report ? 'fa-solid fa-check text-[7px]' : 'fa-solid fa-plus text-[7px]'"></i>
+                                                <span x-text="test.is_included_in_report ? '{{ __('In Report') }}' : '{{ __('Draft') }}'"></span>
+                                            </button>
+                                            <button @click.stop="deleteSavedTest(test.id)"
+                                                class="text-gray-300 hover:text-red-500 transition-colors p-1"
+                                                title="{{ __('Delete saved test') }}">
+                                                <i class="fa-solid fa-trash-alt text-[10px]"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                     <h5 class="text-xs font-bold text-gray-800 line-clamp-2 leading-tight"
                                         x-text="test.title"></h5>
-                                    <p class="text-[9px] text-gray-500 mt-1 font-medium" x-text="test.variables"></p>
+                                    <p class="text-[9px] text-gray-500 mt-1 font-medium" x-text="formatTestVariables(test)">
+                                    </p>
                                 </div>
                             </template>
                         </div>
@@ -1509,10 +1664,10 @@
                     <!-- Right Main Area -->
                     <div class="w-full" :class="sidebarOpen ? 'lg:w-[calc(100%-17rem)]' : 'w-full'">
                         <div
-                            class="bg-white rounded-3xl p-6 sm:p-8 md:p-10 border border-gray-100 shadow-sm relative overflow-hidden space-y-8">
+                            class="bg-white rounded-3xl p-4 sm:p-6 md:p-8 border border-gray-100 shadow-sm relative overflow-hidden space-y-6 sm:space-y-8">
 
                             <!-- Header Area -->
-                            <div class="border-b border-gray-50 pb-6 flex justify-between items-start">
+                            <div class="border-b border-gray-50 pb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
                                 <div class="flex items-center gap-3">
                                     <button type="button" @click="sidebarOpen = !sidebarOpen"
                                         class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 border border-gray-200 text-gray-700 flex items-center justify-center transition-all shadow-sm shrink-0"
@@ -1529,10 +1684,20 @@
                                         </p>
                                     </div>
                                 </div>
-                                <span x-show="isSaving"
-                                    class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl flex items-center gap-2">
-                                    <i class="fa-solid fa-spinner fa-spin"></i> {{ __('Auto-saving...') }}
-                                </span>
+                                <div class="flex items-center gap-2">
+                                    <template x-if="loadedTestId && savedTests.find(t => t.id === loadedTestId)">
+                                        <button type="button" @click="toggleReportInclusion(savedTests.find(t => t.id === loadedTestId))"
+                                            class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border shadow-2xs cursor-pointer"
+                                            :class="savedTests.find(t => t.id === loadedTestId)?.is_included_in_report ? 'bg-blue-50 text-[#2271b1] border-blue-200 hover:bg-blue-100' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'">
+                                            <i :class="savedTests.find(t => t.id === loadedTestId)?.is_included_in_report ? 'fa-solid fa-circle-check text-[#2271b1]' : 'fa-regular fa-circle text-gray-400'"></i>
+                                            <span x-text="savedTests.find(t => t.id === loadedTestId)?.is_included_in_report ? '{{ __('Included in Report') }}' : '{{ __('Include in Report') }}'"></span>
+                                        </button>
+                                    </template>
+                                    <span x-show="isSaving"
+                                        class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl flex items-center gap-2">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> {{ __('Saving...') }}
+                                    </span>
+                                </div>
                             </div>
 
                             <!-- Test Selection -->
@@ -1563,18 +1728,18 @@
                                         <div
                                             class="inline-flex flex-wrap p-1 bg-gray-100/90 rounded-2xl border border-gray-200/80 gap-1">
                                             <button type="button" @click="scope = 'within'"
-                                                :class="scope === 'within' ? 'bg-white text-indigo-700 shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900 font-medium'"
+                                                :class="scope === 'within' ? 'bg-white text-[#2271b1] shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900 font-medium'"
                                                 class="px-4 py-2 rounded-xl text-xs transition-all">
                                                 {{ __('Within This Survey') }}
                                             </button>
                                             <button type="button" @click="scope = 'cross_survey'"
-                                                :class="scope === 'cross_survey' ? 'bg-white text-indigo-700 shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900 font-medium'"
+                                                :class="scope === 'cross_survey' ? 'bg-white text-[#2271b1] shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900 font-medium'"
                                                 class="px-4 py-2 rounded-xl text-xs transition-all">
                                                 {{ __('Compare with Another Survey') }}
                                             </button>
                                             <template x-if="testMethod === 'ttest'">
                                                 <button type="button" @click="scope = 'upload'"
-                                                    :class="scope === 'upload' ? 'bg-white text-indigo-700 shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900 font-medium'"
+                                                    :class="scope === 'upload' ? 'bg-white text-[#2271b1] shadow-sm font-bold' : 'text-gray-600 hover:text-gray-900 font-medium'"
                                                     class="px-4 py-2 rounded-xl text-xs transition-all">
                                                     {{ __('Upload External Dataset') }}
                                                 </button>
@@ -1583,6 +1748,7 @@
                                     </div>
                                 </template>
 
+                                <!-- Case 1: Crosstab / Chi-Square -->
                                 <!-- Case 1: Crosstab / Chi-Square -->
                                 <template x-if="testMethod === 'crosstab' || testMethod === 'chisquare'">
                                     <div class="contents">
@@ -1593,11 +1759,65 @@
                                                 class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 transition-all truncate">
                                                 <option value="">{{ __('Select Question...') }}</option>
                                                 @foreach($analysis as $item)
-                                                    <option value="{{ $item['id'] }}" title="{{ $item['label'] }}">
-                                                        {{ \Illuminate\Support\Str::limit($item['label'], 85) }}
-                                                    </option>
+                                                    @if(in_array($item['type'] ?? '', ['likert_matrix', 'likert_matrix_grid']) && !empty($item['likert_matrix_rows']))
+                                                        <optgroup
+                                                            label="Q{{ $loop->iteration }}: {{ \Illuminate\Support\Str::limit(\App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']), 65) }}">
+                                                            @foreach($item['likert_matrix_rows'] as $subIdx => $subRow)
+                                                                @php
+                                                                    $rawSub = $subRow['label'] ?? '';
+                                                                    $cleanSub = preg_replace('/^(\d+[\.\:\)\s]+|\([a-zA-Z0-9]+\)\s*|[a-zA-Z][\.\:\)\s]+)\s*/', '', $rawSub);
+                                                                @endphp
+                                                                <option value="{{ $item['id'] }}__{{ $subRow['value'] }}"
+                                                                    title="{{ $rawSub }} ({{ $item['label'] }})">
+                                                                    Q{{ $loop->parent->iteration }}.{{ $subIdx + 1 }}:
+                                                                    {{ \Illuminate\Support\Str::limit($cleanSub, 70) }}
+                                                                </option>
+                                                            @endforeach
+                                                        </optgroup>
+                                                    @else
+                                                        <option value="{{ $item['id'] }}" title="{{ $item['label'] }}">
+                                                            Q{{ $loop->iteration }}:
+                                                            {{ \Illuminate\Support\Str::limit($item['label'], 75) }}
+                                                        </option>
+                                                    @endif
                                                 @endforeach
                                             </select>
+                                            <template x-if="getQuestionInfo(rowVar)">
+                                                <div
+                                                    class="mt-2.5 p-3.5 bg-indigo-50/60 rounded-2xl border border-indigo-100/80 shadow-2xs text-xs space-y-1.5 animate-in fade-in duration-200">
+                                                    <div class="flex items-center justify-between gap-2">
+                                                        <div class="flex items-center gap-2">
+                                                            <span
+                                                                class="text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md bg-white text-indigo-700 border border-indigo-200/60 shadow-2xs"
+                                                                x-text="getQuestionInfo(rowVar).type === 'likert_item' ? '{{ __('Likert Sub-Item') }}' : getQuestionInfo(rowVar).type"></span>
+                                                        </div>
+                                                        <template
+                                                            x-if="getQuestionInfo(rowVar).answered_count !== undefined && getQuestionInfo(rowVar).answered_count !== null">
+                                                            <span class="text-[11px] text-gray-500 font-bold"
+                                                                x-text="'N = ' + getQuestionInfo(rowVar).answered_count + ' responses'"></span>
+                                                        </template>
+                                                    </div>
+                                                    <template x-if="getQuestionInfo(rowVar).parent_label">
+                                                        <div class="text-[11px] text-gray-500 font-medium leading-relaxed">
+                                                            <span
+                                                                class="font-bold text-gray-700">{{ __('Context:') }}</span>
+                                                            <span x-text="getQuestionInfo(rowVar).parent_label"></span>
+                                                        </div>
+                                                    </template>
+                                                    <div class="text-xs font-bold text-gray-900 leading-snug break-words">
+                                                        <template x-if="getQuestionInfo(rowVar).sub_label">
+                                                            <div>
+                                                                <span
+                                                                    class="text-indigo-700 font-extrabold">{{ __('Item Statement:') }}</span>
+                                                                <span x-text="getQuestionInfo(rowVar).sub_label"></span>
+                                                            </div>
+                                                        </template>
+                                                        <template x-if="!getQuestionInfo(rowVar).sub_label">
+                                                            <p x-text="getQuestionInfo(rowVar).label"></p>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            </template>
                                         </div>
                                         <div>
                                             <label
@@ -1606,11 +1826,65 @@
                                                 class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 transition-all truncate">
                                                 <option value="">{{ __('Select Question...') }}</option>
                                                 @foreach($analysis as $item)
-                                                    <option value="{{ $item['id'] }}" title="{{ $item['label'] }}">
-                                                        {{ \Illuminate\Support\Str::limit($item['label'], 85) }}
-                                                    </option>
+                                                    @if(in_array($item['type'] ?? '', ['likert_matrix', 'likert_matrix_grid']) && !empty($item['likert_matrix_rows']))
+                                                        <optgroup
+                                                            label="Q{{ $loop->iteration }}: {{ \Illuminate\Support\Str::limit(\App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']), 65) }}">
+                                                            @foreach($item['likert_matrix_rows'] as $subIdx => $subRow)
+                                                                @php
+                                                                    $rawSub = $subRow['label'] ?? '';
+                                                                    $cleanSub = preg_replace('/^(\d+[\.\:\)\s]+|\([a-zA-Z0-9]+\)\s*|[a-zA-Z][\.\:\)\s]+)\s*/', '', $rawSub);
+                                                                @endphp
+                                                                <option value="{{ $item['id'] }}__{{ $subRow['value'] }}"
+                                                                    title="{{ $rawSub }} ({{ $item['label'] }})">
+                                                                    Q{{ $loop->parent->iteration }}.{{ $subIdx + 1 }}:
+                                                                    {{ \Illuminate\Support\Str::limit($cleanSub, 70) }}
+                                                                </option>
+                                                            @endforeach
+                                                        </optgroup>
+                                                    @else
+                                                        <option value="{{ $item['id'] }}" title="{{ $item['label'] }}">
+                                                            Q{{ $loop->iteration }}:
+                                                            {{ \Illuminate\Support\Str::limit($item['label'], 75) }}
+                                                        </option>
+                                                    @endif
                                                 @endforeach
                                             </select>
+                                            <template x-if="getQuestionInfo(colVar)">
+                                                <div
+                                                    class="mt-2.5 p-3.5 bg-indigo-50/60 rounded-2xl border border-indigo-100/80 shadow-2xs text-xs space-y-1.5 animate-in fade-in duration-200">
+                                                    <div class="flex items-center justify-between gap-2">
+                                                        <div class="flex items-center gap-2">
+                                                            <span
+                                                                class="text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md bg-white text-indigo-700 border border-indigo-200/60 shadow-2xs"
+                                                                x-text="getQuestionInfo(colVar).type === 'likert_item' ? '{{ __('Likert Sub-Item') }}' : getQuestionInfo(colVar).type"></span>
+                                                        </div>
+                                                        <template
+                                                            x-if="getQuestionInfo(colVar).answered_count !== undefined && getQuestionInfo(colVar).answered_count !== null">
+                                                            <span class="text-[11px] text-gray-500 font-bold"
+                                                                x-text="'N = ' + getQuestionInfo(colVar).answered_count + ' responses'"></span>
+                                                        </template>
+                                                    </div>
+                                                    <template x-if="getQuestionInfo(colVar).parent_label">
+                                                        <div class="text-[11px] text-gray-500 font-medium leading-relaxed">
+                                                            <span
+                                                                class="font-bold text-gray-700">{{ __('Context:') }}</span>
+                                                            <span x-text="getQuestionInfo(colVar).parent_label"></span>
+                                                        </div>
+                                                    </template>
+                                                    <div class="text-xs font-bold text-gray-900 leading-snug break-words">
+                                                        <template x-if="getQuestionInfo(colVar).sub_label">
+                                                            <div>
+                                                                <span
+                                                                    class="text-indigo-700 font-extrabold">{{ __('Item Statement:') }}</span>
+                                                                <span x-text="getQuestionInfo(colVar).sub_label"></span>
+                                                            </div>
+                                                        </template>
+                                                        <template x-if="!getQuestionInfo(colVar).sub_label">
+                                                            <p x-text="getQuestionInfo(colVar).label"></p>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            </template>
                                         </div>
                                     </div>
                                 </template>
@@ -1618,24 +1892,133 @@
                                 <!-- Case 1b: Cronbach Alpha -->
                                 <template x-if="testMethod === 'cronbach'">
                                     <div class="col-span-full space-y-4">
-                                        <label
-                                            class="block text-xs font-bold text-gray-700 tracking-normal">{{ __('Select Likert / Rating Scale Items for Reliability Testing') }}</label>
-                                        <p class="text-xs text-gray-500">{{ __('Evaluates internal consistency.') }}</p>
                                         <div
-                                            class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 bg-gray-50 p-4 rounded-2xl border border-gray-100 max-h-60 overflow-y-auto custom-scrollbar">
-                                            @foreach($analysis as $item)
-                                                @if($item['isChartable'])
-                                                    <label
-                                                        class="flex items-center gap-2 text-xs font-semibold text-gray-700 bg-white p-2.5 rounded-xl border border-gray-200/80 cursor-pointer hover:bg-indigo-50/50 transition-colors"
-                                                        title="{{ $item['label'] }}">
-                                                        <input type="checkbox" :value="'{{ $item['canvasId'] }}'"
-                                                            x-model="cronbachItems"
-                                                            class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                                        <span
-                                                            class="truncate">{{ \Illuminate\Support\Str::limit($item['label'], 85) }}</span>
-                                                    </label>
-                                                @endif
-                                            @endforeach
+                                            class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-2xs">
+                                            <div>
+                                                <label
+                                                    class="block text-xs font-bold text-gray-800 tracking-normal flex items-center gap-2">
+                                                    <i class="fa-solid fa-layer-group text-[#2271b1] text-xs"></i>
+                                                    <span>{{ __('Select Likert / Rating Scale Items for Reliability Testing') }}</span>
+                                                </label>
+                                                <p class="text-[11px] text-gray-500 mt-0.5">
+                                                    {{ __('Categorical and text fields are hidden. Items are organized by construct. Select at least 2 items.') }}
+                                                </p>
+                                            </div>
+                                            <div class="flex items-center gap-2 shrink-0">
+                                                <template x-if="cronbachItems.length > 0">
+                                                    <button type="button" @click="clearScaleItems()"
+                                                        class="text-[11px] font-semibold text-gray-400 hover:text-red-500 transition-colors cursor-pointer px-2 py-1">
+                                                        {{ __('Clear') }}
+                                                    </button>
+                                                </template>
+                                                <button type="button"
+                                                    @click="selectAllScaleItems(@js($allEligibleScaleIds))"
+                                                    class="text-[11px] font-bold text-[#2271b1] hover:text-[#135e96] bg-blue-50 hover:bg-blue-100/80 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer">
+                                                    {{ __('Select All') }} ({{ count($allEligibleScaleIds) }})
+                                                </button>
+                                                <span class="text-xs font-black px-2.5 py-1 rounded-xl transition-all"
+                                                    :class="cronbachItems.length >= 2 ? 'text-emerald-700 bg-emerald-50 border border-emerald-200/60' : 'text-amber-700 bg-amber-50 border border-amber-200/60'"
+                                                    x-text="cronbachItems.length + ' {{ __('selected') }}' + (cronbachItems.length < 2 ? ' (min 2)' : '')"></span>
+                                            </div>
+                                        </div>
+
+                                        <div class="space-y-4 max-h-80 overflow-y-auto custom-scrollbar p-1">
+                                            @if(!empty($scaleGroups))
+                                                @foreach($scaleGroups as $groupKey => $group)
+                                                    @php
+                                                        $groupIds = array_column($group['items'], 'id');
+                                                    @endphp
+                                                    <div class="bg-gray-50/70 border border-gray-200/80 rounded-2xl p-4 space-y-3">
+                                                        <div
+                                                            class="flex items-center justify-between pb-2 border-b border-gray-200/60">
+                                                            <div class="flex items-center gap-2">
+                                                                <span class="w-2 h-2 rounded-full bg-[#2271b1] shrink-0"></span>
+                                                                <span class="text-xs font-bold text-gray-800 tracking-tight">
+                                                                    {{ __('Construct / Section:') }} <span
+                                                                        class="text-gray-900 font-black">{{ $group['label'] }}</span>
+                                                                </span>
+                                                                <span
+                                                                    class="text-[10px] font-semibold text-gray-500 bg-white px-2 py-0.5 rounded-full border border-gray-200 shadow-2xs">
+                                                                    {{ count($group['items']) }} {{ __('items') }}
+                                                                </span>
+                                                            </div>
+                                                            <button type="button" @click="toggleGroupItems(@js($groupIds))"
+                                                                class="text-[11px] font-bold px-2.5 py-1 rounded-lg transition-all border cursor-pointer"
+                                                                :class="isGroupAllSelected(@js($groupIds)) ? 'bg-[#2271b1] text-white border-[#2271b1] shadow-xs' : 'bg-white text-[#2271b1] border-blue-200 hover:bg-blue-50/80'">
+                                                                <span
+                                                                    x-text="isGroupAllSelected(@js($groupIds)) ? '{{ __('Deselect Construct') }}' : '{{ __('Select All in Construct') }}'"></span>
+                                                            </button>
+                                                        </div>
+
+                                                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                                                            @foreach($group['items'] as $item)
+                                                                <label
+                                                                    class="flex items-start gap-2.5 text-xs font-semibold p-2.5 rounded-xl border transition-all cursor-pointer select-none"
+                                                                    :class="cronbachItems.includes('{{ $item['id'] }}') ? 'bg-white border-[#2271b1] ring-1 ring-[#2271b1] shadow-xs text-gray-900' : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50/50'"
+                                                                    title="{{ $item['label'] }}">
+                                                                    <input type="checkbox" :value="'{{ $item['id'] }}'"
+                                                                        x-model="cronbachItems"
+                                                                        class="mt-0.5 rounded border-gray-300 text-[#2271b1] focus:ring-[#2271b1] shrink-0">
+                                                                    <div class="min-w-0 flex-1">
+                                                                        <p class="font-bold leading-snug break-words text-[11px]">
+                                                                            {{ $item['subItemText'] ?? $item['label'] }}
+                                                                        </p>
+                                                                    </div>
+                                                                </label>
+                                                            @endforeach
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                            @endif
+
+                                            @if(!empty($standaloneScaleItems))
+                                                <div class="bg-gray-50/70 border border-gray-200/80 rounded-2xl p-4 space-y-3">
+                                                    @php
+                                                        $standaloneIds = array_column($standaloneScaleItems, 'id');
+                                                    @endphp
+                                                    <div
+                                                        class="flex items-center justify-between pb-2 border-b border-gray-200/60">
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="w-2 h-2 rounded-full bg-[#2271b1] shrink-0"></span>
+                                                            <span class="text-xs font-bold text-gray-800 tracking-tight">
+                                                                {{ __('Individual Scale & Rating Items') }}
+                                                            </span>
+                                                            <span
+                                                                class="text-[10px] font-semibold text-gray-500 bg-white px-2 py-0.5 rounded-full border border-gray-200 shadow-2xs">
+                                                                {{ count($standaloneScaleItems) }} {{ __('items') }}
+                                                            </span>
+                                                        </div>
+                                                        <button type="button" @click="toggleGroupItems(@js($standaloneIds))"
+                                                            class="text-[11px] font-bold px-2.5 py-1 rounded-lg transition-all border cursor-pointer"
+                                                            :class="isGroupAllSelected(@js($standaloneIds)) ? 'bg-[#2271b1] text-white border-[#2271b1] shadow-xs' : 'bg-white text-[#2271b1] border-blue-200 hover:bg-blue-50/80'">
+                                                            <span
+                                                                x-text="isGroupAllSelected(@js($standaloneIds)) ? '{{ __('Deselect All') }}' : '{{ __('Select All') }}'"></span>
+                                                        </button>
+                                                    </div>
+
+                                                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                                                        @foreach($standaloneScaleItems as $item)
+                                                            <label
+                                                                class="flex items-start gap-2.5 text-xs font-semibold p-2.5 rounded-xl border transition-all cursor-pointer select-none"
+                                                                :class="cronbachItems.includes('{{ $item['id'] }}') ? 'bg-white border-[#2271b1] ring-1 ring-[#2271b1] shadow-xs text-gray-900' : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50/50'"
+                                                                title="{{ $item['label'] }}">
+                                                                <input type="checkbox" :value="'{{ $item['id'] }}'"
+                                                                    x-model="cronbachItems"
+                                                                    class="mt-0.5 rounded border-gray-300 text-[#2271b1] focus:ring-[#2271b1] shrink-0">
+                                                                <div class="min-w-0 flex-1">
+                                                                    <p class="font-bold leading-snug break-words text-[11px]">
+                                                                        {{ $item['label'] }}
+                                                                    </p>
+                                                                    @if(!empty($item['type']))
+                                                                        <span
+                                                                            class="inline-block mt-1 text-[9px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 px-1.5 py-0.2 rounded">{{ $item['type'] }}</span>
+                                                                    @endif
+                                                                </div>
+                                                            </label>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            @endif
                                         </div>
                                     </div>
                                 </template>
@@ -1648,31 +2031,226 @@
                                             <div class="contents">
                                                 <div>
                                                     <label
-                                                        class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Dependent Variable (Numeric)') }}</label>
+                                                        class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Dependent Variable (Numeric / Metric)') }}</label>
                                                     <select x-model="depVar"
-                                                        class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 transition-all truncate">
-                                                        <option value="">{{ __('Select Question...') }}</option>
+                                                        class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#2271b1] transition-all truncate">
+                                                        <option value="">{{ __('Select Metric Question...') }}</option>
                                                         @foreach($analysis as $item)
-                                                            @if($item['isChartable'])
+                                                            @php
+                                                                $itemType = strtolower($item['type'] ?? '');
+                                                                $isLikertMatrix = in_array($itemType, ['likert_matrix', 'likert_matrix_grid']) && !empty($item['likert_matrix_rows']);
+                                                                $isContinuousMetric = !empty($item['summary_stats'])
+                                                                    || in_array($itemType, ['number', 'rating', 'scale', 'slider', 'range', 'star_rating', 'nps', 'likert', 'likert_item'])
+                                                                    || (!empty($item['isLikertLike']) && !in_array($itemType, ['select_one', 'radio', 'select_many', 'checkbox', 'select', 'text', 'textarea', 'email', 'date', 'file']));
+                                                            @endphp
+                                                            @if($isLikertMatrix)
+                                                                <optgroup
+                                                                    label="Q{{ $loop->iteration }}: {{ \Illuminate\Support\Str::limit(\App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']), 90) }}">
+                                                                    @foreach($item['likert_matrix_rows'] as $subIdx => $subRow)
+                                                                        @php
+                                                                            $rawSub = $subRow['label'] ?? '';
+                                                                            $cleanSub = preg_replace('/^(\d+[\.\:\)\s]+|\([a-zA-Z0-9]+\)\s*|[a-zA-Z][\.\:\)\s]+)\s*/', '', $rawSub);
+                                                                            $cleanTheme = \App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']);
+                                                                        @endphp
+                                                                        <option value="{{ $item['id'] }}__{{ $subRow['value'] }}"
+                                                                            title="{{ $cleanSub }} ({{ $cleanTheme }})">
+                                                                            Q{{ $loop->parent->iteration }}.{{ $subIdx + 1 }}:
+                                                                            {{ \Illuminate\Support\Str::limit($cleanSub, 85) }}
+                                                                        </option>
+                                                                    @endforeach
+                                                                </optgroup>
+                                                            @elseif($isContinuousMetric && !empty($item['isChartable']))
                                                                 <option value="{{ $item['id'] }}" title="{{ $item['label'] }}">
+                                                                    Q{{ $loop->iteration }}:
                                                                     {{ \Illuminate\Support\Str::limit($item['label'], 85) }}
                                                                 </option>
                                                             @endif
                                                         @endforeach
                                                     </select>
+                                                    <template x-if="getQuestionInfo(depVar)">
+                                                        <div
+                                                            class="mt-2.5 p-3.5 bg-blue-50/60 rounded-2xl border border-blue-100/80 shadow-2xs text-xs space-y-1.5 animate-in fade-in duration-200">
+                                                            <div class="flex items-center justify-between gap-2">
+                                                                <div class="flex items-center gap-2">
+                                                                    <span
+                                                                        class="text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md bg-white text-[#2271b1] border border-blue-200/60 shadow-2xs"
+                                                                        x-text="getQuestionInfo(depVar).type === 'likert_item' ? '{{ __('Likert Sub-Item') }}' : getQuestionInfo(depVar).type"></span>
+                                                                </div>
+                                                                <template
+                                                                    x-if="getQuestionInfo(depVar).answered_count !== undefined && getQuestionInfo(depVar).answered_count !== null">
+                                                                    <span class="text-[11px] text-gray-500 font-bold"
+                                                                        x-text="'N = ' + getQuestionInfo(depVar).answered_count + ' responses'"></span>
+                                                                </template>
+                                                            </div>
+                                                            <template x-if="getQuestionInfo(depVar).parent_label">
+                                                                <div
+                                                                    class="text-[11px] text-gray-500 font-medium leading-relaxed">
+                                                                    <span
+                                                                        class="font-bold text-gray-700">{{ __('Context:') }}</span>
+                                                                    <span
+                                                                        x-text="getQuestionInfo(depVar).parent_label"></span>
+                                                                </div>
+                                                            </template>
+                                                            <div
+                                                                class="text-xs font-bold text-gray-900 leading-snug break-words">
+                                                                <template x-if="getQuestionInfo(depVar).sub_label">
+                                                                    <div>
+                                                                        <span
+                                                                            class="text-[#2271b1] font-extrabold">{{ __('Item Statement:') }}</span>
+                                                                        <span
+                                                                            x-text="getQuestionInfo(depVar).sub_label"></span>
+                                                                    </div>
+                                                                </template>
+                                                                <template x-if="!getQuestionInfo(depVar).sub_label">
+                                                                    <p x-text="getQuestionInfo(depVar).label"></p>
+                                                                </template>
+                                                            </div>
+                                                        </div>
+                                                    </template>
                                                 </div>
                                                 <div>
                                                     <label
-                                                        class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Grouping Variable') }}</label>
+                                                        class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Grouping Variable (Categorical / Factor)') }}</label>
                                                     <select x-model="groupVar"
-                                                        class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 transition-all truncate">
+                                                        class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#2271b1] transition-all truncate">
                                                         <option value="">{{ __('Select Question...') }}</option>
                                                         @foreach($analysis as $item)
-                                                            <option value="{{ $item['id'] }}" title="{{ $item['label'] }}">
-                                                                {{ \Illuminate\Support\Str::limit($item['label'], 85) }}
-                                                            </option>
+                                                            @php
+                                                                $itemType = strtolower($item['type'] ?? '');
+                                                                $isExcluded = in_array($itemType, ['text', 'textarea', 'email', 'date', 'file', 'checkbox', 'multiple_choice']);
+                                                            @endphp
+                                                            @if(in_array($itemType, ['likert_matrix', 'likert_matrix_grid']) && !empty($item['likert_matrix_rows']))
+                                                                <optgroup
+                                                                    label="Q{{ $loop->iteration }}: {{ \Illuminate\Support\Str::limit(\App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']), 90) }}">
+                                                                    @foreach($item['likert_matrix_rows'] as $subIdx => $subRow)
+                                                                        @php
+                                                                            $rawSub = $subRow['label'] ?? '';
+                                                                            $cleanSub = preg_replace('/^(\d+[\.\:\)\s]+|\([a-zA-Z0-9]+\)\s*|[a-zA-Z][\.\:\)\s]+)\s*/', '', $rawSub);
+                                                                            $cleanTheme = \App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']);
+                                                                        @endphp
+                                                                        <option value="{{ $item['id'] }}__{{ $subRow['value'] }}"
+                                                                            title="{{ $cleanSub }} ({{ $cleanTheme }})">
+                                                                            Q{{ $loop->parent->iteration }}.{{ $subIdx + 1 }}:
+                                                                            {{ \Illuminate\Support\Str::limit($cleanSub, 85) }}
+                                                                        </option>
+                                                                    @endforeach
+                                                                </optgroup>
+                                                            @elseif(!$isExcluded)
+                                                                <option value="{{ $item['id'] }}" title="{{ $item['label'] }}">
+                                                                    Q{{ $loop->iteration }}:
+                                                                    {{ \Illuminate\Support\Str::limit($item['label'], 85) }}
+                                                                </option>
+                                                            @endif
                                                         @endforeach
                                                     </select>
+                                                    <template x-if="getQuestionInfo(groupVar)">
+                                                        <div
+                                                            class="mt-2.5 p-3.5 bg-blue-50/60 rounded-2xl border border-blue-100/80 shadow-2xs text-xs space-y-1.5 animate-in fade-in duration-200">
+                                                            <div class="flex items-center justify-between gap-2">
+                                                                <div class="flex items-center gap-2">
+                                                                    <span
+                                                                        class="text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md bg-white text-[#2271b1] border border-blue-200/60 shadow-2xs"
+                                                                        x-text="getQuestionInfo(groupVar).type === 'likert_item' ? '{{ __('Likert Sub-Item') }}' : getQuestionInfo(groupVar).type"></span>
+                                                                </div>
+                                                                <template
+                                                                    x-if="getQuestionInfo(groupVar).answered_count !== undefined && getQuestionInfo(groupVar).answered_count !== null">
+                                                                    <span class="text-[11px] text-gray-500 font-bold"
+                                                                        x-text="'N = ' + getQuestionInfo(groupVar).answered_count + ' responses'"></span>
+                                                                </template>
+                                                            </div>
+                                                            <template x-if="getQuestionInfo(groupVar).parent_label">
+                                                                <div
+                                                                    class="text-[11px] text-gray-500 font-medium leading-relaxed">
+                                                                    <span
+                                                                        class="font-bold text-gray-700">{{ __('Context:') }}</span>
+                                                                    <span
+                                                                        x-text="getQuestionInfo(groupVar).parent_label"></span>
+                                                                </div>
+                                                            </template>
+                                                            <div
+                                                                class="text-xs font-bold text-gray-900 leading-snug break-words">
+                                                                <template x-if="getQuestionInfo(groupVar).sub_label">
+                                                                    <div>
+                                                                        <span
+                                                                            class="text-[#2271b1] font-extrabold">{{ __('Item Statement:') }}</span>
+                                                                        <span
+                                                                            x-text="getQuestionInfo(groupVar).sub_label"></span>
+                                                                    </div>
+                                                                </template>
+                                                                <template x-if="!getQuestionInfo(groupVar).sub_label">
+                                                                    <p x-text="getQuestionInfo(groupVar).label"></p>
+                                                                </template>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+
+                                                    <!-- SPSS Define Groups Dynamic Cohort Selector (T-Test with > 2 categories) -->
+                                                    <template
+                                                        x-if="testMethod === 'ttest' && scope === 'within' && getQuestionInfo(groupVar) && (getQuestionInfo(groupVar).categories || []).length > 2">
+                                                        <div
+                                                            class="mt-2.5 p-3.5 bg-blue-50/80 rounded-2xl border border-blue-200/90 shadow-2xs space-y-2.5 animate-in fade-in duration-200">
+                                                            <div class="flex items-center justify-between flex-wrap gap-1">
+                                                                <span
+                                                                    class="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md bg-[#2271b1] text-white shadow-2xs">
+                                                                    {{ __('SPSS Define Groups: Select 2 Cohorts') }}
+                                                                </span>
+                                                                <button type="button" @click="testMethod = 'anova'"
+                                                                    class="text-[11px] font-bold text-[#2271b1] hover:underline flex items-center gap-1 cursor-pointer">
+                                                                    <span>{{ __('Compare all categories with One-Way ANOVA') }}</span>
+                                                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                                                </button>
+                                                            </div>
+                                                            <p class="text-[11px] text-gray-600 font-medium">
+                                                                <span
+                                                                    x-text="'This variable contains ' + (getQuestionInfo(groupVar).categories || []).length + ' categories. Choose 2 specific cohorts for independent sample comparison:'"></span>
+                                                            </p>
+                                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                                                <div>
+                                                                    <label
+                                                                        class="block text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">{{ __('Group 1 (Cohort A):') }}</label>
+                                                                    <select x-model="ttestGroup1"
+                                                                        class="w-full bg-white border border-gray-200 text-xs font-semibold rounded-xl px-3 py-2 focus:ring-2 focus:ring-[#2271b1] transition-all truncate">
+                                                                        <template
+                                                                            x-for="opt in (getQuestionInfo(groupVar).category_options || (getQuestionInfo(groupVar).categories || []).map(c => ({value: c, label: c})))"
+                                                                            :key="'g1_' + opt.value">
+                                                                            <option :value="opt.value" x-text="opt.label"
+                                                                                :disabled="opt.value === ttestGroup2">
+                                                                            </option>
+                                                                        </template>
+                                                                    </select>
+                                                                </div>
+                                                                <div>
+                                                                    <label
+                                                                        class="block text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">{{ __('Group 2 (Cohort B):') }}</label>
+                                                                    <select x-model="ttestGroup2"
+                                                                        class="w-full bg-white border border-gray-200 text-xs font-semibold rounded-xl px-3 py-2 focus:ring-2 focus:ring-[#2271b1] transition-all truncate">
+                                                                        <template
+                                                                            x-for="opt in (getQuestionInfo(groupVar).category_options || (getQuestionInfo(groupVar).categories || []).map(c => ({value: c, label: c})))"
+                                                                            :key="'g2_' + opt.value">
+                                                                            <option :value="opt.value" x-text="opt.label"
+                                                                                :disabled="opt.value === ttestGroup1">
+                                                                            </option>
+                                                                        </template>
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+
+                                                    <!-- Binary Factor Confirmation Badge (T-Test with exactly 2 categories) -->
+                                                    <template
+                                                        x-if="testMethod === 'ttest' && scope === 'within' && getQuestionInfo(groupVar) && (getQuestionInfo(groupVar).categories || []).length === 2">
+                                                        <div
+                                                            class="mt-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 flex items-center justify-between shadow-2xs animate-in fade-in duration-200">
+                                                            <span class="flex items-center gap-1.5">
+                                                                <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                                                                <span>{{ __('Binary Factor:') }} <span class="text-gray-900"
+                                                                        x-text="(getQuestionInfo(groupVar).category_options ? getQuestionInfo(groupVar).category_options.map(o => o.label) : (getQuestionInfo(groupVar).categories || [])).join(' vs ')"></span></span>
+                                                            </span>
+                                                            <span
+                                                                class="text-[9px] font-black uppercase tracking-wider text-emerald-700 bg-white border border-emerald-200 px-2 py-0.5 rounded-md">{{ __('2 Cohorts Auto-Selected') }}</span>
+                                                        </div>
+                                                    </template>
                                                 </div>
                                             </div>
                                         </template>
@@ -1682,18 +2260,82 @@
                                             <div class="contents">
                                                 <div>
                                                     <label
-                                                        class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Current Dataset') }}</label>
+                                                        class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Current Dataset Question') }}</label>
                                                     <select x-model="depVar"
-                                                        class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 transition-all truncate">
+                                                        class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#2271b1] transition-all truncate">
                                                         <option value="">{{ __('Select Question...') }}</option>
                                                         @foreach($analysis as $item)
-                                                            @if($item['isChartable'])
+                                                            @php
+                                                                $itemType = strtolower($item['type'] ?? '');
+                                                                $isLikertMatrix = in_array($itemType, ['likert_matrix', 'likert_matrix_grid']) && !empty($item['likert_matrix_rows']);
+                                                                $isContinuousMetric = !empty($item['summary_stats'])
+                                                                    || in_array($itemType, ['number', 'rating', 'scale', 'slider', 'range', 'star_rating', 'nps', 'likert', 'likert_item'])
+                                                                    || (!empty($item['isLikertLike']) && !in_array($itemType, ['select_one', 'radio', 'select_many', 'checkbox', 'select', 'text', 'textarea', 'email', 'date', 'file']));
+                                                            @endphp
+                                                            @if($isLikertMatrix)
+                                                                <optgroup
+                                                                    label="Q{{ $loop->iteration }}: {{ \Illuminate\Support\Str::limit(\App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']), 90) }}">
+                                                                    @foreach($item['likert_matrix_rows'] as $subIdx => $subRow)
+                                                                        @php
+                                                                            $rawSub = $subRow['label'] ?? '';
+                                                                            $cleanSub = preg_replace('/^(\d+[\.\:\)\s]+|\([a-zA-Z0-9]+\)\s*|[a-zA-Z][\.\:\)\s]+)\s*/', '', $rawSub);
+                                                                            $cleanTheme = \App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']);
+                                                                        @endphp
+                                                                        <option value="{{ $item['id'] }}__{{ $subRow['value'] }}"
+                                                                            title="{{ $cleanSub }} ({{ $cleanTheme }})">
+                                                                            Q{{ $loop->parent->iteration }}.{{ $subIdx + 1 }}:
+                                                                            {{ \Illuminate\Support\Str::limit($cleanSub, 85) }}
+                                                                        </option>
+                                                                    @endforeach
+                                                                </optgroup>
+                                                            @elseif($isContinuousMetric && !empty($item['isChartable']))
                                                                 <option value="{{ $item['id'] }}" title="{{ $item['label'] }}">
+                                                                    Q{{ $loop->iteration }}:
                                                                     {{ \Illuminate\Support\Str::limit($item['label'], 85) }}
                                                                 </option>
                                                             @endif
                                                         @endforeach
                                                     </select>
+                                                    <template x-if="getQuestionInfo(depVar)">
+                                                        <div
+                                                            class="mt-2.5 p-3.5 bg-blue-50/60 rounded-2xl border border-blue-100/80 shadow-2xs text-xs space-y-1.5 animate-in fade-in duration-200">
+                                                            <div class="flex items-center justify-between gap-2">
+                                                                <div class="flex items-center gap-2">
+                                                                    <span
+                                                                        class="text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md bg-white text-[#2271b1] border border-blue-200/60 shadow-2xs"
+                                                                        x-text="getQuestionInfo(depVar).type === 'likert_item' ? '{{ __('Likert Sub-Item') }}' : getQuestionInfo(depVar).type"></span>
+                                                                </div>
+                                                                <template
+                                                                    x-if="getQuestionInfo(depVar).answered_count !== undefined && getQuestionInfo(depVar).answered_count !== null">
+                                                                    <span class="text-[11px] text-gray-500 font-bold"
+                                                                        x-text="'N = ' + getQuestionInfo(depVar).answered_count + ' responses'"></span>
+                                                                </template>
+                                                            </div>
+                                                            <template x-if="getQuestionInfo(depVar).parent_label">
+                                                                <div
+                                                                    class="text-[11px] text-gray-500 font-medium leading-relaxed">
+                                                                    <span
+                                                                        class="font-bold text-gray-700">{{ __('Context:') }}</span>
+                                                                    <span
+                                                                        x-text="getQuestionInfo(depVar).parent_label"></span>
+                                                                </div>
+                                                            </template>
+                                                            <div
+                                                                class="text-xs font-bold text-gray-900 leading-snug break-words">
+                                                                <template x-if="getQuestionInfo(depVar).sub_label">
+                                                                    <div>
+                                                                        <span
+                                                                            class="text-[#2271b1] font-extrabold">{{ __('Item Statement:') }}</span>
+                                                                        <span
+                                                                            x-text="getQuestionInfo(depVar).sub_label"></span>
+                                                                    </div>
+                                                                </template>
+                                                                <template x-if="!getQuestionInfo(depVar).sub_label">
+                                                                    <p x-text="getQuestionInfo(depVar).label"></p>
+                                                                </template>
+                                                            </div>
+                                                        </div>
+                                                    </template>
                                                 </div>
 
                                                 <!-- T-Test Cross Survey target -->
@@ -1703,7 +2345,7 @@
                                                             <label
                                                                 class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('External Dataset') }}</label>
                                                             <select x-model="targetSurveyId" @change="targetDepVar = ''"
-                                                                class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 transition-all truncate">
+                                                                class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#2271b1] transition-all truncate">
                                                                 <option value="">{{ __('Select Other Survey...') }}</option>
                                                                 <template x-for="s in userSurveys" :key="s.id">
                                                                     <option :value="s.id"
@@ -1716,41 +2358,117 @@
                                                             <label
                                                                 class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Target Comparison Question') }}</label>
                                                             <select x-model="targetDepVar"
-                                                                class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 transition-all truncate">
-                                                                <option value="">{{ __('Select Matching Question...') }}
-                                                                </option>
-                                                                <template x-for="q in getTargetQuestions(targetSurveyId)"
-                                                                    :key="q.id">
-                                                                    <option :value="q.id"
-                                                                        x-text="q.label.length > 85 ? q.label.substring(0, 85) + '...' : q.label"
-                                                                        :title="q.label"></option>
-                                                                </template>
+                                                                @change="targetDepVar = $el.value"
+                                                                class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#2271b1] transition-all truncate"
+                                                                x-html="getTargetQuestionsHtml(targetSurveyId, targetDepVar)">
                                                             </select>
+                                                            <template
+                                                                x-if="getTargetQuestionInfo(targetSurveyId, targetDepVar)">
+                                                                <div
+                                                                    class="mt-2.5 p-3.5 bg-blue-50/60 rounded-2xl border border-blue-100/80 shadow-2xs text-xs space-y-1.5 animate-in fade-in duration-200">
+                                                                    <div class="flex items-center justify-between gap-2">
+                                                                        <div class="flex items-center gap-2">
+                                                                            <span
+                                                                                class="text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md bg-white text-[#2271b1] border border-blue-200/60 shadow-2xs"
+                                                                                x-text="getTargetQuestionInfo(targetSurveyId, targetDepVar).type === 'likert_item' ? '{{ __('Likert Sub-Item') }}' : getTargetQuestionInfo(targetSurveyId, targetDepVar).type"></span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <template
+                                                                        x-if="getTargetQuestionInfo(targetSurveyId, targetDepVar).parentLabel">
+                                                                        <div
+                                                                            class="text-[11px] text-gray-500 font-medium leading-relaxed">
+                                                                            <span
+                                                                                class="font-bold text-gray-700">{{ __('Context:') }}</span>
+                                                                            <span
+                                                                                x-text="getTargetQuestionInfo(targetSurveyId, targetDepVar).parentLabel"></span>
+                                                                        </div>
+                                                                    </template>
+                                                                    <div
+                                                                        class="text-xs font-bold text-gray-900 leading-snug break-words">
+                                                                        <template
+                                                                            x-if="getTargetQuestionInfo(targetSurveyId, targetDepVar).subItemText">
+                                                                            <div>
+                                                                                <span
+                                                                                    class="text-[#2271b1] font-extrabold">{{ __('Item Statement:') }}</span>
+                                                                                <span
+                                                                                    x-text="getTargetQuestionInfo(targetSurveyId, targetDepVar).subItemText"></span>
+                                                                            </div>
+                                                                        </template>
+                                                                        <template
+                                                                            x-if="!getTargetQuestionInfo(targetSurveyId, targetDepVar).subItemText">
+                                                                            <p
+                                                                                x-text="getTargetQuestionInfo(targetSurveyId, targetDepVar).label">
+                                                                            </p>
+                                                                        </template>
+                                                                    </div>
+                                                                </div>
+                                                            </template>
                                                         </div>
                                                     </div>
                                                 </template>
 
-                                                <!-- ANOVA Cross Survey targets -->
+                                                <!-- ANOVA Multi-Survey Comparison Builder (3+ Surveys) -->
                                                 <template x-if="testMethod === 'anova'">
-                                                    <div>
-                                                        <label
-                                                            class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Select Comparison Surveys') }}</label>
+                                                    <div class="space-y-4">
+                                                        <div class="flex items-center justify-between">
+                                                            <label
+                                                                class="block text-xs font-bold text-gray-700 tracking-normal">{{ __('External Comparison Surveys') }}</label>
+                                                            <button type="button" @click="addAnovaTargetSurvey()"
+                                                                class="text-[11px] font-bold text-[#2271b1] hover:text-[#135e96] bg-blue-50 hover:bg-blue-100/80 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5">
+                                                                <i class="fa-solid fa-plus text-[10px]"></i>
+                                                                <span>{{ __('Add Comparison Survey') }}</span>
+                                                            </button>
+                                                        </div>
+
                                                         <div
-                                                            class="bg-gray-50 border border-gray-200 rounded-xl p-3 max-h-[160px] overflow-y-auto space-y-2">
-                                                            <template x-if="userSurveys.length === 0">
-                                                                <p class="text-xs text-gray-500 p-2">
-                                                                    {{ __('No other surveys found in your workspace.') }}
-                                                                </p>
-                                                            </template>
-                                                            <template x-for="s in userSurveys" :key="s.id">
-                                                                <label
-                                                                    class="flex items-center gap-2.5 text-xs font-semibold text-gray-700 hover:text-indigo-600 transition-colors cursor-pointer p-1"
-                                                                    :title="s.title">
-                                                                    <input type="checkbox" :value="s.id"
-                                                                        x-model="targetSurveyIds"
-                                                                        class="rounded text-indigo-600 focus:ring-indigo-500 border-gray-300">
-                                                                    <span class="truncate" x-text="s.title"></span>
-                                                                </label>
+                                                            class="space-y-3 max-h-[360px] overflow-y-auto custom-scrollbar p-1">
+                                                            <template x-for="(target, tIdx) in anovaTargetSurveys"
+                                                                :key="tIdx">
+                                                                <div
+                                                                    class="bg-gray-50/80 border border-gray-200/90 rounded-2xl p-4 space-y-3 relative group">
+                                                                    <div
+                                                                        class="flex items-center justify-between pb-2 border-b border-gray-200/60">
+                                                                        <span
+                                                                            class="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                                                                            <span
+                                                                                class="w-2 h-2 rounded-full bg-[#2271b1]"></span>
+                                                                            <span
+                                                                                x-text="'Comparison Survey ' + (tIdx + 1)"></span>
+                                                                        </span>
+                                                                        <template x-if="anovaTargetSurveys.length > 1">
+                                                                            <button type="button"
+                                                                                @click="removeAnovaTargetSurvey(tIdx)"
+                                                                                class="text-xs text-gray-400 hover:text-red-500 transition-colors p-1"
+                                                                                title="{{ __('Remove this survey') }}">
+                                                                                <i class="fa-regular fa-trash-can"></i>
+                                                                            </button>
+                                                                        </template>
+                                                                    </div>
+                                                                    <div class="space-y-3">
+                                                                        <div>
+                                                                            <select x-model="target.survey_id"
+                                                                                @change="target.dep = ''"
+                                                                                class="w-full bg-white border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-[#2271b1] transition-all truncate">
+                                                                                <option value="">
+                                                                                    {{ __('Select Survey...') }}
+                                                                                </option>
+                                                                                <template x-for="s in userSurveys"
+                                                                                    :key="s.id">
+                                                                                    <option :value="s.id"
+                                                                                        x-text="s.title.length > 70 ? s.title.substring(0, 70) + '...' : s.title"
+                                                                                        :title="s.title"></option>
+                                                                                </template>
+                                                                            </select>
+                                                                        </div>
+                                                                        <div x-show="target.survey_id">
+                                                                            <select x-model="target.dep"
+                                                                                @change="target.dep = $el.value"
+                                                                                class="w-full bg-white border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-[#2271b1] transition-all truncate"
+                                                                                x-html="getTargetQuestionsHtml(target.survey_id, target.dep)">
+                                                                            </select>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
                                                             </template>
                                                         </div>
                                                     </div>
@@ -1761,36 +2479,74 @@
                                         <!-- Subcase C: Upload Benchmark Dataset -->
                                         <template x-if="scope === 'upload'">
                                             <div
-                                                class="col-span-full grid grid-cols-1 md:grid-cols-2 gap-6 bg-indigo-50/30 p-5 rounded-2xl border border-indigo-100/60">
+                                                class="col-span-full grid grid-cols-1 md:grid-cols-2 gap-6 bg-blue-50/30 p-5 rounded-2xl border border-blue-100/60">
                                                 <div>
                                                     <label
-                                                        class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Current Dataset') }}</label>
+                                                        class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Current Dataset Question') }}</label>
                                                     <select x-model="depVar"
-                                                        class="w-full bg-white border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 transition-all truncate">
+                                                        class="w-full bg-white border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#2271b1] transition-all truncate">
                                                         <option value="">{{ __('Select Question...') }}</option>
                                                         @foreach($analysis as $item)
-                                                            @if($item['isChartable'])
+                                                            @php
+                                                                $itemType = strtolower($item['type'] ?? '');
+                                                                $isLikertMatrix = in_array($itemType, ['likert_matrix', 'likert_matrix_grid']) && !empty($item['likert_matrix_rows']);
+                                                                $isContinuousMetric = !empty($item['summary_stats'])
+                                                                    || in_array($itemType, ['number', 'rating', 'scale', 'slider', 'range', 'star_rating', 'nps', 'likert', 'likert_item'])
+                                                                    || (!empty($item['isLikertLike']) && !in_array($itemType, ['select_one', 'radio', 'select_many', 'checkbox', 'select', 'text', 'textarea', 'email', 'date', 'file']));
+                                                            @endphp
+                                                            @if($isLikertMatrix)
+                                                                <optgroup
+                                                                    label="Q{{ $loop->iteration }}: {{ \Illuminate\Support\Str::limit(\App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']), 90) }}">
+                                                                    @foreach($item['likert_matrix_rows'] as $subIdx => $subRow)
+                                                                        @php
+                                                                            $rawSub = $subRow['label'] ?? '';
+                                                                            $cleanSub = preg_replace('/^(\d+[\.\:\)\s]+|\([a-zA-Z0-9]+\)\s*|[a-zA-Z][\.\:\)\s]+)\s*/', '', $rawSub);
+                                                                            $cleanTheme = \App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']);
+                                                                        @endphp
+                                                                        <option value="{{ $item['id'] }}__{{ $subRow['value'] }}"
+                                                                            title="{{ $cleanSub }} ({{ $cleanTheme }})">
+                                                                            Q{{ $loop->parent->iteration }}.{{ $subIdx + 1 }}:
+                                                                            {{ \Illuminate\Support\Str::limit($cleanSub, 85) }}
+                                                                        </option>
+                                                                    @endforeach
+                                                                </optgroup>
+                                                            @elseif($isContinuousMetric && !empty($item['isChartable']))
                                                                 <option value="{{ $item['id'] }}" title="{{ $item['label'] }}">
+                                                                    Q{{ $loop->iteration }}:
                                                                     {{ \Illuminate\Support\Str::limit($item['label'], 85) }}
                                                                 </option>
                                                             @endif
                                                         @endforeach
                                                     </select>
+                                                    <template x-if="getQuestionInfo(depVar)">
+                                                        <div
+                                                            class="mt-2.5 p-3.5 bg-white rounded-2xl border border-blue-100 shadow-2xs text-xs space-y-1.5 animate-in fade-in duration-200">
+                                                            <div class="flex items-center justify-between gap-2">
+                                                                <div class="flex items-center gap-2">
+                                                                    <span
+                                                                        class="text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md bg-[#2271b1]/10 text-[#2271b1] border border-blue-200/60"
+                                                                        x-text="getQuestionInfo(depVar).type === 'likert_item' ? '{{ __('Likert Sub-Item') }}' : getQuestionInfo(depVar).type"></span>
+                                                                </div>
+                                                            </div>
+                                                            <p class="text-xs font-semibold text-gray-800 leading-snug break-words"
+                                                                x-text="getQuestionInfo(depVar).label"></p>
+                                                        </div>
+                                                    </template>
                                                 </div>
                                                 <div>
                                                     <label
                                                         class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('External Dataset Label') }}</label>
                                                     <input type="text" x-model="uploadedDataLabel"
-                                                        class="w-full bg-white border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 transition-all truncate">
+                                                        class="w-full bg-white border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#2271b1] transition-all truncate">
                                                 </div>
                                                 <div class="col-span-full">
                                                     <label
                                                         class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Upload CSV / Excel file or Paste Numbers') }}</label>
                                                     <div class="flex flex-col sm:flex-row gap-3 items-stretch">
                                                         <label
-                                                            class="flex-1 border-2 border-dashed border-indigo-200 hover:border-indigo-400 bg-white rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-colors group">
+                                                            class="flex-1 border-2 border-dashed border-blue-200 hover:border-blue-400 bg-white rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-colors group">
                                                             <i
-                                                                class="fa-solid fa-cloud-arrow-up text-indigo-500 group-hover:scale-110 text-xl mb-1.5 transition-transform"></i>
+                                                                class="fa-solid fa-cloud-arrow-up text-[#2271b1] group-hover:scale-110 text-xl mb-1.5 transition-transform"></i>
                                                             <span class="text-xs font-bold text-gray-700"
                                                                 x-text="uploadedFileName || '{{ __('Choose CSV or Excel file') }}'"></span>
                                                             <span
@@ -1802,7 +2558,7 @@
                                                             <textarea x-model="rawUploadedText" @input="parseUploadedText()"
                                                                 rows="3"
                                                                 placeholder="{{ __('Or paste comma or newline-separated numbers here: 4.5, 3.2, 5.0, ...') }}"
-                                                                class="w-full h-full bg-white border border-gray-200 text-xs rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 transition-all resize-none"></textarea>
+                                                                class="w-full h-full bg-white border border-gray-200 text-xs rounded-xl p-3 focus:ring-2 focus:ring-[#2271b1] transition-all resize-none"></textarea>
                                                         </div>
                                                     </div>
                                                     <div x-show="uploadedDataValues.length > 0"
@@ -1822,33 +2578,153 @@
                                     <div class="contents">
                                         <div>
                                             <label
-                                                class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Variable X (Numeric)') }}</label>
+                                                class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Variable X (Numeric / Metric)') }}</label>
                                             <select x-model="varX"
-                                                class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 transition-all truncate">
-                                                <option value="">{{ __('Select Question...') }}</option>
+                                                class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#2271b1] transition-all truncate">
+                                                <option value="">{{ __('Select Metric Question...') }}</option>
                                                 @foreach($analysis as $item)
-                                                    @if($item['isChartable'])
+                                                    @php
+                                                        $itemType = strtolower($item['type'] ?? '');
+                                                        $isLikertMatrix = in_array($itemType, ['likert_matrix', 'likert_matrix_grid']) && !empty($item['likert_matrix_rows']);
+                                                        $isContinuousMetric = !empty($item['summary_stats'])
+                                                            || in_array($itemType, ['number', 'rating', 'scale', 'slider', 'range', 'star_rating', 'nps', 'likert', 'likert_item'])
+                                                            || (!empty($item['isLikertLike']) && !in_array($itemType, ['select_one', 'radio', 'select_many', 'checkbox', 'select', 'text', 'textarea', 'email', 'date', 'file']));
+                                                    @endphp
+                                                    @if($isLikertMatrix)
+                                                        <optgroup
+                                                            label="Q{{ $loop->iteration }}: {{ \Illuminate\Support\Str::limit(\App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']), 90) }}">
+                                                            @foreach($item['likert_matrix_rows'] as $subIdx => $subRow)
+                                                                @php
+                                                                    $rawSub = $subRow['label'] ?? '';
+                                                                    $cleanSub = preg_replace('/^(\d+[\.\:\)\s]+|\([a-zA-Z0-9]+\)\s*|[a-zA-Z][\.\:\)\s]+)\s*/', '', $rawSub);
+                                                                    $cleanTheme = \App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']);
+                                                                @endphp
+                                                                <option value="{{ $item['id'] }}__{{ $subRow['value'] }}"
+                                                                    title="{{ $cleanSub }} ({{ $cleanTheme }})">
+                                                                    Q{{ $loop->parent->iteration }}.{{ $subIdx + 1 }}:
+                                                                    {{ \Illuminate\Support\Str::limit($cleanSub, 85) }}
+                                                                </option>
+                                                            @endforeach
+                                                        </optgroup>
+                                                    @elseif($isContinuousMetric && !empty($item['isChartable']))
                                                         <option value="{{ $item['id'] }}" title="{{ $item['label'] }}">
+                                                            Q{{ $loop->iteration }}:
                                                             {{ \Illuminate\Support\Str::limit($item['label'], 85) }}
                                                         </option>
                                                     @endif
                                                 @endforeach
                                             </select>
+                                            <template x-if="getQuestionInfo(varX)">
+                                                <div
+                                                    class="mt-2.5 p-3.5 bg-blue-50/60 rounded-2xl border border-blue-100/80 shadow-2xs text-xs space-y-1.5 animate-in fade-in duration-200">
+                                                    <div class="flex items-center justify-between gap-2">
+                                                        <div class="flex items-center gap-2">
+                                                            <span
+                                                                class="text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md bg-white text-[#2271b1] border border-blue-200/60 shadow-2xs"
+                                                                x-text="getQuestionInfo(varX).type === 'likert_item' ? '{{ __('Likert Sub-Item') }}' : getQuestionInfo(varX).type"></span>
+                                                        </div>
+                                                        <template
+                                                            x-if="getQuestionInfo(varX).answered_count !== undefined && getQuestionInfo(varX).answered_count !== null">
+                                                            <span class="text-[11px] text-gray-500 font-bold"
+                                                                x-text="'N = ' + getQuestionInfo(varX).answered_count + ' responses'"></span>
+                                                        </template>
+                                                    </div>
+                                                    <template x-if="getQuestionInfo(varX).parent_label">
+                                                        <div class="text-[11px] text-gray-500 font-medium leading-relaxed">
+                                                            <span
+                                                                class="font-bold text-gray-700">{{ __('Context:') }}</span>
+                                                            <span x-text="getQuestionInfo(varX).parent_label"></span>
+                                                        </div>
+                                                    </template>
+                                                    <div class="text-xs font-bold text-gray-900 leading-snug break-words">
+                                                        <template x-if="getQuestionInfo(varX).sub_label">
+                                                            <div>
+                                                                <span
+                                                                    class="text-[#2271b1] font-extrabold">{{ __('Item Statement:') }}</span>
+                                                                <span x-text="getQuestionInfo(varX).sub_label"></span>
+                                                            </div>
+                                                        </template>
+                                                        <template x-if="!getQuestionInfo(varX).sub_label">
+                                                            <p x-text="getQuestionInfo(varX).label"></p>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            </template>
                                         </div>
                                         <div>
                                             <label
-                                                class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Variable Y (Numeric)') }}</label>
+                                                class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Variable Y (Numeric / Metric)') }}</label>
                                             <select x-model="varY"
-                                                class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 transition-all truncate">
-                                                <option value="">{{ __('Select Question...') }}</option>
+                                                class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#2271b1] transition-all truncate">
+                                                <option value="">{{ __('Select Metric Question...') }}</option>
                                                 @foreach($analysis as $item)
-                                                    @if($item['isChartable'])
+                                                    @php
+                                                        $itemType = strtolower($item['type'] ?? '');
+                                                        $isLikertMatrix = in_array($itemType, ['likert_matrix', 'likert_matrix_grid']) && !empty($item['likert_matrix_rows']);
+                                                        $isContinuousMetric = !empty($item['summary_stats'])
+                                                            || in_array($itemType, ['number', 'rating', 'scale', 'slider', 'range', 'star_rating', 'nps', 'likert', 'likert_item'])
+                                                            || (!empty($item['isLikertLike']) && !in_array($itemType, ['select_one', 'radio', 'select_many', 'checkbox', 'select', 'text', 'textarea', 'email', 'date', 'file']));
+                                                    @endphp
+                                                    @if($isLikertMatrix)
+                                                        <optgroup
+                                                            label="Q{{ $loop->iteration }}: {{ \Illuminate\Support\Str::limit(\App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']), 90) }}">
+                                                            @foreach($item['likert_matrix_rows'] as $subIdx => $subRow)
+                                                                @php
+                                                                    $rawSub = $subRow['label'] ?? '';
+                                                                    $cleanSub = preg_replace('/^(\d+[\.\:\)\s]+|\([a-zA-Z0-9]+\)\s*|[a-zA-Z][\.\:\)\s]+)\s*/', '', $rawSub);
+                                                                    $cleanTheme = \App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']);
+                                                                @endphp
+                                                                <option value="{{ $item['id'] }}__{{ $subRow['value'] }}"
+                                                                    title="{{ $cleanSub }} ({{ $cleanTheme }})">
+                                                                    Q{{ $loop->parent->iteration }}.{{ $subIdx + 1 }}:
+                                                                    {{ \Illuminate\Support\Str::limit($cleanSub, 85) }}
+                                                                </option>
+                                                            @endforeach
+                                                        </optgroup>
+                                                    @elseif($isContinuousMetric && !empty($item['isChartable']))
                                                         <option value="{{ $item['id'] }}" title="{{ $item['label'] }}">
+                                                            Q{{ $loop->iteration }}:
                                                             {{ \Illuminate\Support\Str::limit($item['label'], 85) }}
                                                         </option>
                                                     @endif
                                                 @endforeach
                                             </select>
+                                            <template x-if="getQuestionInfo(varY)">
+                                                <div
+                                                    class="mt-2.5 p-3.5 bg-blue-50/60 rounded-2xl border border-blue-100/80 shadow-2xs text-xs space-y-1.5 animate-in fade-in duration-200">
+                                                    <div class="flex items-center justify-between gap-2">
+                                                        <div class="flex items-center gap-2">
+                                                            <span
+                                                                class="text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md bg-white text-[#2271b1] border border-blue-200/60 shadow-2xs"
+                                                                x-text="getQuestionInfo(varY).type === 'likert_item' ? '{{ __('Likert Sub-Item') }}' : getQuestionInfo(varY).type"></span>
+                                                        </div>
+                                                        <template
+                                                            x-if="getQuestionInfo(varY).answered_count !== undefined && getQuestionInfo(varY).answered_count !== null">
+                                                            <span class="text-[11px] text-gray-500 font-bold"
+                                                                x-text="'N = ' + getQuestionInfo(varY).answered_count + ' responses'"></span>
+                                                        </template>
+                                                    </div>
+                                                    <template x-if="getQuestionInfo(varY).parent_label">
+                                                        <div class="text-[11px] text-gray-500 font-medium leading-relaxed">
+                                                            <span
+                                                                class="font-bold text-gray-700">{{ __('Context:') }}</span>
+                                                            <span x-text="getQuestionInfo(varY).parent_label"></span>
+                                                        </div>
+                                                    </template>
+                                                    <div class="text-xs font-bold text-gray-900 leading-snug break-words">
+                                                        <template x-if="getQuestionInfo(varY).sub_label">
+                                                            <div>
+                                                                <span
+                                                                    class="text-[#2271b1] font-extrabold">{{ __('Item Statement:') }}</span>
+                                                                <span x-text="getQuestionInfo(varY).sub_label"></span>
+                                                            </div>
+                                                        </template>
+                                                        <template x-if="!getQuestionInfo(varY).sub_label">
+                                                            <p x-text="getQuestionInfo(varY).label"></p>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            </template>
                                         </div>
                                     </div>
                                 </template>
@@ -1858,33 +2734,153 @@
                                     <div class="contents">
                                         <div>
                                             <label
-                                                class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Dependent Variable Y (Numeric)') }}</label>
+                                                class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Dependent Variable Y (Numeric / Metric)') }}</label>
                                             <select x-model="depVar"
-                                                class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 transition-all truncate">
-                                                <option value="">{{ __('Select Question...') }}</option>
+                                                class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#2271b1] transition-all truncate">
+                                                <option value="">{{ __('Select Metric Question...') }}</option>
                                                 @foreach($analysis as $item)
-                                                    @if($item['isChartable'])
+                                                    @php
+                                                        $itemType = strtolower($item['type'] ?? '');
+                                                        $isLikertMatrix = in_array($itemType, ['likert_matrix', 'likert_matrix_grid']) && !empty($item['likert_matrix_rows']);
+                                                        $isContinuousMetric = !empty($item['summary_stats'])
+                                                            || in_array($itemType, ['number', 'rating', 'scale', 'slider', 'range', 'star_rating', 'nps', 'likert', 'likert_item'])
+                                                            || (!empty($item['isLikertLike']) && !in_array($itemType, ['select_one', 'radio', 'select_many', 'checkbox', 'select', 'text', 'textarea', 'email', 'date', 'file']));
+                                                    @endphp
+                                                    @if($isLikertMatrix)
+                                                        <optgroup
+                                                            label="Q{{ $loop->iteration }}: {{ \Illuminate\Support\Str::limit(\App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']), 90) }}">
+                                                            @foreach($item['likert_matrix_rows'] as $subIdx => $subRow)
+                                                                @php
+                                                                    $rawSub = $subRow['label'] ?? '';
+                                                                    $cleanSub = preg_replace('/^(\d+[\.\:\)\s]+|\([a-zA-Z0-9]+\)\s*|[a-zA-Z][\.\:\)\s]+)\s*/', '', $rawSub);
+                                                                    $cleanTheme = \App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']);
+                                                                @endphp
+                                                                <option value="{{ $item['id'] }}__{{ $subRow['value'] }}"
+                                                                    title="{{ $cleanSub }} ({{ $cleanTheme }})">
+                                                                    Q{{ $loop->parent->iteration }}.{{ $subIdx + 1 }}:
+                                                                    {{ \Illuminate\Support\Str::limit($cleanSub, 85) }}
+                                                                </option>
+                                                            @endforeach
+                                                        </optgroup>
+                                                    @elseif($isContinuousMetric && !empty($item['isChartable']))
                                                         <option value="{{ $item['id'] }}" title="{{ $item['label'] }}">
+                                                            Q{{ $loop->iteration }}:
                                                             {{ \Illuminate\Support\Str::limit($item['label'], 85) }}
                                                         </option>
                                                     @endif
                                                 @endforeach
                                             </select>
+                                            <template x-if="getQuestionInfo(depVar)">
+                                                <div
+                                                    class="mt-2.5 p-3.5 bg-blue-50/60 rounded-2xl border border-blue-100/80 shadow-2xs text-xs space-y-1.5 animate-in fade-in duration-200">
+                                                    <div class="flex items-center justify-between gap-2">
+                                                        <div class="flex items-center gap-2">
+                                                            <span
+                                                                class="text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md bg-white text-[#2271b1] border border-blue-200/60 shadow-2xs"
+                                                                x-text="getQuestionInfo(depVar).type === 'likert_item' ? '{{ __('Likert Sub-Item') }}' : getQuestionInfo(depVar).type"></span>
+                                                        </div>
+                                                        <template
+                                                            x-if="getQuestionInfo(depVar).answered_count !== undefined && getQuestionInfo(depVar).answered_count !== null">
+                                                            <span class="text-[11px] text-gray-500 font-bold"
+                                                                x-text="'N = ' + getQuestionInfo(depVar).answered_count + ' responses'"></span>
+                                                        </template>
+                                                    </div>
+                                                    <template x-if="getQuestionInfo(depVar).parent_label">
+                                                        <div class="text-[11px] text-gray-500 font-medium leading-relaxed">
+                                                            <span
+                                                                class="font-bold text-gray-700">{{ __('Context:') }}</span>
+                                                            <span x-text="getQuestionInfo(depVar).parent_label"></span>
+                                                        </div>
+                                                    </template>
+                                                    <div class="text-xs font-bold text-gray-900 leading-snug break-words">
+                                                        <template x-if="getQuestionInfo(depVar).sub_label">
+                                                            <div>
+                                                                <span
+                                                                    class="text-[#2271b1] font-extrabold">{{ __('Item Statement:') }}</span>
+                                                                <span x-text="getQuestionInfo(depVar).sub_label"></span>
+                                                            </div>
+                                                        </template>
+                                                        <template x-if="!getQuestionInfo(depVar).sub_label">
+                                                            <p x-text="getQuestionInfo(depVar).label"></p>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            </template>
                                         </div>
                                         <div>
                                             <label
-                                                class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Independent Variable X (Numeric)') }}</label>
+                                                class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Independent Variable X (Numeric / Metric)') }}</label>
                                             <select x-model="groupVar"
-                                                class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 transition-all truncate">
-                                                <option value="">{{ __('Select Question...') }}</option>
+                                                class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#2271b1] transition-all truncate">
+                                                <option value="">{{ __('Select Metric Question...') }}</option>
                                                 @foreach($analysis as $item)
-                                                    @if($item['isChartable'])
+                                                    @php
+                                                        $itemType = strtolower($item['type'] ?? '');
+                                                        $isLikertMatrix = in_array($itemType, ['likert_matrix', 'likert_matrix_grid']) && !empty($item['likert_matrix_rows']);
+                                                        $isContinuousMetric = !empty($item['summary_stats'])
+                                                            || in_array($itemType, ['number', 'rating', 'scale', 'slider', 'range', 'star_rating', 'nps', 'likert', 'likert_item'])
+                                                            || (!empty($item['isLikertLike']) && !in_array($itemType, ['select_one', 'radio', 'select_many', 'checkbox', 'select', 'text', 'textarea', 'email', 'date', 'file']));
+                                                    @endphp
+                                                    @if($isLikertMatrix)
+                                                        <optgroup
+                                                            label="Q{{ $loop->iteration }}: {{ \Illuminate\Support\Str::limit(\App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']), 90) }}">
+                                                            @foreach($item['likert_matrix_rows'] as $subIdx => $subRow)
+                                                                @php
+                                                                    $rawSub = $subRow['label'] ?? '';
+                                                                    $cleanSub = preg_replace('/^(\d+[\.\:\)\s]+|\([a-zA-Z0-9]+\)\s*|[a-zA-Z][\.\:\)\s]+)\s*/', '', $rawSub);
+                                                                    $cleanTheme = \App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']);
+                                                                @endphp
+                                                                <option value="{{ $item['id'] }}__{{ $subRow['value'] }}"
+                                                                    title="{{ $cleanSub }} ({{ $cleanTheme }})">
+                                                                    Q{{ $loop->parent->iteration }}.{{ $subIdx + 1 }}:
+                                                                    {{ \Illuminate\Support\Str::limit($cleanSub, 85) }}
+                                                                </option>
+                                                            @endforeach
+                                                        </optgroup>
+                                                    @elseif($isContinuousMetric && !empty($item['isChartable']))
                                                         <option value="{{ $item['id'] }}" title="{{ $item['label'] }}">
+                                                            Q{{ $loop->iteration }}:
                                                             {{ \Illuminate\Support\Str::limit($item['label'], 85) }}
                                                         </option>
                                                     @endif
                                                 @endforeach
                                             </select>
+                                            <template x-if="getQuestionInfo(groupVar)">
+                                                <div
+                                                    class="mt-2.5 p-3.5 bg-blue-50/60 rounded-2xl border border-blue-100/80 shadow-2xs text-xs space-y-1.5 animate-in fade-in duration-200">
+                                                    <div class="flex items-center justify-between gap-2">
+                                                        <div class="flex items-center gap-2">
+                                                            <span
+                                                                class="text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md bg-white text-[#2271b1] border border-blue-200/60 shadow-2xs"
+                                                                x-text="getQuestionInfo(groupVar).type === 'likert_item' ? '{{ __('Likert Sub-Item') }}' : getQuestionInfo(groupVar).type"></span>
+                                                        </div>
+                                                        <template
+                                                            x-if="getQuestionInfo(groupVar).answered_count !== undefined && getQuestionInfo(groupVar).answered_count !== null">
+                                                            <span class="text-[11px] text-gray-500 font-bold"
+                                                                x-text="'N = ' + getQuestionInfo(groupVar).answered_count + ' responses'"></span>
+                                                        </template>
+                                                    </div>
+                                                    <template x-if="getQuestionInfo(groupVar).parent_label">
+                                                        <div class="text-[11px] text-gray-500 font-medium leading-relaxed">
+                                                            <span
+                                                                class="font-bold text-gray-700">{{ __('Context:') }}</span>
+                                                            <span x-text="getQuestionInfo(groupVar).parent_label"></span>
+                                                        </div>
+                                                    </template>
+                                                    <div class="text-xs font-bold text-gray-900 leading-snug break-words">
+                                                        <template x-if="getQuestionInfo(groupVar).sub_label">
+                                                            <div>
+                                                                <span
+                                                                    class="text-[#2271b1] font-extrabold">{{ __('Item Statement:') }}</span>
+                                                                <span x-text="getQuestionInfo(groupVar).sub_label"></span>
+                                                            </div>
+                                                        </template>
+                                                        <template x-if="!getQuestionInfo(groupVar).sub_label">
+                                                            <p x-text="getQuestionInfo(groupVar).label"></p>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            </template>
                                         </div>
                                     </div>
                                 </template>
@@ -1894,33 +2890,139 @@
                                     <div class="contents">
                                         <div>
                                             <label
-                                                class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Dependent Variable Y (Numeric)') }}</label>
+                                                class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Dependent Variable Y (Numeric / Metric)') }}</label>
                                             <select x-model="depVar"
-                                                class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 transition-all truncate">
-                                                <option value="">{{ __('Select Question...') }}</option>
+                                                class="w-full bg-gray-50 border border-gray-200 text-xs sm:text-sm font-medium rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#2271b1] transition-all truncate">
+                                                <option value="">{{ __('Select Metric Question...') }}</option>
                                                 @foreach($analysis as $item)
-                                                    @if($item['isChartable'])
+                                                    @php
+                                                        $itemType = strtolower($item['type'] ?? '');
+                                                        $isLikertMatrix = in_array($itemType, ['likert_matrix', 'likert_matrix_grid']) && !empty($item['likert_matrix_rows']);
+                                                        $isContinuousMetric = !empty($item['summary_stats'])
+                                                            || in_array($itemType, ['number', 'rating', 'scale', 'slider', 'range', 'star_rating', 'nps', 'likert', 'likert_item'])
+                                                            || (!empty($item['isLikertLike']) && !in_array($itemType, ['select_one', 'radio', 'select_many', 'checkbox', 'select', 'text', 'textarea', 'email', 'date', 'file']));
+                                                    @endphp
+                                                    @if($isLikertMatrix)
+                                                        <optgroup
+                                                            label="Q{{ $loop->iteration }}: {{ \Illuminate\Support\Str::limit(\App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']), 90) }}">
+                                                            @foreach($item['likert_matrix_rows'] as $subIdx => $subRow)
+                                                                @php
+                                                                    $rawSub = $subRow['label'] ?? '';
+                                                                    $cleanSub = preg_replace('/^(\d+[\.\:\)\s]+|\([a-zA-Z0-9]+\)\s*|[a-zA-Z][\.\:\)\s]+)\s*/', '', $rawSub);
+                                                                    $cleanTheme = \App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']);
+                                                                @endphp
+                                                                <option value="{{ $item['id'] }}__{{ $subRow['value'] }}"
+                                                                    title="{{ $cleanSub }} ({{ $cleanTheme }})">
+                                                                    Q{{ $loop->parent->iteration }}.{{ $subIdx + 1 }}:
+                                                                    {{ \Illuminate\Support\Str::limit($cleanSub, 85) }}
+                                                                </option>
+                                                            @endforeach
+                                                        </optgroup>
+                                                    @elseif($isContinuousMetric && !empty($item['isChartable']))
                                                         <option value="{{ $item['id'] }}" title="{{ $item['label'] }}">
+                                                            Q{{ $loop->iteration }}:
                                                             {{ \Illuminate\Support\Str::limit($item['label'], 85) }}
                                                         </option>
                                                     @endif
                                                 @endforeach
                                             </select>
+                                            <template x-if="getQuestionInfo(depVar)">
+                                                <div
+                                                    class="mt-2.5 p-3.5 bg-blue-50/60 rounded-2xl border border-blue-100/80 shadow-2xs text-xs space-y-1.5 animate-in fade-in duration-200">
+                                                    <div class="flex items-center justify-between gap-2">
+                                                        <div class="flex items-center gap-2">
+                                                            <span
+                                                                class="text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md bg-white text-[#2271b1] border border-blue-200/60 shadow-2xs"
+                                                                x-text="getQuestionInfo(depVar).type === 'likert_item' ? '{{ __('Likert Sub-Item') }}' : getQuestionInfo(depVar).type"></span>
+                                                        </div>
+                                                        <template
+                                                            x-if="getQuestionInfo(depVar).answered_count !== undefined && getQuestionInfo(depVar).answered_count !== null">
+                                                            <span class="text-[11px] text-gray-500 font-bold"
+                                                                x-text="'N = ' + getQuestionInfo(depVar).answered_count + ' responses'"></span>
+                                                        </template>
+                                                    </div>
+                                                    <template x-if="getQuestionInfo(depVar).parent_label">
+                                                        <div class="text-[11px] text-gray-500 font-medium leading-relaxed">
+                                                            <span
+                                                                class="font-bold text-gray-700">{{ __('Context:') }}</span>
+                                                            <span x-text="getQuestionInfo(depVar).parent_label"></span>
+                                                        </div>
+                                                    </template>
+                                                    <div class="text-xs font-bold text-gray-900 leading-snug break-words">
+                                                        <template x-if="getQuestionInfo(depVar).sub_label">
+                                                            <div>
+                                                                <span
+                                                                    class="text-[#2271b1] font-extrabold">{{ __('Item Statement:') }}</span>
+                                                                <span x-text="getQuestionInfo(depVar).sub_label"></span>
+                                                            </div>
+                                                        </template>
+                                                        <template x-if="!getQuestionInfo(depVar).sub_label">
+                                                            <p x-text="getQuestionInfo(depVar).label"></p>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            </template>
                                         </div>
                                         <div>
-                                            <label
-                                                class="block text-xs font-bold text-gray-700 tracking-normal mb-2">{{ __('Independent Variables X (Select Multiple)') }}</label>
+                                            <div class="flex items-center justify-between mb-2">
+                                                <label
+                                                    class="block text-xs font-bold text-gray-700 tracking-normal">{{ __('Independent Variables X (Select Multiple Numeric / Metric)') }}</label>
+                                                <template x-if="indVars.length > 0">
+                                                    <span
+                                                        class="text-[10px] font-bold text-[#2271b1] bg-blue-50 px-2 py-0.5 rounded"
+                                                        x-text="indVars.length + ' {{ __('selected') }}'"></span>
+                                                </template>
+                                            </div>
                                             <div
                                                 class="bg-gray-50 border border-gray-200 rounded-xl p-4 max-h-[160px] overflow-y-auto space-y-2.5">
                                                 @foreach($analysis as $item)
-                                                    @if($item['isChartable'])
+                                                    @php
+                                                        $itemType = strtolower($item['type'] ?? '');
+                                                        $isLikertMatrix = in_array($itemType, ['likert_matrix', 'likert_matrix_grid']) && !empty($item['likert_matrix_rows']);
+                                                        $isContinuousMetric = !empty($item['summary_stats'])
+                                                            || in_array($itemType, ['number', 'rating', 'scale', 'slider', 'range', 'star_rating', 'nps', 'likert', 'likert_item'])
+                                                            || (!empty($item['isLikertLike']) && !in_array($itemType, ['select_one', 'radio', 'select_many', 'checkbox', 'select', 'text', 'textarea', 'email', 'date', 'file']));
+                                                    @endphp
+                                                    @if($isLikertMatrix)
+                                                        @php
+                                                            $cleanTheme = \App\Http\Controllers\SurveyController::formatShortCategoryTheme($item['label']);
+                                                        @endphp
+                                                        <div
+                                                            class="text-[11px] font-black text-gray-500 uppercase tracking-wider pt-1 border-t border-gray-200/60 first:border-t-0 first:pt-0">
+                                                            Q{{ $loop->iteration }}:
+                                                            {{ \Illuminate\Support\Str::limit($cleanTheme, 75) }}
+                                                        </div>
+                                                        @foreach($item['likert_matrix_rows'] as $subIdx => $subRow)
+                                                            @php
+                                                                $rawSub = $subRow['label'] ?? '';
+                                                                $cleanSub = preg_replace('/^(\d+[\.\:\)\s]+|\([a-zA-Z0-9]+\)\s*|[a-zA-Z][\.\:\)\s]+)\s*/', '', $rawSub);
+                                                            @endphp
+                                                            <label
+                                                                class="flex items-center gap-2.5 text-xs font-semibold text-gray-700 hover:text-[#2271b1] transition-colors cursor-pointer pl-2"
+                                                                x-show="depVar !== '{{ $item['id'] }}__{{ $subRow['value'] }}'"
+                                                                :class="depVar === '{{ $item['id'] }}__{{ $subRow['value'] }}' ? 'opacity-30 pointer-events-none' : ''"
+                                                                title="{{ $cleanSub }} ({{ $cleanTheme }})">
+                                                                <input type="checkbox"
+                                                                    :value="'{{ $item['id'] }}__{{ $subRow['value'] }}'"
+                                                                    x-model="indVars"
+                                                                    :disabled="depVar === '{{ $item['id'] }}__{{ $subRow['value'] }}'"
+                                                                    class="rounded text-[#2271b1] focus:ring-[#2271b1] border-gray-300">
+                                                                <span
+                                                                    class="truncate">Q{{ $loop->parent->iteration }}.{{ $subIdx + 1 }}:
+                                                                    {{ \Illuminate\Support\Str::limit($cleanSub, 85) }}</span>
+                                                            </label>
+                                                        @endforeach
+                                                    @elseif($isContinuousMetric && !empty($item['isChartable']))
                                                         <label
-                                                            class="flex items-center gap-2.5 text-xs font-semibold text-gray-700 hover:text-indigo-600 transition-colors cursor-pointer"
+                                                            class="flex items-center gap-2.5 text-xs font-semibold text-gray-700 hover:text-[#2271b1] transition-colors cursor-pointer"
+                                                            x-show="depVar !== '{{ $item['id'] }}'"
+                                                            :class="depVar === '{{ $item['id'] }}' ? 'opacity-30 pointer-events-none' : ''"
                                                             title="{{ $item['label'] }}">
                                                             <input type="checkbox" :value="'{{ $item['id'] }}'" x-model="indVars"
-                                                                class="rounded text-indigo-600 focus:ring-indigo-500 border-gray-300">
-                                                            <span
-                                                                class="truncate">{{ \Illuminate\Support\Str::limit($item['label'], 85) }}</span>
+                                                                :disabled="depVar === '{{ $item['id'] }}'"
+                                                                class="rounded text-[#2271b1] focus:ring-[#2271b1] border-gray-300">
+                                                            <span class="truncate">Q{{ $loop->iteration }}:
+                                                                {{ \Illuminate\Support\Str::limit($item['label'], 85) }}</span>
                                                         </label>
                                                     @endif
                                                 @endforeach
@@ -1930,38 +3032,127 @@
                                 </template>
                             </div>
 
-                            <div class="flex justify-end border-t border-gray-50 mt-6 pt-6">
-                                <button @click="runAnalysis()" :disabled="loading"
-                                    class="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px]  tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            <div
+                                class="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-50 mt-6 pt-6">
+                                <div>
+                                    <template x-if="testMethod === 'cronbach'">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5"
+                                                :class="cronbachItems.length >= 2 ? 'text-emerald-700 bg-emerald-50 border border-emerald-200/80 shadow-2xs' : 'text-amber-800 bg-amber-50 border border-amber-200/80 shadow-2xs'">
+                                                <i
+                                                    :class="cronbachItems.length >= 2 ? 'fa-solid fa-circle-check text-emerald-600' : 'fa-solid fa-circle-info text-amber-600'"></i>
+                                                <span
+                                                    x-text="cronbachItems.length >= 2 ? cronbachItems.length + ' {{ __('scale items selected (Ready to evaluate)') }}' : '{{ __('Select at least 2 items to run reliability (Current: ') }}' + cronbachItems.length + '/2)'"></span>
+                                            </span>
+                                        </div>
+                                    </template>
+                                </div>
+                                <button @click="runAnalysis()" :disabled="loading || isRunDisabled()"
+                                    class="w-full sm:w-auto px-8 py-3 bg-[#2271b1] text-white rounded-2xl font-black text-[10px] tracking-widest hover:bg-[#135e96] transition-all shadow-lg shadow-blue-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                                     <i class="fa-solid fa-calculator" :class="{'fa-spin': loading}"></i> <span
                                         x-text="loading ? '{{ __('Calculating...') }}' : '{{ __('Run Analysis') }}'"></span>
                                 </button>
                             </div>
                         </div>
 
+                        <!-- Insufficient Data / Analysis Error Banner -->
+                        <template x-if="analysisError">
+                            <div
+                                class="p-5 bg-amber-50/90 border border-amber-200 rounded-3xl flex items-start gap-3.5 shadow-xs animate-in fade-in duration-300">
+                                <div
+                                    class="w-9 h-9 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                                    <i class="fa-solid fa-triangle-exclamation text-base"></i>
+                                </div>
+                                <div class="space-y-1">
+                                    <h5 class="text-xs font-black text-amber-900 uppercase tracking-wider">
+                                        {{ __('Cannot Compute Analysis') }}
+                                    </h5>
+                                    <p class="text-xs font-medium text-amber-800 leading-relaxed" x-text="analysisError">
+                                    </p>
+                                </div>
+                            </div>
+                        </template>
+
                         <!-- 1. Pure Crosstabulation Results ( -->
                         <template x-if="testMethod === 'crosstab' && matrixData">
                             <div class="space-y-8 animate-in fade-in duration-500">
                                 <div
-                                    class="bg-white rounded-3xl p-6 sm:p-8 md:p-10 border border-gray-100 shadow-sm space-y-6">
+                                    class="bg-white rounded-3xl p-4 sm:p-6 md:p-8 border border-gray-100 shadow-sm space-y-6 overflow-hidden">
                                     <div class="border-b border-gray-100 pb-4 flex justify-between items-center">
                                         <div>
                                             <h4 class="text-lg font-black text-gray-900">
                                                 {{ __('Cross-Tabulation Contingency Table') }}
                                             </h4>
                                             <p class="text-xs text-gray-500 mt-1"
-                                                x-text="'Joint frequency distribution of ' + (matrixData.rowLabel || 'Row') + ' vs ' + (matrixData.colLabel || 'Column')">
+                                                x-text="'Joint frequency distribution of ' + formatShortVarLabel(matrixData.rowLabel, 40) + ' vs ' + formatShortVarLabel(matrixData.colLabel, 40)"
+                                                :title="(matrixData.rowLabel || 'Row') + ' vs ' + (matrixData.colLabel || 'Column')">
                                             </p>
                                         </div>
-
                                     </div>
+
+                                    <!-- SPSS Case Processing Summary -->
+                                    <template x-if="matrixData && matrixData.case_summary">
+                                        <div class="border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
+                                            <div
+                                                class="bg-gray-50/90 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
+                                                <span
+                                                    class="text-xs font-bold text-gray-700 uppercase tracking-wider">{{ __('Case Processing Summary') }}</span>
+                                                <span class="text-[11px] text-gray-500 font-medium"
+                                                    x-text="'Total Sample N = ' + matrixData.case_summary.total_n"></span>
+                                            </div>
+                                            <div class="overflow-x-auto">
+                                                <table class="w-full text-left text-xs text-gray-600">
+                                                    <thead
+                                                        class="bg-gray-50/50 text-[11px] font-bold text-gray-500 uppercase border-b border-gray-100">
+                                                        <tr>
+                                                            <th class="py-2.5 px-4">{{ __('Variables Analyzed') }}</th>
+                                                            <th class="py-2.5 px-4 text-center">{{ __('Valid N') }}</th>
+                                                            <th class="py-2.5 px-4 text-center">{{ __('Valid %') }}</th>
+                                                            <th class="py-2.5 px-4 text-center">{{ __('Excluded N') }}</th>
+                                                            <th class="py-2.5 px-4 text-center">{{ __('Excluded %') }}</th>
+                                                            <th class="py-2.5 px-4 text-center">{{ __('Total N') }}</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody class="divide-y divide-gray-100">
+                                                        <tr>
+                                                            <td class="py-2.5 px-4 font-semibold text-gray-800"
+                                                                :title="(matrixData.rowLabel || 'Row') + ' * ' + (matrixData.colLabel || 'Column')">
+                                                                <span
+                                                                    x-text="formatShortVarLabel(matrixData.rowLabel, 40) + ' * ' + formatShortVarLabel(matrixData.colLabel, 40)"></span>
+                                                            </td>
+                                                            <td class="py-2.5 px-4 text-center font-bold text-indigo-700"
+                                                                x-text="matrixData.case_summary.valid_n"></td>
+                                                            <td class="py-2.5 px-4 text-center font-semibold text-indigo-700"
+                                                                x-text="Number(matrixData.case_summary.valid_pct).toFixed(1) + '%'">
+                                                            </td>
+                                                            <td class="py-2.5 px-4 text-center font-medium text-amber-600"
+                                                                x-text="matrixData.case_summary.missing_n"></td>
+                                                            <td class="py-2.5 px-4 text-center font-medium text-amber-600"
+                                                                x-text="Number(matrixData.case_summary.missing_pct).toFixed(1) + '%'">
+                                                            </td>
+                                                            <td class="py-2.5 px-4 text-center font-bold text-gray-900"
+                                                                x-text="matrixData.case_summary.total_n"></td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </template>
 
                                     <div class="overflow-x-auto">
                                         <table class="w-full text-left border-collapse min-w-[600px]">
                                             <thead>
                                                 <tr>
-                                                    <th class="p-4 border-b border-r border-gray-200 bg-gray-50 w-1/4 text-xs font-medium text-gray-700  tracking-widest"
-                                                        x-text="matrixData.rowLabel + ' \\ ' + matrixData.colLabel"></th>
+                                                    <th class="p-4 border-b border-r border-gray-200 bg-gray-50 w-1/4 text-xs font-semibold text-gray-700"
+                                                        :title="(matrixData.rowLabel || 'Row') + ' \\ ' + (matrixData.colLabel || 'Column')">
+                                                        <div class="space-y-0.5">
+                                                            <div class="text-indigo-900 font-bold"
+                                                                x-text="formatShortVarLabel(matrixData.rowLabel, 35)"></div>
+                                                            <div class="text-gray-500 text-[10px] font-medium"
+                                                                x-text="'\\ ' + formatShortVarLabel(matrixData.colLabel, 35)">
+                                                            </div>
+                                                        </div>
+                                                    </th>
                                                     <template x-for="col in matrixData.columns" :key="col">
                                                         <th class="p-4 border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-600  tracking-widest text-center"
                                                             x-text="col"></th>
@@ -1979,16 +3170,59 @@
                                                             x-text="row"></th>
                                                         <template x-for="col in matrixData.columns" :key="col">
                                                             <td
-                                                                class="p-4 border-b border-gray-100 text-center text-sm font-medium text-gray-600">
-                                                                <div class="font-black text-gray-600"
-                                                                    x-text="getMatrixValue(row, col)"></div>
-                                                                <div class="text-[10px] text-gray-400 mt-0.5"
-                                                                    x-text="'Row: ' + ((matrixData.rowPercentages || {})[row] || {})[col] + '%'">
+                                                                class="p-3 border-b border-gray-100 text-center text-xs font-medium text-gray-700 align-top">
+                                                                <div
+                                                                    class="flex flex-col items-center justify-start gap-1 min-w-[90px]">
+                                                                    <!-- Count (Bold Large) -->
+                                                                    <div class="font-black text-gray-900 text-sm leading-tight"
+                                                                        x-text="getMatrixValue(row, col)"></div>
+
+                                                                    <!-- Expected Count / Badge -->
+                                                                    <div class="h-5 flex items-center justify-center">
+                                                                        <template
+                                                                            x-if="matrixData.expectedMatrix && matrixData.expectedMatrix[row]">
+                                                                            <span
+                                                                                class="text-[10px] leading-tight px-1.5 py-0.5 rounded transition-all inline-flex items-center justify-center"
+                                                                                :class="(Number(((matrixData.expectedMatrix[row] || {})[col] || 0)) < 5) 
+                                                                                                                                                        ? 'text-amber-800 font-bold bg-amber-50 border border-amber-200/80 shadow-2xs' 
+                                                                                                                                                        : 'text-gray-500 font-medium border border-transparent'"
+                                                                                x-text="'Exp: ' + formatExpectedCount((matrixData.expectedMatrix[row] || {})[col])">
+                                                                            </span>
+                                                                        </template>
+                                                                    </div>
+
+                                                                    <!-- Percentages Block (Row %, Col %, Tot %) -->
+                                                                    <div
+                                                                        class="w-full pt-1.5 border-t border-gray-100 space-y-0.5 text-[10px] text-gray-500 font-medium text-left px-1">
+                                                                        <div class="flex items-center justify-between">
+                                                                            <span class="text-gray-400 font-normal">%
+                                                                                Row:</span>
+                                                                            <span class="font-bold text-gray-700"
+                                                                                x-text="Number(((matrixData.rowPercentages || {})[row] || {})[col] || 0).toFixed(1) + '%'"></span>
+                                                                        </div>
+                                                                        <div class="flex items-center justify-between">
+                                                                            <span class="text-gray-400 font-normal">%
+                                                                                Col:</span>
+                                                                            <span class="font-bold text-gray-700"
+                                                                                x-text="Number(((matrixData.colPercentages || {})[row] || {})[col] || 0).toFixed(1) + '%'"></span>
+                                                                        </div>
+                                                                        <div class="flex items-center justify-between">
+                                                                            <span class="text-gray-400 font-normal">%
+                                                                                Tot:</span>
+                                                                            <span class="font-bold text-gray-700"
+                                                                                x-text="Number(((matrixData.totalPercentages || {})[row] || {})[col] || 0).toFixed(1) + '%'"></span>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                             </td>
                                                         </template>
-                                                        <td class="p-4 border-b border-l border-gray-200 bg-indigo-50/30 text-center text-sm font-black text-indigo-700"
-                                                            x-text="(matrixData.rowTotals || {})[row] || 0"></td>
+                                                        <td
+                                                            class="p-3 border-b border-l border-gray-200 bg-indigo-50/30 text-center text-sm font-black text-indigo-700 align-top">
+                                                            <div x-text="(matrixData.rowTotals || {})[row] || 0"></div>
+                                                            <div class="text-[10px] font-bold text-indigo-600 mt-1"
+                                                                x-text="matrixData.grandTotal > 0 ? ((((matrixData.rowTotals || {})[row] || 0) / matrixData.grandTotal * 100).toFixed(1) + '%') : '0.0%'">
+                                                            </div>
+                                                        </td>
                                                     </tr>
                                                 </template>
                                             </tbody>
@@ -1999,15 +3233,51 @@
                                                         {{ __('Total') }}
                                                     </th>
                                                     <template x-for="col in matrixData.columns" :key="col">
-                                                        <th class="p-4 border-t border-gray-200 bg-indigo-50 text-center text-sm font-black text-indigo-800"
-                                                            x-text="(matrixData.colTotals || {})[col] || 0"></th>
+                                                        <th
+                                                            class="p-3 border-t border-gray-200 bg-indigo-50 text-center text-sm font-black text-indigo-800">
+                                                            <div x-text="(matrixData.colTotals || {})[col] || 0"></div>
+                                                            <div class="text-[10px] font-bold text-indigo-600 mt-0.5"
+                                                                x-text="Number((matrixData.colTotalPercentages || {})[col] || 0).toFixed(1) + '%'">
+                                                            </div>
+                                                        </th>
                                                     </template>
-                                                    <th class="p-4 border-t border-l border-indigo-200 bg-indigo-100 text-center text-sm font-black text-indigo-900"
-                                                        x-text="matrixData.grandTotal || 0"></th>
+                                                    <th
+                                                        class="p-4 border-t border-l border-indigo-200 bg-indigo-100 text-center text-sm font-black text-indigo-900">
+                                                        <div x-text="matrixData.grandTotal || 0"></div>
+                                                        <div class="text-[10px] font-medium text-indigo-700 mt-0.5">100.0%
+                                                        </div>
+                                                    </th>
                                                 </tr>
                                             </tfoot>
                                         </table>
                                     </div>
+
+                                    <!-- Cochran Assumption Warning / Footnote for Crosstab -->
+                                    <template x-if="matrixData && matrixData.assumptionWarning">
+                                        <div class="p-4 rounded-2xl border text-xs flex items-start gap-3 transition-all shadow-xs"
+                                            :class="matrixData.assumptionWarning.is_violated ? 'bg-amber-50/80 border-amber-200 text-amber-900' : 'bg-gray-50/80 border-gray-200 text-gray-700'">
+                                            <i class="fa-solid mt-0.5 text-sm shrink-0"
+                                                :class="matrixData.assumptionWarning.is_violated ? 'fa-triangle-exclamation text-amber-500' : 'fa-circle-check text-emerald-500'"></i>
+                                            <div class="space-y-1 w-full">
+                                                <div class="font-bold flex items-center justify-between">
+                                                    <span
+                                                        x-text="matrixData.assumptionWarning.is_violated ? '{{ __('Cochran Chi-Square Assumption Check (Violated)') }}' : '{{ __('Contingency Table Assumption Check (Passed)') }}'"></span>
+                                                    <span
+                                                        class="px-2 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase"
+                                                        :class="matrixData.assumptionWarning.is_violated ? 'bg-amber-200 text-amber-900' : 'bg-emerald-100 text-emerald-800'"
+                                                        x-text="matrixData.assumptionWarning.is_violated ? '{{ __('Assumption Violated') }}' : '{{ __('Assumptions Met') }}'"></span>
+                                                </div>
+                                                <p class="text-[11px] leading-relaxed text-gray-700"
+                                                    x-text="matrixData.assumptionWarning.message"></p>
+                                                <template x-if="matrixData.assumptionWarning.is_violated">
+                                                    <p
+                                                        class="text-[11px] font-medium text-amber-800 leading-relaxed pt-0.5">
+                                                        {{ __('Methodological note: More than 20% of cells have expected counts below 5. Consider collapsing sparse adjacent categories or evaluating Fisher’s Exact Test.') }}
+                                                    </p>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
 
                                     <!-- AI Narrative Insight Card for Crosstab -->
                                     <template x-if="matrixData && matrixData.aiSummary">
@@ -2029,15 +3299,211 @@
                         <template x-if="testMethod === 'chisquare' && (chisquareData || matrixData)">
                             <div class="space-y-8 animate-in fade-in duration-500">
                                 <div
-                                    class="bg-white rounded-3xl p-6 sm:p-8 md:p-10 border border-gray-100 shadow-sm space-y-6">
+                                    class="bg-white rounded-3xl p-4 sm:p-6 md:p-8 border border-gray-100 shadow-sm space-y-6 overflow-hidden">
                                     <div class="border-b border-gray-100 pb-4 flex justify-between items-center">
                                         <div>
                                             <h4 class="text-lg font-black text-gray-900">
-                                                {{ __('Chi-Square for Independence ') }}
+                                                {{ __('Chi-Square for Independence') }}
                                             </h4>
-
+                                            <p class="text-xs text-gray-500 mt-1"
+                                                x-text="'Hypothesis test of independence between ' + ((chisquareData || matrixData).rowLabel || 'Row') + ' and ' + ((chisquareData || matrixData).colLabel || 'Column')">
+                                            </p>
                                         </div>
                                     </div>
+
+                                    <!-- SPSS Case Processing Summary for Chi-Square -->
+                                    <template
+                                        x-if="(chisquareData || matrixData) && (chisquareData || matrixData).case_summary">
+                                        <div class="border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
+                                            <div
+                                                class="bg-gray-50/90 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
+                                                <span
+                                                    class="text-xs font-bold text-gray-700 uppercase tracking-wider">{{ __('Case Processing Summary') }}</span>
+                                                <span class="text-[11px] text-gray-500 font-medium"
+                                                    x-text="'Total Sample N = ' + (chisquareData || matrixData).case_summary.total_n"></span>
+                                            </div>
+                                            <div class="overflow-x-auto">
+                                                <table class="w-full text-left text-xs text-gray-600">
+                                                    <thead
+                                                        class="bg-gray-50/50 text-[11px] font-bold text-gray-500 uppercase border-b border-gray-100">
+                                                        <tr>
+                                                            <th class="py-2.5 px-4">{{ __('Variables Analyzed') }}</th>
+                                                            <th class="py-2.5 px-4 text-center">{{ __('Valid N') }}</th>
+                                                            <th class="py-2.5 px-4 text-center">{{ __('Valid %') }}</th>
+                                                            <th class="py-2.5 px-4 text-center">{{ __('Excluded N') }}</th>
+                                                            <th class="py-2.5 px-4 text-center">{{ __('Excluded %') }}</th>
+                                                            <th class="py-2.5 px-4 text-center">{{ __('Total N') }}</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody class="divide-y divide-gray-100">
+                                                        <tr>
+                                                            <td class="py-2.5 px-4 font-semibold text-gray-800"
+                                                                x-text="((chisquareData || matrixData).rowLabel || 'Row') + ' * ' + ((chisquareData || matrixData).colLabel || 'Column')">
+                                                            </td>
+                                                            <td class="py-2.5 px-4 text-center font-bold text-indigo-700"
+                                                                x-text="(chisquareData || matrixData).case_summary.valid_n">
+                                                            </td>
+                                                            <td class="py-2.5 px-4 text-center font-semibold text-indigo-700"
+                                                                x-text="Number((chisquareData || matrixData).case_summary.valid_pct).toFixed(1) + '%'">
+                                                            </td>
+                                                            <td class="py-2.5 px-4 text-center font-medium text-amber-600"
+                                                                x-text="(chisquareData || matrixData).case_summary.missing_n">
+                                                            </td>
+                                                            <td class="py-2.5 px-4 text-center font-medium text-amber-600"
+                                                                x-text="Number((chisquareData || matrixData).case_summary.missing_pct).toFixed(1) + '%'">
+                                                            </td>
+                                                            <td class="py-2.5 px-4 text-center font-bold text-gray-900"
+                                                                x-text="(chisquareData || matrixData).case_summary.total_n">
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Crosstabulation Contingency Table for Chi-Square -->
+                                    <template x-if="(chisquareData || matrixData) && (chisquareData || matrixData).rows">
+                                        <div class="border-t border-gray-100 pt-6 space-y-3">
+                                            <div class="flex items-center justify-between">
+                                                <h5 class="text-sm font-black text-gray-900">
+                                                    {{ __('Cross-Tabulation Contingency Table') }}
+                                                </h5>
+                                                <span
+                                                    class="text-[11px] text-gray-500 font-medium">{{ __('Observed Counts, Expected Frequencies & Percentages') }}</span>
+                                            </div>
+                                            <div class="overflow-x-auto">
+                                                <table class="w-full text-left border-collapse min-w-[600px]">
+                                                    <thead>
+                                                        <tr>
+                                                            <th class="p-4 border-b border-r border-gray-200 bg-gray-50 w-1/4 text-xs font-semibold text-gray-700"
+                                                                :title="((chisquareData || matrixData).rowLabel || 'Row') + ' \\ ' + ((chisquareData || matrixData).colLabel || 'Column')">
+                                                                <div class="space-y-0.5">
+                                                                    <div class="text-indigo-900 font-bold"
+                                                                        x-text="formatShortVarLabel((chisquareData || matrixData).rowLabel, 35)">
+                                                                    </div>
+                                                                    <div class="text-gray-500 text-[10px] font-medium"
+                                                                        x-text="'\\ ' + formatShortVarLabel((chisquareData || matrixData).colLabel, 35)">
+                                                                    </div>
+                                                                </div>
+                                                            </th>
+                                                            <template x-for="col in (chisquareData || matrixData).columns"
+                                                                :key="col">
+                                                                <th class="p-4 border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-600 tracking-widest text-center"
+                                                                    x-text="col"></th>
+                                                            </template>
+                                                            <th
+                                                                class="p-4 border-b border-l border-gray-200 bg-indigo-50 text-[12px] font-black text-indigo-800 tracking-widest text-center">
+                                                                {{ __('Total') }}
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template x-for="row in (chisquareData || matrixData).rows"
+                                                            :key="row">
+                                                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                                                <th class="p-4 border-b border-r border-gray-200 text-[11px] font-black text-gray-700"
+                                                                    x-text="row"></th>
+                                                                <template
+                                                                    x-for="col in (chisquareData || matrixData).columns"
+                                                                    :key="col">
+                                                                    <td
+                                                                        class="p-3 border-b border-gray-100 text-center text-xs font-medium text-gray-700 align-top">
+                                                                        <div
+                                                                            class="flex flex-col items-center justify-start gap-1 min-w-[90px]">
+                                                                            <!-- Count (Bold Large) -->
+                                                                            <div class="font-black text-gray-900 text-sm leading-tight"
+                                                                                x-text="getMatrixValue(row, col)"></div>
+
+                                                                            <!-- Expected Count / Badge Slot -->
+                                                                            <div
+                                                                                class="h-5 flex items-center justify-center">
+                                                                                <template
+                                                                                    x-if="(chisquareData || matrixData).expectedMatrix && (chisquareData || matrixData).expectedMatrix[row]">
+                                                                                    <span
+                                                                                        class="text-[10px] leading-tight px-1.5 py-0.5 rounded transition-all inline-flex items-center justify-center"
+                                                                                        :class="(Number((((chisquareData || matrixData).expectedMatrix[row] || {})[col] || 0)) < 5) 
+                                                                                                                                                                ? 'text-amber-800 font-bold bg-amber-50 border border-amber-200/80 shadow-2xs' 
+                                                                                                                                                                : 'text-gray-500 font-medium border border-transparent'"
+                                                                                        x-text="'Exp: ' + formatExpectedCount(((chisquareData || matrixData).expectedMatrix[row] || {})[col])">
+                                                                                    </span>
+                                                                                </template>
+                                                                            </div>
+
+                                                                            <!-- Percentages Block (Row %, Col %, Tot %) -->
+                                                                            <div
+                                                                                class="w-full pt-1.5 border-t border-gray-100 space-y-0.5 text-[10px] text-gray-500 font-medium text-left px-1">
+                                                                                <div
+                                                                                    class="flex items-center justify-between">
+                                                                                    <span
+                                                                                        class="text-gray-400 font-normal">%
+                                                                                        Row:</span>
+                                                                                    <span class="font-bold text-gray-700"
+                                                                                        x-text="Number((((chisquareData || matrixData).rowPercentages || {})[row] || {})[col] || 0).toFixed(1) + '%'"></span>
+                                                                                </div>
+                                                                                <div
+                                                                                    class="flex items-center justify-between">
+                                                                                    <span
+                                                                                        class="text-gray-400 font-normal">%
+                                                                                        Col:</span>
+                                                                                    <span class="font-bold text-gray-700"
+                                                                                        x-text="Number((((chisquareData || matrixData).colPercentages || {})[row] || {})[col] || 0).toFixed(1) + '%'"></span>
+                                                                                </div>
+                                                                                <div
+                                                                                    class="flex items-center justify-between">
+                                                                                    <span
+                                                                                        class="text-gray-400 font-normal">%
+                                                                                        Tot:</span>
+                                                                                    <span class="font-bold text-gray-700"
+                                                                                        x-text="Number((((chisquareData || matrixData).totalPercentages || {})[row] || {})[col] || 0).toFixed(1) + '%'"></span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                </template>
+                                                                <td
+                                                                    class="p-3 border-b border-l border-gray-200 bg-indigo-50/30 text-center text-sm font-black text-indigo-700 align-top">
+                                                                    <div
+                                                                        x-text="((chisquareData || matrixData).rowTotals || {})[row] || 0">
+                                                                    </div>
+                                                                    <div class="text-[10px] font-bold text-indigo-600 mt-1"
+                                                                        x-text="(chisquareData || matrixData).grandTotal > 0 ? (((((chisquareData || matrixData).rowTotals || {})[row] || 0) / (chisquareData || matrixData).grandTotal * 100).toFixed(1) + '%') : '0.0%'">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                    <tfoot>
+                                                        <tr>
+                                                            <th
+                                                                class="p-4 border-t border-r border-gray-200 bg-indigo-50 text-[12px] font-medium text-indigo-800 tracking-widest">
+                                                                {{ __('Total') }}
+                                                            </th>
+                                                            <template x-for="col in (chisquareData || matrixData).columns"
+                                                                :key="col">
+                                                                <th
+                                                                    class="p-3 border-t border-gray-200 bg-indigo-50 text-center text-sm font-black text-indigo-800">
+                                                                    <div
+                                                                        x-text="((chisquareData || matrixData).colTotals || {})[col] || 0">
+                                                                    </div>
+                                                                    <div class="text-[10px] font-bold text-indigo-600 mt-0.5"
+                                                                        x-text="Number(((chisquareData || matrixData).colTotalPercentages || {})[col] || 0).toFixed(1) + '%'">
+                                                                    </div>
+                                                                </th>
+                                                            </template>
+                                                            <th
+                                                                class="p-4 border-t border-l border-indigo-200 bg-indigo-100 text-center text-sm font-black text-indigo-900">
+                                                                <div x-text="(chisquareData || matrixData).grandTotal || 0">
+                                                                </div>
+                                                                <div class="text-[10px] font-medium text-indigo-700 mt-0.5">
+                                                                    100.0%</div>
+                                                            </th>
+                                                        </tr>
+                                                    </tfoot>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </template>
 
                                     <!-- Key Statistics Summary Grid -->
                                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -2045,31 +3511,32 @@
                                             class="p-5 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 rounded-2xl border border-grey-100">
                                             <span
                                                 class="text-[12px] font-medium text-grey-600 tracking-widest">{{ __('Chi-Square (χ²)') }}</span>
-                                            <p class="text-2xl font-medium text-grey-300 mt-1"
-                                                x-text="(chisquareData || matrixData).chiSquare"></p>
+                                            <p class="text-2xl font-medium text-grey-900 mt-1"
+                                                x-text="formatDec((chisquareData || matrixData).chiSquare, 3)"></p>
                                         </div>
                                         <div
                                             class="p-5 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 rounded-2xl border border-grey-100">
                                             <span
-                                                class="text-[12px] font-medium text-grey-600  tracking-widest">{{ __('Degrees of Freedom (df)') }}</span>
-                                            <p class="text-2xl font-medium text-grey-300 mt-1"
+                                                class="text-[12px] font-medium text-grey-600 tracking-widest">{{ __('Degrees of Freedom (df)') }}</span>
+                                            <p class="text-2xl font-medium text-grey-900 mt-1"
                                                 x-text="(chisquareData || matrixData).df"></p>
                                         </div>
                                         <div class="p-5 rounded-2xl border"
                                             :class="(chisquareData || matrixData).significant ? 'bg-blue-50/50 border-grey-200 text-grey-900' : 'bg-indigo-50/50 border-grey-200 text-grey-900'">
-                                            <span class="text-[12px] font-medium  tracking-widest"
+                                            <span class="text-[12px] font-medium tracking-widest"
                                                 :class="(chisquareData || matrixData).significant ? 'text-grey-700' : 'text-grey-600'">{{ __('p-Value (Sig.)') }}</span>
                                             <p class="text-2xl font-medium mt-1"
-                                                x-text="(chisquareData || matrixData).pValue"></p>
+                                                x-text="formatP((chisquareData || matrixData).pValue)"></p>
                                             <span class="text-[10px] font-medium"
                                                 x-text="(chisquareData || matrixData).significant ? 'Significant (p < 0.05)' : 'Not Significant (p >= 0.05)'"></span>
                                         </div>
                                         <div
                                             class="p-5 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 rounded-2xl border border-grey-100">
                                             <span
-                                                class="text-[12px] font-medium text-grey-700  tracking-widest">{{ __("Cramer's V (Effect Size)") }}</span>
+                                                class="text-[12px] font-medium text-grey-700 tracking-widest">{{ __("Cramer's V (Effect Size)") }}</span>
                                             <p class="text-2xl font-medium text-grey-950 mt-1"
-                                                x-text="(chisquareData || matrixData).cramersV || 'N/A'"></p>
+                                                x-text="(chisquareData || matrixData).cramersV !== undefined ? formatDec((chisquareData || matrixData).cramersV, 3, true) : 'N/A'">
+                                            </p>
                                             <span class="text-[10px] font-medium text-grey-800"
                                                 x-text="((chisquareData || matrixData).effectLabel || 'Effect') + ' Association'"></span>
                                         </div>
@@ -2096,41 +3563,82 @@
                                                             {{ __('Pearson Chi-Square') }}
                                                         </td>
                                                         <td class="p-3 border-b text-xs font-bold text-gray-900 text-center"
-                                                            x-text="(chisquareData || matrixData).chiSquare"></td>
+                                                            x-text="formatDec((chisquareData || matrixData).chiSquare, 3)">
+                                                        </td>
                                                         <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
                                                             x-text="(chisquareData || matrixData).df"></td>
                                                         <td class="p-3 border-b text-xs font-black text-center"
                                                             :class="(chisquareData || matrixData).significant ? 'text-emerald-600' : 'text-gray-500'"
-                                                            x-text="(chisquareData || matrixData).pValue"></td>
+                                                            x-text="formatP((chisquareData || matrixData).pValue)"></td>
                                                     </tr>
+                                                    <template
+                                                        x-if="(chisquareData || matrixData).isTwoByTwo && (chisquareData || matrixData).yatesChiSquare !== null">
+                                                        <tr class="hover:bg-gray-50/50">
+                                                            <td class="p-3 border-b text-xs font-semibold text-gray-800">
+                                                                {{ __('Continuity Correction (Yates)') }}
+                                                            </td>
+                                                            <td class="p-3 border-b text-xs font-medium text-gray-700 text-center"
+                                                                x-text="formatDec((chisquareData || matrixData).yatesChiSquare, 3)">
+                                                            </td>
+                                                            <td
+                                                                class="p-3 border-b text-xs font-medium text-gray-600 text-center">
+                                                                1</td>
+                                                            <td class="p-3 border-b text-xs font-bold text-center"
+                                                                :class="(chisquareData || matrixData).yatesPValue < 0.05 ? 'text-emerald-600' : 'text-gray-500'"
+                                                                x-text="formatP((chisquareData || matrixData).yatesPValue)">
+                                                            </td>
+                                                        </tr>
+                                                    </template>
                                                     <template x-if="(chisquareData || matrixData).likelihoodRatio">
                                                         <tr class="hover:bg-gray-50/50">
                                                             <td class="p-3 border-b text-xs font-semibold text-gray-800">
                                                                 {{ __('Likelihood Ratio') }}
                                                             </td>
                                                             <td class="p-3 border-b text-xs font-medium text-gray-700 text-center"
-                                                                x-text="(chisquareData || matrixData).likelihoodRatio"></td>
+                                                                x-text="formatDec((chisquareData || matrixData).likelihoodRatio, 3)">
+                                                            </td>
                                                             <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
                                                                 x-text="(chisquareData || matrixData).df"></td>
                                                             <td class="p-3 border-b text-xs font-bold text-center"
                                                                 :class="(chisquareData || matrixData).likelihoodSignificant ? 'text-emerald-600' : 'text-gray-500'"
-                                                                x-text="(chisquareData || matrixData).likelihoodPValue">
+                                                                x-text="formatP((chisquareData || matrixData).likelihoodPValue)">
+                                                            </td>
+                                                        </tr>
+                                                    </template>
+                                                    <template
+                                                        x-if="(chisquareData || matrixData).isTwoByTwo && (chisquareData || matrixData).fisherExact2Sided !== null">
+                                                        <tr class="hover:bg-gray-50/50">
+                                                            <td class="p-3 border-b text-xs font-semibold text-gray-800">
+                                                                {{ __("Fisher's Exact Test (2-sided / 1-sided)") }}
+                                                            </td>
+                                                            <td
+                                                                class="p-3 border-b text-xs font-medium text-gray-500 text-center">
+                                                                N/A</td>
+                                                            <td
+                                                                class="p-3 border-b text-xs font-medium text-gray-500 text-center">
+                                                                -</td>
+                                                            <td class="p-3 border-b text-xs font-bold text-center"
+                                                                :class="(chisquareData || matrixData).fisherExact2Sided < 0.05 ? 'text-emerald-600' : 'text-gray-500'"
+                                                                x-text="formatP((chisquareData || matrixData).fisherExact2Sided) + ' (1-sided: ' + formatP((chisquareData || matrixData).fisherExact1Sided) + ')'">
                                                             </td>
                                                         </tr>
                                                     </template>
                                                     <template x-if="(chisquareData || matrixData).linearAssociation">
                                                         <tr class="hover:bg-gray-50/50">
                                                             <td class="p-3 border-b text-xs font-semibold text-gray-800">
-                                                                {{ __('Linear-by-Linear Association') }}
+                                                                <span>{{ __('Linear-by-Linear Association') }}</span>
+                                                                <span
+                                                                    class="block text-[10px] text-gray-400 font-normal">{{ __('Requires ordinal scale data') }}</span>
                                                             </td>
                                                             <td class="p-3 border-b text-xs font-medium text-gray-700 text-center"
-                                                                x-text="(chisquareData || matrixData).linearAssociation">
+                                                                x-text="formatDec((chisquareData || matrixData).linearAssociation, 3)">
                                                             </td>
                                                             <td
                                                                 class="p-3 border-b text-xs font-medium text-gray-600 text-center">
                                                                 1</td>
                                                             <td class="p-3 border-b text-xs font-bold text-center"
-                                                                x-text="(chisquareData || matrixData).linearPValue"></td>
+                                                                x-text="formatP((chisquareData || matrixData).linearPValue)">
+                                                            </td>
                                                         </tr>
                                                     </template>
                                                     <tr class="hover:bg-gray-50/50 bg-gray-50/30">
@@ -2145,18 +3653,101 @@
                                                     </tr>
                                                 </tbody>
                                             </table>
-                                            <p class="text-xs text-gray-500 mt-1"
-                                                x-text="(chisquareData || matrixData).footnote"></p>
+                                            <!-- Cochran Assumption Warning / Footnote for Chi-Square -->
+                                            <template
+                                                x-if="(chisquareData || matrixData) && (chisquareData || matrixData).assumptionWarning">
+                                                <div class="mt-3 p-4 rounded-2xl border text-xs flex items-start gap-3 transition-all shadow-xs"
+                                                    :class="(chisquareData || matrixData).assumptionWarning.is_violated ? 'bg-amber-50/80 border-amber-200 text-amber-900' : 'bg-gray-50/80 border-gray-200 text-gray-700'">
+                                                    <i class="fa-solid mt-0.5 text-sm shrink-0"
+                                                        :class="(chisquareData || matrixData).assumptionWarning.is_violated ? 'fa-triangle-exclamation text-amber-500' : 'fa-circle-check text-emerald-500'"></i>
+                                                    <div class="space-y-1 w-full">
+                                                        <div class="font-bold flex items-center justify-between">
+                                                            <span
+                                                                x-text="(chisquareData || matrixData).assumptionWarning.is_violated ? '{{ __('Cochran Chi-Square Assumption Check (Violated)') }}' : '{{ __('Chi-Square Assumption Check (Passed)') }}'"></span>
+                                                            <span
+                                                                class="px-2 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase"
+                                                                :class="(chisquareData || matrixData).assumptionWarning.is_violated ? 'bg-amber-200 text-amber-900' : 'bg-emerald-100 text-emerald-800'"
+                                                                x-text="(chisquareData || matrixData).assumptionWarning.is_violated ? '{{ __('Assumption Violated') }}' : '{{ __('Assumptions Met') }}'"></span>
+                                                        </div>
+                                                        <p class="text-[11px] leading-relaxed text-gray-700"
+                                                            x-text="(chisquareData || matrixData).assumptionWarning.message">
+                                                        </p>
+                                                        <template
+                                                            x-if="(chisquareData || matrixData).assumptionWarning.is_violated">
+                                                            <p
+                                                                class="text-[11px] font-medium text-amber-800 leading-relaxed pt-0.5">
+                                                                {{ __('Methodological note: More than 20% of cells have expected counts below 5. The standard asymptotic chi-square p-value may be anti-conservative; consider collapsing sparse categories or referring to Fisher’s Exact Test.') }}
+                                                            </p>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                            <template
+                                                x-if="!(chisquareData || matrixData)?.assumptionWarning && (chisquareData || matrixData)?.footnote">
+                                                <p class="text-xs text-gray-500 mt-1"
+                                                    x-text="(chisquareData || matrixData).footnote"></p>
+                                            </template>
                                         </div>
                                     </div>
 
-                                    <!-- Dedicated AI Academic Narrative Card for Chi-Square -->
+                                    <!-- Symmetric Measures Table -->
+                                    <template
+                                        x-if="(chisquareData || matrixData).symmetricMeasures && (chisquareData || matrixData).symmetricMeasures.length > 0">
+                                        <div class="mt-6 border-t border-gray-100 pt-6 space-y-3">
+                                            <h5 class="text-sm font-black text-gray-900">
+                                                {{ __('Symmetric Measures Table') }}
+                                            </h5>
+                                            <div class="overflow-x-auto">
+                                                <table class="w-full text-left border-collapse min-w-[500px]">
+                                                    <thead>
+                                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                                            <th class="p-3 border-b">{{ __('Category') }}</th>
+                                                            <th class="p-3 border-b">{{ __('Measure') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('Value') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('Approx. Sig.') }}
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template
+                                                            x-for="meas in (chisquareData || matrixData).symmetricMeasures"
+                                                            :key="meas.measure">
+                                                            <tr class="hover:bg-gray-50/50">
+                                                                <td class="p-3 border-b text-xs font-semibold text-gray-800"
+                                                                    x-text="meas.category"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-700"
+                                                                    x-text="meas.measure"></td>
+                                                                <td class="p-3 border-b text-xs font-bold text-gray-900 text-center"
+                                                                    x-text="formatDec(meas.value, 3, true)"></td>
+                                                                <td class="p-3 border-b text-xs font-black text-center"
+                                                                    :class="meas.approxSig < 0.05 ? 'text-emerald-600' : 'text-gray-500'"
+                                                                    x-text="formatP(meas.approxSig)"></td>
+                                                            </tr>
+                                                        </template>
+                                                        <tr class="hover:bg-gray-50/50 bg-gray-50/30">
+                                                            <td class="p-3 border-b text-xs font-bold text-gray-900">
+                                                                {{ __('N of Valid Cases') }}
+                                                            </td>
+                                                            <td class="p-3 border-b text-xs text-gray-500"></td>
+                                                            <td class="p-3 border-b text-xs font-bold text-gray-900 text-center"
+                                                                x-text="(chisquareData || matrixData).grandTotal || (chisquareData || matrixData).validCases">
+                                                            </td>
+                                                            <td class="p-3 border-b text-xs text-center"></td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Academic Reporting & APA Summary Card -->
                                     <template
                                         x-if="(chisquareData || matrixData) && (chisquareData || matrixData).aiSummary">
                                         <div
                                             class="p-5 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 rounded-2xl border border-indigo-100 shadow-sm space-y-2">
                                             <div class="flex items-center gap-2 text-blue-950 font-bold text-xs">
-                                                <span>{{ __('Chi-Square Narrative Interpretation') }}</span>
+                                                <i class="fa-solid fa-file-lines text-blue-700 text-xs"></i>
+                                                <span>{{ __('Academic Reporting & APA Summary') }}</span>
                                             </div>
                                             <p class="text-xs text-gray-800 font-medium leading-relaxed"
                                                 x-text="(chisquareData || matrixData).aiSummary"></p>
@@ -2170,7 +3761,7 @@
                         <template x-if="testMethod === 'cronbach' && cronbachData">
                             <div class="space-y-8 animate-in fade-in duration-500">
                                 <div
-                                    class="bg-white rounded-3xl p-6 sm:p-8 md:p-10 border border-gray-100 shadow-sm space-y-6">
+                                    class="bg-white rounded-3xl p-4 sm:p-6 md:p-8 border border-gray-100 shadow-sm space-y-6 overflow-hidden">
                                     <div class="border-b border-gray-100 pb-4 flex justify-between items-center">
                                         <div>
                                             <h4 class="text-lg font-black text-gray-900">
@@ -2184,87 +3775,378 @@
                                             class="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-100">{{ __('Scale Reliability') }}</span>
                                     </div>
 
+                                    <!-- SPSS Case Processing Summary -->
+                                    <template x-if="cronbachData && cronbachData.case_summary">
+                                        <div class="border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
+                                            <div
+                                                class="bg-gray-50/90 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
+                                                <span
+                                                    class="text-xs font-bold text-gray-700 uppercase tracking-wider">{{ __('Case Processing Summary') }}</span>
+                                                <span class="text-[11px] text-gray-500 font-medium"
+                                                    x-text="'Total Sample N = ' + cronbachData.case_summary.total_n"></span>
+                                            </div>
+                                            <div class="overflow-x-auto">
+                                                <table class="w-full text-left text-xs text-gray-600">
+                                                    <thead
+                                                        class="bg-gray-50/50 text-[11px] font-bold text-gray-500 uppercase border-b border-gray-100">
+                                                        <tr>
+                                                            <th class="py-2.5 px-4">{{ __('Cases') }}</th>
+                                                            <th class="py-2.5 px-4 text-center">{{ __('N') }}</th>
+                                                            <th class="py-2.5 px-4 text-center">{{ __('%') }}</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody class="divide-y divide-gray-100">
+                                                        <tr class="hover:bg-gray-50/50 font-semibold text-gray-800">
+                                                            <td class="py-2.5 px-4 flex items-center gap-2">
+                                                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                                                <span>{{ __('Valid') }}</span>
+                                                            </td>
+                                                            <td class="py-2.5 px-4 text-center font-bold text-gray-900"
+                                                                x-text="cronbachData.case_summary.valid_n"></td>
+                                                            <td class="py-2.5 px-4 text-center text-emerald-700 font-bold"
+                                                                x-text="cronbachData.case_summary.valid_pct + '%'"></td>
+                                                        </tr>
+                                                        <tr class="hover:bg-gray-50/50 text-gray-600">
+                                                            <td class="py-2.5 px-4 flex items-center gap-2">
+                                                                <span class="w-2 h-2 rounded-full bg-gray-300"></span>
+                                                                <span>{{ __('Excluded (Listwise Missing)') }}</span>
+                                                            </td>
+                                                            <td class="py-2.5 px-4 text-center font-medium text-gray-600"
+                                                                x-text="cronbachData.case_summary.excluded_n"></td>
+                                                            <td class="py-2.5 px-4 text-center text-gray-500"
+                                                                x-text="cronbachData.case_summary.excluded_pct + '%'"></td>
+                                                        </tr>
+                                                        <tr
+                                                            class="bg-gray-50/80 font-bold text-gray-900 border-t border-gray-200">
+                                                            <td class="py-2.5 px-4">{{ __('Total') }}</td>
+                                                            <td class="py-2.5 px-4 text-center font-black"
+                                                                x-text="cronbachData.case_summary.total_n"></td>
+                                                            <td class="py-2.5 px-4 text-center font-black">100.0%</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <div
+                                                class="bg-gray-50/60 px-4 py-2 border-t border-gray-100 text-[10px] text-gray-500 italic">
+                                                {{ __('a. Listwise deletion based on all scale items in the procedure.') }}
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Key Metric Cards -->
                                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                                        <div class="p-5 rounded-2xl border"
+                                        <div class="p-5 rounded-2xl border shadow-2xs"
                                             :class="cronbachData.alpha >= 0.7 ? 'bg-emerald-50/50 border-emerald-200' : 'bg-amber-50/50 border-amber-200'">
-                                            <span class="text-[10px] font-black  tracking-widest"
+                                            <span class="text-[10px] font-black tracking-widest uppercase"
                                                 :class="cronbachData.alpha >= 0.7 ? 'text-emerald-700' : 'text-amber-700'">{{ __("Cronbach's Alpha (α)") }}</span>
-                                            <p class="text-3xl font-black mt-1"
+                                            <p class="text-3xl font-black mt-1 tracking-tight"
                                                 :class="cronbachData.alpha >= 0.7 ? 'text-emerald-950' : 'text-amber-950'"
-                                                x-text="cronbachData.alpha"></p>
+                                                x-text="formatDec(cronbachData.alpha, 4, true)"></p>
                                         </div>
-                                        <div class="p-5 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+                                        <div class="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 shadow-2xs">
                                             <span
-                                                class="text-[10px] font-black text-indigo-600  tracking-widest">{{ __('Standardized Alpha (α_std)') }}</span>
-                                            <p class="text-3xl font-black text-indigo-900 mt-1"
-                                                x-text="cronbachData.std_alpha || cronbachData.alpha"></p>
+                                                class="text-[10px] font-black text-[#2271b1] tracking-widest uppercase">{{ __('Standardized Alpha') }}
+                                                (α<sub>std</sub>)</span>
+                                            <p class="text-3xl font-black text-blue-950 mt-1 tracking-tight"
+                                                x-text="formatDec(cronbachData.std_alpha || cronbachData.alpha, 4, true)">
+                                            </p>
                                         </div>
-                                        <div class="p-5 bg-gray-50 rounded-2xl border border-gray-200">
+                                        <div class="p-5 bg-gray-50 rounded-2xl border border-gray-200 shadow-2xs">
                                             <span
-                                                class="text-[10px] font-black text-gray-500  tracking-widest">{{ __('Items Evaluated (K)') }}</span>
+                                                class="text-[10px] font-black text-gray-500 tracking-widest uppercase">{{ __('Items Evaluated (K)') }}</span>
                                             <p class="text-3xl font-black text-gray-900 mt-1" x-text="cronbachData.k_items">
                                             </p>
                                         </div>
-                                        <div class="p-5 bg-blue-50/50 rounded-2xl border border-blue-100">
+                                        <div class="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 shadow-2xs">
                                             <span
-                                                class="text-[10px] font-black text-blue-600  tracking-widest">{{ __('Valid Cases (N)') }}</span>
+                                                class="text-[10px] font-black text-[#2271b1] tracking-widest uppercase">{{ __('Valid Cases (N)') }}</span>
                                             <p class="text-3xl font-black text-blue-950 mt-1" x-text="cronbachData.valid_n">
                                             </p>
                                         </div>
                                     </div>
 
                                     <div
-                                        class="p-4 rounded-2xl border bg-gray-50 border-gray-200 flex items-center justify-between">
+                                        class="p-4 rounded-2xl border bg-gray-50 border-gray-200 flex items-center justify-between shadow-2xs">
                                         <span
                                             class="text-xs font-bold text-gray-700">{{ __('Scale Consistency Rating:') }}</span>
                                         <span
-                                            class="text-xs font-black px-3 py-1 rounded-full text-indigo-700 bg-indigo-50 border border-indigo-100"
+                                            class="text-xs font-black px-3 py-1 rounded-full text-[#2271b1] bg-blue-50 border border-blue-100 shadow-2xs"
                                             x-text="cronbachData.interpretation"></span>
                                     </div>
+
+                                    <!-- Item Statistics Table -->
+                                    <template
+                                        x-if="cronbachData.item_descriptives && cronbachData.item_descriptives.length > 0">
+                                        <div class="mt-6 border-t border-gray-100 pt-6 space-y-3">
+                                            <div class="flex items-center justify-between">
+                                                <h5 class="text-sm font-black text-gray-900">{{ __('Item Statistics') }}
+                                                </h5>
+                                                <span class="text-[11px] text-gray-500 font-medium">{{ __('N = ') }}<span
+                                                        x-text="cronbachData.valid_n"></span></span>
+                                            </div>
+                                            <div class="overflow-x-auto border border-gray-200 rounded-2xl shadow-xs">
+                                                <table class="w-full text-left border-collapse min-w-[500px]">
+                                                    <thead>
+                                                        <tr
+                                                            class="bg-gray-50/90 font-bold text-gray-700 text-xs uppercase border-b border-gray-200">
+                                                            <th class="p-3">{{ __('Scale Item') }}</th>
+                                                            <th class="p-3 text-center">{{ __('Mean') }}</th>
+                                                            <th class="p-3 text-center">{{ __('Std. Deviation') }}</th>
+                                                            <th class="p-3 text-center">{{ __('N') }}</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody class="divide-y divide-gray-100 text-xs">
+                                                        <template x-for="(item, idx) in cronbachData.item_descriptives"
+                                                            :key="item.item_key">
+                                                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                                                <td class="p-3 font-semibold text-gray-800">
+                                                                    <div class="flex items-start gap-2">
+                                                                        <span
+                                                                            class="px-1.5 py-0.5 rounded bg-blue-50 text-[#2271b1] border border-blue-100 text-[10px] font-bold shrink-0 mt-0.5"
+                                                                            x-text="item.short_label || ('Item ' + (idx + 1))"></span>
+                                                                        <span class="leading-relaxed"
+                                                                            x-text="item.label"></span>
+                                                                    </div>
+                                                                </td>
+                                                                <td class="p-3 font-medium text-gray-700 text-center"
+                                                                    x-text="formatDec(item.mean, 4)"></td>
+                                                                <td class="p-3 font-medium text-gray-700 text-center"
+                                                                    x-text="formatDec(item.stdDev, 4)"></td>
+                                                                <td class="p-3 font-medium text-gray-600 text-center"
+                                                                    x-text="item.n"></td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Inter-Item Correlation Matrix Table -->
+                                    <template
+                                        x-if="cronbachData.inter_item_matrix && Object.keys(cronbachData.inter_item_matrix).length > 0">
+                                        <div class="mt-6 border-t border-gray-100 pt-6 space-y-3">
+                                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                                                <div>
+                                                    <h5 class="text-sm font-black text-gray-900">
+                                                        {{ __('Inter-Item Correlation Matrix') }}
+                                                    </h5>
+                                                    <p class="text-[11px] text-gray-500">
+                                                        {{ __('Bivariate Pearson correlation coefficients (r) across scale items. Tap or hover any cell for details.') }}
+                                                    </p>
+                                                </div>
+                                                <template x-if="cronbachData.mean_inter_item_corr !== undefined">
+                                                    <span
+                                                        class="text-xs font-bold px-2.5 py-1 rounded-xl bg-blue-50 text-[#2271b1] border border-blue-100 self-start sm:self-auto">
+                                                        {{ __('Average r = ') }}<span
+                                                            x-text="formatDec(cronbachData.mean_inter_item_corr, 3, true)"></span>
+                                                    </span>
+                                                </template>
+                                            </div>
+
+                                            <!-- Tap-to-Inspect Micro Popover Card (Touch/Mobile & Desktop) -->
+                                            <template x-if="activeCorrInspect">
+                                                <div
+                                                    class="p-3.5 bg-slate-900 text-white rounded-2xl shadow-md border border-slate-800 flex items-center justify-between gap-3 animate-in fade-in duration-200">
+                                                    <div class="space-y-1 text-xs">
+                                                        <div class="flex items-center gap-2">
+                                                            <span
+                                                                class="px-2 py-0.5 rounded bg-slate-800 text-blue-200 text-[10px] font-bold"
+                                                                x-text="activeCorrInspect.rowShort + ' ⟷ ' + activeCorrInspect.colShort"></span>
+                                                            <span class="font-black text-amber-300 text-sm"
+                                                                x-text="'r = ' + activeCorrInspect.r"></span>
+                                                            <template x-if="activeCorrInspect.isDiag">
+                                                                <span
+                                                                    class="text-[10px] text-slate-400 italic">({{ __('Identity diagonal') }})</span>
+                                                            </template>
+                                                        </div>
+                                                        <p class="text-[11px] text-slate-200 leading-snug">
+                                                            <span class="font-semibold text-white"
+                                                                x-text="activeCorrInspect.rowShort + ': ' + activeCorrInspect.rowLabel"></span>
+                                                            <span class="mx-1 text-slate-400">×</span>
+                                                            <span class="font-semibold text-white"
+                                                                x-text="activeCorrInspect.colShort + ': ' + activeCorrInspect.colLabel"></span>
+                                                        </p>
+                                                    </div>
+                                                    <button type="button" @click="clearCorrInspect()"
+                                                        class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors shrink-0">
+                                                        <i class="fa-solid fa-xmark text-sm"></i>
+                                                    </button>
+                                                </div>
+                                            </template>
+
+                                            <!-- Correlation Matrix Grid -->
+                                            <div class="overflow-x-auto border border-gray-200 rounded-2xl shadow-xs">
+                                                <table class="w-full text-left border-collapse min-w-[600px]">
+                                                    <thead>
+                                                        <tr
+                                                            class="bg-gray-50/90 font-bold text-gray-700 text-xs border-b border-gray-200">
+                                                            <th class="p-3 uppercase text-[11px]">{{ __('Item') }}</th>
+                                                            <template x-for="(item, idx) in cronbachData.item_descriptives"
+                                                                :key="'col_' + item.item_key">
+                                                                <th class="p-2.5 text-center text-xs whitespace-nowrap cursor-pointer hover:bg-blue-50/60 transition-colors"
+                                                                    :title="item.label"
+                                                                    @click="inspectCorrelation(item, item, 1.0)">
+                                                                    <span
+                                                                        class="px-2 py-1 rounded-lg bg-white border border-gray-200 text-gray-800 font-bold shadow-2xs text-[11px]"
+                                                                        x-text="item.short_label || ('Item ' + (idx + 1))"></span>
+                                                                </th>
+                                                            </template>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody class="divide-y divide-gray-100 text-xs">
+                                                        <template x-for="(row, rIdx) in cronbachData.item_descriptives"
+                                                            :key="'row_' + row.item_key">
+                                                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                                                <td class="p-3 font-semibold text-gray-800 whitespace-nowrap cursor-pointer"
+                                                                    :title="row.label"
+                                                                    @click="inspectCorrelation(row, row, 1.0)">
+                                                                    <div class="flex items-center gap-2">
+                                                                        <span
+                                                                            class="px-2 py-0.5 rounded bg-blue-50 text-[#2271b1] border border-blue-100 text-[10px] font-bold"
+                                                                            x-text="row.short_label || ('Item ' + (rIdx + 1))"></span>
+                                                                        <span
+                                                                            class="text-xs text-gray-600 hidden sm:inline max-w-[180px] truncate"
+                                                                            x-text="row.label"></span>
+                                                                    </div>
+                                                                </td>
+                                                                <template
+                                                                    x-for="(col, cIdx) in cronbachData.item_descriptives"
+                                                                    :key="'cell_' + row.item_key + '_' + col.item_key">
+                                                                    <td class="p-2.5 text-center transition-colors cursor-pointer"
+                                                                        :class="row.item_key === col.item_key ? 'font-black text-gray-400 bg-gray-50/60' : 'text-gray-800 hover:bg-blue-50 hover:text-[#2271b1] font-medium'"
+                                                                        @click="inspectCorrelation(row, col, (cronbachData.inter_item_matrix[row.item_key] || {})[col.item_key])">
+                                                                        <span
+                                                                            x-text="row.item_key === col.item_key ? '1.000' : formatDec((cronbachData.inter_item_matrix[row.item_key] || {})[col.item_key], 3, true)"></span>
+                                                                    </td>
+                                                                </template>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            <!-- Item Reference Key / Legend -->
+                                            <div class="bg-gray-50/70 border border-gray-200/80 rounded-2xl p-4 space-y-2">
+                                                <div class="flex items-center gap-2 pb-1 border-b border-gray-200/60">
+                                                    <i class="fa-solid fa-list-ol text-[#2271b1] text-xs"></i>
+                                                    <h6 class="text-xs font-bold text-gray-800 uppercase tracking-wider">
+                                                        {{ __('Item Reference Key') }}
+                                                    </h6>
+                                                </div>
+                                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs pt-1">
+                                                    <template x-for="(item, idx) in cronbachData.item_descriptives"
+                                                        :key="'legend_' + item.item_key">
+                                                        <div class="flex items-start gap-2 p-1.5 rounded-lg hover:bg-white transition-colors cursor-pointer"
+                                                            @click="inspectCorrelation(item, item, 1.0)">
+                                                            <span
+                                                                class="px-2 py-0.5 rounded bg-white text-[#2271b1] border border-blue-100 font-bold text-[10px] shrink-0 mt-0.5 shadow-2xs"
+                                                                x-text="item.short_label || ('Item ' + (idx + 1))"></span>
+                                                            <p class="text-gray-700 leading-snug break-words"
+                                                                x-text="item.label"></p>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
 
                                     <!-- Item-Total Statistics Table -->
                                     <template x-if="cronbachData.item_stats && cronbachData.item_stats.length > 0">
                                         <div class="mt-6 border-t border-gray-100 pt-6 space-y-3">
-                                            <h5 class="text-sm font-black text-gray-900">
-                                                {{ __('Item-Total Statistics Table') }}
-                                            </h5>
-                                            <div class="overflow-x-auto">
-                                                <table class="w-full text-left border-collapse min-w-[600px]">
+                                            <div class="flex items-center justify-between">
+                                                <h5 class="text-sm font-black text-gray-900">
+                                                    {{ __('Item-Total Statistics Table') }}
+                                                </h5>
+                                                <span
+                                                    class="text-[11px] text-gray-500 italic">{{ __('SPSS Reliability Procedure') }}</span>
+                                            </div>
+                                            <div class="overflow-x-auto border border-gray-200 rounded-2xl shadow-xs">
+                                                <table class="w-full text-left border-collapse min-w-[700px]">
                                                     <thead>
-                                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
-                                                            <th class="p-3 border-b">{{ __('Scale Item') }}</th>
-                                                            <th class="p-3 border-b text-center">
+                                                        <tr
+                                                            class="bg-gray-50/90 font-bold text-gray-700 text-xs border-b border-gray-200 uppercase">
+                                                            <th class="p-3">{{ __('Scale Item') }}</th>
+                                                            <th class="p-3 text-center">
                                                                 {{ __('Scale Mean if Item Deleted') }}
                                                             </th>
-                                                            <th class="p-3 border-b text-center">
+                                                            <th class="p-3 text-center">
                                                                 {{ __('Scale Variance if Item Deleted') }}
                                                             </th>
-                                                            <th class="p-3 border-b text-center">
-                                                                {{ __('Corrected Item-Total Correlation') }}
+                                                            <th class="p-3 text-center">
+                                                                {{ __('Corrected Item-Total Corr.') }}
                                                             </th>
-                                                            <th class="p-3 border-b text-center">
-                                                                {{ __("Cronbach's Alpha if Item Deleted") }}
+                                                            <th class="p-3 text-center">
+                                                                {{ __('Squared Multiple Corr.') }}
+                                                            </th>
+                                                            <th class="p-3 text-center">
+                                                                {{ __("Cronbach's α if Item Deleted") }}
                                                             </th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody>
-                                                        <template x-for="item in cronbachData.item_stats"
+                                                    <tbody class="divide-y divide-gray-100 text-xs">
+                                                        <template x-for="(item, idx) in cronbachData.item_stats"
                                                             :key="item.item_key">
                                                             <tr class="hover:bg-gray-50/50 transition-colors">
-                                                                <td class="p-3 border-b text-xs font-semibold text-gray-800"
-                                                                    x-text="item.label"></td>
-                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                                    x-text="item.scale_mean_if_deleted"></td>
-                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                                    x-text="item.scale_var_if_deleted"></td>
-                                                                <td class="p-3 border-b text-xs font-black text-center"
-                                                                    :class="item.item_total_corr >= 0.3 ? 'text-indigo-600' : 'text-rose-500'"
-                                                                    x-text="item.item_total_corr"></td>
-                                                                <td class="p-3 border-b text-xs font-black text-center"
+                                                                <td class="p-3 font-semibold text-gray-800">
+                                                                    <div class="flex items-start gap-2">
+                                                                        <span
+                                                                            class="px-1.5 py-0.5 rounded bg-blue-50 text-[#2271b1] border border-blue-100 text-[10px] font-bold shrink-0 mt-0.5"
+                                                                            x-text="item.short_label || ('Item ' + (idx + 1))"></span>
+                                                                        <span class="leading-relaxed"
+                                                                            x-text="item.label"></span>
+                                                                    </div>
+                                                                </td>
+                                                                <td class="p-3 font-medium text-gray-700 text-center"
+                                                                    x-text="formatDec(item.scale_mean_if_deleted, 2)"></td>
+                                                                <td class="p-3 font-medium text-gray-700 text-center"
+                                                                    x-text="formatDec(item.scale_var_if_deleted, 2)"></td>
+                                                                <td class="p-3 font-black text-center"
+                                                                    :class="item.item_total_corr >= 0.3 ? 'text-[#2271b1]' : 'text-rose-500'"
+                                                                    x-text="formatDec(item.item_total_corr, 3, true)"></td>
+                                                                <td class="p-3 font-bold text-gray-700 text-center"
+                                                                    x-text="formatDec(item.squared_multiple_corr || 0, 3, true)">
+                                                                </td>
+                                                                <td class="p-3 font-black text-center"
                                                                     :class="item.alpha_if_deleted > cronbachData.alpha ? 'text-amber-600 font-black' : 'text-gray-700'"
-                                                                    x-text="item.alpha_if_deleted"></td>
+                                                                    x-text="formatDec(item.alpha_if_deleted, 4, true)"></td>
                                                             </tr>
                                                         </template>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Scale Statistics Table -->
+                                    <template x-if="cronbachData.scale_statistics">
+                                        <div class="mt-6 border-t border-gray-100 pt-6 space-y-3">
+                                            <h5 class="text-sm font-black text-gray-900">{{ __('Scale Statistics') }}</h5>
+                                            <div class="overflow-x-auto border border-gray-200 rounded-2xl shadow-xs">
+                                                <table class="w-full text-left border-collapse min-w-[500px]">
+                                                    <thead>
+                                                        <tr
+                                                            class="bg-gray-50/90 font-bold text-gray-700 text-xs border-b border-gray-200 uppercase">
+                                                            <th class="p-3 text-center">{{ __('Mean') }}</th>
+                                                            <th class="p-3 text-center">{{ __('Variance') }}</th>
+                                                            <th class="p-3 text-center">{{ __('Std. Deviation') }}</th>
+                                                            <th class="p-3 text-center">{{ __('N of Items') }}</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody class="divide-y divide-gray-100 text-xs">
+                                                        <tr class="hover:bg-gray-50/50">
+                                                            <td class="p-3 font-bold text-gray-900 text-center"
+                                                                x-text="formatDec(cronbachData.scale_statistics.mean, 4)">
+                                                            </td>
+                                                            <td class="p-3 font-medium text-gray-700 text-center"
+                                                                x-text="formatDec(cronbachData.scale_statistics.variance, 4)">
+                                                            </td>
+                                                            <td class="p-3 font-medium text-gray-700 text-center"
+                                                                x-text="formatDec(cronbachData.scale_statistics.stdDev, 4)">
+                                                            </td>
+                                                            <td class="p-3 font-bold text-[#2271b1] text-center"
+                                                                x-text="cronbachData.scale_statistics.k_items"></td>
+                                                        </tr>
                                                     </tbody>
                                                 </table>
                                             </div>
@@ -2274,13 +4156,13 @@
                                     <!-- AI Scale Reliability Academic Synthesis Card -->
                                     <template x-if="cronbachData && cronbachData.aiSummary">
                                         <div
-                                            class="p-5 bg-gradient-to-r from-amber-50/80 to-indigo-50/80 rounded-2xl border border-amber-100 shadow-sm space-y-2">
+                                            class="p-5 bg-amber-50/70 rounded-2xl border border-amber-200/80 shadow-2xs space-y-2">
                                             <div class="flex items-center gap-2 text-amber-950 font-bold text-xs">
                                                 <i class="fa-solid fa-clipboard-check text-amber-600"></i>
-                                                <span>{{ __('AI Scale Reliability Academic Synthesis') }}</span>
+                                                <span>{{ __('Scale Reliability Academic Synthesis') }}</span>
                                             </div>
                                             <p class="text-xs text-gray-800 font-medium leading-relaxed"
-                                                x-text="cronbachData.aiSummary"></p>
+                                                x-html="cronbachData.aiSummary"></p>
                                         </div>
                                     </template>
                                 </div>
@@ -2290,201 +4172,511 @@
                         <!-- 2. T-Test Results -->
                         <template x-if="testMethod === 'ttest' && tTestData">
                             <div class="space-y-8 animate-in fade-in duration-500">
-                                <div class="bg-white rounded-3xl p-6 sm:p-8 md:p-10 border border-gray-100 shadow-sm">
-                                    <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Group Statistics') }}</h5>
-                                    <div class="overflow-x-auto mb-8">
-                                        <table class="w-full text-left border-collapse">
-                                            <thead>
-                                                <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
-                                                    <th class="p-3 border-b">{{ __('Grouping Variable') }}</th>
-                                                    <th class="p-3 border-b text-center">{{ __('N') }}</th>
-                                                    <th class="p-3 border-b text-center">{{ __('Mean') }}</th>
-                                                    <th class="p-3 border-b text-center">{{ __('Std. Deviation') }}</th>
-                                                    <th class="p-3 border-b text-center">{{ __('Std. Error Mean') }}</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <template x-for="g in tTestData.groups" :key="g.name">
-                                                    <tr>
-                                                        <td class="p-3 border-b text-xs font-semibold text-gray-800"
-                                                            x-text="g.name"></td>
-                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                            x-text="g.n"></td>
-                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                            x-text="g.mean"></td>
-                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                            x-text="g.stdDev"></td>
-                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                            x-text="g.stdError"></td>
-                                                    </tr>
-                                                </template>
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Independent Samples Test') }}
-                                    </h5>
-                                    <div class="overflow-x-auto">
-                                        <table class="w-full text-left border-collapse min-w-[800px]">
-                                            <thead>
-                                                <tr class="bg-gray-50 font-bold text-gray-700 text-[10px]  tracking-wider">
-                                                    <th class="p-3 border-b" rowspan="2"></th>
-                                                    <th class="p-3 border-b text-center border-r" colspan="2">
-                                                        {{ __("Levene's Test for Equality of Variances") }}
-                                                    </th>
-                                                    <th class="p-3 border-b text-center" colspan="7">
-                                                        {{ __('t-test for Equality of Means') }}
-                                                    </th>
-                                                </tr>
-                                                <tr class="bg-gray-50 font-bold text-gray-700 text-[10px]  tracking-wider">
-                                                    <th class="p-3 border-b text-center">{{ __('F') }}</th>
-                                                    <th class="p-3 border-b text-center border-r">{{ __('Sig.') }}</th>
-                                                    <th class="p-3 border-b text-center">{{ __('t') }}</th>
-                                                    <th class="p-3 border-b text-center">{{ __('df') }}</th>
-                                                    <th class="p-3 border-b text-center">{{ __('Sig. (2-tailed)') }}</th>
-                                                    <th class="p-3 border-b text-center">{{ __('Mean Difference') }}</th>
-                                                    <th class="p-3 border-b text-center">{{ __('Std. Error Difference') }}
-                                                    </th>
-                                                    <th class="p-3 border-b text-center">
-                                                        {{ __('95% Confidence Interval (Lower)') }}
-                                                    </th>
-                                                    <th class="p-3 border-b text-center">
-                                                        {{ __('95% Confidence Interval (Upper)') }}
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr class="hover:bg-gray-50/50 transition-colors">
-                                                    <td class="p-3 border-b text-xs font-semibold text-gray-800">
-                                                        {{ __('Equal variances assumed') }}
-                                                    </td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                        x-text="tTestData.leveneF"></td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r"
-                                                        x-text="tTestData.leveneSig"></td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                        x-text="tTestData.tValue"></td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                        x-text="tTestData.df"></td>
-                                                    <td class="p-3 border-b text-xs font-black text-center"
-                                                        :class="tTestData.significant ? 'text-green-600' : 'text-gray-500'"
-                                                        x-text="tTestData.pValue"></td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                        x-text="tTestData.meanDiff"></td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                        x-text="tTestData.stdErrorDiff"></td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                        x-text="tTestData.ciLower"></td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                        x-text="tTestData.ciUpper"></td>
-                                                </tr>
-                                                <tr class="hover:bg-gray-50/50 transition-colors">
-                                                    <td class="p-3 border-b text-xs font-semibold text-gray-800">
-                                                        {{ __('Equal variances not assumed') }}
-                                                    </td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center">
-                                                    </td>
-                                                    <td
-                                                        class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r">
-                                                    </td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                        x-text="tTestData.tValueWelch || tTestData.tValue"></td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                        x-text="tTestData.dfWelch || tTestData.df"></td>
-                                                    <td class="p-3 border-b text-xs font-black text-center"
-                                                        :class="(tTestData.significantWelch !== undefined ? tTestData.significantWelch : tTestData.significant) ? 'text-green-600' : 'text-gray-500'"
-                                                        x-text="tTestData.pValueWelch || tTestData.pValue"></td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                        x-text="tTestData.meanDiff"></td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                        x-text="tTestData.stdErrorDiffWelch || tTestData.stdErrorDiff"></td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                        x-text="tTestData.ciLowerWelch || tTestData.ciLower"></td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                        x-text="tTestData.ciUpperWelch || tTestData.ciUpper"></td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-
-                                        <!-- Footnotes and Effect Sizes (Cohen's d) -->
-                                        <div
-                                            class="mt-4 pt-3 border-t border-gray-100 flex flex-wrap gap-4 items-center justify-between text-xs text-gray-600">
-                                            <div class="flex items-center gap-2">
+                                <div
+                                    class="bg-white rounded-3xl p-4 sm:p-6 md:p-8 border border-gray-100 shadow-sm space-y-6 sm:space-y-8 overflow-hidden">
+                                    <!-- Case Processing Summary (SPSS Standard) -->
+                                    <template x-if="tTestData.case_summary">
+                                        <div class="border border-gray-200/80 rounded-2xl overflow-hidden shadow-2xs">
+                                            <div
+                                                class="bg-gray-50/90 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
                                                 <span
-                                                    class="font-bold text-gray-700">{{ __("Cohen's d (Effect Size):") }}</span>
-                                                <span class="font-black text-indigo-600" x-text="tTestData.cohensD"></span>
-                                                <span class="text-gray-500 font-medium"
-                                                    x-text="'(' + (tTestData.cohensDEffect || '') + ' {{ __('effect') }}' + ')'"></span>
+                                                    class="text-xs font-bold text-gray-700 uppercase tracking-wider">{{ __('Case Processing Summary') }}</span>
+                                                <span class="text-[11px] text-gray-500 font-medium"
+                                                    x-text="'Total Cases Evaluated = ' + tTestData.case_summary.total_n"></span>
                                             </div>
-                                            <div class="text-[11px] text-gray-500 italic">
-                                                <template x-if="tTestData.equalVarAssumed">
-                                                    <span>{{ __("Levene's test p ≥ .05: Equal variances assumed (Pooled t-test interpretation valid).") }}</span>
+                                            <div class="overflow-x-auto">
+                                                <template x-if="tTestData.case_summary.group1">
+                                                    <table class="w-full text-left text-xs text-gray-600">
+                                                        <thead
+                                                            class="bg-gray-50/75 text-[11px] font-bold text-gray-700 uppercase border-b border-gray-200">
+                                                            <tr>
+                                                                <th class="py-2.5 px-4" rowspan="2"
+                                                                    style="vertical-align: middle;">
+                                                                    {{ __('Sample / Cohort') }}
+                                                                </th>
+                                                                <th class="py-2 px-4 text-center border-l border-gray-200"
+                                                                    colspan="2">{{ __('Included / Valid') }}</th>
+                                                                <th class="py-2 px-4 text-center border-l border-gray-200"
+                                                                    colspan="2">{{ __('Excluded / Missing') }}</th>
+                                                                <th class="py-2 px-4 text-center border-l border-gray-200"
+                                                                    colspan="2">{{ __('Total Cases') }}</th>
+                                                            </tr>
+                                                            <tr
+                                                                class="bg-gray-50/50 text-[10px] text-gray-500 border-t border-gray-100">
+                                                                <th
+                                                                    class="py-1.5 px-3 text-center border-l border-gray-200">
+                                                                    {{ __('N') }}
+                                                                </th>
+                                                                <th class="py-1.5 px-3 text-center">{{ __('Percent') }}</th>
+                                                                <th
+                                                                    class="py-1.5 px-3 text-center border-l border-gray-200">
+                                                                    {{ __('N') }}
+                                                                </th>
+                                                                <th class="py-1.5 px-3 text-center">{{ __('Percent') }}</th>
+                                                                <th
+                                                                    class="py-1.5 px-3 text-center border-l border-gray-200">
+                                                                    {{ __('N') }}
+                                                                </th>
+                                                                <th class="py-1.5 px-3 text-center">{{ __('Percent') }}</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody class="divide-y divide-gray-100">
+                                                            <tr class="hover:bg-gray-50/50">
+                                                                <td class="py-2.5 px-4 font-semibold text-gray-800"
+                                                                    x-text="tTestData.case_summary.group1.name"></td>
+                                                                <td class="py-2.5 px-3 text-center font-bold text-gray-900 border-l border-gray-100"
+                                                                    x-text="tTestData.case_summary.group1.valid_n"></td>
+                                                                <td class="py-2.5 px-3 text-center text-emerald-700 font-bold"
+                                                                    x-text="tTestData.case_summary.group1.valid_pct + '%'">
+                                                                </td>
+                                                                <td class="py-2.5 px-3 text-center font-medium text-gray-600 border-l border-gray-100"
+                                                                    x-text="tTestData.case_summary.group1.missing_n"></td>
+                                                                <td class="py-2.5 px-3 text-center text-gray-500"
+                                                                    x-text="tTestData.case_summary.group1.missing_pct + '%'">
+                                                                </td>
+                                                                <td class="py-2.5 px-3 text-center font-bold text-gray-900 border-l border-gray-100"
+                                                                    x-text="tTestData.case_summary.group1.total_n"></td>
+                                                                <td class="py-2.5 px-3 text-center text-gray-500">100.0%
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="hover:bg-gray-50/50">
+                                                                <td class="py-2.5 px-4 font-semibold text-gray-800"
+                                                                    x-text="tTestData.case_summary.group2.name"></td>
+                                                                <td class="py-2.5 px-3 text-center font-bold text-gray-900 border-l border-gray-100"
+                                                                    x-text="tTestData.case_summary.group2.valid_n"></td>
+                                                                <td class="py-2.5 px-3 text-center text-emerald-700 font-bold"
+                                                                    x-text="tTestData.case_summary.group2.valid_pct + '%'">
+                                                                </td>
+                                                                <td class="py-2.5 px-3 text-center font-medium text-gray-600 border-l border-gray-100"
+                                                                    x-text="tTestData.case_summary.group2.missing_n"></td>
+                                                                <td class="py-2.5 px-3 text-center text-gray-500"
+                                                                    x-text="tTestData.case_summary.group2.missing_pct + '%'">
+                                                                </td>
+                                                                <td class="py-2.5 px-3 text-center font-bold text-gray-900 border-l border-gray-100"
+                                                                    x-text="tTestData.case_summary.group2.total_n"></td>
+                                                                <td class="py-2.5 px-3 text-center text-gray-500">100.0%
+                                                                </td>
+                                                            </tr>
+                                                            <tr
+                                                                class="bg-gray-50/80 font-bold text-gray-900 border-t-2 border-gray-200">
+                                                                <td class="py-2.5 px-4">{{ __('Total') }}</td>
+                                                                <td class="py-2.5 px-3 text-center font-black border-l border-gray-200"
+                                                                    x-text="tTestData.case_summary.valid_n"></td>
+                                                                <td class="py-2.5 px-3 text-center font-black text-emerald-700"
+                                                                    x-text="tTestData.case_summary.valid_pct + '%'"></td>
+                                                                <td class="py-2.5 px-3 text-center font-bold text-gray-700 border-l border-gray-200"
+                                                                    x-text="tTestData.case_summary.missing_n"></td>
+                                                                <td class="py-2.5 px-3 text-center font-bold text-gray-600"
+                                                                    x-text="tTestData.case_summary.missing_pct + '%'"></td>
+                                                                <td class="py-2.5 px-3 text-center font-black border-l border-gray-200"
+                                                                    x-text="tTestData.case_summary.total_n"></td>
+                                                                <td class="py-2.5 px-3 text-center font-black">100.0%</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
                                                 </template>
-                                                <template x-if="!tTestData.equalVarAssumed">
-                                                    <span>{{ __("Levene's test p < .05: Equal variances violated (Welch Satterthwaite t-test reported).") }}</span>
+                                                <template x-if="!tTestData.case_summary.group1">
+                                                    <table class="w-full text-left text-xs text-gray-600">
+                                                        <thead
+                                                            class="bg-gray-50/50 text-[11px] font-bold text-gray-500 uppercase border-b border-gray-100">
+                                                            <tr>
+                                                                <th class="py-2.5 px-4">{{ __('Cases') }}</th>
+                                                                <th class="py-2.5 px-4 text-center">{{ __('N') }}</th>
+                                                                <th class="py-2.5 px-4 text-center">{{ __('%') }}</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody class="divide-y divide-gray-100">
+                                                            <tr class="hover:bg-gray-50/50 font-semibold text-gray-800">
+                                                                <td class="py-2.5 px-4 flex items-center gap-2">
+                                                                    <span
+                                                                        class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                                                    <span>{{ __('Valid (Included in Comparison)') }}</span>
+                                                                </td>
+                                                                <td class="py-2.5 px-4 text-center font-bold text-gray-900"
+                                                                    x-text="tTestData.case_summary.valid_n"></td>
+                                                                <td class="py-2.5 px-4 text-center text-emerald-700 font-bold"
+                                                                    x-text="tTestData.case_summary.valid_pct + '%'"></td>
+                                                            </tr>
+                                                            <tr class="hover:bg-gray-50/50 text-gray-600">
+                                                                <td class="py-2.5 px-4 flex items-center gap-2">
+                                                                    <span class="w-2 h-2 rounded-full bg-gray-300"></span>
+                                                                    <span>{{ __('Excluded (Missing / Other Groups)') }}</span>
+                                                                </td>
+                                                                <td class="py-2.5 px-4 text-center font-medium text-gray-600"
+                                                                    x-text="tTestData.case_summary.missing_n"></td>
+                                                                <td class="py-2.5 px-4 text-center text-gray-500"
+                                                                    x-text="tTestData.case_summary.missing_pct + '%'"></td>
+                                                            </tr>
+                                                            <tr
+                                                                class="bg-gray-50/80 font-bold text-gray-900 border-t border-gray-200">
+                                                                <td class="py-2.5 px-4">{{ __('Total') }}</td>
+                                                                <td class="py-2.5 px-4 text-center font-black"
+                                                                    x-text="tTestData.case_summary.total_n"></td>
+                                                                <td class="py-2.5 px-4 text-center font-black">100.0%</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
                                                 </template>
+                                            </div>
+                                            <div
+                                                class="bg-gray-50/60 px-4 py-2 border-t border-gray-100 text-[10px] text-gray-500 italic">
+                                                {{ __('a. Listwise deletion based on dependent and grouping variables in the procedure.') }}
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <div>
+                                        <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Group Statistics') }}</h5>
+                                        <div class="overflow-x-auto mb-8">
+                                            <table class="w-full text-left border-collapse">
+                                                <thead>
+                                                    <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                                        <th class="p-3 border-b">{{ __('Grouping Variable') }}</th>
+                                                        <th class="p-3 border-b text-center">{{ __('N') }}</th>
+                                                        <th class="p-3 border-b text-center">{{ __('Mean') }}</th>
+                                                        <th class="p-3 border-b text-center">{{ __('Std. Deviation') }}</th>
+                                                        <th class="p-3 border-b text-center">{{ __('Std. Error Mean') }}
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <template x-for="g in tTestData.groups" :key="g.name">
+                                                        <tr>
+                                                            <td class="p-3 border-b text-xs font-semibold text-gray-800"
+                                                                x-text="g.name"></td>
+                                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                x-text="g.n"></td>
+                                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                x-text="g.mean"></td>
+                                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                x-text="g.stdDev"></td>
+                                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                x-text="g.stdError"></td>
+                                                        </tr>
+                                                    </template>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <h5 class="text-sm font-black text-gray-900 mb-4">
+                                            {{ __('Independent Samples Test') }}
+                                        </h5>
+                                        <div class="overflow-x-auto">
+                                            <table class="w-full text-left border-collapse min-w-[800px]">
+                                                <thead>
+                                                    <tr
+                                                        class="bg-gray-50 font-bold text-gray-700 text-[10px]  tracking-wider">
+                                                        <th class="p-3 border-b" rowspan="2"></th>
+                                                        <th class="p-3 border-b text-center border-r" colspan="2">
+                                                            {{ __("Levene's Test for Equality of Variances") }}
+                                                        </th>
+                                                        <th class="p-3 border-b text-center" colspan="8">
+                                                            {{ __('t-test for Equality of Means') }}
+                                                        </th>
+                                                    </tr>
+                                                    <tr
+                                                        class="bg-gray-50 font-bold text-gray-700 text-[10px]  tracking-wider">
+                                                        <th class="p-3 border-b text-center">{{ __('F') }}</th>
+                                                        <th class="p-3 border-b text-center border-r">{{ __('Sig.') }}</th>
+                                                        <th class="p-3 border-b text-center">{{ __('t') }}</th>
+                                                        <th class="p-3 border-b text-center">{{ __('df') }}</th>
+                                                        <th class="p-3 border-b text-center">{{ __('Sig. (2-tailed)') }}
+                                                        </th>
+                                                        <th class="p-3 border-b text-center">{{ __('Sig. (1-tailed)') }}
+                                                        </th>
+                                                        <th class="p-3 border-b text-center">{{ __('Mean Difference') }}
+                                                        </th>
+                                                        <th class="p-3 border-b text-center">
+                                                            {{ __('Std. Error Difference') }}
+                                                        </th>
+                                                        <th class="p-3 border-b text-center">
+                                                            {{ __('95% Confidence Interval (Lower)') }}
+                                                        </th>
+                                                        <th class="p-3 border-b text-center">
+                                                            {{ __('95% Confidence Interval (Upper)') }}
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr class="hover:bg-gray-50/50 transition-colors">
+                                                        <td class="p-3 border-b text-xs font-semibold text-gray-800">
+                                                            {{ __('Equal variances assumed') }}
+                                                        </td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                            x-text="tTestData.leveneF"></td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r"
+                                                            x-text="formatP(tTestData.leveneSig)"></td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                            x-text="tTestData.tValue"></td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                            x-text="tTestData.df"></td>
+                                                        <td class="p-3 border-b text-xs font-black text-center"
+                                                            :class="tTestData.significant ? 'text-green-600' : 'text-gray-500'"
+                                                            x-text="formatP(tTestData.pValue)"></td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                            x-text="formatP(tTestData.pValue1Tailed)"></td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                            x-text="tTestData.meanDiff"></td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                            x-text="tTestData.stdErrorDiff"></td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                            x-text="tTestData.ciLower"></td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                            x-text="tTestData.ciUpper"></td>
+                                                    </tr>
+                                                    <tr class="hover:bg-gray-50/50 transition-colors">
+                                                        <td class="p-3 border-b text-xs font-semibold text-gray-800">
+                                                            {{ __('Equal variances not assumed') }}
+                                                        </td>
+                                                        <td
+                                                            class="p-3 border-b text-xs font-medium text-gray-600 text-center">
+                                                        </td>
+                                                        <td
+                                                            class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r">
+                                                        </td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                            x-text="tTestData.tValueWelch || tTestData.tValue"></td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                            x-text="tTestData.dfWelch || tTestData.df"></td>
+                                                        <td class="p-3 border-b text-xs font-black text-center"
+                                                            :class="(tTestData.significantWelch !== undefined ? tTestData.significantWelch : tTestData.significant) ? 'text-green-600' : 'text-gray-500'"
+                                                            x-text="formatP(tTestData.pValueWelch || tTestData.pValue)">
+                                                        </td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                            x-text="formatP(tTestData.pValueWelch1Tailed || tTestData.pValue1Tailed)">
+                                                        </td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                            x-text="tTestData.meanDiff"></td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                            x-text="tTestData.stdErrorDiffWelch || tTestData.stdErrorDiff">
+                                                        </td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                            x-text="tTestData.ciLowerWelch || tTestData.ciLower"></td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                            x-text="tTestData.ciUpperWelch || tTestData.ciUpper"></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+
+                                            <!-- Independent Samples Effect Sizes (SPSS v27+ Standard) -->
+                                            <template x-if="tTestData.effect_sizes && tTestData.effect_sizes.length > 0">
+                                                <div class="mt-8 border-t border-gray-100 pt-6">
+                                                    <h5 class="text-sm font-black text-gray-900 mb-4">
+                                                        {{ __('Independent Samples Effect Sizes') }}
+                                                    </h5>
+                                                    <div class="overflow-x-auto">
+                                                        <table class="w-full text-left border-collapse min-w-[600px]">
+                                                            <thead>
+                                                                <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                                                    <th class="p-3 border-b">{{ __('Effect Size Measure') }}
+                                                                    </th>
+                                                                    <th class="p-3 border-b text-center">
+                                                                        {{ __('Standardizer a') }}
+                                                                    </th>
+                                                                    <th class="p-3 border-b text-center">
+                                                                        {{ __('Point Estimate') }}
+                                                                    </th>
+                                                                    <th class="p-3 border-b text-center border-l"
+                                                                        colspan="2">{{ __('95% Confidence Interval') }}</th>
+                                                                </tr>
+                                                                <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                                                    <th class="p-3 border-b" colspan="3"></th>
+                                                                    <th class="p-3 border-b text-center border-l">
+                                                                        {{ __('Lower') }}
+                                                                    </th>
+                                                                    <th class="p-3 border-b text-center">{{ __('Upper') }}
+                                                                    </th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <template x-for="es in tTestData.effect_sizes"
+                                                                    :key="es.name">
+                                                                    <tr class="hover:bg-gray-50/50">
+                                                                        <td class="p-3 border-b text-xs font-semibold text-gray-800"
+                                                                            x-text="es.name"></td>
+                                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                            x-text="formatDec(es.standardizer, 4)"></td>
+                                                                        <td class="p-3 border-b text-xs font-bold text-indigo-700 text-center"
+                                                                            x-text="formatDec(es.point_estimate, 3)"></td>
+                                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-l"
+                                                                            x-text="formatDec(es.ci_lower, 3)"></td>
+                                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                            x-text="formatDec(es.ci_upper, 3)"></td>
+                                                                    </tr>
+                                                                </template>
+                                                            </tbody>
+                                                        </table>
+                                                        <div class="mt-2 text-[10px] text-gray-400 italic space-y-0.5">
+                                                            <p>{{ __("a. The denominator used in estimating the effect sizes. Cohen's d and Hedges' correction use the pooled standard deviation. Glass's delta uses the sample standard deviation of the control/comparison group.") }}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </template>
+
+                                            <!-- Footnotes and Effect Sizes (Cohen's d & Hedges' g) -->
+                                            <div
+                                                class="mt-4 pt-3 border-t border-gray-100 flex flex-wrap gap-4 items-center justify-between text-xs text-gray-600">
+                                                <div class="flex items-center gap-4">
+                                                    <div class="flex items-center gap-1.5">
+                                                        <span class="font-bold text-gray-700">{{ __("Cohen's d:") }}</span>
+                                                        <span class="font-black text-indigo-600"
+                                                            x-text="tTestData.cohensD"></span>
+                                                        <span class="text-gray-500 font-medium"
+                                                            x-text="'(' + (tTestData.cohensDEffect || '') + ')'"></span>
+                                                    </div>
+                                                    <template x-if="tTestData.hedgesG !== undefined">
+                                                        <div
+                                                            class="flex items-center gap-1.5 border-l border-gray-200 pl-4">
+                                                            <span
+                                                                class="font-bold text-gray-700">{{ __("Hedges' g:") }}</span>
+                                                            <span class="font-black text-indigo-600"
+                                                                x-text="tTestData.hedgesG"></span>
+                                                            <span class="text-gray-500 font-medium"
+                                                                x-text="'(' + (tTestData.hedgesGEffect || '') + ')'"></span>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                                <div class="text-[11px] text-gray-500 italic">
+                                                    <template x-if="tTestData.equalVarAssumed">
+                                                        <span>{{ __("Levene's test p ≥ .05: Equal variances assumed (Pooled t-test interpretation valid).") }}</span>
+                                                    </template>
+                                                    <template x-if="!tTestData.equalVarAssumed">
+                                                        <span>{{ __("Levene's test p < .05: Equal variances violated (Welch Satterthwaite t-test reported).") }}</span>
+                                                    </template>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
                         </template>
 
                         <!-- 3. Correlation Results -->
                         <template x-if="testMethod === 'correlation' && correlationData">
                             <div class="space-y-8 animate-in fade-in duration-500">
-                                <div class="bg-white rounded-3xl p-6 sm:p-8 md:p-10 border border-gray-100 shadow-sm">
-                                    <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Correlations Matrix') }}</h5>
+                                <div
+                                    class="bg-white rounded-3xl p-4 sm:p-6 md:p-8 border border-gray-100 shadow-sm space-y-6 overflow-hidden">
+                                    <!-- Descriptive Statistics Table -->
+                                    <template
+                                        x-if="correlationData.descriptives && correlationData.descriptives.length > 0">
+                                        <div>
+                                            <h5 class="text-sm font-black text-gray-900 mb-4">
+                                                {{ __('Descriptive Statistics') }}
+                                            </h5>
+                                            <div class="overflow-x-auto mb-6">
+                                                <table class="w-full text-left border-collapse">
+                                                    <thead>
+                                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                                            <th class="p-3 border-b">{{ __('Variable') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('Mean') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('Std. Deviation') }}
+                                                            </th>
+                                                            <th class="p-3 border-b text-center">{{ __('N') }}</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template x-for="d in correlationData.descriptives"
+                                                            :key="d.variable">
+                                                            <tr class="hover:bg-gray-50/50">
+                                                                <td class="p-3 border-b text-xs font-semibold text-gray-800"
+                                                                    x-text="d.short_label || d.label" :title="d.label"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                    x-text="d.mean"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                    x-text="d.stdDev"></td>
+                                                                <td class="p-3 border-b text-xs font-bold text-gray-900 text-center"
+                                                                    x-text="d.n"></td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <h5 class="text-sm font-black text-gray-900 mb-4">
+                                        {{ __('Correlations Matrix (Pearson & Spearman)') }}
+                                    </h5>
                                     <div class="overflow-x-auto">
-                                        <table class="w-full text-left border-collapse">
+                                        <table class="w-full text-left border-collapse min-w-[500px]">
                                             <thead>
                                                 <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
                                                     <th class="p-3 border-b"></th>
-                                                    <th class="p-3 border-b" x-text="correlationData.labelX"></th>
-                                                    <th class="p-3 border-b" x-text="correlationData.labelY"></th>
+                                                    <th class="p-3 border-b"
+                                                        x-text="correlationData.shortLabelX || correlationData.labelX"
+                                                        :title="correlationData.labelX"></th>
+                                                    <th class="p-3 border-b"
+                                                        x-text="correlationData.shortLabelY || correlationData.labelY"
+                                                        :title="correlationData.labelY"></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <tr class="border-b hover:bg-gray-50/30 transition-colors">
                                                     <td class="p-3 text-xs font-bold text-gray-800"
-                                                        x-text="correlationData.labelX"></td>
-                                                    <td class="p-3 text-xs text-gray-600">
-                                                        <div>{{ __('Pearson Correlation:') }} <span
-                                                                class="font-bold">1</span></div>
-                                                        <div class="mt-1">{{ __('Sig. (2-tailed):') }} </div>
+                                                        x-text="correlationData.shortLabelX || correlationData.labelX"
+                                                        :title="correlationData.labelX"></td>
+                                                    <td class="p-3 text-xs text-gray-600 space-y-1">
+                                                        <div>{{ __('Pearson r:') }} <span class="font-bold">1</span></div>
+                                                        <div>{{ __('Sig. (2-tailed):') }} <span
+                                                                class="text-gray-400">-</span></div>
+                                                        <template x-if="correlationData.spearmanRho !== undefined">
+                                                            <div>{{ __("Spearman's ρ:") }} <span class="font-bold">1</span>
+                                                            </div>
+                                                        </template>
                                                         <div class="text-[10px] text-gray-400 mt-1">N: <span
                                                                 x-text="correlationData.n"></span></div>
                                                     </td>
-                                                    <td class="p-3 text-xs text-gray-600">
-                                                        <div>{{ __('Pearson Correlation:') }} <span
-                                                                class="font-black text-indigo-600"
+                                                    <td class="p-3 text-xs text-gray-600 space-y-1">
+                                                        <div>{{ __('Pearson r:') }} <span class="font-black text-indigo-600"
                                                                 x-text="correlationData.r + (correlationData.sigMarker || '')"></span>
                                                         </div>
-                                                        <div class="mt-1">{{ __('Sig. (2-tailed):') }} <span
+                                                        <div>{{ __('Sig. (2-tailed):') }} <span
                                                                 class="font-bold text-indigo-700"
-                                                                x-text="correlationData.pValue"></span></div>
+                                                                x-text="formatP(correlationData.pValue)"></span></div>
+                                                        <template x-if="correlationData.spearmanRho !== undefined">
+                                                            <div>
+                                                                <span>{{ __("Spearman's ρ:") }}</span>
+                                                                <span class="font-black text-purple-600"
+                                                                    x-text="correlationData.spearmanRho + (correlationData.spearmanSigMarker || '')"></span>
+                                                                <span class="text-[10px] text-gray-500"
+                                                                    x-text="'(p = ' + formatP(correlationData.spearmanPValue) + ')'"></span>
+                                                            </div>
+                                                        </template>
                                                         <div class="text-[10px] text-gray-400 mt-1">N: <span
                                                                 x-text="correlationData.n"></span></div>
                                                     </td>
                                                 </tr>
                                                 <tr class="border-b hover:bg-gray-50/30 transition-colors">
                                                     <td class="p-3 text-xs font-bold text-gray-800"
-                                                        x-text="correlationData.labelY"></td>
-                                                    <td class="p-3 text-xs text-gray-600">
-                                                        <div>{{ __('Pearson Correlation:') }} <span
-                                                                class="font-black text-indigo-600"
+                                                        x-text="correlationData.shortLabelY || correlationData.labelY"
+                                                        :title="correlationData.labelY"></td>
+                                                    <td class="p-3 text-xs text-gray-600 space-y-1">
+                                                        <div>{{ __('Pearson r:') }} <span class="font-black text-indigo-600"
                                                                 x-text="correlationData.r + (correlationData.sigMarker || '')"></span>
                                                         </div>
-                                                        <div class="mt-1">{{ __('Sig. (2-tailed):') }} <span
+                                                        <div>{{ __('Sig. (2-tailed):') }} <span
                                                                 class="font-bold text-indigo-700"
-                                                                x-text="correlationData.pValue"></span></div>
+                                                                x-text="formatP(correlationData.pValue)"></span></div>
+                                                        <template x-if="correlationData.spearmanRho !== undefined">
+                                                            <div>
+                                                                <span>{{ __("Spearman's ρ:") }}</span>
+                                                                <span class="font-black text-purple-600"
+                                                                    x-text="correlationData.spearmanRho + (correlationData.spearmanSigMarker || '')"></span>
+                                                                <span class="text-[10px] text-gray-500"
+                                                                    x-text="'(p = ' + formatP(correlationData.spearmanPValue) + ')'"></span>
+                                                            </div>
+                                                        </template>
                                                         <div class="text-[10px] text-gray-400 mt-1">N: <span
                                                                 x-text="correlationData.n"></span></div>
                                                     </td>
-                                                    <td class="p-3 text-xs text-gray-600">
-                                                        <div>{{ __('Pearson Correlation:') }} <span
-                                                                class="font-bold">1</span></div>
-                                                        <div class="mt-1">{{ __('Sig. (2-tailed):') }} </div>
+                                                    <td class="p-3 text-xs text-gray-600 space-y-1">
+                                                        <div>{{ __('Pearson r:') }} <span class="font-bold">1</span></div>
+                                                        <div>{{ __('Sig. (2-tailed):') }} <span
+                                                                class="text-gray-400">-</span></div>
+                                                        <template x-if="correlationData.spearmanRho !== undefined">
+                                                            <div>{{ __("Spearman's ρ:") }} <span class="font-bold">1</span>
+                                                            </div>
+                                                        </template>
                                                         <div class="text-[10px] text-gray-400 mt-1">N: <span
                                                                 x-text="correlationData.n"></span></div>
                                                     </td>
@@ -2494,12 +4686,14 @@
 
                                         <!-- Footnotes -->
                                         <div class="mt-4 space-y-1 text-[10px] text-gray-500 italic">
-                                            <template x-if="correlationData.sigMarker === '**'">
+                                            <template
+                                                x-if="correlationData.sigMarker === '**' || correlationData.spearmanSigMarker === '**'">
                                                 <div>
                                                     {{ __('**. Correlation is significant at the 0.01 level (2-tailed).') }}
                                                 </div>
                                             </template>
-                                            <template x-if="correlationData.sigMarker === '*'">
+                                            <template
+                                                x-if="correlationData.sigMarker === '*' || correlationData.spearmanSigMarker === '*'">
                                                 <div>{{ __('*. Correlation is significant at the 0.05 level (2-tailed).') }}
                                                 </div>
                                             </template>
@@ -2514,6 +4708,25 @@
                                             </div>
                                         </div>
                                     </div>
+
+                                    <!-- Interactive Scatter Plot with Trendline -->
+                                    <template
+                                        x-if="correlationData.scatterPoints && correlationData.scatterPoints.length > 0">
+                                        <div class="mt-6 border-t border-gray-100 pt-6">
+                                            <div class="flex items-center justify-between mb-4">
+                                                <h5 class="text-sm font-black text-gray-900">
+                                                    {{ __('Scatter Plot & Regression Trendline') }}
+                                                </h5>
+                                                <span
+                                                    class="text-[10px] font-semibold px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md"
+                                                    x-text="'R² = ' + correlationData.r2"></span>
+                                            </div>
+                                            <div class="relative w-full h-80 sm:h-96 bg-gray-50/50 rounded-2xl p-4 border border-gray-100"
+                                                x-init="$nextTick(() => renderCorrelationScatter($el, correlationData))">
+                                                <canvas class="w-full h-full"></canvas>
+                                            </div>
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
                         </template>
@@ -2521,7 +4734,8 @@
                         <!-- 4. ANOVA Results -->
                         <template x-if="testMethod === 'anova' && anovaData">
                             <div class="space-y-8 animate-in fade-in duration-500">
-                                <div class="bg-white rounded-3xl p-6 sm:p-8 md:p-10 border border-gray-100 shadow-sm">
+                                <div
+                                    class="bg-white rounded-3xl p-4 sm:p-6 md:p-8 border border-gray-100 shadow-sm overflow-hidden space-y-6 sm:space-y-8">
                                     <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('ANOVA Descriptives') }}</h5>
                                     <div class="overflow-x-auto mb-8">
                                         <table class="w-full text-left border-collapse">
@@ -2558,24 +4772,64 @@
                                                         <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
                                                             x-text="g.n"></td>
                                                         <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                            x-text="g.mean"></td>
+                                                            x-text="formatDec(g.mean, 4)"></td>
                                                         <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                            x-text="g.stdDev"></td>
+                                                            x-text="formatDec(g.stdDev, 4)"></td>
                                                         <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                            x-text="g.stdError"></td>
+                                                            x-text="formatDec(g.stdError, 4)"></td>
                                                         <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-l"
-                                                            x-text="g.ciLower"></td>
+                                                            x-text="formatDec(g.ciLower, 4)"></td>
                                                         <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                            x-text="g.ciUpper"></td>
+                                                            x-text="formatDec(g.ciUpper, 4)"></td>
                                                         <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-l"
-                                                            x-text="g.min"></td>
+                                                            x-text="formatDec(g.min, 4)"></td>
                                                         <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
-                                                            x-text="g.max"></td>
+                                                            x-text="formatDec(g.max, 4)"></td>
                                                     </tr>
                                                 </template>
                                             </tbody>
                                         </table>
                                     </div>
+
+                                    <!-- Test of Homogeneity of Variances (Levene's Test) -->
+                                    <template x-if="anovaData.levene">
+                                        <div class="mb-8">
+                                            <h5 class="text-sm font-black text-gray-900 mb-4">
+                                                {{ __("Test of Homogeneity of Variances (Levene's)") }}
+                                            </h5>
+                                            <div class="overflow-x-auto">
+                                                <table class="w-full text-left border-collapse min-w-[500px]">
+                                                    <thead>
+                                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                                            <th class="p-3 border-b">{{ __('Levene Statistic') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('df1') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('df2') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('Sig.') }}</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr class="hover:bg-gray-50/50">
+                                                            <td class="p-3 border-b text-xs font-bold text-gray-900"
+                                                                x-text="anovaData.levene.statistic"></td>
+                                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                x-text="anovaData.levene.df1"></td>
+                                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                x-text="anovaData.levene.df2"></td>
+                                                            <td class="p-3 border-b text-xs font-black text-center"
+                                                                :class="anovaData.levene.sig < 0.05 ? 'text-amber-600' : 'text-emerald-600'"
+                                                                x-text="formatP(anovaData.levene.sig)"></td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                                <p class="text-[11px] text-gray-500 italic mt-2">
+                                                    <span
+                                                        x-show="anovaData.levene.equalVarAssumed">{{ __("p ≥ .05: Equal variances assumed across comparison groups.") }}</span>
+                                                    <span
+                                                        x-show="!anovaData.levene.equalVarAssumed">{{ __("p < .05: Variance homogeneity assumption is violated.") }}</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </template>
 
                                     <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('ANOVA Table') }}</h5>
                                     <div class="overflow-x-auto">
@@ -2606,7 +4860,7 @@
                                                         style="vertical-align: middle;"></td>
                                                     <td class="p-3 border-b text-xs font-black text-center"
                                                         :class="anovaData.significant ? 'text-green-600' : 'text-gray-500'"
-                                                        x-text="anovaData.pValue" rowspan="2"
+                                                        x-text="formatP(anovaData.pValue)" rowspan="2"
                                                         style="vertical-align: middle;"></td>
                                                 </tr>
                                                 <tr>
@@ -2649,6 +4903,284 @@
                                             </div>
                                         </div>
                                     </div>
+
+                                    <!-- Robust Tests of Equality of Means (Welch & Brown-Forsythe ANOVA) -->
+                                    <template x-if="anovaData.robust_tests">
+                                        <div class="mt-8 border-t border-gray-100 pt-6">
+                                            <div class="flex items-center justify-between mb-4">
+                                                <h5 class="text-sm font-black text-gray-900">
+                                                    {{ __('Robust Tests of Equality of Means') }}
+                                                </h5>
+                                                <span x-show="anovaData.levene && !anovaData.levene.equalVarAssumed"
+                                                    class="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-lg">
+                                                    {{ __('Recommended Test (Equal Variances Violated)') }}
+                                                </span>
+                                            </div>
+                                            <div class="overflow-x-auto">
+                                                <table class="w-full text-left border-collapse min-w-[500px]">
+                                                    <thead>
+                                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                                            <th class="p-3 border-b">{{ __('Test') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('Statistic a') }}
+                                                            </th>
+                                                            <th class="p-3 border-b text-center">{{ __('df1') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('df2') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('Sig.') }}</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr class="hover:bg-gray-50/50"
+                                                            :class="anovaData.levene && !anovaData.levene.equalVarAssumed ? 'bg-amber-50/30 font-semibold' : ''">
+                                                            <td class="p-3 border-b text-xs font-semibold text-gray-800">
+                                                                {{ __('Welch') }}
+                                                            </td>
+                                                            <td class="p-3 border-b text-xs font-bold text-indigo-700 text-center"
+                                                                x-text="formatDec(anovaData.robust_tests.welch.statistic, 3)">
+                                                            </td>
+                                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                x-text="anovaData.robust_tests.welch.df1"></td>
+                                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                x-text="formatDec(anovaData.robust_tests.welch.df2, 3)">
+                                                            </td>
+                                                            <td class="p-3 border-b text-xs font-black text-center"
+                                                                :class="anovaData.robust_tests.welch.sig < 0.05 ? 'text-emerald-600' : 'text-gray-500'"
+                                                                x-text="formatP(anovaData.robust_tests.welch.sig)"></td>
+                                                        </tr>
+                                                        <tr class="hover:bg-gray-50/50">
+                                                            <td class="p-3 border-b text-xs font-semibold text-gray-800">
+                                                                {{ __('Brown-Forsythe') }}
+                                                            </td>
+                                                            <td class="p-3 border-b text-xs font-bold text-indigo-700 text-center"
+                                                                x-text="formatDec(anovaData.robust_tests.brown_forsythe.statistic, 3)">
+                                                            </td>
+                                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                x-text="anovaData.robust_tests.brown_forsythe.df1"></td>
+                                                            <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                x-text="formatDec(anovaData.robust_tests.brown_forsythe.df2, 3)">
+                                                            </td>
+                                                            <td class="p-3 border-b text-xs font-black text-center"
+                                                                :class="anovaData.robust_tests.brown_forsythe.sig < 0.05 ? 'text-emerald-600' : 'text-gray-500'"
+                                                                x-text="formatP(anovaData.robust_tests.brown_forsythe.sig)">
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                                <p class="text-[10px] text-gray-400 italic mt-2">
+                                                    {{ __('a. Asymptotically F distributed.') }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Means Plot (Interactive Chart with 95% CI Error Bars) -->
+                                    <div class="mt-8 border-t border-gray-100 pt-6">
+                                        <div class="flex items-center justify-between mb-4">
+                                            <h5 class="text-sm font-black text-gray-900">
+                                                {{ __('Means Plot (with 95% Confidence Intervals)') }}
+                                            </h5>
+                                            <span
+                                                class="text-[11px] text-gray-500 font-medium">{{ __('Error bars represent 95% CI for the mean') }}</span>
+                                        </div>
+                                        <div id="anova-means-chart-container"
+                                            class="h-64 sm:h-72 w-full bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                                            <canvas></canvas>
+                                        </div>
+                                    </div>
+
+                                    <!-- Post-Hoc Multiple Comparisons Table (Tukey HSD) -->
+                                    <template x-if="anovaData.postHoc && anovaData.postHoc.length > 0">
+                                        <div class="mt-8 border-t border-gray-100 pt-6">
+                                            <h5 class="text-sm font-black text-gray-900 mb-3">
+                                                {{ __('Post-Hoc Multiple Comparisons (Tukey HSD / Bonferroni)') }}
+                                            </h5>
+                                            <!-- Non-significant Omnibus F Note (SPSS convention) -->
+                                            <template x-if="anovaData && !anovaData.significant">
+                                                <div
+                                                    class="mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200/80 flex items-start gap-3">
+                                                    <i
+                                                        class="fa-solid fa-circle-info text-amber-600 mt-0.5 text-sm shrink-0"></i>
+                                                    <div class="text-xs text-amber-900 leading-relaxed">
+                                                        <span class="font-bold">{{ __('Note on Post-Hoc Tests:') }}</span>
+                                                        {{ __('The Omnibus F-test is non-significant (p ≥ .05), indicating no overall statistically significant difference between group means. In accordance with standard statistical conventions (SPSS / APA), post-hoc pairwise comparisons are provided for exploratory reference only and should not be interpreted as confirmatory significant differences.') }}
+                                                    </div>
+                                                </div>
+                                            </template>
+                                            <div class="overflow-x-auto">
+                                                <table class="w-full text-left border-collapse min-w-[700px]">
+                                                    <thead>
+                                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                                            <th class="p-3 border-b">{{ __('(I) Group') }}</th>
+                                                            <th class="p-3 border-b">{{ __('(J) Group') }}</th>
+                                                            <th class="p-3 border-b text-center">
+                                                                {{ __('Mean Difference (I-J)') }}
+                                                            </th>
+                                                            <th class="p-3 border-b text-center">{{ __('Std. Error') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('Sig. (Tukey)') }}
+                                                            </th>
+                                                            <th class="p-3 border-b text-center">{{ __('95% CI Lower') }}
+                                                            </th>
+                                                            <th class="p-3 border-b text-center">{{ __('95% CI Upper') }}
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template x-for="ph in anovaData.postHoc"
+                                                            :key="ph.groupI + '_' + ph.groupJ">
+                                                            <tr class="hover:bg-gray-50/50"
+                                                                :class="ph.significant ? 'bg-emerald-50/20' : ''">
+                                                                <td class="p-3 border-b text-xs font-semibold text-gray-800"
+                                                                    x-text="ph.groupI"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-700"
+                                                                    x-text="ph.groupJ"></td>
+                                                                <td class="p-3 border-b text-xs font-bold text-center"
+                                                                    :class="ph.significant ? 'text-indigo-700' : 'text-gray-800'"
+                                                                    x-text="formatDec(ph.meanDiff, 4) + (ph.significant ? ' *' : '')">
+                                                                </td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                    x-text="formatDec(ph.stdError, 4)"></td>
+                                                                <td class="p-3 border-b text-xs font-black text-center"
+                                                                    :class="ph.significant ? 'text-emerald-600' : 'text-gray-500'"
+                                                                    x-text="formatP(ph.sig)"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                    x-text="formatDec(ph.ciLower, 4)"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                    x-text="formatDec(ph.ciUpper, 4)"></td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                                <p class="text-[10px] text-gray-400 italic mt-2">
+                                                    {{ __('*. The mean difference is significant at the 0.05 level.') }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Games-Howell Post-Hoc Multiple Comparisons (Unequal Variances) -->
+                                    <template
+                                        x-if="anovaData.postHocGamesHowell && anovaData.postHocGamesHowell.length > 0">
+                                        <div class="mt-8 border-t border-gray-100 pt-6">
+                                            <div class="flex items-center justify-between mb-3">
+                                                <h5 class="text-sm font-black text-gray-900">
+                                                    {{ __('Post-Hoc Multiple Comparisons (Games-Howell)') }}
+                                                </h5>
+                                                <span
+                                                    class="text-[10px] font-semibold px-2 py-0.5 bg-amber-50 text-amber-800 rounded-md border border-amber-200">
+                                                    {{ __('Unequal Variances Assumed') }}
+                                                </span>
+                                            </div>
+                                            <div class="overflow-x-auto">
+                                                <table class="w-full text-left border-collapse min-w-[750px]">
+                                                    <thead>
+                                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                                            <th class="p-3 border-b">{{ __('(I) Group') }}</th>
+                                                            <th class="p-3 border-b">{{ __('(J) Group') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('Mean Diff (I-J)') }}
+                                                            </th>
+                                                            <th class="p-3 border-b text-center">{{ __('Std. Error') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('df') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('Sig.') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('95% CI Lower') }}
+                                                            </th>
+                                                            <th class="p-3 border-b text-center">{{ __('95% CI Upper') }}
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template x-for="gh in anovaData.postHocGamesHowell"
+                                                            :key="'gh_' + gh.groupI + '_' + gh.groupJ">
+                                                            <tr class="hover:bg-gray-50/50"
+                                                                :class="gh.significant ? 'bg-amber-50/20' : ''">
+                                                                <td class="p-3 border-b text-xs font-semibold text-gray-800"
+                                                                    x-text="gh.groupI"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-700"
+                                                                    x-text="gh.groupJ"></td>
+                                                                <td class="p-3 border-b text-xs font-bold text-center"
+                                                                    :class="gh.significant ? 'text-amber-700' : 'text-gray-800'"
+                                                                    x-text="formatDec(gh.meanDiff, 4) + (gh.significant ? ' *' : '')">
+                                                                </td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                    x-text="formatDec(gh.stdError, 4)"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                    x-text="formatDec(gh.df, 2)"></td>
+                                                                <td class="p-3 border-b text-xs font-black text-center"
+                                                                    :class="gh.significant ? 'text-amber-700' : 'text-gray-500'"
+                                                                    x-text="formatP(gh.sig)"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                    x-text="formatDec(gh.ciLower, 4)"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                    x-text="formatDec(gh.ciUpper, 4)"></td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                                <p class="text-[10px] text-gray-400 italic mt-2">
+                                                    {{ __('*. The mean difference is significant at the 0.05 level. Welch-Satterthwaite df used.') }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Homogeneous Subsets (Tukey HSD Harmonic Mean) Table -->
+                                    <template
+                                        x-if="anovaData.homogeneousSubsets && anovaData.homogeneousSubsets.rows && anovaData.homogeneousSubsets.rows.length > 0">
+                                        <div class="mt-8 border-t border-gray-100 pt-6">
+                                            <h5 class="text-sm font-black text-gray-900 mb-3">
+                                                {{ __('Homogeneous Subsets (Tukey HSD)') }}
+                                            </h5>
+                                            <div class="overflow-x-auto">
+                                                <table class="w-full text-left border-collapse min-w-[500px]">
+                                                    <thead>
+                                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                                            <th class="p-3 border-b" rowspan="2">{{ __('Group') }}</th>
+                                                            <th class="p-3 border-b text-center" rowspan="2">{{ __('N') }}
+                                                            </th>
+                                                            <th class="p-3 border-b text-center border-l"
+                                                                :colspan="anovaData.homogeneousSubsets.subsetCount">
+                                                                {{ __('Subset for alpha = 0.05') }}
+                                                            </th>
+                                                        </tr>
+                                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                                            <template
+                                                                x-for="sIdx in anovaData.homogeneousSubsets.subsetCount"
+                                                                :key="'subset_th_' + sIdx">
+                                                                <th class="p-3 border-b text-center border-l" x-text="sIdx">
+                                                                </th>
+                                                            </template>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template x-for="row in anovaData.homogeneousSubsets.rows"
+                                                            :key="'hs_' + row.group">
+                                                            <tr class="hover:bg-gray-50/50">
+                                                                <td class="p-3 border-b text-xs font-semibold text-gray-800"
+                                                                    x-text="row.group"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                    x-text="row.n"></td>
+                                                                <template
+                                                                    x-for="sIdx in anovaData.homogeneousSubsets.subsetCount"
+                                                                    :key="'hs_val_' + row.group + '_' + sIdx">
+                                                                    <td class="p-3 border-b text-xs font-bold text-center border-l"
+                                                                        :class="row.subsets[sIdx - 1] !== null ? 'text-indigo-700 bg-indigo-50/30' : 'text-gray-300'"
+                                                                        x-text="row.subsets[sIdx - 1] !== null ? formatDec(row.subsets[sIdx - 1], 4) : ''">
+                                                                    </td>
+                                                                </template>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                                <p class="text-[10px] text-gray-500 italic mt-2">
+                                                    {{ __('Means for groups in homogeneous subsets are displayed. Harmonic mean sample size = ') }}
+                                                    <span class="font-semibold"
+                                                        x-text="formatDec(anovaData.homogeneousSubsets.harmonicMeanN, 3)"></span>.
+                                                    <span x-show="anovaData.homogeneousSubsets.isUnequalN"
+                                                        class="text-amber-600">
+                                                        {{ __('Type I error levels are not guaranteed for unequal sample sizes.') }}
+                                                    </span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
                         </template>
@@ -2656,7 +5188,8 @@
                         <!-- 5. Regression Results -->
                         <template x-if="testMethod === 'regression' && regressionData">
                             <div class="space-y-8 animate-in fade-in duration-500">
-                                <div class="bg-white rounded-3xl p-6 sm:p-8 md:p-10 border border-gray-100 shadow-sm">
+                                <div
+                                    class="bg-white rounded-3xl p-4 sm:p-6 md:p-8 border border-gray-100 shadow-sm overflow-hidden space-y-6 sm:space-y-8">
                                     <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Variables Entered/Removed') }}
                                     </h5>
                                     <div class="overflow-x-auto mb-8">
@@ -2672,8 +5205,9 @@
                                             <tbody>
                                                 <tr class="hover:bg-gray-50/50 transition-colors">
                                                     <td class="p-3 border-b text-xs font-semibold text-gray-800">1</td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600"
-                                                        x-text="regressionData.indLabel"></td>
+                                                    <td class="p-3 border-b text-xs font-medium text-gray-700"
+                                                        x-text="(regressionData.shortIndLabel || regressionData.indLabel) + ' ᵇ'"
+                                                        :title="regressionData.indLabel"></td>
                                                     <td class="p-3 border-b text-xs font-medium text-gray-600">.</td>
                                                     <td class="p-3 border-b text-xs font-medium text-gray-600">
                                                         {{ __('Enter') }}
@@ -2681,6 +5215,12 @@
                                                 </tr>
                                             </tbody>
                                         </table>
+                                        <div class="mt-2 text-[10px] text-gray-500 italic space-y-0.5">
+                                            <p
+                                                x-text="'a. Dependent Variable: ' + (regressionData.shortDepLabel || regressionData.depLabel)">
+                                            </p>
+                                            <p>{{ __('b. All requested variables entered.') }}</p>
+                                        </div>
                                     </div>
 
                                     <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Model Summary') }}</h5>
@@ -2695,6 +5235,7 @@
                                                     <th class="p-3 border-b text-center">
                                                         {{ __('Std. Error of the Estimate') }}
                                                     </th>
+                                                    <th class="p-3 border-b text-center">{{ __('Durbin-Watson') }}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -2710,6 +5251,8 @@
                                                         x-text="regressionData.adjR2"></td>
                                                     <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
                                                         x-text="regressionData.stdErrorEst"></td>
+                                                    <td class="p-3 border-b text-xs font-bold text-gray-900 text-center"
+                                                        x-text="regressionData.durbinWatson"></td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -2746,7 +5289,7 @@
                                                         style="vertical-align: middle;"></td>
                                                     <td class="p-3 border-b text-xs font-black text-center"
                                                         :class="regressionData.anova.significant ? 'text-green-600' : 'text-gray-500'"
-                                                        x-text="regressionData.anova.pValue" rowspan="2"
+                                                        x-text="formatP(regressionData.anova.pValue)" rowspan="2"
                                                         style="vertical-align: middle;"></td>
                                                 </tr>
                                                 <tr>
@@ -2760,12 +5303,22 @@
                                                     <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
                                                         x-text="regressionData.anova.mse"></td>
                                                 </tr>
+                                                <tr class="bg-gray-50/50 font-bold text-gray-900">
+                                                    <td class="p-3 border-b text-xs">{{ __('Total') }}</td>
+                                                    <td class="p-3 border-b text-xs text-center"
+                                                        x-text="regressionData.anova.sst"></td>
+                                                    <td class="p-3 border-b text-xs text-center"
+                                                        x-text="regressionData.anova.dfTotal"></td>
+                                                    <td class="p-3 border-b text-xs text-gray-400 text-center">-</td>
+                                                    <td class="p-3 border-b text-xs text-gray-400 text-center">-</td>
+                                                    <td class="p-3 border-b text-xs text-gray-400 text-center">-</td>
+                                                </tr>
                                             </tbody>
                                         </table>
                                     </div>
 
                                     <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Coefficients') }}</h5>
-                                    <div class="overflow-x-auto">
+                                    <div class="overflow-x-auto mb-8">
                                         <table class="w-full text-left border-collapse min-w-[700px]">
                                             <thead>
                                                 <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
@@ -2809,26 +5362,27 @@
                                                         x-text="regressionData.coefficients.intercept.tValue"></td>
                                                     <td class="p-3 border-b text-xs font-black text-center border-r"
                                                         :class="regressionData.coefficients.intercept.significant ? 'text-green-600' : 'text-gray-500'"
-                                                        x-text="regressionData.coefficients.intercept.pValue"></td>
+                                                        x-text="formatP(regressionData.coefficients.intercept.pValue)"></td>
                                                     <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-l"
                                                         x-text="regressionData.coefficients.intercept.ciLower"></td>
                                                     <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
                                                         x-text="regressionData.coefficients.intercept.ciUpper"></td>
                                                 </tr>
                                                 <tr class="hover:bg-gray-50/50 transition-colors">
-                                                    <td class="p-3 border-b text-xs font-semibold text-gray-800"
-                                                        x-text="regressionData.indLabel"></td>
+                                                    <td class="p-3 border-b text-xs font-semibold text-gray-800 max-w-xs sm:max-w-sm whitespace-normal break-words leading-relaxed"
+                                                        x-text="regressionData.shortIndLabel || regressionData.indLabel"
+                                                        :title="regressionData.indLabel"></td>
                                                     <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
                                                         x-text="regressionData.coefficients.slope.coef"></td>
                                                     <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r"
                                                         x-text="regressionData.coefficients.slope.stdError"></td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r"
+                                                    <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r font-bold text-indigo-700"
                                                         x-text="regressionData.coefficients.slope.beta"></td>
                                                     <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r"
                                                         x-text="regressionData.coefficients.slope.tValue"></td>
                                                     <td class="p-3 border-b text-xs font-black text-center border-r"
                                                         :class="regressionData.coefficients.slope.significant ? 'text-green-600' : 'text-gray-500'"
-                                                        x-text="regressionData.coefficients.slope.pValue"></td>
+                                                        x-text="formatP(regressionData.coefficients.slope.pValue)"></td>
                                                     <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-l"
                                                         x-text="regressionData.coefficients.slope.ciLower"></td>
                                                     <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
@@ -2837,6 +5391,69 @@
                                             </tbody>
                                         </table>
                                     </div>
+
+                                    <!-- Residuals Statistics Table -->
+                                    <template
+                                        x-if="regressionData.residualsStats && regressionData.residualsStats.length > 0">
+                                        <div class="mb-8">
+                                            <h5 class="text-sm font-black text-gray-900 mb-4">
+                                                {{ __('Residuals Statistics') }}
+                                            </h5>
+                                            <div class="overflow-x-auto">
+                                                <table class="w-full text-left border-collapse min-w-[500px]">
+                                                    <thead>
+                                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                                            <th class="p-3 border-b">{{ __('Statistic') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('Minimum') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('Maximum') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('Mean') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('Std. Deviation') }}
+                                                            </th>
+                                                            <th class="p-3 border-b text-center">{{ __('N') }}</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template x-for="r in regressionData.residualsStats"
+                                                            :key="r.statistic">
+                                                            <tr class="hover:bg-gray-50/50">
+                                                                <td class="p-3 border-b text-xs font-semibold text-gray-800"
+                                                                    x-text="r.statistic"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                    x-text="r.min"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                    x-text="r.max"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                    x-text="r.mean"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                    x-text="r.stdDev"></td>
+                                                                <td class="p-3 border-b text-xs font-bold text-gray-900 text-center"
+                                                                    x-text="r.n"></td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Interactive Scatter Plot with Regression Line -->
+                                    <template
+                                        x-if="regressionData.scatterPoints && regressionData.scatterPoints.length > 0">
+                                        <div class="border-t border-gray-100 pt-6">
+                                            <div class="flex items-center justify-between mb-4">
+                                                <h5 class="text-sm font-black text-gray-900">
+                                                    {{ __('Linear Regression Fit Plot') }}
+                                                </h5>
+                                                <span
+                                                    class="text-[10px] font-semibold px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md"
+                                                    x-text="'R² = ' + regressionData.r2"></span>
+                                            </div>
+                                            <div class="relative w-full h-80 sm:h-96 bg-gray-50/50 rounded-2xl p-4 border border-gray-100"
+                                                x-init="$nextTick(() => renderCorrelationScatter($el, regressionData))">
+                                                <canvas class="w-full h-full"></canvas>
+                                            </div>
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
                         </template>
@@ -2845,27 +5462,49 @@
                         <template x-if="testMethod === 'regression_multiple' && multipleRegressionData">
                             <div class="space-y-8 animate-in fade-in duration-500">
                                 <!-- Mathematical Formula Banner -->
-                                <div
-                                    class="bg-gradient-to-r from-indigo-900 to-indigo-950 rounded-3xl p-6 text-white border border-indigo-950 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-                                    <div class="flex items-center gap-3">
-                                        <div
-                                            class="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-300">
-                                            <i class="fa-solid fa-square-root-variable text-lg"></i>
-                                        </div>
-                                        <div>
-                                            <h5 class="text-[9px] font-black text-indigo-300  tracking-widest">
-                                                {{ __('Computed Regression Model Equation') }}
-                                            </h5>
-                                            <p class="text-sm font-bold mt-1" x-text="multipleRegressionData.equation"></p>
-                                        </div>
-                                    </div>
+                                <div style="background-color: #2271b1; color: #ffffff;"
+                                    class="bg-[#2271b1] rounded-3xl p-5 sm:p-6 text-white border border-[#1b5b8d] shadow-sm flex flex-col gap-4">
                                     <div
-                                        class="text-[10px] font-medium text-indigo-200 bg-white/10 px-3 py-1.5 rounded-lg border border-white/10">
-                                        <i class="fa-solid fa-circle-info mr-1"></i> {{ __('OLS Parameter Estimates') }}
+                                        class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                        <div class="flex items-center gap-3">
+                                            <div
+                                                class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-white shrink-0">
+                                                <i class="fa-solid fa-square-root-variable text-lg"></i>
+                                            </div>
+                                            <div>
+                                                <h5 class="text-[9px] font-black text-blue-100 tracking-widest uppercase">
+                                                    {{ __('Computed Regression Model Equation') }}
+                                                </h5>
+                                                <p class="text-sm sm:text-base font-bold mt-1 tracking-wide text-white font-mono break-all"
+                                                    x-text="formatRegressionEquation(multipleRegressionData)"></p>
+                                            </div>
+                                        </div>
+                                        <div
+                                            class="text-[10px] font-semibold text-white bg-white/15 px-3 py-1.5 rounded-xl border border-white/20 whitespace-nowrap shrink-0">
+                                            <i class="fa-solid fa-circle-info mr-1"></i> {{ __('OLS Parameter Estimates') }}
+                                        </div>
                                     </div>
+                                    <!-- Equation Token Legend / Key -->
+                                    <template
+                                        x-if="getEquationKey(multipleRegressionData) && getEquationKey(multipleRegressionData).length > 0">
+                                        <div
+                                            class="pt-3 border-t border-white/20 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
+                                            <template x-for="item in getEquationKey(multipleRegressionData)"
+                                                :key="item.code">
+                                                <div
+                                                    class="flex items-start gap-1.5 text-blue-100 text-[11px] leading-tight">
+                                                    <span class="font-mono font-bold text-white shrink-0"
+                                                        x-text="'[' + item.code + ']:'"></span>
+                                                    <span class="truncate" :title="item.label"
+                                                        x-text="item.short_label || item.label"></span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
                                 </div>
 
-                                <div class="bg-white rounded-3xl p-6 sm:p-8 md:p-10 border border-gray-100 shadow-sm">
+                                <div
+                                    class="bg-white rounded-3xl p-4 sm:p-6 md:p-8 border border-gray-100 shadow-sm overflow-hidden space-y-6 sm:space-y-8">
                                     <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Variables Entered/Removed') }}
                                     </h5>
                                     <div class="overflow-x-auto mb-8">
@@ -2881,8 +5520,9 @@
                                             <tbody>
                                                 <tr class="hover:bg-gray-50/50 transition-colors">
                                                     <td class="p-3 border-b text-xs font-semibold text-gray-800">1</td>
-                                                    <td class="p-3 border-b text-xs font-medium text-gray-600"
-                                                        x-text="multipleRegressionData.indLabels.join(', ')"></td>
+                                                    <td class="p-3 border-b text-xs font-medium text-gray-700"
+                                                        x-text="(multipleRegressionData.indShortLabels || multipleRegressionData.indLabels || []).join(', ') + ' ᵇ'">
+                                                    </td>
                                                     <td class="p-3 border-b text-xs font-medium text-gray-600">.</td>
                                                     <td class="p-3 border-b text-xs font-medium text-gray-600">
                                                         {{ __('Enter') }}
@@ -2890,6 +5530,12 @@
                                                 </tr>
                                             </tbody>
                                         </table>
+                                        <div class="mt-2 text-[10px] text-gray-500 italic space-y-0.5">
+                                            <p
+                                                x-text="'a. Dependent Variable: ' + (multipleRegressionData.shortDepLabel || multipleRegressionData.depLabel)">
+                                            </p>
+                                            <p>{{ __('b. All requested variables entered.') }}</p>
+                                        </div>
                                     </div>
 
                                     <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Model Summary') }}</h5>
@@ -2904,6 +5550,9 @@
                                                     <th class="p-3 border-b text-center">
                                                         {{ __('Std. Error of the Estimate') }}
                                                     </th>
+                                                    <template x-if="multipleRegressionData.durbinWatson">
+                                                        <th class="p-3 border-b text-center">{{ __('Durbin-Watson') }}</th>
+                                                    </template>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -2919,6 +5568,10 @@
                                                         x-text="multipleRegressionData.adjR2"></td>
                                                     <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
                                                         x-text="multipleRegressionData.stdErrorEst"></td>
+                                                    <template x-if="multipleRegressionData.durbinWatson">
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                            x-text="multipleRegressionData.durbinWatson"></td>
+                                                    </template>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -2955,7 +5608,7 @@
                                                         style="vertical-align: middle;"></td>
                                                     <td class="p-3 border-b text-xs font-black text-center"
                                                         :class="multipleRegressionData.anova.significant ? 'text-green-600' : 'text-gray-500'"
-                                                        x-text="multipleRegressionData.anova.pValue" rowspan="2"
+                                                        x-text="formatP(multipleRegressionData.anova.pValue)" rowspan="2"
                                                         style="vertical-align: middle;"></td>
                                                 </tr>
                                                 <tr>
@@ -2969,13 +5622,37 @@
                                                     <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
                                                         x-text="multipleRegressionData.anova.mse"></td>
                                                 </tr>
+                                                <tr class="bg-gray-50/50 font-bold text-gray-900">
+                                                    <td class="p-3 border-b text-xs">{{ __('Total') }}</td>
+                                                    <td class="p-3 border-b text-xs text-center"
+                                                        x-text="multipleRegressionData.anova.sst"></td>
+                                                    <td class="p-3 border-b text-xs text-center"
+                                                        x-text="multipleRegressionData.anova.dfTotal"></td>
+                                                    <td class="p-3 border-b text-xs text-gray-400 text-center">-</td>
+                                                    <td class="p-3 border-b text-xs text-gray-400 text-center">-</td>
+                                                    <td class="p-3 border-b text-xs text-gray-400 text-center">-</td>
+                                                </tr>
                                             </tbody>
                                         </table>
                                     </div>
 
+                                    <!-- Multicollinearity Alert Banner -->
+                                    <template x-if="multipleRegressionData.hasMulticollinearity">
+                                        <div
+                                            class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs flex items-start gap-3">
+                                            <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5 text-sm"></i>
+                                            <div>
+                                                <span
+                                                    class="font-bold block">{{ __('Warning: Potential Multicollinearity Detected') }}</span>
+                                                <span
+                                                    class="text-amber-700">{{ __('One or more predictor variables exhibit a Variance Inflation Factor (VIF) > 5.0 or Tolerance < 0.20, indicating high collinearity that may inflate standard errors.') }}</span>
+                                            </div>
+                                        </div>
+                                    </template>
+
                                     <h5 class="text-sm font-black text-gray-900 mb-4">{{ __('Coefficients') }}</h5>
-                                    <div class="overflow-x-auto">
-                                        <table class="w-full text-left border-collapse min-w-[700px]">
+                                    <div class="overflow-x-auto mb-8">
+                                        <table class="w-full text-left border-collapse min-w-[750px]">
                                             <thead>
                                                 <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
                                                     <th class="p-3 border-b" rowspan="2">{{ __('Model') }}</th>
@@ -2990,8 +5667,11 @@
                                                     <th class="p-3 border-b text-center border-r" rowspan="2">
                                                         {{ __('Sig.') }}
                                                     </th>
-                                                    <th class="p-3 border-b text-center" colspan="2">
+                                                    <th class="p-3 border-b text-center border-r" colspan="2">
                                                         {{ __('95.0% Confidence Interval for B') }}
+                                                    </th>
+                                                    <th class="p-3 border-b text-center" colspan="2">
+                                                        {{ __('Collinearity Statistics') }}
                                                     </th>
                                                 </tr>
                                                 <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
@@ -3000,36 +5680,91 @@
                                                     </th>
                                                     <th class="p-3 border-b text-center border-l">{{ __('Lower Bound') }}
                                                     </th>
-                                                    <th class="p-3 border-b text-center">{{ __('Upper Bound') }}</th>
+                                                    <th class="p-3 border-b text-center border-r">{{ __('Upper Bound') }}
+                                                    </th>
+                                                    <th class="p-3 border-b text-center border-l">{{ __('Tolerance') }}</th>
+                                                    <th class="p-3 border-b text-center">{{ __('VIF') }}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <template x-for="coef in multipleRegressionData.coefficients"
                                                     :key="coef.variable">
                                                     <tr class="hover:bg-gray-50/50 transition-colors">
-                                                        <td class="p-3 border-b text-xs font-semibold text-gray-800"
-                                                            x-text="coef.label"></td>
+                                                        <td class="p-3 border-b text-xs font-semibold text-gray-800 max-w-xs sm:max-w-sm whitespace-normal break-words leading-relaxed"
+                                                            x-text="coef.short_label || coef.label" :title="coef.label">
+                                                        </td>
                                                         <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
                                                             x-text="coef.coef"></td>
                                                         <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r"
                                                             x-text="coef.stdError"></td>
                                                         <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r font-bold"
-                                                            :class="coef.beta !== 'N/A' ? 'text-indigo-600' : 'text-gray-400'"
+                                                            :class="coef.beta !== 'N/A' ? 'text-[#2271b1]' : 'text-gray-400'"
                                                             x-text="coef.beta"></td>
                                                         <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r"
                                                             x-text="coef.tValue"></td>
                                                         <td class="p-3 border-b text-xs font-black text-center border-r"
                                                             :class="coef.significant ? 'text-green-600' : 'text-gray-500'"
-                                                            x-text="coef.pValue"></td>
+                                                            x-text="formatP(coef.pValue)"></td>
                                                         <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-l"
                                                             x-text="coef.ciLower"></td>
-                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-r"
                                                             x-text="coef.ciUpper"></td>
+                                                        <td class="p-3 border-b text-xs font-medium text-gray-600 text-center border-l"
+                                                            x-text="coef.tolerance !== undefined && coef.tolerance !== null ? coef.tolerance : '-'">
+                                                        </td>
+                                                        <td class="p-3 border-b text-xs font-medium text-center"
+                                                            :class="coef.vif > 10 ? 'font-black text-red-600' : (coef.vif > 5 ? 'font-bold text-amber-600' : 'text-gray-600')"
+                                                            x-text="coef.vif !== undefined && coef.vif !== null ? coef.vif : '-'">
+                                                        </td>
                                                     </tr>
                                                 </template>
                                             </tbody>
                                         </table>
                                     </div>
+
+                                    <!-- Residuals Statistics Table -->
+                                    <template
+                                        x-if="multipleRegressionData.residualsStats && multipleRegressionData.residualsStats.length > 0">
+                                        <div class="mb-4">
+                                            <h5 class="text-sm font-black text-gray-900 mb-4">
+                                                {{ __('Residuals Statistics') }}
+                                            </h5>
+                                            <div class="overflow-x-auto">
+                                                <table class="w-full text-left border-collapse min-w-[500px]">
+                                                    <thead>
+                                                        <tr class="bg-gray-50 font-bold text-gray-700 text-xs">
+                                                            <th class="p-3 border-b">{{ __('Statistic') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('Minimum') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('Maximum') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('Mean') }}</th>
+                                                            <th class="p-3 border-b text-center">{{ __('Std. Deviation') }}
+                                                            </th>
+                                                            <th class="p-3 border-b text-center">{{ __('N') }}</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template x-for="r in multipleRegressionData.residualsStats"
+                                                            :key="r.statistic">
+                                                            <tr class="hover:bg-gray-50/50">
+                                                                <td class="p-3 border-b text-xs font-semibold text-gray-800"
+                                                                    x-text="r.statistic"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                    x-text="r.min"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                    x-text="r.max"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                    x-text="r.mean"></td>
+                                                                <td class="p-3 border-b text-xs font-medium text-gray-600 text-center"
+                                                                    x-text="r.stdDev"></td>
+                                                                <td class="p-3 border-b text-xs font-bold text-gray-900 text-center"
+                                                                    x-text="r.n"></td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
                         </template>
@@ -3038,9 +5773,9 @@
                         <template
                             x-if="matrixData || tTestData || anovaData || correlationData || regressionData || multipleRegressionData">
                             <div
-                                class="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-wrap gap-4 items-center justify-between">
+                                class="bg-white rounded-3xl p-4 sm:p-6 border border-gray-100 shadow-sm flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between overflow-hidden">
                                 <button @click="copyResultsToClipboard()"
-                                    class="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-[10px] font-black tracking-widest transition-all flex items-center gap-2">
+                                    class="w-full sm:w-auto px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-[10px] font-black tracking-widest transition-all flex items-center justify-center gap-2">
                                     <i class="fa-solid fa-copy"></i> {{ __('Copy Results to Clipboard') }}
                                 </button>
 
@@ -3117,9 +5852,10 @@
                                                     :class="msg.role === 'user' ? 'items-end' : 'items-start'">
                                                     <div class="max-w-[90%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed font-medium"
                                                         :class="msg.role === 'user' 
-                                                                                                        ? 'bg-[#2271b1] text-white rounded-br-none shadow-sm' 
-                                                                                                        : 'bg-gray-50 text-gray-800 rounded-bl-none border border-gray-200/60 shadow-xs'">
-                                                        <p class="whitespace-pre-wrap" x-text="msg.content"></p>
+                                                                                                                                                                                                        ? 'bg-[#2271b1] text-white rounded-br-none shadow-sm' 
+                                                                                                                                                                                                        : 'bg-gray-50 text-gray-800 rounded-bl-none border border-gray-200/60 shadow-xs'">
+                                                        <div class="whitespace-pre-wrap leading-relaxed"
+                                                            x-html="renderFormattedText(msg.content)"></div>
                                                     </div>
                                                 </div>
                                             </template>
@@ -3202,6 +5938,7 @@
             @push('scripts')
                 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
                 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
                 <script>
                     const chartConfigs = {!! json_encode($chartConfigs) !!};
                     const chartInstances = {};
@@ -3455,9 +6192,9 @@
 
                             if (areas.length > 0) {
                                 htmlContent = `<img src="${dataUrl}" usemap="#${mapName}" style="max-width:100%;height:auto;" />
-                                                                                                               <map name="${mapName}">
-                                                                                                                 ${areas.join('\n  ')}
-                                                                                                               </map>`;
+                                                                                                                                                                                                                                                                                                               <map name="${mapName}">
+                                                                                                                                                                                                                                                                                                                 ${areas.join('\n  ')}
+                                                                                                                                                                                                                                                                                                               </map>`;
                             }
                         }
 
@@ -4094,18 +6831,379 @@
                         return new Chart(ctx, chartConfig);
                     }
 
+                    window.formatP = function (val) {
+                        if (val === null || val === undefined || val === '') return '-';
+                        let num = parseFloat(val);
+                        if (isNaN(num)) return val;
+                        if (num < 0.001) return '< .001';
+                        let s = num.toFixed(3);
+                        return s.startsWith('0.') ? s.substring(1) : (s.startsWith('-0.') ? '-' + s.substring(2) : s);
+                    };
+
+                    window.formatDec = function (val, decimals = 3, dropLeadingZero = false) {
+                        if (val === null || val === undefined || val === '') return '-';
+                        let num = parseFloat(val);
+                        if (isNaN(num)) return val;
+                        let s = num.toFixed(decimals);
+                        if (dropLeadingZero) {
+                            return s.startsWith('0.') ? s.substring(1) : (s.startsWith('-0.') ? '-' + s.substring(2) : s);
+                        }
+                        return s;
+                    };
+
+                    window.wrapAxisTitle = function (lbl, maxCharsPerLine = 35, maxLines = 2) {
+                        if (!lbl) return '';
+                        let str = String(lbl).trim();
+                        if (str.includes(' - ')) {
+                            const parts = str.split(' - ');
+                            str = parts[parts.length - 1].trim();
+                        }
+                        const words = str.split(/\s+/);
+                        const lines = [];
+                        let currentLine = '';
+
+                        for (let word of words) {
+                            if (!currentLine) {
+                                currentLine = word;
+                            } else if ((currentLine + ' ' + word).length <= maxCharsPerLine) {
+                                currentLine += ' ' + word;
+                            } else {
+                                lines.push(currentLine);
+                                currentLine = word;
+                                if (lines.length === maxLines - 1) {
+                                    break;
+                                }
+                            }
+                        }
+                        if (currentLine && lines.length < maxLines) {
+                            lines.push(currentLine);
+                        }
+                        return lines.length === 1 ? lines[0] : lines;
+                    };
+
+                    window.formatRegressionEquation = function (data) {
+                        if (!data) return '';
+                        if (data.equation && !data.equation.includes('...') && !data.equation.includes('[')) {
+                            return data.equation;
+                        }
+
+                        let depCode = 'Y';
+                        const depLbl = data.shortDepLabel || data.depLabel || '';
+                        const mDep = depLbl.match(/^(Q\d+(\.\d+)?)/i);
+                        if (mDep) {
+                            depCode = mDep[1];
+                        }
+
+                        const interceptObj = (data.coefficients || []).find(c => c.variable === '(Constant)');
+                        const b0 = interceptObj ? (parseFloat(interceptObj.coef) || 0).toFixed(4) : '0';
+
+                        let eq = `ŷ(${depCode}) = ${b0}`;
+                        const predictors = (data.coefficients || []).filter(c => c.variable !== '(Constant)');
+
+                        predictors.forEach((coef, idx) => {
+                            const val = parseFloat(coef.coef) || 0;
+                            const sign = val >= 0 ? ' + ' : ' - ';
+                            const absVal = Math.abs(val).toFixed(4);
+
+                            let code = 'X' + (idx + 1);
+                            const lbl = coef.short_label || coef.label || '';
+                            const m = lbl.match(/^(Q\d+(\.\d+)?)/i);
+                            if (m) {
+                                code = m[1];
+                            } else if (data.equationKey && data.equationKey[idx] && data.equationKey[idx].code) {
+                                code = data.equationKey[idx].code;
+                            }
+                            eq += `${sign}${absVal}(${code})`;
+                        });
+
+                        return eq;
+                    };
+
+                    window.getEquationKey = function (data) {
+                        if (!data) return [];
+                        if (data.equationKey && Array.isArray(data.equationKey) && data.equationKey.length > 0) {
+                            return data.equationKey;
+                        }
+                        const predictors = (data.coefficients || []).filter(c => c.variable !== '(Constant)');
+                        return predictors.map((coef, idx) => {
+                            let code = 'X' + (idx + 1);
+                            const lbl = coef.short_label || coef.label || '';
+                            const m = lbl.match(/^(Q\d+(\.\d+)?)/i);
+                            if (m) {
+                                code = m[1];
+                            }
+                            return {
+                                code: code,
+                                label: lbl,
+                                short_label: coef.short_label || lbl
+                            };
+                        });
+                    };
+
+                    window.renderAnovaMeansPlot = function (container, data) {
+                        if (!container || !data || !data.groupStats) return;
+                        const canvas = container.querySelector('canvas');
+                        if (!canvas) return;
+
+                        if (canvas._chartInstance) {
+                            canvas._chartInstance.destroy();
+                            canvas._chartInstance = null;
+                        }
+
+                        const labels = data.groupStats.map(g => wrapAxisTitle(g.name, 25, 2));
+                        const means = data.groupStats.map(g => Number(g.mean));
+                        const ciLowers = data.groupStats.map(g => Number(g.ciLower));
+                        const ciUppers = data.groupStats.map(g => Number(g.ciUpper));
+
+                        const errorBarPlugin = {
+                            id: 'errorBars',
+                            afterDatasetsDraw(chart) {
+                                const ctx = chart.ctx;
+                                const meta = chart.getDatasetMeta(0);
+                                const yScale = chart.scales.y;
+                                ctx.save();
+                                ctx.strokeStyle = '#2271b1';
+                                ctx.lineWidth = 2;
+
+                                meta.data.forEach((point, idx) => {
+                                    const x = point.x;
+                                    const yLow = yScale.getPixelForValue(ciLowers[idx]);
+                                    const yHigh = yScale.getPixelForValue(ciUppers[idx]);
+                                    const capWidth = 5;
+
+                                    ctx.beginPath();
+                                    ctx.moveTo(x, yLow);
+                                    ctx.lineTo(x, yHigh);
+                                    ctx.stroke();
+
+                                    ctx.beginPath();
+                                    ctx.moveTo(x - capWidth, yHigh);
+                                    ctx.lineTo(x + capWidth, yHigh);
+                                    ctx.stroke();
+
+                                    ctx.beginPath();
+                                    ctx.moveTo(x - capWidth, yLow);
+                                    ctx.lineTo(x + capWidth, yLow);
+                                    ctx.stroke();
+                                });
+                                ctx.restore();
+                            }
+                        };
+
+                        const rawDepLabel = data.shortDepLabel || data.depLabel || 'Mean Score';
+                        const yAxisTitle = wrapAxisTitle(rawDepLabel, 30, 2);
+
+                        canvas._chartInstance = new Chart(canvas.getContext('2d'), {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: 'Group Mean',
+                                    data: means,
+                                    borderColor: '#2271b1',
+                                    backgroundColor: '#2271b1',
+                                    borderWidth: 2.5,
+                                    pointBackgroundColor: '#2271b1',
+                                    pointBorderColor: '#ffffff',
+                                    pointBorderWidth: 2,
+                                    pointRadius: 6,
+                                    pointHoverRadius: 8,
+                                    tension: 0,
+                                    fill: false
+                                }]
+                            },
+                            plugins: [errorBarPlugin],
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                layout: {
+                                    padding: { left: 25, right: 20, top: 15, bottom: 20 }
+                                },
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function (ctx) {
+                                                const idx = ctx.dataIndex;
+                                                return [
+                                                    `Mean: ${means[idx].toFixed(4)}`,
+                                                    `95% CI: [${ciLowers[idx].toFixed(4)}, ${ciUppers[idx].toFixed(4)}]`
+                                                ];
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        grid: { display: false },
+                                        ticks: { font: { weight: '600', size: 11, family: 'Inter, sans-serif' }, color: '#334155' }
+                                    },
+                                    y: {
+                                        grid: { color: '#f1f5f9' },
+                                        ticks: { font: { weight: '600', size: 11, family: 'Inter, sans-serif' }, color: '#334155' },
+                                        title: {
+                                            display: true,
+                                            text: yAxisTitle,
+                                            color: '#0f172a',
+                                            font: { weight: '700', size: 12, family: 'Inter, sans-serif' },
+                                            padding: { bottom: 10 }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    };
+
+                    window.renderCorrelationScatter = function (container, data) {
+                        if (!container || !data) return;
+                        const canvas = container.querySelector('canvas');
+                        if (!canvas) return;
+
+                        if (canvas._chartInstance) {
+                            canvas._chartInstance.destroy();
+                            canvas._chartInstance = null;
+                        }
+
+                        const isDiscrete = (data.scatterPoints || []).every(p => Number.isInteger(Number(p.x)) && Number.isInteger(Number(p.y)));
+                        const scatterPoints = (data.scatterPoints || []).map((p, idx) => {
+                            const rawX = Number(p.x);
+                            const rawY = Number(p.y);
+                            const jitterX = isDiscrete ? ((((idx * 17 + 5) % 100) / 100) - 0.5) * 0.12 : 0;
+                            const jitterY = isDiscrete ? ((((idx * 23 + 11) % 100) / 100) - 0.5) * 0.12 : 0;
+                            return {
+                                x: rawX + jitterX,
+                                y: rawY + jitterY,
+                                rawX: rawX,
+                                rawY: rawY
+                            };
+                        });
+
+                        const datasets = [
+                            {
+                                type: 'scatter',
+                                label: 'Sample Data',
+                                data: scatterPoints,
+                                backgroundColor: 'rgba(34, 113, 177, 0.7)',
+                                borderColor: '#2271b1',
+                                borderWidth: 1,
+                                pointRadius: 4.5,
+                                pointHoverRadius: 6.5
+                            }
+                        ];
+
+                        const trendPoints = Array.isArray(data.trendline)
+                            ? data.trendline
+                            : (data.trendline && data.trendline.x1 !== undefined
+                                ? [{ x: data.trendline.x1, y: data.trendline.y1 }, { x: data.trendline.x2, y: data.trendline.y2 }]
+                                : []);
+
+                        if (trendPoints.length > 0) {
+                            datasets.push({
+                                type: 'line',
+                                label: 'Linear Fit Line (ŷ = β₀ + β₁X)',
+                                data: trendPoints.map(p => ({ x: Number(p.x), y: Number(p.y) })),
+                                borderColor: '#2271b1',
+                                backgroundColor: '#2271b1',
+                                borderWidth: 2.5,
+                                pointRadius: 0,
+                                fill: false,
+                                tension: 0
+                            });
+                        }
+
+                        const rawX = data.shortVarXLabel || data.shortIndLabel || data.varXLabel || data.indLabel || 'Independent Variable (X)';
+                        const rawY = data.shortVarYLabel || data.shortDepLabel || data.varYLabel || data.depLabel || 'Dependent Variable (Y)';
+                        const xLabel = wrapAxisTitle(rawX, 38, 2);
+                        const yLabel = wrapAxisTitle(rawY, 28, 2);
+
+                        canvas._chartInstance = new Chart(canvas.getContext('2d'), {
+                            type: 'scatter',
+                            data: { datasets },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                layout: {
+                                    padding: { left: 30, right: 20, top: 15, bottom: 25 }
+                                },
+                                plugins: {
+                                    legend: {
+                                        position: 'top',
+                                        labels: { boxWidth: 12, font: { family: 'Inter, sans-serif', size: 11, weight: '600' } }
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function (ctx) {
+                                                if (ctx.dataset.type === 'line') return 'Trendline';
+                                                return `(${ctx.parsed.x.toFixed(2)}, ${ctx.parsed.y.toFixed(2)})`;
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        type: 'linear',
+                                        position: 'bottom',
+                                        title: {
+                                            display: true,
+                                            text: xLabel,
+                                            font: { family: 'Inter, sans-serif', size: 11, weight: '700' },
+                                            color: '#334155',
+                                            padding: { top: 10 }
+                                        },
+                                        grid: { color: '#f1f5f9' },
+                                        ticks: { font: { weight: '600', size: 10, family: 'Inter, sans-serif' }, color: '#475569' }
+                                    },
+                                    y: {
+                                        type: 'linear',
+                                        title: {
+                                            display: true,
+                                            text: yLabel,
+                                            font: { family: 'Inter, sans-serif', size: 11, weight: '700' },
+                                            color: '#334155',
+                                            padding: { bottom: 10 }
+                                        },
+                                        grid: { color: '#f1f5f9' },
+                                        ticks: { font: { weight: '600', size: 10, family: 'Inter, sans-serif' }, color: '#475569' }
+                                    }
+                                }
+                            }
+                        });
+                    };
+
                     window.inferentialManager = function (savedTestsInit = []) {
                         return {
+                            formatP(val) {
+                                return window.formatP(val);
+                            },
+                            formatDec(val, decimals = 3, dropLeadingZero = false) {
+                                return window.formatDec(val, decimals, dropLeadingZero);
+                            },
                             savedTests: savedTestsInit,
                             loadedTestId: null,
                             isSaving: false,
                             sidebarOpen: false,
 
                             userSurveys: @json($userSurveys ?? []),
+                            questionsMap: @json($questionsMap ?? []),
+                            scaleItemsMap: @json($scaleItemsMap ?? []),
+                            getQuestionInfo(id) {
+                                if (!id) return null;
+                                const key = String(id);
+                                return this.questionsMap[key] || this.scaleItemsMap[key] || null;
+                            },
                             scope: 'within',
                             targetSurveyId: '',
                             targetDepVar: '',
                             targetSurveyIds: [],
+                            anovaTargetSurveys: [{ survey_id: '', dep: '' }],
+                            addAnovaTargetSurvey() {
+                                this.anovaTargetSurveys.push({ survey_id: '', dep: '' });
+                            },
+                            removeAnovaTargetSurvey(index) {
+                                if (this.anovaTargetSurveys.length > 1) {
+                                    this.anovaTargetSurveys.splice(index, 1);
+                                }
+                            },
                             uploadedDataLabel: 'National Benchmark (2025)',
                             uploadedDataValues: [],
                             rawUploadedText: '',
@@ -4116,11 +7214,14 @@
                             colVar: '',
                             depVar: '',
                             groupVar: '',
+                            ttestGroup1: '',
+                            ttestGroup2: '',
                             varX: '',
                             varY: '',
                             indVars: [],
                             cronbachItems: [],
                             loading: false,
+                            analysisError: null,
                             aiLoading: false,
                             aiInsight: null,
                             aiFeedback: '',
@@ -4136,29 +7237,265 @@
                             regressionData: null,
                             multipleRegressionData: null,
 
+                            isRunDisabled() {
+                                if (this.testMethod === 'crosstab' || this.testMethod === 'chisquare') {
+                                    return !this.rowVar || !this.colVar;
+                                }
+                                if (this.testMethod === 'correlation') {
+                                    return !this.varX || !this.varY;
+                                }
+                                if (this.testMethod === 'ttest') {
+                                    if (this.scope === 'within') {
+                                        return !this.depVar || !this.groupVar;
+                                    }
+                                    if (this.scope === 'cross_survey') {
+                                        return !this.depVar || !this.targetSurveyId || !this.targetDepVar;
+                                    }
+                                    if (this.scope === 'upload') {
+                                        return !this.depVar || this.uploadedDataValues.length === 0;
+                                    }
+                                }
+                                if (this.testMethod === 'anova') {
+                                    if (this.scope === 'within') {
+                                        return !this.depVar || !this.groupVar;
+                                    }
+                                    if (this.scope === 'cross_survey') {
+                                        return !this.depVar || (this.anovaTargetSurveys || []).some(t => !t.survey_id || !t.dep);
+                                    }
+                                }
+                                if (this.testMethod === 'regression') {
+                                    return !this.depVar || !this.groupVar;
+                                }
+                                if (this.testMethod === 'regression_multiple') {
+                                    return !this.depVar || !this.indVars || this.indVars.length === 0;
+                                }
+                                if (this.testMethod === 'cronbach') {
+                                    return !this.cronbachItems || this.cronbachItems.length < 2;
+                                }
+                                return false;
+                            },
                             init() {
+                                this.$watch('depVar', (val) => {
+                                    if (val && this.indVars && this.indVars.includes(val)) {
+                                        this.indVars = this.indVars.filter(v => v !== val);
+                                    }
+                                });
                                 this.$watch('testMethod', () => {
                                     if (!this.loadedTestId) this.clearResults();
                                 });
+                                this.$watch('groupVar', () => {
+                                    this.syncTTestGroups();
+                                });
+                                this.$watch('anovaData', (val) => {
+                                    if (val && this.testMethod === 'anova') {
+                                        this.$nextTick(() => {
+                                            const el = document.getElementById('anova-means-chart-container');
+                                            if (el && window.renderAnovaMeansPlot) {
+                                                window.renderAnovaMeansPlot(el, val);
+                                            }
+                                        });
+                                    }
+                                });
+                            },
+
+                            syncTTestGroups() {
+                                if (!this.groupVar) {
+                                    this.ttestGroup1 = '';
+                                    this.ttestGroup2 = '';
+                                    return;
+                                }
+                                const qInfo = this.getQuestionInfo(this.groupVar);
+                                const opts = qInfo && qInfo.category_options ? qInfo.category_options : [];
+                                const cats = qInfo && qInfo.categories ? qInfo.categories : [];
+                                if (opts.length >= 2) {
+                                    this.ttestGroup1 = opts[0].value;
+                                    this.ttestGroup2 = opts[1].value;
+                                } else if (cats.length >= 2) {
+                                    this.ttestGroup1 = cats[0];
+                                    this.ttestGroup2 = cats[1];
+                                } else {
+                                    this.ttestGroup1 = '';
+                                    this.ttestGroup2 = '';
+                                }
                             },
 
                             getTargetQuestions(surveyId) {
                                 if (!surveyId) return [];
                                 const s = this.userSurveys.find(item => item.id == surveyId);
-                                return s && s.questions ? s.questions.filter(q => q.isChartable) : [];
+                                if (!s || !s.questions) return [];
+                                return s.questions.filter(q => {
+                                    const t = (q.type || '').toLowerCase();
+                                    return q.isScaleItem || t === 'likert_item' || ['number', 'rating', 'scale', 'slider', 'range', 'star_rating', 'nps', 'likert'].includes(t);
+                                });
+                            },
+
+                            getTargetQuestionInfo(surveyId, qId) {
+                                if (!surveyId || !qId) return null;
+                                const list = this.getTargetQuestions(surveyId);
+                                return list.find(q => q.id === qId) || null;
+                            },
+
+                            getTargetGroupedQuestions(surveyId) {
+                                const list = this.getTargetQuestions(surveyId);
+                                const groups = {};
+                                const standalones = [];
+                                list.forEach(q => {
+                                    if (q.optgroup) {
+                                        if (!groups[q.optgroup]) {
+                                            groups[q.optgroup] = [];
+                                        }
+                                        groups[q.optgroup].push(q);
+                                    } else {
+                                        standalones.push(q);
+                                    }
+                                });
+                                return { groups, standalones };
+                            },
+
+                            getTargetQuestionsHtml(surveyId, selectedVal = '') {
+                                if (!surveyId) return '<option value="">{{ __("Select Survey First...") }}</option>';
+                                const grouped = this.getTargetGroupedQuestions(surveyId);
+                                let html = '<option value="">{{ __("Select Matching Question...") }}</option>';
+                                if (grouped.groups && Object.keys(grouped.groups).length > 0) {
+                                    for (const [groupLabel, items] of Object.entries(grouped.groups)) {
+                                        const cleanGrp = String(groupLabel).replace(/"/g, '&quot;');
+                                        html += `<optgroup label="${cleanGrp}">`;
+                                        for (const q of items) {
+                                            const sel = String(q.id) === String(selectedVal) ? ' selected' : '';
+                                            const disp = String(q.display_label || q.label).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                            html += `<option value="${q.id}"${sel}>${disp}</option>`;
+                                        }
+                                        html += '</optgroup>';
+                                    }
+                                }
+                                if (grouped.standalones && grouped.standalones.length > 0) {
+                                    for (const q of grouped.standalones) {
+                                        const sel = String(q.id) === String(selectedVal) ? ' selected' : '';
+                                        const disp = String(q.display_label || q.label).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                        html += `<option value="${q.id}"${sel}>${disp}</option>`;
+                                    }
+                                }
+                                return html;
+                            },
+
+                            formatVarCode(id) {
+                                if (!id) return '';
+                                const info = this.getQuestionInfo(id);
+                                if (!info) return String(id);
+                                if (info.display_label) {
+                                    const m = info.display_label.match(/^(Q\d+(\.\d+)?)/i);
+                                    if (m) return m[1];
+                                }
+                                if (info.code) return info.code;
+                                const sub = info.sub_label || info.label || String(id);
+                                const m2 = sub.match(/^(Q\d+(\.\d+)?)/i);
+                                if (m2) return m2[1];
+                                return sub.length > 15 ? sub.substring(0, 12) + '...' : sub;
+                            },
+
+                            formatTestVariables(test) {
+                                if (!test) return '';
+                                if (test.variables_formatted) return test.variables_formatted;
+                                if (!test.variables) return '';
+                                // If variables contains raw ids, format them nicely
+                                return test.variables.split(',').map(part => {
+                                    const trimmed = part.trim();
+                                    const [k, v] = trimmed.split(':');
+                                    if (v) {
+                                        const keyTrim = k.trim();
+                                        const valTrim = v.trim();
+                                        if (['Dep', 'Grp', 'Ind', 'Row', 'Col', 'X', 'Y'].includes(keyTrim)) {
+                                            return keyTrim + ': ' + this.formatVarCode(valTrim);
+                                        }
+                                        if (keyTrim === 'Inds') {
+                                            const codes = valTrim.split(',').map(subId => this.formatVarCode(subId.trim()));
+                                            return 'Inds: ' + codes.join(', ');
+                                        }
+                                    }
+                                    return trimmed;
+                                }).join(' | ');
                             },
 
                             handleFileUpload(e) {
                                 const file = e.target.files[0];
                                 if (!file) return;
                                 this.uploadedFileName = file.name;
-                                const reader = new FileReader();
-                                reader.onload = (evt) => {
-                                    const text = evt.target.result;
-                                    this.rawUploadedText = text;
-                                    this.parseUploadedText();
-                                };
-                                reader.readAsText(file);
+                                const isExcel = /\.(xlsx|xls)$/i.test(file.name);
+
+                                if (isExcel && typeof XLSX !== 'undefined') {
+                                    const reader = new FileReader();
+                                    reader.onload = (evt) => {
+                                        try {
+                                            const data = new Uint8Array(evt.target.result);
+                                            const workbook = XLSX.read(data, { type: 'array' });
+                                            const firstSheetName = workbook.SheetNames[0];
+                                            const worksheet = workbook.Sheets[firstSheetName];
+                                            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                                            const numbers = [];
+                                            json.forEach(row => {
+                                                if (Array.isArray(row)) {
+                                                    row.forEach(cell => {
+                                                        if (typeof cell === 'number' && !isNaN(cell)) {
+                                                            numbers.push(cell);
+                                                        } else if (typeof cell === 'string') {
+                                                            const trimmed = cell.trim().replace(/^["']|["']$/g, '');
+                                                            if (trimmed !== '' && !isNaN(Number(trimmed))) {
+                                                                numbers.push(Number(trimmed));
+                                                            }
+                                                        }
+                                                    });
+                                                }
+                                            });
+                                            this.uploadedDataValues = numbers;
+                                            this.rawUploadedText = numbers.length > 0 ? numbers.join('\n') : '';
+                                        } catch (err) {
+                                            console.error("Failed to parse Excel file:", err);
+                                            this.uploadedDataValues = [];
+                                            this.rawUploadedText = '';
+                                        }
+                                    };
+                                    reader.readAsArrayBuffer(file);
+                                } else {
+                                    const reader = new FileReader();
+                                    reader.onload = (evt) => {
+                                        let text = evt.target.result;
+                                        if (typeof text !== 'string') text = '';
+                                        // If binary zip header detected (e.g. xlsx uploaded as csv)
+                                        if (text.startsWith('PK\x03\x04') || text.includes('\x00')) {
+                                            if (typeof XLSX !== 'undefined') {
+                                                const abReader = new FileReader();
+                                                abReader.onload = (abEvt) => {
+                                                    try {
+                                                        const data = new Uint8Array(abEvt.target.result);
+                                                        const workbook = XLSX.read(data, { type: 'array' });
+                                                        const ws = workbook.Sheets[workbook.SheetNames[0]];
+                                                        const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
+                                                        const nums = [];
+                                                        json.forEach(r => Array.isArray(r) && r.forEach(c => {
+                                                            const n = Number(String(c).trim());
+                                                            if (!isNaN(n) && String(c).trim() !== '') nums.push(n);
+                                                        }));
+                                                        this.uploadedDataValues = nums;
+                                                        this.rawUploadedText = nums.join('\n');
+                                                    } catch (e) { }
+                                                };
+                                                abReader.readAsArrayBuffer(file);
+                                                return;
+                                            }
+                                        }
+                                        const tokens = text.split(/[\r\n,;\t]+/);
+                                        const numbers = [];
+                                        tokens.forEach(tok => {
+                                            const cleaned = tok.trim().replace(/^["']|["']$/g, '');
+                                            if (cleaned !== '' && !isNaN(Number(cleaned))) {
+                                                numbers.push(Number(cleaned));
+                                            }
+                                        });
+                                        this.uploadedDataValues = numbers;
+                                        this.rawUploadedText = numbers.length > 0 ? numbers.join('\n') : text;
+                                    };
+                                    reader.readAsText(file);
+                                }
                             },
 
                             parseUploadedText() {
@@ -4166,12 +7503,65 @@
                                     this.uploadedDataValues = [];
                                     return;
                                 }
-                                const matches = this.rawUploadedText.match(/-?\d+(?:\.\d+)?/g);
-                                if (matches) {
-                                    this.uploadedDataValues = matches.map(Number).filter(n => !isNaN(n));
+                                const tokens = this.rawUploadedText.split(/[\r\n,;\t\s]+/);
+                                const numbers = [];
+                                tokens.forEach(tok => {
+                                    const cleaned = tok.trim().replace(/^["']|["']$/g, '');
+                                    if (cleaned !== '' && !isNaN(Number(cleaned))) {
+                                        numbers.push(Number(cleaned));
+                                    }
+                                });
+                                this.uploadedDataValues = numbers;
+                            },
+
+                            toggleGroupItems(itemIds) {
+                                if (!itemIds || !itemIds.length) return;
+                                const strIds = itemIds.map(String);
+                                const allSelected = strIds.every(id => this.cronbachItems.map(String).includes(id));
+                                if (allSelected) {
+                                    this.cronbachItems = this.cronbachItems.filter(id => !strIds.includes(String(id)));
                                 } else {
-                                    this.uploadedDataValues = [];
+                                    const set = new Set(this.cronbachItems.map(String));
+                                    strIds.forEach(id => set.add(id));
+                                    this.cronbachItems = Array.from(set);
                                 }
+                            },
+
+                            isGroupAllSelected(itemIds) {
+                                if (!itemIds || !itemIds.length) return false;
+                                const currentSelected = this.cronbachItems.map(String);
+                                return itemIds.map(String).every(id => currentSelected.includes(id));
+                            },
+
+                            selectAllScaleItems(allIds) {
+                                if (!allIds || !allIds.length) return;
+                                this.cronbachItems = Array.from(new Set(allIds.map(String)));
+                            },
+
+                            clearScaleItems() {
+                                this.cronbachItems = [];
+                            },
+
+                            activeCorrInspect: null,
+                            inspectCorrelation(rowItem, colItem, rVal) {
+                                if (!rowItem || !colItem) return;
+                                if (this.activeCorrInspect && this.activeCorrInspect.rowKey === rowItem.item_key && this.activeCorrInspect.colKey === colItem.item_key) {
+                                    this.activeCorrInspect = null;
+                                    return;
+                                }
+                                this.activeCorrInspect = {
+                                    rowKey: rowItem.item_key,
+                                    colKey: colItem.item_key,
+                                    rowShort: rowItem.short_label || 'Item',
+                                    colShort: colItem.short_label || 'Item',
+                                    rowLabel: rowItem.label || rowItem.item_key,
+                                    colLabel: colItem.label || colItem.item_key,
+                                    r: rVal !== undefined && rVal !== null ? this.formatDec(rVal, 3, true) : '—',
+                                    isDiag: rowItem.item_key === colItem.item_key
+                                };
+                            },
+                            clearCorrInspect() {
+                                this.activeCorrInspect = null;
                             },
 
                             resetForm() {
@@ -4185,6 +7575,8 @@
                                 this.uploadedDataValues = [];
                                 this.rawUploadedText = '';
                                 this.uploadedFileName = '';
+                                this.ttestGroup1 = '';
+                                this.ttestGroup2 = '';
                             },
 
                             clearResults() {
@@ -4258,16 +7650,26 @@
                                     } else {
                                         if (!this.groupVar) return this.loading = false;
                                         body.group = this.groupVar;
+                                        if (this.ttestGroup1 && this.ttestGroup2) {
+                                            body.group1 = this.ttestGroup1;
+                                            body.group2 = this.ttestGroup2;
+                                        }
                                     }
                                 } else if (this.testMethod === 'anova') {
                                     if (!this.depVar) return this.loading = false;
                                     body.dep = this.depVar;
                                     if (this.scope === 'cross_survey') {
-                                        if (this.targetSurveyIds.length < 1) {
-                                            alert('Please select at least one other survey for cohort comparison.');
+                                        if (!this.targetSurveyId && (!this.targetSurveyIds || this.targetSurveyIds.length < 1)) {
+                                            alert('Please select a target comparison survey.');
                                             return this.loading = false;
                                         }
-                                        body.target_survey_ids = this.targetSurveyIds;
+                                        if (this.targetSurveyId) {
+                                            body.target_survey_id = this.targetSurveyId;
+                                            body.target_dep = this.targetDepVar || this.depVar;
+                                        }
+                                        if (this.targetSurveyIds && this.targetSurveyIds.length > 0) {
+                                            body.target_survey_ids = this.targetSurveyIds;
+                                        }
                                     } else {
                                         if (!this.groupVar) return this.loading = false;
                                         body.group = this.groupVar;
@@ -4295,11 +7697,13 @@
                                         },
                                         body: JSON.stringify(body)
                                     });
-                                    if (!res.ok) {
-                                        const errData = await res.json();
-                                        throw new Error(errData.message || 'Analysis failed.');
+                                    const data = await res.json().catch(() => ({}));
+                                    if (!res.ok || data.success === false) {
+                                        this.clearResults();
+                                        this.analysisError = data.message || 'Unable to compute statistical analysis.';
+                                        return;
                                     }
-                                    const data = await res.json();
+                                    this.analysisError = null;
                                     if (this.testMethod === 'crosstab') {
                                         this.matrixData = data;
                                     } else if (this.testMethod === 'chisquare') {
@@ -4323,7 +7727,8 @@
                                         await this.getAiInterpretation();
                                     });
                                 } catch (err) {
-                                    alert("Analysis Error: " + err.message);
+                                    this.clearResults();
+                                    this.analysisError = err.message || 'An unexpected error occurred while calculating results.';
                                 } finally {
                                     this.loading = false;
                                 }
@@ -4348,6 +7753,7 @@
                                 if (this.colVar) variables.push("Col: " + this.colVar);
                                 if (this.depVar) variables.push("Dep: " + this.depVar);
                                 if (this.groupVar) variables.push("Grp: " + this.groupVar);
+                                if (this.ttestGroup1 && this.ttestGroup2) variables.push("Cohorts: " + this.ttestGroup1 + " vs " + this.ttestGroup2);
                                 if (this.targetSurveyId) variables.push("Target Survey: " + this.targetSurveyId);
                                 if (this.varX) variables.push("X: " + this.varX);
                                 if (this.varY) variables.push("Y: " + this.varY);
@@ -4373,6 +7779,8 @@
                                                     colVar: this.colVar,
                                                     depVar: this.depVar,
                                                     groupVar: this.groupVar,
+                                                    ttestGroup1: this.ttestGroup1,
+                                                    ttestGroup2: this.ttestGroup2,
                                                     targetSurveyId: this.targetSurveyId,
                                                     targetDepVar: this.targetDepVar,
                                                     targetSurveyIds: this.targetSurveyIds,
@@ -4409,6 +7817,8 @@
                                 this.colVar = vars.colVar || '';
                                 this.depVar = vars.depVar || '';
                                 this.groupVar = vars.groupVar || '';
+                                this.ttestGroup1 = vars.ttestGroup1 || '';
+                                this.ttestGroup2 = vars.ttestGroup2 || '';
                                 this.targetSurveyId = vars.targetSurveyId || '';
                                 this.targetDepVar = vars.targetDepVar || '';
                                 this.targetSurveyIds = vars.targetSurveyIds || [];
@@ -4444,23 +7854,107 @@
                                     const res = await fetch(`{{ url('/surveys/' . $survey->id . '/inferential-analysis') }}/${id}`, {
                                         method: 'DELETE',
                                         headers: {
-                                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                            'Accept': 'application/json'
                                         }
                                     });
                                     if (res.ok) {
                                         this.savedTests = this.savedTests.filter(t => t.id !== id);
                                         if (this.loadedTestId === id) this.resetForm();
+                                    } else {
+                                        const errData = await res.json().catch(() => ({}));
+                                        if (window.Swal) {
+                                            Swal.fire({
+                                                icon: 'error',
+                                                title: 'Delete Failed',
+                                                text: errData.message || 'Unable to delete the saved test.'
+                                            });
+                                        }
                                     }
                                 } catch (e) {
                                     console.error(e);
+                                    if (window.Swal) {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Error',
+                                            text: 'A network error occurred while deleting the test.'
+                                        });
+                                    }
+                                }
+                            },
+
+                            async toggleReportInclusion(test) {
+                                if (!test || !test.id) return;
+                                try {
+                                    const res = await fetch(`{{ url('/surveys/' . $survey->id . '/inferential-analysis') }}/${test.id}/toggle-report`, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                            'Accept': 'application/json'
+                                        }
+                                    });
+                                    const data = await res.json();
+                                    if (data.success) {
+                                        test.is_included_in_report = data.is_included_in_report;
+                                        if (window.Swal) {
+                                            Swal.fire({
+                                                toast: true,
+                                                position: 'top-end',
+                                                icon: 'success',
+                                                title: data.message,
+                                                showConfirmButton: false,
+                                                timer: 2000
+                                            });
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Toggle report inclusion failed:', e);
                                 }
                             },
 
                             getMatrixValue(row, col) {
-                                if (this.matrixData && this.matrixData.matrix[row] && this.matrixData.matrix[row][col] !== undefined) {
-                                    return this.matrixData.matrix[row][col];
+                                const data = this.testMethod === 'chisquare' ? (this.chisquareData || this.matrixData) : this.matrixData;
+                                if (data && data.matrix && data.matrix[row] && data.matrix[row][col] !== undefined) {
+                                    return data.matrix[row][col];
                                 }
                                 return 0;
+                            },
+
+                            escapeHtml(value) {
+                                return String(value)
+                                    .replace(/&/g, '&amp;')
+                                    .replace(/</g, '&lt;')
+                                    .replace(/>/g, '&gt;')
+                                    .replace(/"/g, '&quot;')
+                                    .replace(/'/g, '&#039;');
+                            },
+
+                            renderFormattedText(text) {
+                                if (!text) return '';
+                                const escaped = this.escapeHtml(text);
+                                return escaped
+                                    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                                    .replace(/__(.+?)__/g, '<strong>$1</strong>')
+                                    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                                    .replace(/`(.+?)`/g, '<code class="bg-gray-200/60 px-1 py-0.5 rounded text-xs">$1</code>');
+                            },
+
+                            formatExpectedCount(val) {
+                                if (val === undefined || val === null) return '0.0';
+                                const num = Number(val);
+                                if (isNaN(num)) return '0.0';
+                                if (num < 1.0) {
+                                    return num.toFixed(2);
+                                }
+                                return num.toFixed(1);
+                            },
+
+                            formatShortVarLabel(label, maxLen = 45) {
+                                if (!label) return '';
+                                const str = String(label).trim();
+                                if (str.length <= maxLen) return str;
+                                return str.substring(0, maxLen).trim() + '...';
                             },
 
                             async getAiInterpretation() {
@@ -4475,6 +7969,11 @@
                                 else if (this.testMethod === 'regression_multiple') currentData = this.multipleRegressionData;
 
                                 if (!currentData) return;
+                                if (currentData.grandTotal !== undefined && currentData.grandTotal <= 0) return;
+                                if (currentData.validCases !== undefined && currentData.validCases <= 0) return;
+                                if (currentData.n !== undefined && currentData.n <= 0) return;
+                                if (currentData.valid_n !== undefined && currentData.valid_n <= 0) return;
+
                                 this.aiLoading = true;
                                 this.aiInsight = null;
                                 this.aiMessages = [];
@@ -4508,6 +8007,14 @@
                                     console.error("Interpretation Error: ", err);
                                     this.aiInsight = null;
                                     this.aiMessages = [];
+                                    if (window.Swal) {
+                                        Swal.fire({
+                                            icon: 'warning',
+                                            title: @js(__('Interpretation Notice')),
+                                            text: err.message || @js(__('Unable to generate statistical interpretation. Please check your AI quota or connection.')),
+                                            confirmButtonColor: '#2271b1'
+                                        });
+                                    }
                                 } finally {
                                     this.aiLoading = false;
                                     // Auto-save analysis test right after calculation & AI completion
@@ -4685,11 +8192,11 @@
                                 } else if (this.testMethod === 'regression' && this.regressionData) {
                                     testName = 'Simple Linear Regression Analysis';
                                     variablesSummary = `Dependent Variable (Y): "${this.regressionData.depLabel || 'Y'}", Independent Variable (X): "${this.regressionData.indLabel || 'X'}"`;
-                                    statsSummary = `R = ${this.regressionData.r}, R² = ${this.regressionData.r2}, Adjusted R² = ${this.regressionData.adjR2}, Std Error = ${this.regressionData.stdErrorEst}, ANOVA F = ${this.regressionData.anova?.fValue}, p = ${this.regressionData.anova?.pValue}.\nCoefficients: ` + JSON.stringify(this.regressionData.coefficients, null, 2);
+                                    statsSummary = `Sample N = ${this.regressionData.n}, Residual df = ${this.regressionData.anova?.dfRes}, R = ${this.regressionData.r}, R² = ${this.regressionData.r2}, Adjusted R² = ${this.regressionData.adjR2}, Std Error = ${this.regressionData.stdErrorEst}, ANOVA F(${this.regressionData.anova?.dfReg}, ${this.regressionData.anova?.dfRes}) = ${this.regressionData.anova?.fValue}, p = ${this.regressionData.anova?.pValue}. Note: Report slope t-test in APA format citing residual df as t(${this.regressionData.anova?.dfRes}) = ${this.regressionData.coefficients?.slope?.tValue}.\nCoefficients: ` + JSON.stringify(this.regressionData.coefficients, null, 2);
                                 } else if (this.testMethod === 'regression_multiple' && this.multipleRegressionData) {
                                     testName = 'Multiple Linear Regression Analysis';
                                     variablesSummary = `Dependent Variable (Y): "${this.multipleRegressionData.depLabel || 'Y'}", Model Equation: "${this.multipleRegressionData.equation || ''}"`;
-                                    statsSummary = `R = ${this.multipleRegressionData.r}, R² = ${this.multipleRegressionData.r2}, Adjusted R² = ${this.multipleRegressionData.adjR2}, Std Error = ${this.multipleRegressionData.stdErrorEst}, ANOVA F = ${this.multipleRegressionData.anova?.fValue}, p = ${this.multipleRegressionData.anova?.pValue}.\nCoefficients: ` + JSON.stringify(this.multipleRegressionData.coefficients, null, 2);
+                                    statsSummary = `Sample N = ${this.multipleRegressionData.n}, Residual df = ${this.multipleRegressionData.anova?.dfRes}, R = ${this.multipleRegressionData.r}, R² = ${this.multipleRegressionData.r2}, Adjusted R² = ${this.multipleRegressionData.adjR2}, Std Error = ${this.multipleRegressionData.stdErrorEst}, ANOVA F(${this.multipleRegressionData.anova?.dfReg}, ${this.multipleRegressionData.anova?.dfRes}) = ${this.multipleRegressionData.anova?.fValue}, p = ${this.multipleRegressionData.anova?.pValue}. Note: Report predictor t-tests in APA format citing residual df as t(${this.multipleRegressionData.anova?.dfRes}) = value.\nCoefficients: ` + JSON.stringify(this.multipleRegressionData.coefficients, null, 2);
                                 } else if (this.testMethod === 'chisquare' && (this.chisquareData || this.matrixData)) {
                                     const d = this.chisquareData || this.matrixData;
                                     testName = 'Chi-Square Test of Independence';
@@ -4708,20 +8215,20 @@
                                 const aiCurrent = this.aiInsight ? `\n\nPreliminary Interpretation Summary:\n"${this.aiInsight}"` : '';
 
                                 const promptText = `STATISTICAL RESEARCH ANALYSIS (${testName.toUpperCase()}):
-                                                                                                                                            Please provide a comprehensive academic discussion and formal APA 7th style writeup for the following statistical findings from survey: "{{ $survey->title }}".
+                                                                                                                                                                                                                                                                                                                                            Please provide a comprehensive academic discussion and formal APA 7th style writeup for the following statistical findings from survey: "{{ $survey->title }}".
 
-                                                                                                                                            TEST DETAILS:
-                                                                                                                                            - Test Conducted: ${testName}
-                                                                                                                                            - Variables: ${variablesSummary}
+                                                                                                                                                                                                                                                                                                                                            TEST DETAILS:
+                                                                                                                                                                                                                                                                                                                                            - Test Conducted: ${testName}
+                                                                                                                                                                                                                                                                                                                                            - Variables: ${variablesSummary}
 
-                                                                                                                                            STATISTICAL METRICS & DATA PAYLOAD:
-                                                                                                                                            ${statsSummary}${aiCurrent}
+                                                                                                                                                                                                                                                                                                                                            STATISTICAL METRICS & DATA PAYLOAD:
+                                                                                                                                                                                                                                                                                                                                            ${statsSummary}${aiCurrent}
 
-                                                                                                                                            KEY REQUIREMENTS:
-                                                                                                                                            1. Provide a rigorous APA 7th statistical writeup (reporting test statistic, degrees of freedom, exact p-value, effect size / confidence interval).
-                                                                                                                                            2. Detail the empirical interpretation in relation to the research questions.
-                                                                                                                                            3. Discuss practical and policy implications for decision-makers.
-                                                                                                                                            4. Highlight methodological limitations and recommend actionable next steps.`;
+                                                                                                                                                                                                                                                                                                                                            KEY REQUIREMENTS:
+                                                                                                                                                                                                                                                                                                                                            1. Provide a rigorous APA 7th statistical writeup (reporting test statistic, degrees of freedom, exact p-value, effect size / confidence interval).
+                                                                                                                                                                                                                                                                                                                                            2. Detail the empirical interpretation in relation to the research questions.
+                                                                                                                                                                                                                                                                                                                                            3. Discuss practical and policy implications for decision-makers.
+                                                                                                                                                                                                                                                                                                                                            4. Highlight methodological limitations and recommend actionable next steps.`;
 
                                 // Switch to Analyze tab in main survey reports
                                 const mainEl = document.querySelector('[x-data*="reportManager"]');
@@ -4881,10 +8388,10 @@
                             Swal.fire({
                                 title: `<span class="text-base font-bold text-gray-900">${@js(__('Generating Full Executive Report...'))}</span>`,
                                 html: `<div class="text-xs text-gray-500 space-y-2 text-left mt-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                                                                                                                                            <p class="flex items-center gap-2"><i class="fa-solid fa-chart-pie text-[#2271b1]"></i> <span>${@js(__('Compiling charts & distribution tables...'))}</span></p>
-                                                                                                                                                            <p class="flex items-center gap-2"><i class="fa-solid fa-brain text-indigo-500"></i> <span>${@js(__('Integrating statistical interpretations...'))}</span></p>
-                                                                                                                                                            <p class="text-[11px] text-amber-700 font-medium pt-1 border-t border-gray-200/60">${@js(__('For comprehensive or large surveys, this download may take a few moments.'))}</p>
-                                                                                                                                                           </div>`,
+                                                                                                                                                                                                                                                                                                                                                            <p class="flex items-center gap-2"><i class="fa-solid fa-chart-pie text-[#2271b1]"></i> <span>${@js(__('Compiling charts & distribution tables...'))}</span></p>
+                                                                                                                                                                                                                                                                                                                                                            <p class="flex items-center gap-2"><i class="fa-solid fa-brain text-indigo-500"></i> <span>${@js(__('Integrating statistical interpretations...'))}</span></p>
+                                                                                                                                                                                                                                                                                                                                                            <p class="text-[11px] text-amber-700 font-medium pt-1 border-t border-gray-200/60">${@js(__('For comprehensive or large surveys, this download may take a few moments.'))}</p>
+                                                                                                                                                                                                                                                                                                                                                           </div>`,
                                 showConfirmButton: false,
                                 allowOutsideClick: false,
                                 timer: 10000,
@@ -6058,28 +9565,28 @@
 
                                 if (data.summary || data.title) {
                                     html += `
-                                                                                                                                                                                                                                                                                                                                                        <div class="bg-white/5 rounded-2xl p-4 border border-white/10 space-y-2">
-                                                                                                                                                                                                                                                                                                                                                            <div class="flex items-center gap-2">
-                                                                                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-file-lines text-indigo-400 text-xs"></i>
-                                                                                                                                                                                                                                                                                                                                                                <h5 class="text-xs font-bold text-white tracking-tight">${this.escapeHtml(data.title || 'Summary')}</h5>
-                                                                                                                                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                                                                                                                                            <p class="text-xs leading-relaxed text-slate-300">${this.inlineFormat(data.summary || '')}</p>
-                                                                                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                                                                                    `;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <div class="bg-white/5 rounded-2xl p-4 border border-white/10 space-y-2">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <div class="flex items-center gap-2">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-file-lines text-indigo-400 text-xs"></i>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <h5 class="text-xs font-bold text-white tracking-tight">${this.escapeHtml(data.title || 'Summary')}</h5>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <p class="text-xs leading-relaxed text-slate-300">${this.inlineFormat(data.summary || '')}</p>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    `;
                                 }
 
                                 if (data.key_findings && Array.isArray(data.key_findings) && data.key_findings.length > 0) {
                                     html += `
-                                                                                                                                                                                                                                                                                                                                                        <div class="bg-white/5 rounded-2xl p-4 border border-white/10 space-y-2">
-                                                                                                                                                                                                                                                                                                                                                            <div class="flex items-center gap-2">
-                                                                                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-lightbulb text-amber-400 text-xs"></i>
-                                                                                                                                                                                                                                                                                                                                                                <h5 class="text-xs font-bold text-white tracking-tight">${this.escapeHtml('Key Findings')}</h5>
-                                                                                                                                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                                                                                                                                            <ul class="list-disc list-inside space-y-1 text-xs text-slate-300">
-                                                                                                                                                                                                                                                                                                                                                                ${data.key_findings.map(f => `<li>${this.inlineFormat(f)}</li>`).join('')}
-                                                                                                                                                                                                                                                                                                                                                            </ul>
-                                                                                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                                                                                    `;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <div class="bg-white/5 rounded-2xl p-4 border border-white/10 space-y-2">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <div class="flex items-center gap-2">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-lightbulb text-amber-400 text-xs"></i>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <h5 class="text-xs font-bold text-white tracking-tight">${this.escapeHtml('Key Findings')}</h5>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <ul class="list-disc list-inside space-y-1 text-xs text-slate-300">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ${data.key_findings.map(f => `<li>${this.inlineFormat(f)}</li>`).join('')}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            </ul>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    `;
                                 }
 
                                 if (data.table && typeof data.table === 'object') {
@@ -6088,44 +9595,44 @@
                                     if (headers.length > 0 && rows.length > 0) {
                                         const tableId = `socius-struct-tbl-${Math.random().toString(36).slice(2, 9)}`;
                                         html += `
-                                                                                                                                                                                                                                                                                                                                                            <div class="rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e2d]/60 shadow-xl">
-                                                                                                                                                                                                                                                                                                                                                                <div class="flex items-center justify-between gap-3 px-4 py-2 bg-white/[0.05] border-b border-white/10">
-                                                                                                                                                                                                                                                                                                                                                                    <span class="text-xs font-bold text-white">${this.escapeHtml(data.table.title || 'Data Table')}</span>
-                                                                                                                                                                                                                                                                                                                                                                    <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 border border-white/10 text-[10px] font-bold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
-                                                                                                                                                                                                                                                                                                                                                                        <i class="fa-regular fa-copy"></i> Copy
-                                                                                                                                                                                                                                                                                                                                                                    </button>
-                                                                                                                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                                                                                                                                <div class="overflow-x-auto">
-                                                                                                                                                                                                                                                                                                                                                                    <table id="${tableId}" class="min-w-full text-left text-xs border-collapse">
-                                                                                                                                                                                                                                                                                                                                                                        <thead>
-                                                                                                                                                                                                                                                                                                                                                                            <tr class="bg-white/[0.04] border-b border-white/10">
-                                                                                                                                                                                                                                                                                                                                                                                ${headers.map(h => `<th class="px-4 py-2.5 text-[11px] font-bold text-indigo-300">${this.escapeHtml(h)}</th>`).join('')}
-                                                                                                                                                                                                                                                                                                                                                                            </tr>
-                                                                                                                                                                                                                                                                                                                                                                        </thead>
-                                                                                                                                                                                                                                                                                                                                                                        <tbody class="divide-y divide-white/5">
-                                                                                                                                                                                                                                                                                                                                                                            ${rows.map(r => `
-                                                                                                                                                                                                                                                                                                                                                                                <tr class="hover:bg-white/[0.02]">
-                                                                                                                                                                                                                                                                                                                                                                                    ${(Array.isArray(r) ? r : Object.values(r)).map(c => `<td class="px-4 py-2 text-slate-300">${this.inlineFormat(String(c))}</td>`).join('')}
-                                                                                                                                                                                                                                                                                                                                                                                </tr>
-                                                                                                                                                                                                                                                                                                                                                                            `).join('')}
-                                                                                                                                                                                                                                                                                                                                                                        </tbody>
-                                                                                                                                                                                                                                                                                                                                                                    </table>
-                                                                                                                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                                                                                                                                        `;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <div class="rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e2d]/60 shadow-xl">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <div class="flex items-center justify-between gap-3 px-4 py-2 bg-white/[0.05] border-b border-white/10">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <span class="text-xs font-bold text-white">${this.escapeHtml(data.table.title || 'Data Table')}</span>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 border border-white/10 text-[10px] font-bold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <i class="fa-regular fa-copy"></i> Copy
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </button>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <div class="overflow-x-auto">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <table id="${tableId}" class="min-w-full text-left text-xs border-collapse">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <thead>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <tr class="bg-white/[0.04] border-b border-white/10">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ${headers.map(h => `<th class="px-4 py-2.5 text-[11px] font-bold text-indigo-300">${this.escapeHtml(h)}</th>`).join('')}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            </tr>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </thead>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <tbody class="divide-y divide-white/5">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ${rows.map(r => `
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <tr class="hover:bg-white/[0.02]">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    ${(Array.isArray(r) ? r : Object.values(r)).map(c => `<td class="px-4 py-2 text-slate-300">${this.inlineFormat(String(c))}</td>`).join('')}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </tr>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            `).join('')}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </tbody>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </table>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        `;
                                     }
                                 }
 
                                 if (data.interpretation || data.recommendations) {
                                     html += `
-                                                                                                                                                                                                                                                                                                                                                        <div class="bg-white/5 rounded-2xl p-4 border border-white/10 space-y-2">
-                                                                                                                                                                                                                                                                                                                                                            <div class="flex items-center gap-2">
-                                                                                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-compass text-emerald-400 text-xs"></i>
-                                                                                                                                                                                                                                                                                                                                                                <h5 class="text-xs font-bold text-white tracking-tight">${this.escapeHtml('Interpretation & Recommendations')}</h5>
-                                                                                                                                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                                                                                                                                            <p class="text-xs leading-relaxed text-slate-300">${this.inlineFormat(data.interpretation || data.recommendations || '')}</p>
-                                                                                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                                                                                    `;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <div class="bg-white/5 rounded-2xl p-4 border border-white/10 space-y-2">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <div class="flex items-center gap-2">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-compass text-emerald-400 text-xs"></i>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <h5 class="text-xs font-bold text-white tracking-tight">${this.escapeHtml('Interpretation & Recommendations')}</h5>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <p class="text-xs leading-relaxed text-slate-300">${this.inlineFormat(data.interpretation || data.recommendations || '')}</p>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    `;
                                 }
 
                                 html += '</div>';
@@ -6182,27 +9689,27 @@
                                             const type = codeBlockType === 'chart.js' ? 'chartjs' : codeBlockType;
                                             const isImage = type === 'pollinations';
                                             blocks.push(`
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <div class="socius-visual my-6 bg-white/5 rounded-2xl border border-white/10 overflow-hidden" 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 data-visual-type="${type}" 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 data-visual-id="${id}">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <div class="visual-header flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/5">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <div class="flex gap-2 ml-auto">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <button onclick="window.sociusVisuals.copy('${id}', this)" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <i class="fa-solid fa-copy mr-1"></i> {{ __('Copy') }}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </button>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <button onclick="window.sociusVisuals.download('${id}', 'png')" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <i class="fa-solid fa-download mr-1"></i> {{ __('PNG') }}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </button>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <div id="${id}" class="visual-body p-6 flex justify-center overflow-x-auto min-h-[100px] relative">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <textarea class="visual-source hidden">${this.escapeHtml(content)}</textarea>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <div class="visual-target w-full flex justify-center">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ${isImage ? '<div class="animate-pulse flex flex-col items-center gap-3 p-8"><i class="fa-solid fa-wand-magic-sparkles text-[#3894dc] text-2xl"></i><span class="text-[10px] text-slate-500 font-bold">{{ __('Generating Image...') }}</span></div>' : ''}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        `);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <div class="socius-visual my-6 bg-white/5 rounded-2xl border border-white/10 overflow-hidden" 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 data-visual-type="${type}" 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 data-visual-id="${id}">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <div class="visual-header flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/5">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <div class="flex gap-2 ml-auto">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <button onclick="window.sociusVisuals.copy('${id}', this)" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <i class="fa-solid fa-copy mr-1"></i> {{ __('Copy') }}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </button>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <button onclick="window.sociusVisuals.download('${id}', 'png')" class="text-[10px] font-bold text-slate-400 hover:text-white transition-colors">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <i class="fa-solid fa-download mr-1"></i> {{ __('PNG') }}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </button>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <div id="${id}" class="visual-body p-6 flex justify-center overflow-x-auto min-h-[100px] relative">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <textarea class="visual-source hidden">${this.escapeHtml(content)}</textarea>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <div class="visual-target w-full flex justify-center">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ${isImage ? '<div class="animate-pulse flex flex-col items-center gap-3 p-8"><i class="fa-solid fa-wand-magic-sparkles text-[#3894dc] text-2xl"></i><span class="text-[10px] text-slate-500 font-bold">{{ __('Generating Image...') }}</span></div>' : ''}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        `);
                                         } else {
                                             blocks.push(`<pre class="bg-black/30 p-4 rounded-xl overflow-x-auto text-xs my-4 border border-white/5"><code>${this.escapeHtml(content)}</code></pre>`);
                                         }
@@ -6285,11 +9792,11 @@
                                         const type = codeBlockType === 'chart.js' ? 'chartjs' : codeBlockType;
                                         const isImage = type === 'pollinations';
                                         blocks.push(`
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <div class="socius-visual-loading my-6 bg-white/5 rounded-2xl border border-white/10 border-dashed p-8 text-center animate-pulse">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <i class="fa-solid ${isImage ? 'fa-wand-magic-sparkles' : 'fa-chart-simple'} text-[#3894dc]/50 text-2xl mb-3"></i>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <p class="text-[10px] text-slate-500 font-bold">{{ __('Socius is generating an image...') }}</p>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    `);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <div class="socius-visual-loading my-6 bg-white/5 rounded-2xl border border-white/10 border-dashed p-8 text-center animate-pulse">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <i class="fa-solid ${isImage ? 'fa-wand-magic-sparkles' : 'fa-chart-simple'} text-[#3894dc]/50 text-2xl mb-3"></i>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <p class="text-[10px] text-slate-500 font-bold">{{ __('Socius is generating an image...') }}</p>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    `);
                                     } else {
                                         flushCodeBlock();
                                     }
@@ -6368,36 +9875,36 @@
                                 const tableId = `socius-table-${Math.random().toString(36).slice(2, 10)}`;
 
                                 return `
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <div class="my-4 rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e2d]/60 shadow-xl">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-white/[0.05] border-b border-white/10">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <div class="my-4 rounded-2xl border border-white/10 overflow-hidden bg-[#1e1e2d]/60 shadow-xl">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <div class="flex items-center justify-between gap-3 px-4 py-2.5 bg-white/[0.05] border-b border-white/10">
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-[10px] font-bold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <i class="fa-regular fa-copy text-[10px]"></i>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        {{ __('Copy Table') }}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </button>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <div class="overflow-x-auto">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <table id="${tableId}" class="min-w-full text-left text-xs border-collapse">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <thead>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <tr class="bg-white/[0.04] border-b border-white/10">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ${header.map(cell => `<th class="px-4 py-3 text-[11px] font-bold text-blue-300 border-b border-white/10 bg-white/[0.03]">${this.inlineFormat(cell)}</th>`).join('')}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            </tr>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </thead>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <tbody>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ${body.map((row, rIdx) => {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <button type="button" onclick="window.copyRenderedSociusTable('${tableId}', this)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-[10px] font-bold text-slate-300 hover:bg-[#2271b1] hover:text-white transition-all">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <i class="fa-regular fa-copy text-[10px]"></i>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        {{ __('Copy Table') }}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </button>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <div class="overflow-x-auto">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <table id="${tableId}" class="min-w-full text-left text-xs border-collapse">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <thead>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <tr class="bg-white/[0.04] border-b border-white/10">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ${header.map(cell => `<th class="px-4 py-3 text-[11px] font-bold text-blue-300 border-b border-white/10 bg-white/[0.03]">${this.inlineFormat(cell)}</th>`).join('')}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            </tr>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </thead>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <tbody>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ${body.map((row, rIdx) => {
                                     const isTotal = row[0] && row[0].toLowerCase().includes('total');
                                     const rowBg = isTotal ? 'bg-white/[0.08] font-bold text-blue-200' : (rIdx % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]');
                                     return `
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <tr class="${rowBg}">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ${row.map(cell => `<td class="px-4 py-2.5 border-b border-white/5 ${isTotal ? 'font-bold text-blue-200 border-t border-white/10' : 'text-slate-200'}">${this.inlineFormat(cell)}</td>`).join('')}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </tr>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                `;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <tr class="${rowBg}">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ${row.map(cell => `<td class="px-4 py-2.5 border-b border-white/5 ${isTotal ? 'font-bold text-blue-200 border-t border-white/10' : 'text-slate-200'}">${this.inlineFormat(cell)}</td>`).join('')}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </tr>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                `;
                                 }).join('')}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </tbody>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </table>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        `;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </tbody>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </table>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        `;
                             },
 
                             async renderVisuals() {
@@ -6616,9 +10123,9 @@
                                     } catch (e) {
                                         console.error(`Socius Visual Error [${type}]:`, e);
                                         target.innerHTML = `<div class="text-red-400/60 text-[10px] font-bold p-4 bg-red-500/10 rounded-xl border border-red-500/20">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        {{ __('Invalid visual syntax.') }}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </div>`;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        {{ __('Invalid visual syntax.') }}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </div>`;
                                         el.classList.add('rendered');
                                     }
                                 }
@@ -6644,9 +10151,9 @@
                                     const { prompt, target, el } = window._sociusImageQueue.shift();
 
                                     target.innerHTML = `<div class="animate-pulse flex flex-col items-center gap-3 p-8">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <i class="fa-solid fa-wand-magic-sparkles fa-bounce text-indigo-400 text-2xl"></i>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <span class="text-[10px] text-slate-500  tracking-widest font-bold">{{ __('Visualizing Analysis...') }}</span>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </div>`;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <i class="fa-solid fa-wand-magic-sparkles fa-bounce text-indigo-400 text-2xl"></i>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <span class="text-[10px] text-slate-500  tracking-widest font-bold">{{ __('Visualizing Analysis...') }}</span>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </div>`;
 
                                     await this.loadSingleImage(prompt, target, el);
                                     await new Promise(r => setTimeout(r, 1000));
@@ -6693,17 +10200,17 @@
                                             };
                                             img.onerror = () => {
                                                 target.innerHTML = `<div class="p-6 text-center bg-slate-800/40 rounded-xl border border-slate-700/30">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-triangle-exclamation text-amber-500/50 text-xl mb-2"></i>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <p class="text-[10px] text-slate-400  font-bold tracking-widest">{{ __('Image Source Unreachable') }}</p>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            </div>`;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-triangle-exclamation text-amber-500/50 text-xl mb-2"></i>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <p class="text-[10px] text-slate-400  font-bold tracking-widest">{{ __('Image Source Unreachable') }}</p>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            </div>`;
                                                 resolve();
                                             };
                                         }
                                     } catch (e) {
                                         console.error('Image load failed:', e);
                                         target.innerHTML = `<div class="p-6 text-center bg-slate-800/40 rounded-xl">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <p class="text-[9px] text-slate-500">{{ __('Visualization failed to render') }}</p>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </div>`;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <p class="text-[9px] text-slate-500">{{ __('Visualization failed to render') }}</p>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </div>`;
                                         resolve();
                                     }
                                 });
@@ -7226,56 +10733,58 @@
     </div>
 
     <!-- Floating Scroll Control Stack (Available across quantitative, qualitative & inferential tabs) -->
-    <div x-show="reportTab !== 'analyse' && reportTab !== 'humanizer'" x-data="{ 
-                                                                showTop: false, 
-                                                                showBottom: false,
-                                                                getScrollContainer() {
-                                                                    return document.getElementById('main-viewport') || 
-                                                                           document.querySelector('.content-pane') || 
-                                                                           document.querySelector('main') || 
-                                                                           document.documentElement;
-                                                                },
-                                                                check() {
-                                                                    const p = this.getScrollContainer();
-                                                                    const scrollTop = Math.max(
-                                                                        window.pageYOffset || 0,
-                                                                        document.documentElement.scrollTop || 0,
-                                                                        document.body.scrollTop || 0,
-                                                                        p ? (p.scrollTop || 0) : 0
-                                                                    );
-                                                                    const scrollHeight = Math.max(
-                                                                        document.documentElement.scrollHeight || 0,
-                                                                        document.body.scrollHeight || 0,
-                                                                        p ? (p.scrollHeight || 0) : 0
-                                                                    );
-                                                                    const clientHeight = window.innerHeight || (p ? p.clientHeight : 0) || document.documentElement.clientHeight || 0;
+    <div x-show="reportTab !== 'analyse' && reportTab !== 'humanizer'"
+        x-data="{ 
+                                                                                                                                                                showTop: false, 
+                                                                                                                                                                showBottom: false,
+                                                                                                                                                                getScrollContainer() {
+                                                                                                                                                                    return document.getElementById('main-viewport') || 
+                                                                                                                                                                           document.querySelector('.content-pane') || 
+                                                                                                                                                                           document.querySelector('main') || 
+                                                                                                                                                                           document.documentElement;
+                                                                                                                                                                },
+                                                                                                                                                                check() {
+                                                                                                                                                                    const p = this.getScrollContainer();
+                                                                                                                                                                    const scrollTop = Math.max(
+                                                                                                                                                                        window.pageYOffset || 0,
+                                                                                                                                                                        document.documentElement.scrollTop || 0,
+                                                                                                                                                                        document.body.scrollTop || 0,
+                                                                                                                                                                        p ? (p.scrollTop || 0) : 0
+                                                                                                                                                                    );
+                                                                                                                                                                    const scrollHeight = Math.max(
+                                                                                                                                                                        document.documentElement.scrollHeight || 0,
+                                                                                                                                                                        document.body.scrollHeight || 0,
+                                                                                                                                                                        p ? (p.scrollHeight || 0) : 0
+                                                                                                                                                                    );
+                                                                                                                                                                    const clientHeight = window.innerHeight || (p ? p.clientHeight : 0) || document.documentElement.clientHeight || 0;
 
-                                                                    this.showTop = scrollTop > 150; 
-                                                                    this.showBottom = (scrollTop + clientHeight) < (scrollHeight - 150);
-                                                                },
-                                                                scrollToTop() {
-                                                                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                                                                    const p = this.getScrollContainer();
-                                                                    if (p && p.scrollTo) p.scrollTo({ top: 0, behavior: 'smooth' });
-                                                                },
-                                                                scrollToBottom() {
-                                                                    const scrollHeight = Math.max(
-                                                                        document.documentElement.scrollHeight || 0,
-                                                                        document.body.scrollHeight || 0
-                                                                    );
-                                                                    window.scrollTo({ top: scrollHeight, behavior: 'smooth' });
-                                                                    const p = this.getScrollContainer();
-                                                                    if (p && p.scrollTo) {
-                                                                        p.scrollTo({ top: p.scrollHeight || scrollHeight, behavior: 'smooth' });
-                                                                    }
-                                                                }
-                                                            }" x-init="$nextTick(() => {
-                                                                check();
-                                                                const p = getScrollContainer();
-                                                                if (p) p.addEventListener('scroll', () => check(), { passive: true });
-                                                                window.addEventListener('resize', () => check(), { passive: true });
-                                                                window.addEventListener('scroll', () => check(), { passive: true });
-                                                            })" @scroll.window.throttle.50ms="check()"
+                                                                                                                                                                    this.showTop = scrollTop > 150; 
+                                                                                                                                                                    this.showBottom = (scrollTop + clientHeight) < (scrollHeight - 150);
+                                                                                                                                                                },
+                                                                                                                                                                scrollToTop() {
+                                                                                                                                                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                                                                                                                                    const p = this.getScrollContainer();
+                                                                                                                                                                    if (p && p.scrollTo) p.scrollTo({ top: 0, behavior: 'smooth' });
+                                                                                                                                                                },
+                                                                                                                                                                scrollToBottom() {
+                                                                                                                                                                    const scrollHeight = Math.max(
+                                                                                                                                                                        document.documentElement.scrollHeight || 0,
+                                                                                                                                                                        document.body.scrollHeight || 0
+                                                                                                                                                                    );
+                                                                                                                                                                    window.scrollTo({ top: scrollHeight, behavior: 'smooth' });
+                                                                                                                                                                    const p = this.getScrollContainer();
+                                                                                                                                                                    if (p && p.scrollTo) {
+                                                                                                                                                                        p.scrollTo({ top: p.scrollHeight || scrollHeight, behavior: 'smooth' });
+                                                                                                                                                                    }
+                                                                                                                                                                }
+                                                                                                                                                            }"
+        x-init="$nextTick(() => {
+                                                                                                                                                                check();
+                                                                                                                                                                const p = getScrollContainer();
+                                                                                                                                                                if (p) p.addEventListener('scroll', () => check(), { passive: true });
+                                                                                                                                                                window.addEventListener('resize', () => check(), { passive: true });
+                                                                                                                                                                window.addEventListener('scroll', () => check(), { passive: true });
+                                                                                                                                                            })" @scroll.window.throttle.50ms="check()"
         class="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2">
 
         <!-- TOP BUTTON -->

@@ -16,11 +16,13 @@ class SurveyInferentialAnalysis extends Model
         'title',
         'variables',
         'ai_summary',
+        'is_included_in_report',
         'payload'
     ];
 
     protected $casts = [
         'payload' => 'array',
+        'is_included_in_report' => 'boolean',
     ];
 
     public function survey()

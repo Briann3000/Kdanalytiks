@@ -242,6 +242,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/crosstab', [SurveyController::class, 'crosstab'])->name('reports.crosstab');
         Route::match(['get', 'post'], '/inferential-analysis', [SurveyController::class, 'inferentialAnalysis'])->name('reports.inferential');
         Route::post('/inferential-analysis/save', [SurveyController::class, 'saveInferentialAnalysis'])->name('reports.inferential.save');
+        Route::post('/inferential-analysis/{analysisId}/toggle-report', [SurveyController::class, 'toggleInferentialReportInclusion'])->name('reports.inferential.toggle-report');
         Route::delete('/inferential-analysis/{analysisId}', [SurveyController::class, 'deleteInferentialAnalysis'])->name('reports.inferential.delete');
 
         // Data Portability Export Routes

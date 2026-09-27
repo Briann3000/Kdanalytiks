@@ -470,7 +470,7 @@ class InsightController extends Controller
         $survey = \App\Models\Survey::findOrFail($surveyId);
 
         $user = auth()->user();
-        if (!$user || !$user->hasActiveSubscription()) {
+        if (!$user || !$user->canUseAiAnalysis()) {
             return response()->json(['success' => false, 'message' => 'Premium subscription required for Statistical Intelligence.'], 403);
         }
 
@@ -532,8 +532,8 @@ class InsightController extends Controller
             $prompt .= "6. You MUST write the entire revised analysis and response in the {$targetLang} language. Do not output it in English if the target language is different.";
 
             try {
-                $polishSystemPrompt = "You are a senior research statistician. Refine the statistical interpretation strictly according to the researcher's instructions. Maintain APA 7 statistical precision, past tense, and plain text formatting without Markdown symbols.";
-                $insight = $this->aiService->callAi($prompt, $polishSystemPrompt, false, 2048, 0.3);
+                $polishSystemPrompt = "You are a senior research statistician. Refine the statistical interpretation strictly according to the researcher's instructions. Maintain APA 7 statistical precision (*p*, *N*, *χ²*, *V*, *t*, *F*), past tense, complete sentences, and full academic clarity.";
+                $insight = $this->aiService->callAi($prompt, $polishSystemPrompt, false, 4096, 0.3);
                 return response()->json(['success' => true, 'insight' => $insight]);
             } catch (\Exception $e) {
                 return response()->json(['success' => false, 'message' => 'AI Refinement Failed: ' . $e->getMessage()], 500);
@@ -569,13 +569,28 @@ class InsightController extends Controller
                 $prompt .= "Total Sample (N): " . ($data['grandTotal'] ?? 0) . "\n";
                 $prompt .= "Pearson Chi-Square (χ²): " . ($data['chiSquare'] ?? 0) . ", df: " . ($data['df'] ?? 1) . ", p-value: " . ($data['pValue'] ?? 1) . "\n";
                 $prompt .= "Cramer's V (Effect Size): " . ($data['cramersV'] ?? 'N/A') . " (" . ($data['effectLabel'] ?? 'N/A') . ")\n";
+                if (isset($data['contingencyCoeff'])) {
+                    $prompt .= "Contingency Coefficient: " . $data['contingencyCoeff'] . "\n";
+                }
                 if (isset($data['likelihoodRatio'])) {
                     $prompt .= "Likelihood Ratio: " . $data['likelihoodRatio'] . " (p = " . ($data['likelihoodPValue'] ?? 'N/A') . ")\n";
                 }
                 if (isset($data['linearAssociation'])) {
-                    $prompt .= "Linear-by-Linear Association: " . $data['linearAssociation'] . " (p = " . ($data['linearPValue'] ?? 'N/A') . ")\n";
+                    $prompt .= "Linear-by-Linear Association: " . $data['linearAssociation'] . " (p = " . ($data['linearPValue'] ?? 'N/A') . ") [Note: Applicable only if both variables are ordinal]\n";
                 }
                 $prompt .= "Statistical Significance: " . (!empty($data['significant']) ? "Statistically Significant (p < 0.05)" : "Not Statistically Significant (p >= 0.05)") . "\n";
+                if (isset($data['assumptionWarning'])) {
+                    $warn = $data['assumptionWarning'];
+                    $isViolated = !empty($warn['is_violated']);
+                    $pctUnder5 = $warn['cells_under_5_pct'] ?? $warn['percent_less_than_5'] ?? 0;
+                    $minExp = $warn['min_expected'] ?? 0;
+                    $cellsUnder5 = $warn['cells_less_than_5'] ?? $warn['cells_under_5'] ?? 0;
+                    $totalCells = $warn['total_cells'] ?? 0;
+                    $prompt .= "Cochran Assumption Check: " . ($isViolated ? "VIOLATED" : "PASSED (MET)") . " ({$cellsUnder5}/{$totalCells} cells = {$pctUnder5}% have expected count < 5, minimum expected = {$minExp}).\n";
+                    $prompt .= "CRITICAL ASSUMPTION INSTRUCTION: " . ($isViolated
+                        ? "Cochran's rule was violated because more than 20% of cells have expected count < 5 or min expected < 1. Mention this assumption violation cautiously."
+                        : "Cochran's rule was MET/PASSED ({$pctUnder5}% <= 20% threshold, min expected count {$minExp} >= 1.0). You MUST confirm the expected cell count assumption was satisfied, and you MUST NOT claim or suggest that Cochran's assumption was violated or that caution is warranted.") . "\n";
+                }
                 $prompt .= "Observed Contingency Matrix: " . json_encode($data['matrix'] ?? []) . "\n\n";
                 break;
 
@@ -613,17 +628,33 @@ class InsightController extends Controller
                         $prompt .= "- Group '{$name}': N = {$n}, Mean (M) = {$m}, Std Dev (SD) = {$sd}, Std Error = {$se}\n";
                     }
                 }
-                $prompt .= "Test Results:\n";
-                $prompt .= "- t-statistic: {$data['tValue']}, df: {$data['df']}, p-value (2-tailed): {$data['pValue']}\n";
-                $prompt .= "- Mean Difference: {$data['meanDiff']}, Std Error of Difference: {$data['stdErrorDiff']}\n";
+                $useWelch = isset($data['equalVarAssumed']) && !$data['equalVarAssumed'];
+                $tStat = $useWelch ? ($data['tValueWelch'] ?? $data['tValue']) : $data['tValue'];
+                $df = $useWelch ? ($data['dfWelch'] ?? $data['df']) : $data['df'];
+                $pValue = $useWelch ? ($data['pValueWelch'] ?? $data['pValue']) : $data['pValue'];
+                $seDiff = $useWelch ? ($data['stdErrorDiffWelch'] ?? $data['stdErrorDiff'] ?? 'N/A') : ($data['stdErrorDiff'] ?? 'N/A');
+                $ciLower = $useWelch ? ($data['ciLowerWelch'] ?? $data['ciLower'] ?? 'N/A') : ($data['ciLower'] ?? $data['ciLowerAssumed'] ?? 'N/A');
+                $ciUpper = $useWelch ? ($data['ciUpperWelch'] ?? $data['ciUpper'] ?? 'N/A') : ($data['ciUpper'] ?? $data['ciUpperAssumed'] ?? 'N/A');
+
+                $prompt .= "Test Results & Model Selection:\n";
+                $prompt .= "- Model: " . ($useWelch ? "Welch's t-test (Equal Variances Not Assumed)" : "Student's t-test (Equal Variances Assumed)") . "\n";
+                if (isset($data['leveneF']) && isset($data['leveneSig'])) {
+                    $prompt .= "- Levene's Test for Equality of Variances: F = {$data['leveneF']}, Sig. (p) = {$data['leveneSig']} (" . ($useWelch ? "VIOLATED (p < .05) -> You MUST cite Welch's test row: t({$df}) = {$tStat}, p = {$pValue}" : "Satisfied (p >= .05) -> Student's pooled t-test reported") . ")\n";
+                }
+                $prompt .= "- Reported t-statistic: {$tStat}, df: {$df}, p-value (2-tailed): {$pValue}\n";
+                $prompt .= "- Mean Difference: {$data['meanDiff']}, Std Error of Difference: {$seDiff}\n";
                 if (isset($data['cohensD'])) {
-                    $effect = $data['dEffectLabel'] ?? 'N/A';
+                    $effect = $data['cohensDEffect'] ?? $data['dEffectLabel'] ?? null;
+                    if (!$effect || $effect === 'N/A') {
+                        $dAbs = abs((float) $data['cohensD']);
+                        $effect = $dAbs >= 0.8 ? 'Large' : ($dAbs >= 0.5 ? 'Medium' : ($dAbs >= 0.2 ? 'Small' : 'Negligible'));
+                    }
                     $prompt .= "- Cohen's d (Effect Size): {$data['cohensD']} ({$effect} effect)\n";
                 }
-                if (isset($data['ciLowerAssumed']) && isset($data['ciUpperAssumed'])) {
-                    $prompt .= "- 95% Confidence Interval of Difference: [{$data['ciLowerAssumed']}, {$data['ciUpperAssumed']}]\n";
+                if ($ciLower !== 'N/A' && $ciUpper !== 'N/A') {
+                    $prompt .= "- 95% Confidence Interval of Difference: [{$ciLower}, {$ciUpper}]\n";
                 }
-                $prompt .= "- Statistical Significance: " . (!empty($data['significant']) ? "Statistically Significant (p < 0.05)" : "Not Statistically Significant (p >= 0.05)") . "\n\n";
+                $prompt .= "- Statistical Significance: " . (!empty($data['significant']) || !empty($data['significantWelch']) || (is_numeric($pValue) && (float) $pValue < 0.05) ? "Statistically Significant (p < 0.05)" : "Not Statistically Significant (p >= 0.05)") . "\n\n";
                 break;
 
             case 'correlation':
@@ -659,22 +690,25 @@ class InsightController extends Controller
                 break;
 
             case 'regression':
+                $dfReg = $data['anova']['dfReg'] ?? 1;
+                $dfRes = $data['anova']['dfRes'] ?? ($data['n'] ? $data['n'] - 2 : 'N/A');
                 $prompt .= "Test: Simple Linear Regression\n";
                 $prompt .= "Dependent Variable (Y): '{$data['depLabel']}', Independent Predictor (X): '{$data['indLabel']}'\n";
+                $prompt .= "Sample Size (N): " . ($data['n'] ?? 'N/A') . ", Residual Degrees of Freedom: df = {$dfRes}\n";
                 $prompt .= "Model Fit: R = {$data['r']}, R-squared (R²) = {$data['r2']}, Adjusted R² = {$data['adjR2']}, Std Error of Estimate = {$data['stdErrorEst']}\n";
                 if (!empty($data['anova'])) {
-                    $prompt .= "ANOVA Model Fit: F = {$data['anova']['fValue']}, p-value = {$data['anova']['pValue']}\n";
+                    $prompt .= "ANOVA Model Fit: F({$dfReg}, {$dfRes}) = {$data['anova']['fValue']}, p-value = {$data['anova']['pValue']}\n";
                 }
                 if (!empty($data['coefficients']) && is_array($data['coefficients'])) {
-                    $prompt .= "Regression Coefficients:\n";
+                    $prompt .= "Regression Coefficients (Report t-tests in APA format as t({$dfRes}) = value):\n";
                     foreach ($data['coefficients'] as $c) {
-                        $var = $c['variable'] ?? 'Variable';
-                        $b = $c['b'] ?? 'N/A';
+                        $var = $c['label'] ?? ($c['variable'] ?? 'Variable');
+                        $b = $c['coef'] ?? ($c['b'] ?? 'N/A');
                         $se = $c['stdError'] ?? 'N/A';
                         $beta = $c['beta'] ?? 'N/A';
                         $t = $c['tValue'] ?? 'N/A';
                         $p = $c['pValue'] ?? 'N/A';
-                        $prompt .= "- Variable '{$var}': B = {$b}, Std Error = {$se}, Beta (β) = {$beta}, t = {$t}, p = {$p}\n";
+                        $prompt .= "- Variable '{$var}': B = {$b}, Std Error = {$se}, Beta (β) = {$beta}, t({$dfRes}) = {$t}, p = {$p}\n";
                     }
                 }
                 if (!empty($data['equation'])) {
@@ -720,17 +754,19 @@ class InsightController extends Controller
 You are a senior research statistician and academic data analyst. Write a clear, comprehensive, and publication-ready academic statistical interpretation of the provided empirical test results.
 
 OUTPUT REQUIREMENTS:
-- Write ONE cohesive, well-developed paragraph (approximately 3 to 5 sentences).
-- Report exact sample statistics, group means (M), standard deviations (SD), test statistics (t, F, χ², r, or α), degrees of freedom (df), p-values, and effect sizes (Cohen's d, Cramer's V, R²) in standard APA 7 reporting style.
-- State whether the result is statistically significant at the α = 0.05 level and what that means for the research variables.
-- Write in formal academic past tense throughout (e.g., 'indicated', 'revealed', 'demonstrated', 'accounted for').
-- Plain text only: NO Markdown symbols, NO asterisks, NO bolding, NO bullet points, NO headings.
-- Always finish the entire paragraph completely with a closing period. Never terminate mid-sentence.
+- Write ONE cohesive, well-developed academic paragraph (approximately 4 to 6 sentences).
+- Strictly adhere to APA 7th Edition statistical reporting standards:
+  * Statistical abbreviations and symbols must be italicized using single markdown asterisks (e.g., *χ²*, *N*, *n*, *p*, *df*, *V*, *t*, *F*, *R²*, *M*, *SD*, *d*, *α*).
+  * Numbers bounded by 1.0 (such as *p*-values, Cramér's *V*, correlations *r*, *R²*, and Cronbach's *α*) MUST drop the leading zero (e.g., *p* = .002, Cramér's *V* = .18, *r* = .45).
+  * Report *p*-values to precisely 3 decimal places without leading zeros (e.g., *p* = .067, *p* = .003, or *p* < .001 when below .001). Never round or truncate *p*-values to only 2 decimal places when *p* is between .01 and .10.
+- Cochran Assumption: Cochran's criterion states that a Chi-Square test is valid if no more than 20% of expected cell counts are < 5 (and all min expected >= 1.0). If Cochran's check indicates PASSED / MET, you MUST affirm that expected cell count assumptions were met and NEVER state or imply an assumption violation or caution. If VIOLATED (> 20% of cells < 5), include an appropriate methodological cautionary note.
+- Write in formal academic past tense throughout (e.g., 'revealed', 'demonstrated', 'indicated').
+- CRITICAL: You must complete every sentence and close all opened parentheses. NEVER terminate mid-sentence.
 - Write entirely in {$targetLang}.
 PROMPT;
 
         try {
-            $insight = $this->aiService->callAi($prompt, $systemPrompt, false, 2048, 0.3);
+            $insight = $this->aiService->callAi($prompt, $systemPrompt, false, 4096, 0.3);
             return response()->json(['success' => true, 'insight' => $insight]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'AI Analysis Failed: ' . $e->getMessage()], 500);
