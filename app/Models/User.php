@@ -67,6 +67,10 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function activeOrganization(): ?Organization
     {
+        if (!$this->exists) {
+            return null;
+        }
+
         $session = $this->activeOrgSession;
         if ($session) {
             return Organization::find($session->active_organization_id);
@@ -335,6 +339,10 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
 
+        if ($this->isSubscriptionExpired()) {
+            return false;
+        }
+
         $activeOrg = $this->activeOrganization();
         if ($activeOrg) {
             $pool = $activeOrg->resourcePool;
@@ -348,7 +356,13 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
 
-        // Free users get 2 trials
+        // [EARLY ACCESS / LAUNCH MODE]: Relaxed limit when early access is active
+        if (config('subscription.early_access_mode', true)) {
+            $earlyLimit = (int) config('subscription.early_access.ai_analyses_monthly', 50);
+            return ($this->ai_analysis_count ?? 0) < $earlyLimit;
+        }
+
+        // [ORIGINAL RESTRICTION]: Free users get 2 trials
         return ($this->ai_analysis_count ?? 0) < 2;
     }
 
@@ -377,6 +391,10 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
 
+        if ($this->isSubscriptionExpired()) {
+            return false;
+        }
+
         $activeOrg = $this->activeOrganization();
         if ($activeOrg && $activeOrg->resourcePool) {
             return $activeOrg->resourcePool->canTranscribe();
@@ -392,7 +410,13 @@ class User extends Authenticatable implements MustVerifyEmail
             return ($this->transcription_count ?? 0) < 10;
         }
 
-        // Free tier: 1 max
+        // [EARLY ACCESS / LAUNCH MODE]: Relaxed limit when early access is active
+        if (config('subscription.early_access_mode', true)) {
+            $earlyLimit = (int) config('subscription.early_access.transcription_count', 5);
+            return ($this->transcription_count ?? 0) < $earlyLimit;
+        }
+
+        // [ORIGINAL RESTRICTION]: Free tier: 1 max
         return ($this->transcription_count ?? 0) < 1;
     }
 
@@ -405,6 +429,10 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
 
+        if ($this->isSubscriptionExpired()) {
+            return false;
+        }
+
         $tierSlug = $this->effectiveTierSlug();
 
         if (str_contains($tierSlug, 'enterprise')) {
@@ -415,7 +443,13 @@ class User extends Authenticatable implements MustVerifyEmail
             return ($this->proofread_count ?? 0) < 10;
         }
 
-        // Free tier: 1 max
+        // [EARLY ACCESS / LAUNCH MODE]: Relaxed limit when early access is active
+        if (config('subscription.early_access_mode', true)) {
+            $earlyLimit = (int) config('subscription.early_access.proofread_count', 5);
+            return ($this->proofread_count ?? 0) < $earlyLimit;
+        }
+
+        // [ORIGINAL RESTRICTION]: Free tier: 1 max
         return ($this->proofread_count ?? 0) < 1;
     }
 
@@ -432,6 +466,12 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
 
+        // [EARLY ACCESS / LAUNCH MODE]: Full preview & export with branding retained
+        if (config('subscription.early_access_mode', true) && config('subscription.early_access.allow_full_report_preview', true)) {
+            return true;
+        }
+
+        // [ORIGINAL RESTRICTION]: Free tier: 2 max
         return ($this->free_report_export_count ?? 0) < 2;
     }
 
@@ -444,8 +484,15 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
 
+        if ($this->isSubscriptionExpired()) {
+            return false;
+        }
+
         if (!$this->exists) {
-            return ($this->plagiarism_scan_count ?? 0) < 3;
+            $guestLimit = config('subscription.early_access_mode', true)
+                ? (int) config('subscription.early_access.plagiarism_scans', 10)
+                : 3;
+            return ($this->plagiarism_scan_count ?? 0) < $guestLimit;
         }
 
         $activeOrg = $this->activeOrganization();
@@ -463,7 +510,13 @@ class User extends Authenticatable implements MustVerifyEmail
             return ($this->plagiarism_scan_count ?? 0) < 15;
         }
 
-        // Free tier: 3 trial scans
+        // [EARLY ACCESS / LAUNCH MODE]: Relaxed limit when early access is active
+        if (config('subscription.early_access_mode', true)) {
+            $earlyLimit = (int) config('subscription.early_access.plagiarism_scans', 10);
+            return ($this->plagiarism_scan_count ?? 0) < $earlyLimit;
+        }
+
+        // [ORIGINAL RESTRICTION]: Free tier: 3 trial scans
         return ($this->plagiarism_scan_count ?? 0) < 3;
     }
 
@@ -486,6 +539,12 @@ class User extends Authenticatable implements MustVerifyEmail
             return 15000;
         }
 
+        // [EARLY ACCESS / LAUNCH MODE]: Relaxed word limit when early access is active
+        if (config('subscription.early_access_mode', true)) {
+            return (int) config('subscription.early_access.plagiarism_word_limit', 5000);
+        }
+
+        // [ORIGINAL RESTRICTION]: Free tier: 1,500 words
         return 1500;
     }
 
@@ -508,6 +567,13 @@ class User extends Authenticatable implements MustVerifyEmail
             return max(0, 15 - ($this->plagiarism_scan_count ?? 0));
         }
 
+        // [EARLY ACCESS / LAUNCH MODE]: Early access quota calculation
+        if (config('subscription.early_access_mode', true)) {
+            $earlyLimit = (int) config('subscription.early_access.plagiarism_scans', 10);
+            return max(0, $earlyLimit - ($this->plagiarism_scan_count ?? 0));
+        }
+
+        // [ORIGINAL RESTRICTION]:
         return max(0, 3 - ($this->plagiarism_scan_count ?? 0));
     }
 

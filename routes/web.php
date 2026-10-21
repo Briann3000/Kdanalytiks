@@ -491,14 +491,11 @@ Route::middleware(['auth', 'verified', 'role:organization,independent,respondent
     Route::get('/subscriptions', [\App\Http\Controllers\SubscriptionController::class, 'index'])->name('subscriptions.index');
     Route::post('/subscriptions/checkout', [\App\Http\Controllers\SubscriptionController::class, 'checkout'])->name('subscriptions.checkout');
     Route::post('/subscriptions/cancel', [\App\Http\Controllers\SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
-    Route::get('/subscriptions/paypal/success', [\App\Http\Controllers\SubscriptionController::class, 'paypalSuccess'])->name('subscriptions.paypal.success');
-    Route::get('/subscriptions/paypal/cancel', [\App\Http\Controllers\SubscriptionController::class, 'paypalCancel'])->name('subscriptions.paypal.cancel');
     Route::get('/subscriptions/intasend/callback', [\App\Http\Controllers\SubscriptionController::class, 'intasendCallback'])->name('subscriptions.intasend.callback');
 });
 
 // Webhooks (Public)
 Route::post('/webhook/payment', [\App\Http\Controllers\SubscriptionController::class, 'webhook'])->name('webhook.payment');
-Route::post('/webhook/paypal', [\App\Http\Controllers\SubscriptionController::class, 'webhook'])->name('webhook.paypal');
 
 // Mock Payment Simulator (Development Only)
 

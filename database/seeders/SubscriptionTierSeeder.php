@@ -82,7 +82,7 @@ class SubscriptionTierSeeder extends Seeder
                 'has_custom_branding' => false,
                 'has_data_export' => false,
                 'has_advanced_analytics' => false,
-                'org_max_seats' => 2,
+                'org_max_seats' => 5,
             ],
             [
                 'name' => 'Org Pro',

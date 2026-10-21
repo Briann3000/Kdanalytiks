@@ -27,7 +27,6 @@ class PaymentManager
 
         if (!isset($this->drivers[$name])) {
             $this->drivers[$name] = match ($name) {
-                'paypal' => app(PayPalGateway::class),
                 'intasend' => app(IntasendGateway::class),
                 default => $this->defaultGateway ?? app(IntasendGateway::class),
             };
@@ -92,7 +91,7 @@ class PaymentManager
             ];
         }
 
-        return $this->driver($gateway)->purchaseSubscription($entity, $tier, $isYearly);
+        return $this->driver($gateway)->purchaseSubscription($entity, $tier, $isYearly, $currency);
     }
 
     /**

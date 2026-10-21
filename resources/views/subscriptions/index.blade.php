@@ -4,12 +4,12 @@
     <div x-data="{ 
                         billingCycle: 'monthly',
                         currency: 'KES',
-                        selectedGateway: 'intasend',
+                        
                         checkoutModalOpen: false,
                         cancelModalOpen: false,
                         isDowngrade: false,
                         checkoutCycle: 'monthly',
-                        modalPaymentMethod: 'intasend', // 'intasend' (KES) or 'paypal' (USD)
+                        modalPaymentMethod: 'intasend',
                         modalTier: null,
                         openCheckoutModal(tier) {
                             if (tier.isFree) {
@@ -19,7 +19,7 @@
                             this.modalTier = tier;
                             this.isDowngrade = (tier.price < {{ $tiers->firstWhere('id', $currentTierId ?? 0)?->monthly_price ?? 0 }});
                             this.checkoutCycle = this.billingCycle;
-                            this.modalPaymentMethod = (this.currency === 'USD') ? 'paypal' : 'intasend';
+                            this.modalPaymentMethod = 'intasend';
                             this.checkoutModalOpen = true;
                         }
                     }" class="py-12 bg-gray-50 min-h-screen">
@@ -29,7 +29,7 @@
             <div class="text-center mb-12">
                 <span
                     class="text-xs font-black text-[#2271b1] tracking-widest uppercase bg-[#2271b1]/10 px-4 py-1.5 rounded-full">
-                    {{ __('Subscription Plans') }}
+                    {{ config('subscription.early_access_mode', true) ? __('Early Access • Subscription Plans') : __('Subscription Plans') }}
                 </span>
                 <h1 class="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight mt-4">
                     {{ __('Choose the Plan That Fits Your Research') }}
@@ -75,15 +75,15 @@
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-6 mt-10">
                     {{-- Currency Selector --}}
                     <div class="inline-flex p-1.5 bg-gray-200/70 rounded-2xl border border-gray-300/60 shadow-inner">
-                        <button type="button" @click="currency = 'KES'; selectedGateway = 'intasend'"
+                        <button type="button" @click="currency = 'KES'"
                             :class="currency === 'KES' ? 'bg-white text-gray-900 shadow-md font-black' : 'text-gray-500 font-bold hover:text-gray-900'"
                             class="px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2">
-                            <span>🇰🇪</span> {{ __('KES (M-Pesa / Card)') }}
+                            <span>🇰🇪</span> {{ __('KES (Shillings)') }}
                         </button>
-                        <button type="button" @click="currency = 'USD'; selectedGateway = 'paypal'"
+                        <button type="button" @click="currency = 'USD'"
                             :class="currency === 'USD' ? 'bg-white text-gray-900 shadow-md font-black' : 'text-gray-500 font-bold hover:text-gray-900'"
                             class="px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2">
-                            <span>🌐</span> {{ __('USD (Card / PayPal)') }}
+                            <span>🌐</span> {{ __('USD (Global Billing)') }}
                         </button>
                     </div>
 
@@ -126,6 +126,24 @@
                         $isPopular = in_array(strtolower($tier->slug), ['pro', 'org-pro', 'respondent-pro']);
                         $isFree = str_contains(strtolower($tier->slug), 'free');
                         $isEnterprise = str_contains(strtolower($tier->slug), 'enterprise');
+                        $isEarlyAccess = config('subscription.early_access_mode', true);
+                        
+                        $displaySurveys = $tier->max_surveys == -1 
+                            ? __('Unlimited') 
+                            : ($isFree && $isEarlyAccess ? config('subscription.early_access.max_surveys', 10) : $tier->max_surveys);
+
+                        $displayResponses = $tier->max_responses_per_survey == -1 
+                            ? __('Unlimited') 
+                            : number_format($isFree && $isEarlyAccess ? config('subscription.early_access.max_responses_per_survey', 1000) : $tier->max_responses_per_survey);
+
+                        $displayAi = $tier->ai_limit_per_month == -1 
+                            ? __('Unlimited') 
+                            : ($isFree && $isEarlyAccess ? config('subscription.early_access.ai_analyses_monthly', 50) : $tier->ai_limit_per_month);
+
+                        $displayOrgSeats = $tier->org_max_seats == -1 
+                            ? __('Unlimited') 
+                            : ($isFree && $isEarlyAccess ? config('subscription.early_access.org_free_seats', 5) : $tier->org_max_seats);
+
                         $btnLabel = __('Upgrade Plan');
                         if ($isCurrent) {
                             $btnLabel = __('Current Plan');
@@ -187,26 +205,37 @@
                                             <i class="fa-solid fa-check text-emerald-600 mt-1 flex-shrink-0"></i>
                                             <span>{{ __('View Survey History & Wallet Ledger') }}</span>
                                         </li>
-                                        <li class="flex items-start gap-3 text-gray-500">
-                                            <i class="fa-solid fa-circle-minus text-gray-400 mt-1 flex-shrink-0"></i>
-                                            <span>{{ __('1 Trial Audio/Video Transcription') }}</span>
+                                        <li class="flex items-start gap-3 text-gray-700">
+                                            <i class="fa-solid fa-check text-emerald-600 mt-1 flex-shrink-0"></i>
+                                            <span><strong>{{ $isEarlyAccess ? '5 Files' : '1 Trial' }}</strong> {{ __('Audio/Video Transcription') }}</span>
                                         </li>
-                                        <li class="flex items-start gap-3 text-gray-500">
-                                            <i class="fa-solid fa-circle-minus text-gray-400 mt-1 flex-shrink-0"></i>
-                                            <span>{{ __('3 Trial Plagiarism Scans (1,500 words)') }}</span>
+                                        <li class="flex items-start gap-3 text-gray-700">
+                                            <i class="fa-solid fa-check text-emerald-600 mt-1 flex-shrink-0"></i>
+                                            <span><strong>{{ $isEarlyAccess ? '10 Scans (5,000 words)' : '3 Trial Scans (1,500 words)' }}</strong> {{ __('Plagiarism Checker') }}</span>
                                         </li>
-                                        <li class="flex items-start gap-3 text-gray-400 opacity-60">
-                                            <i class="fa-solid fa-lock text-gray-400 mt-1 flex-shrink-0"></i>
-                                            <span>{{ __('Socius AI Chat Assistant (Locked)') }}</span>
-                                        </li>
-                                        <li class="flex items-start gap-3 text-gray-400 opacity-60">
-                                            <i class="fa-solid fa-lock text-gray-400 mt-1 flex-shrink-0"></i>
-                                            <span>{{ __('AI Text Humanizer (Locked)') }}</span>
-                                        </li>
-                                        <li class="flex items-start gap-3 text-gray-400 opacity-60">
-                                            <i class="fa-solid fa-lock text-gray-400 mt-1 flex-shrink-0"></i>
-                                            <span>{{ __('Research Studio Report Compiler (Locked)') }}</span>
-                                        </li>
+                                        @if($isEarlyAccess)
+                                            <li class="flex items-start gap-3 text-gray-700">
+                                                <i class="fa-solid fa-check text-emerald-600 mt-1 flex-shrink-0"></i>
+                                                <span><strong>50 {{ __('Queries / mo') }}</strong> {{ __('Socius Chat Assistant') }}</span>
+                                            </li>
+                                            <li class="flex items-start gap-3 text-gray-700">
+                                                <i class="fa-solid fa-check text-emerald-600 mt-1 flex-shrink-0"></i>
+                                                <span>{{ __('Full DOCX Research Report Compilation') }}</span>
+                                            </li>
+                                        @else
+                                            <li class="flex items-start gap-3 text-gray-400 opacity-60">
+                                                <i class="fa-solid fa-lock text-gray-400 mt-1 flex-shrink-0"></i>
+                                                <span>{{ __('Socius AI Chat Assistant (Locked)') }}</span>
+                                            </li>
+                                            <li class="flex items-start gap-3 text-gray-400 opacity-60">
+                                                <i class="fa-solid fa-lock text-gray-400 mt-1 flex-shrink-0"></i>
+                                                <span>{{ __('AI Text Humanizer (Locked)') }}</span>
+                                            </li>
+                                            <li class="flex items-start gap-3 text-gray-400 opacity-60">
+                                                <i class="fa-solid fa-lock text-gray-400 mt-1 flex-shrink-0"></i>
+                                                <span>{{ __('Research Studio Report Compiler (Locked)') }}</span>
+                                            </li>
+                                        @endif
                                     @else
                                         <li class="flex items-start gap-3 text-gray-800">
                                             <i class="fa-solid fa-robot text-[#2271b1] mt-1 flex-shrink-0"></i>
@@ -243,17 +272,17 @@
                                     {{-- Organization Multi-Seat Tier Features --}}
                                     <li class="flex items-start gap-3 text-gray-900 font-bold">
                                         <i class="fa-solid fa-users text-[#2271b1] mt-1 flex-shrink-0"></i>
-                                        <span><strong>{{ $tier->org_max_seats == -1 ? __('Unlimited') : $tier->org_max_seats }}</strong>
+                                        <span><strong>{{ $displayOrgSeats }}</strong>
                                             {{ __('Team Member Seats') }}</span>
                                     </li>
                                     <li class="flex items-start gap-3 text-gray-800">
                                         <i class="fa-solid fa-chart-pie text-[#2271b1] mt-1 flex-shrink-0"></i>
-                                        <span><strong>{{ $tier->max_surveys == -1 ? __('Unlimited') : $tier->max_surveys }}</strong>
+                                        <span><strong>{{ $displaySurveys }}</strong>
                                             {{ __('Active Surveys') }}</span>
                                     </li>
                                     <li class="flex items-start gap-3 text-gray-800">
                                         <i class="fa-solid fa-check text-emerald-600 mt-1 flex-shrink-0"></i>
-                                        <span><strong>{{ $tier->max_responses_per_survey == -1 ? __('Unlimited') : number_format($tier->max_responses_per_survey) }}</strong>
+                                        <span><strong>{{ $displayResponses }}</strong>
                                             {{ __('Responses per Survey') }}</span>
                                     </li>
                                     <li class="flex items-start gap-3 text-gray-800">
@@ -288,33 +317,47 @@
                                     {{-- Independent Researcher Tier Features --}}
                                     <li class="flex items-start gap-3 text-gray-800">
                                         <i class="fa-solid fa-clipboard-list text-[#2271b1] mt-1 flex-shrink-0"></i>
-                                        <span><strong>{{ $tier->max_surveys == -1 ? __('Unlimited') : $tier->max_surveys }}</strong>
+                                        <span><strong>{{ $displaySurveys }}</strong>
                                             {{ __('Surveys') }}</span>
                                     </li>
                                     <li class="flex items-start gap-3 text-gray-800">
                                         <i class="fa-solid fa-check text-emerald-600 mt-1 flex-shrink-0"></i>
-                                        <span><strong>{{ $tier->max_responses_per_survey == -1 ? __('Unlimited') : number_format($tier->max_responses_per_survey) }}</strong>
+                                        <span><strong>{{ $displayResponses }}</strong>
                                             {{ __('Responses per Survey') }}</span>
                                     </li>
                                     <li class="flex items-start gap-3 text-gray-800">
                                         <i class="fa-solid fa-robot text-[#2271b1] mt-1 flex-shrink-0"></i>
-                                        <span><strong>{{ $tier->ai_limit_per_month == -1 ? __('Unlimited') : $tier->ai_limit_per_month }}</strong>
+                                        <span><strong>{{ $displayAi }}</strong>
                                             {{ __('AI Actions / mo') }}</span>
                                     </li>
                                     <li class="flex items-start gap-3 text-gray-800">
                                         <i class="fa-solid fa-microphone text-[#2271b1] mt-1 flex-shrink-0"></i>
-                                        <span><strong>{{ $isFree ? '1 Trial' : ($tier->slug === 'pro' ? '10 / mo' : 'Unlimited') }}</strong>
+                                        <span><strong>{{ $isFree ? ($isEarlyAccess ? '5 Files' : '1 Trial') : ($tier->slug === 'pro' ? 'Unlimited' : 'Unlimited') }}</strong>
                                             {{ __('Audio/Video Transcriptions') }}</span>
                                     </li>
                                     <li class="flex items-start gap-3 text-gray-800">
                                         <i class="fa-solid fa-magnifying-glass text-[#2271b1] mt-1 flex-shrink-0"></i>
-                                        <span><strong>{{ $isFree ? '3 Scans (1.5k words)' : ($tier->slug === 'pro' ? '15 / mo (15k words)' : 'Unlimited (75k words)') }}</strong>
+                                        <span><strong>{{ $isFree ? ($isEarlyAccess ? '10 Scans (5k words)' : '3 Scans (1.5k words)') : ($tier->slug === 'pro' ? 'Unlimited (75k words)' : 'Unlimited (75k words)') }}</strong>
                                             {{ __('Plagiarism Scans') }}</span>
                                     </li>
+                                    @if($isFree && $isEarlyAccess)
+                                        <li class="flex items-start gap-3 text-gray-800">
+                                            <i class="fa-solid fa-file-excel text-[#2271b1] mt-1 flex-shrink-0"></i>
+                                            <span>{{ __('CSV, Excel (.xlsx) & JSON Data Exports') }}</span>
+                                        </li>
+                                        <li class="flex items-start gap-3 text-gray-800">
+                                            <i class="fa-solid fa-file-word text-[#2271b1] mt-1 flex-shrink-0"></i>
+                                            <span>{{ __('Full DOCX Proposal & Report Compilation') }}</span>
+                                        </li>
+                                    @endif
                                     @if(!$isFree)
                                         <li class="flex items-start gap-3 text-gray-800">
                                             <i class="fa-solid fa-file-word text-[#2271b1] mt-1 flex-shrink-0"></i>
                                             <span>{{ __('Unlimited DOCX Proposal & Report Compilation') }}</span>
+                                        </li>
+                                        <li class="flex items-start gap-3 text-gray-800">
+                                            <i class="fa-solid fa-file-export text-[#2271b1] mt-1 flex-shrink-0"></i>
+                                            <span>{{ __('Full SPSS (.sav), Excel, JSON, XML & Sheets Exports') }}</span>
                                         </li>
                                         <li class="flex items-start gap-3 text-gray-800">
                                             <i class="fa-solid fa-diagram-project text-[#2271b1] mt-1 flex-shrink-0"></i>
@@ -323,6 +366,10 @@
                                         <li class="flex items-start gap-3 text-gray-800">
                                             <i class="fa-solid fa-palette text-[#2271b1] mt-1 flex-shrink-0"></i>
                                             <span>{{ __('Custom Branding (Remove KD Analytiks logo)') }}</span>
+                                        </li>
+                                        <li class="flex items-start gap-3 text-gray-800">
+                                            <i class="fa-solid fa-star text-amber-500 mt-1 flex-shrink-0"></i>
+                                            <span>{{ __('Priority Support') }}</span>
                                         </li>
                                     @endif
                                     @if($isEnterprise)
@@ -536,61 +583,34 @@
                             </div>
                         </div>
 
-                        {{-- Payment Method Choice Cards --}}
-                        <div class="space-y-3 mb-6">
-                            {{-- Option 1: KES (IntaSend - M-Pesa / Local Cards) --}}
-                            <div @click="modalPaymentMethod = 'intasend'"
-                                :class="modalPaymentMethod === 'intasend' ? 'border-[#2271b1] bg-blue-50/40 ring-2 ring-[#2271b1]/20 shadow-md' : 'border-gray-200 hover:border-gray-300 bg-white'"
-                                class="relative border-2 rounded-2xl p-4 cursor-pointer transition-all flex items-start gap-4">
-                                <div
-                                    class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center flex-shrink-0 text-xl">
-                                    <span>🇰🇪</span>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center justify-between">
-                                        <h4 class="text-sm font-black text-gray-900 flex items-center gap-2">
-                                            {{ __('KES (M-Pesa & Local Card)') }}
-                                        </h4>
-                                        <span class="text-sm font-black text-[#2271b1]"
-                                            x-text="checkoutCycle === 'monthly' ? modalTier?.kesMonthly : modalTier?.kesYearly"></span>
-                                    </div>
-                                    <p class="text-[11px] text-gray-500 font-medium mt-0.5">
-                                        {{ __('Pay instantly via M-Pesa STK Push, Airtel Money, or local Visa / Mastercard.') }}
-                                    </p>
-                                </div>
-                                <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 flex-shrink-0"
-                                    :class="modalPaymentMethod === 'intasend' ? 'border-[#2271b1] bg-[#2271b1]' : 'border-gray-300'">
-                                    <div class="w-2 h-2 rounded-full bg-white" x-show="modalPaymentMethod === 'intasend'">
-                                    </div>
-                                </div>
+                        {{-- Payment Gateway Card --}}
+                        <div class="mb-6 p-5 bg-gradient-to-r from-blue-50/80 via-slate-50 to-indigo-50/60 border border-blue-200/80 rounded-2xl">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-black uppercase tracking-wider text-blue-900">{{ __('Secure Online Checkout') }}</span>
+                                <span class="text-base font-black text-[#2271b1] px-3 py-1 bg-white rounded-xl shadow-sm border border-blue-100"
+                                    x-text="(currency === 'USD') ? (checkoutCycle === 'monthly' ? modalTier?.usdMonthly : modalTier?.usdYearly) : (checkoutCycle === 'monthly' ? modalTier?.kesMonthly : modalTier?.kesYearly)"></span>
                             </div>
 
-                            {{-- Option 2: USD (PayPal - PayPal / International Cards) --}}
-                            <div @click="modalPaymentMethod = 'paypal'"
-                                :class="modalPaymentMethod === 'paypal' ? 'border-[#2271b1] bg-blue-50/40 ring-2 ring-[#2271b1]/20 shadow-md' : 'border-gray-200 hover:border-gray-300 bg-white'"
-                                class="relative border-2 rounded-2xl p-4 cursor-pointer transition-all flex items-start gap-4">
-                                <div
-                                    class="w-10 h-10 rounded-xl bg-blue-500/10 text-[#003087] flex items-center justify-center flex-shrink-0 text-xl">
-                                    <i class="fa-brands fa-paypal text-[#003087]"></i>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center justify-between">
-                                        <h4 class="text-sm font-black text-gray-900 flex items-center gap-2">
-                                            {{ __('USD (Card / PayPal)') }}
-                                        </h4>
-                                        <span class="text-sm font-black text-[#2271b1]"
-                                            x-text="checkoutCycle === 'monthly' ? modalTier?.usdMonthly : modalTier?.usdYearly"></span>
-                                    </div>
-                                    <p class="text-[11px] text-gray-500 font-medium mt-0.5">
-                                        {{ __('Pay securely with PayPal account or International Visa, Mastercard, AMEX.') }}
-                                    </p>
-                                </div>
-                                <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 flex-shrink-0"
-                                    :class="modalPaymentMethod === 'paypal' ? 'border-[#2271b1] bg-[#2271b1]' : 'border-gray-300'">
-                                    <div class="w-2 h-2 rounded-full bg-white" x-show="modalPaymentMethod === 'paypal'">
-                                    </div>
-                                </div>
+                            {{-- Accepted Methods Badges --}}
+                            <div class="flex flex-wrap items-center gap-2 mb-3">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-800 shadow-sm">
+                                    <i class="fa-brands fa-cc-visa text-blue-600 text-sm"></i> Visa
+                                </span>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-800 shadow-sm">
+                                    <i class="fa-brands fa-cc-mastercard text-red-500 text-sm"></i> Mastercard
+                                </span>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-800 shadow-sm">
+                                    <i class="fa-brands fa-paypal text-[#003087] text-sm"></i> PayPal
+                                </span>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-800 shadow-sm">
+                                    <i class="fa-solid fa-building-columns text-slate-600 text-xs"></i> ACH / SEPA
+                                </span>
                             </div>
+
+                            <p class="text-[11px] text-blue-950/80 font-medium leading-relaxed flex items-start gap-2">
+                                <i class="fa-solid fa-globe text-[#2271b1] mt-0.5 flex-shrink-0"></i>
+                                <span>{{ __('International & Global payments: Credit/Debit Cards, PayPal, and Bank Transfers (ACH/SEPA) are supported directly on the secure checkout screen.') }}</span>
+                            </p>
                         </div>
 
                         {{-- Checkout Form Submission --}}
@@ -598,13 +618,12 @@
                             @csrf
                             <input type="hidden" name="tier_id" :value="modalTier ? modalTier.id : ''">
                             <input type="hidden" name="cycle" :value="checkoutCycle">
-                            <input type="hidden" name="gateway" :value="modalPaymentMethod">
-                            <input type="hidden" name="currency" :value="modalPaymentMethod === 'paypal' ? 'USD' : 'KES'">
+                            <input type="hidden" name="gateway" value="intasend">
+                            <input type="hidden" name="currency" :value="currency">
 
                             <button type="submit"
                                 class="w-full bg-[#2271b1] hover:bg-[#135e96] text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                                <span
-                                    x-text="modalPaymentMethod === 'paypal' ? '{{ __('Proceed to PayPal Checkout') }}' : '{{ __('Proceed to M-Pesa / Card Checkout') }}'"></span>
+                                <span>{{ __('Proceed to Secure Checkout') }}</span>
                                 <i class="fa-solid fa-arrow-right text-xs"></i>
                             </button>
                         </form>

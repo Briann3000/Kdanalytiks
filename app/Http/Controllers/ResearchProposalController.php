@@ -640,7 +640,7 @@ class ResearchProposalController extends Controller
         // Admins always see the full preview.
         // Others see truncated preview if they don't have an active subscription (Pro/Enterprise).
         if ($user && !$user->isAdmin()) {
-            $isTruncated = !$user->hasActiveSubscription();
+            $isTruncated = !$user->hasActiveSubscription() && !(config('subscription.early_access_mode', true) && config('subscription.early_access.allow_full_report_preview', true));
         }
 
         $format = $request->input('format', 'pdf');

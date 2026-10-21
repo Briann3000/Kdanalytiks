@@ -989,7 +989,9 @@ class SurveyController extends Controller
         $this->authorizeOwner($survey);
 
         $tier = $this->getCurrentTier();
-        if (!in_array($tier, ['pro', 'enterprise'])) {
+        $allowJson = in_array($tier, ['pro', 'enterprise']) 
+            || (config('subscription.early_access_mode', true) && config('subscription.early_access.allow_json_export', true));
+        if (!$allowJson) {
             return back()->with('error', 'JSON Export is a Pro/Enterprise feature.');
         }
 
@@ -1048,8 +1050,9 @@ class SurveyController extends Controller
         $this->authorizeOwner($survey);
 
         $tier = $this->getCurrentTier();
-        if ($tier !== 'enterprise') {
-            return back()->with('error', 'XML Export is an Enterprise feature.');
+        $allowXml = ($tier === 'enterprise') || (config('subscription.early_access_mode', true) && in_array($tier, ['pro', 'enterprise']));
+        if (!$allowXml) {
+            return back()->with('error', 'XML Export is a Pro/Enterprise feature.');
         }
 
         $responses = $survey->responses()->with(['answers.question', 'respondent'])->get();
@@ -1126,7 +1129,9 @@ class SurveyController extends Controller
         $this->authorizeOwner($survey);
 
         $tier = $this->getCurrentTier();
-        if (!in_array($tier, ['pro', 'enterprise'])) {
+        $allowXlsx = in_array($tier, ['pro', 'enterprise']) 
+            || (config('subscription.early_access_mode', true) && config('subscription.early_access.allow_excel_export', true));
+        if (!$allowXlsx) {
             return back()->with('error', 'Excel Export is a Pro/Enterprise feature.');
         }
 
@@ -1145,8 +1150,9 @@ class SurveyController extends Controller
         $this->authorizeOwner($survey);
 
         $tier = $this->getCurrentTier();
-        if ($tier !== 'enterprise') {
-            return back()->with('error', 'SPSS Export is an Enterprise feature.');
+        $allowSpss = ($tier === 'enterprise') || (config('subscription.early_access_mode', true) && in_array($tier, ['pro', 'enterprise']));
+        if (!$allowSpss) {
+            return back()->with('error', 'SPSS Export is a Pro/Enterprise feature.');
         }
 
         $responses = $survey->responses()->with(['answers.question', 'respondent'])->get();
@@ -1228,8 +1234,9 @@ class SurveyController extends Controller
         $this->authorizeOwner($survey);
 
         $tier = $this->getCurrentTier();
-        if ($tier !== 'enterprise') {
-            return back()->with('error', 'Google Sheets Export is an Enterprise feature.');
+        $allowGsheets = ($tier === 'enterprise') || (config('subscription.early_access_mode', true) && in_array($tier, ['pro', 'enterprise']));
+        if (!$allowGsheets) {
+            return back()->with('error', 'Google Sheets Export is a Pro/Enterprise feature.');
         }
 
         if (!session()->has('google_token')) {
@@ -5209,10 +5216,12 @@ class SurveyController extends Controller
 
         // Premium Check
         $tier = $this->getCurrentTier();
-        if (!in_array($tier, ['pro', 'enterprise'])) {
+        $allowTranscription = in_array($tier, ['pro', 'enterprise']) 
+            || (config('subscription.early_access_mode', true) && auth()->user()?->canTranscribe());
+        if (!$allowTranscription) {
             return response()->json([
                 'success' => false,
-                'message' => 'Transcription is a Premium feature. Please upgrade to Pro or Enterprise to transcribe media submissions.'
+                'message' => 'Transcription limit reached. Please upgrade your plan to transcribe media submissions.'
             ], 403);
         }
 

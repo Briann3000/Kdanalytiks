@@ -15,11 +15,7 @@ class VerifyCsrfToken extends Middleware
         'webhook/*',
         'webhook/payment',
         '/webhook/payment',
-        'webhook/paypal',
-        '/webhook/paypal',
         'subscriptions/intasend/callback',
         '/subscriptions/intasend/callback',
-        'subscriptions/paypal/success',
-        '/subscriptions/paypal/success',
     ];
 }

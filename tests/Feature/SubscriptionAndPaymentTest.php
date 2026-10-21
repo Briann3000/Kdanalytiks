@@ -9,7 +9,6 @@ use App\Models\SubscriptionTier;
 use App\Models\Transaction;
 use App\Models\Payment;
 use App\Models\User;
-use App\Services\Payments\PayPalGateway;
 use App\Services\Payments\PaymentManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -54,14 +53,22 @@ class SubscriptionAndPaymentTest extends TestCase
             'subscription_tier_id' => SubscriptionTier::where('slug', 'free')->first()->id,
         ]);
 
+        // 1. Early Access Mode (2 tiers: Free & Pro, Enterprise hidden)
+        config(['subscription.early_access_mode' => true]);
         $response = $this->actingAs($user)->get(route('subscriptions.index'));
-
         $response->assertStatus(200);
         $response->assertSee('Pro');
-        $response->assertSee('Enterprise');
+        $response->assertDontSee('Scale & Enterprise');
         $response->assertSee('KES 1,999');
         $response->assertDontSee('Respondent Pro');
         $response->assertDontSee('Org Enterprise');
+
+        // 2. Standard Mode (3 tiers: Free, Pro, Enterprise)
+        config(['subscription.early_access_mode' => false]);
+        $responseStd = $this->actingAs($user)->get(route('subscriptions.index'));
+        $responseStd->assertStatus(200);
+        $responseStd->assertSee('Pro');
+        $responseStd->assertSee('Enterprise');
     }
 
     public function test_organization_owner_sees_org_tiers()
@@ -76,13 +83,21 @@ class SubscriptionAndPaymentTest extends TestCase
             'subscription_tier_id' => SubscriptionTier::where('slug', 'org-free')->first()->id,
         ]);
 
+        // 1. Early Access Mode (2 tiers: Org Free & Org Pro, Org Enterprise hidden)
+        config(['subscription.early_access_mode' => true]);
         $response = $this->actingAs($user)->get(route('subscriptions.index'));
-
         $response->assertStatus(200);
         $response->assertSee('Org Pro');
-        $response->assertSee('Org Enterprise');
+        $response->assertDontSee('Scale & Enterprise');
         $response->assertSee('KES 4,999');
         $response->assertDontSee('Respondent Pro');
+
+        // 2. Standard Mode (3 tiers: Org Free, Org Pro, Org Enterprise)
+        config(['subscription.early_access_mode' => false]);
+        $responseStd = $this->actingAs($user)->get(route('subscriptions.index'));
+        $responseStd->assertStatus(200);
+        $responseStd->assertSee('Org Pro');
+        $responseStd->assertSee('Org Enterprise');
     }
 
     public function test_switching_to_free_tier_bypasses_gateway()
@@ -145,70 +160,6 @@ class SubscriptionAndPaymentTest extends TestCase
         $this->assertFalse($user->hasActiveSubscription());
         $this->assertTrue($user->isSubscriptionExpired());
         $this->assertEquals(0, $user->subscriptionDaysRemaining());
-    }
-
-    public function test_paypal_success_activates_subscription_and_logs_transaction()
-    {
-        $user = User::factory()->create([
-            'role' => UserRole::Independent->value,
-            'email_verified_at' => now(),
-        ]);
-        $proTier = SubscriptionTier::where('slug', 'pro')->first();
-        $freeTier = SubscriptionTier::where('slug', 'free')->first();
-
-        $independent = Independent::create([
-            'user_id' => $user->id,
-            'name' => $user->name,
-            'subscription_tier_id' => $freeTier->id,
-            'payment_status' => 'unpaid',
-        ]);
-
-        // Mock PayPal Capture Response
-        $mockOrderId = 'ORDER-TEST-12345';
-        $mockCaptureId = 'CAPTURE-TEST-99999';
-        $customRef = "SUB-IND-{$independent->id}-TIER-{$proTier->id}-YEAR-RANDOM";
-
-        $mockGateway = $this->createMock(PayPalGateway::class);
-        $mockGateway->method('captureOrder')->willReturn([
-            'status' => 'success',
-            'order_status' => 'COMPLETED',
-            'reference' => $customRef,
-            'transaction_id' => $mockCaptureId,
-            'amount' => 190.00,
-            'currency' => 'USD',
-        ]);
-
-        $this->app->instance(PayPalGateway::class, $mockGateway);
-
-        $response = $this->actingAs($user)->get(route('subscriptions.paypal.success', [
-            'token' => $mockOrderId,
-            'PayerID' => 'PAYER-TEST',
-        ]));
-
-        $response->assertRedirect(route('independent.dashboard'));
-        $independent->refresh();
-
-        // Verify tier upgraded
-        $this->assertEquals($proTier->id, $independent->subscription_tier_id);
-        $this->assertEquals('paid', $independent->payment_status);
-        $this->assertNotNull($independent->subscription_expiry);
-        $this->assertTrue($independent->subscription_expiry->greaterThan(now()->addDays(360)));
-
-        // Verify Payment and Transaction records
-        $this->assertDatabaseHas('payments', [
-            'independent_id' => $independent->id,
-            'amount' => 190.00,
-            'method' => 'paypal',
-            'status' => 'success',
-            'transaction_id' => $mockCaptureId,
-        ]);
-
-        $this->assertDatabaseHas('transactions', [
-            'independent_id' => $independent->id,
-            'amount' => 190.00,
-            'external_reference' => $mockCaptureId,
-            'status' => 'completed',
-        ]);
     }
 
     public function test_org_member_without_admin_role_cannot_checkout_or_cancel()
@@ -288,114 +239,6 @@ class SubscriptionAndPaymentTest extends TestCase
         $response->assertRedirect(route('organization.dashboard'));
     }
 
-    public function test_paypal_success_activates_respondent_pro_subscription()
-    {
-        $user = User::factory()->create([
-            'role' => UserRole::Respondent->value,
-            'email_verified_at' => now(),
-            'subscription_tier_id' => null,
-            'payment_status' => 'unpaid',
-        ]);
-        $respondentProTier = SubscriptionTier::where('slug', 'respondent-pro')->first();
-
-        $mockOrderId = 'ORDER-RES-98765';
-        $mockCaptureId = 'CAPTURE-RES-11111';
-        $customRef = "SUB-RES-{$user->id}-TIER-{$respondentProTier->id}-MONTH-TEST";
-
-        $mockGateway = $this->createMock(PayPalGateway::class);
-        $mockGateway->method('captureOrder')->willReturn([
-            'status' => 'success',
-            'order_status' => 'COMPLETED',
-            'reference' => $customRef,
-            'transaction_id' => $mockCaptureId,
-            'amount' => 6.99,
-            'currency' => 'USD',
-        ]);
-
-        $this->app->instance(PayPalGateway::class, $mockGateway);
-
-        $response = $this->actingAs($user)->get(route('subscriptions.paypal.success', [
-            'token' => $mockOrderId,
-            'PayerID' => 'PAYER-RES',
-        ]));
-
-        $response->assertRedirect(route('respondent.dashboard'));
-        $user->refresh();
-
-        $this->assertEquals($respondentProTier->id, $user->subscription_tier_id);
-        $this->assertEquals('paid', $user->payment_status);
-        $this->assertNotNull($user->subscription_expiry);
-        $this->assertTrue($user->hasActiveSubscription());
-
-        $this->assertDatabaseHas('payments', [
-            'user_id' => $user->id,
-            'amount' => 6.99,
-            'method' => 'paypal',
-            'status' => 'success',
-        ]);
-    }
-
-    public function test_paypal_success_activates_organization_pro_and_members_inherit_privileges()
-    {
-        $owner = User::factory()->create([
-            'role' => UserRole::Organization->value,
-            'email_verified_at' => now(),
-        ]);
-        $org = Organization::create([
-            'user_id' => $owner->id,
-            'name' => 'Data Analytics Org',
-            'subscription_tier_id' => SubscriptionTier::where('slug', 'org-free')->first()->id,
-            'payment_status' => 'unpaid',
-        ]);
-
-        $member = User::factory()->create([
-            'role' => UserRole::Organization->value,
-            'email_verified_at' => now(),
-        ]);
-        \App\Models\OrgMember::create([
-            'organization_id' => $org->id,
-            'user_id' => $member->id,
-            'org_workspace_role' => 'lead_researcher',
-            'status' => 'active',
-            'joined_at' => now(),
-        ]);
-
-        $orgProTier = SubscriptionTier::where('slug', 'org-pro')->first();
-
-        $mockOrderId = 'ORDER-ORG-55555';
-        $mockCaptureId = 'CAPTURE-ORG-88888';
-        $customRef = "SUB-ORG-{$org->id}-TIER-{$orgProTier->id}-YEAR-TEST";
-
-        $mockGateway = $this->createMock(PayPalGateway::class);
-        $mockGateway->method('captureOrder')->willReturn([
-            'status' => 'success',
-            'order_status' => 'COMPLETED',
-            'reference' => $customRef,
-            'transaction_id' => $mockCaptureId,
-            'amount' => 490.00,
-            'currency' => 'USD',
-        ]);
-
-        $this->app->instance(PayPalGateway::class, $mockGateway);
-
-        $response = $this->actingAs($owner)->get(route('subscriptions.paypal.success', [
-            'token' => $mockOrderId,
-            'PayerID' => 'PAYER-ORG',
-        ]));
-
-        $response->assertRedirect(route('organization.dashboard'));
-        $org->refresh();
-
-        $this->assertEquals($orgProTier->id, $org->subscription_tier_id);
-        $this->assertEquals('paid', $org->payment_status);
-        $this->assertNotNull($org->subscription_expiry);
-
-        // Verify organization owner and member inherit active subscription
-        $this->assertTrue($owner->hasActiveSubscription());
-        $this->assertTrue($member->hasActiveSubscription());
-        $this->assertEquals($org->subscriptionDaysRemaining(), $member->subscriptionDaysRemaining());
-    }
-
     public function test_tier_price_helpers_and_formatting()
     {
         $proTier = SubscriptionTier::where('slug', 'pro')->first();
@@ -447,35 +290,6 @@ class SubscriptionAndPaymentTest extends TestCase
         ]);
     }
 
-    public function test_paypal_webhook_handles_payment_capture_completed()
-    {
-        $mockGateway = $this->createMock(PayPalGateway::class);
-        $mockGateway->method('validateWebhook')->willReturn(true);
-        $this->app->instance(PayPalGateway::class, $mockGateway);
-
-        $payload = [
-            'id' => 'WH-EVENT-12345',
-            'event_type' => 'PAYMENT.CAPTURE.COMPLETED',
-            'resource_type' => 'capture',
-            'resource' => [
-                'id' => 'CAPTURE-999',
-                'status' => 'COMPLETED',
-                'amount' => [
-                    'value' => '49.00',
-                    'currency_code' => 'USD',
-                ],
-            ],
-        ];
-
-        $response = $this->postJson(route('webhook.paypal'), $payload);
-
-        $response->assertStatus(200);
-        $response->assertJson([
-            'status' => 'success',
-            'message' => 'PayPal webhook processed',
-        ]);
-    }
-
     public function test_cancel_subscription_reverts_to_free()
     {
         $user = User::factory()->create([
@@ -500,6 +314,39 @@ class SubscriptionAndPaymentTest extends TestCase
         $this->assertEquals($freeTier->id, $independent->subscription_tier_id);
         $this->assertNull($independent->subscription_expiry);
         $this->assertEquals('unpaid', $independent->payment_status);
+    }
+
+    public function test_checkout_initiates_intasend_with_usd_and_kes_currencies()
+    {
+        $user = User::factory()->create([
+            'role' => UserRole::Independent->value,
+            'email_verified_at' => now(),
+        ]);
+        $proTier = SubscriptionTier::where('slug', 'pro')->first();
+        Independent::create([
+            'user_id' => $user->id,
+            'name' => $user->name,
+            'subscription_tier_id' => SubscriptionTier::where('slug', 'free')->first()->id,
+        ]);
+
+        $mockGateway = $this->createMock(\App\Services\Payments\IntasendGateway::class);
+        $mockGateway->expects($this->once())
+            ->method('purchaseSubscription')
+            ->with($this->anything(), $this->anything(), false, 'USD')
+            ->willReturn([
+                'status' => 'success',
+                'checkout_url' => 'https://payment.intasend.com/checkout/test-session-usd',
+            ]);
+        $this->app->instance(\App\Services\Payments\IntasendGateway::class, $mockGateway);
+
+        $response = $this->actingAs($user)->post(route('subscriptions.checkout'), [
+            'tier_id' => $proTier->id,
+            'cycle' => 'monthly',
+            'gateway' => 'intasend',
+            'currency' => 'USD',
+        ]);
+
+        $response->assertRedirect('https://payment.intasend.com/checkout/test-session-usd');
     }
 
     public function test_intasend_callback_synchronously_activates_subscription()

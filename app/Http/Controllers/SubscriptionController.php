@@ -10,7 +10,6 @@ use App\Models\Payment;
 use App\Models\SubscriptionTier;
 use App\Models\Transaction;
 use App\Models\User;
-use App\Services\Payments\PayPalGateway;
 use App\Services\Payments\PaymentManager;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -36,15 +35,19 @@ class SubscriptionController extends Controller
             }
         }
 
-        // Filter tiers strictly based on account role
+        // Filter tiers strictly based on account role (with Early Access 2-tier toggle)
+        $isEarlyAccess = config('subscription.early_access_mode', true) && config('subscription.early_access.hide_enterprise', true);
+
         if ($role === 'respondent') {
             $tiers = SubscriptionTier::whereIn('slug', ['free', 'respondent-pro'])->get();
             $accountTypeLabel = 'Respondent (Participant & AI Suite)';
         } elseif ($role === 'organization') {
-            $tiers = SubscriptionTier::whereIn('slug', ['org-free', 'org-pro', 'org-enterprise'])->get();
+            $orgSlugs = $isEarlyAccess ? ['org-free', 'org-pro'] : ['org-free', 'org-pro', 'org-enterprise'];
+            $tiers = SubscriptionTier::whereIn('slug', $orgSlugs)->get();
             $accountTypeLabel = 'Organization Team Workspace';
         } else {
-            $tiers = SubscriptionTier::whereIn('slug', ['free', 'pro', 'enterprise'])->get();
+            $indSlugs = $isEarlyAccess ? ['free', 'pro'] : ['free', 'pro', 'enterprise'];
+            $tiers = SubscriptionTier::whereIn('slug', $indSlugs)->get();
             $accountTypeLabel = 'Independent Researcher ';
         }
 
@@ -71,7 +74,7 @@ class SubscriptionController extends Controller
         $request->validate([
             'tier_id' => 'required|exists:subscription_tiers,id',
             'cycle' => 'required|in:monthly,yearly',
-            'gateway' => 'nullable|in:intasend,paypal',
+            'gateway' => 'nullable|in:intasend',
             'currency' => 'nullable|in:KES,USD',
         ]);
 
@@ -90,8 +93,8 @@ class SubscriptionController extends Controller
             }
         }
 
-        $gateway = strtolower($request->input('gateway', 'intasend'));
-        $currency = strtoupper($request->input('currency', ($gateway === 'paypal' ? 'USD' : 'KES')));
+        $gateway = 'intasend';
+        $currency = strtoupper($request->input('currency', 'KES'));
         $isYearly = $request->cycle === 'yearly';
 
         try {
@@ -227,83 +230,6 @@ class SubscriptionController extends Controller
     }
 
     /**
-     * Handle PayPal return redirect after user approval.
-     */
-    public function paypalSuccess(Request $request, PayPalGateway $payPalGateway)
-    {
-        $orderId = $request->query('token');
-
-        if (!$orderId) {
-            return redirect()->route('subscriptions.index')->with('error', 'PayPal order token missing.');
-        }
-
-        try {
-            $captureResult = $payPalGateway->captureOrder($orderId);
-
-            if ($captureResult['status'] !== 'success') {
-                return redirect()->route('subscriptions.index')->with('error', 'PayPal capture failed: ' . ($captureResult['message'] ?? 'Please contact support.'));
-            }
-
-            $reference = $captureResult['reference'];
-            $transactionId = $captureResult['transaction_id'];
-            $amount = $captureResult['amount'];
-            $currency = $captureResult['currency'];
-
-            $type = null;
-            $entityId = null;
-            $tierId = null;
-            $cycle = 'MONTH';
-
-            if ($reference && preg_match('/SUB-(ORG|IND|RES)-(\d+)-TIER-(\d+)-(MONTH|YEAR)/', $reference, $matches)) {
-                $type = $matches[1];
-                $entityId = $matches[2];
-                $tierId = $matches[3];
-                $cycle = $matches[4];
-            }
-
-            if (!$type || !$entityId || !$tierId) {
-                Log::error('PayPal Success: Unable to parse custom_id from order capture', ['capture' => $captureResult]);
-                return redirect()->route('subscriptions.index')->with('error', 'Payment captured but could not resolve account reference. Please contact support.');
-            }
-
-            DB::beginTransaction();
-
-            $result = $this->activateSubscription(
-                type: $type,
-                entityId: $entityId,
-                tierId: $tierId,
-                cycle: $cycle,
-                amount: $amount,
-                currency: $currency,
-                gateway: 'paypal',
-                transactionId: $transactionId,
-                reference: $reference,
-                metadata: ['order_id' => $orderId]
-            );
-
-            DB::commit();
-
-            $roleValue = auth()->user()->role instanceof \UnitEnum ? auth()->user()->role->value : auth()->user()->role;
-            $redirect = match ($roleValue) {
-                'organization' => 'organization.dashboard',
-                'independent', 'researcher' => 'independent.dashboard',
-                'respondent' => 'respondent.dashboard',
-                default => 'home'
-            };
-
-            return redirect(route($redirect, [], false))->with(
-                'success',
-                "🎉 Payment successful! You are now on the {$result['tier']->name} plan, active until {$result['expiryFormatted']}."
-            );
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('PayPal Success Processing Exception: ' . $e->getMessage());
-            return redirect()->route('subscriptions.index')->with('error', 'Error activating subscription: ' . $e->getMessage());
-        }
-    }
-
-    /**
      * Handle IntaSend synchronous return callback after customer completes checkout.
      */
     public function intasendCallback(Request $request, \App\Services\Payments\IntasendGateway $gateway)
@@ -397,15 +323,7 @@ class SubscriptionController extends Controller
     }
 
     /**
-     * Handle PayPal checkout cancellation.
-     */
-    public function paypalCancel(Request $request)
-    {
-        return redirect()->route('subscriptions.index')->with('info', 'PayPal checkout was cancelled. You have not been charged.');
-    }
-
-    /**
-     * Handle incoming payment webhooks from IntaSend or PayPal.
+     * Handle incoming payment webhooks from IntaSend.
      */
     public function webhook(Request $request)
     {
@@ -417,21 +335,7 @@ class SubscriptionController extends Controller
             'content' => $request->getContent()
         ]);
 
-        // 1. Check if it is a PayPal Webhook event
-        if (isset($payload['event_type']) || isset($payload['resource_type'])) {
-            $payPalGateway = app(PayPalGateway::class);
-            if (!$payPalGateway->validateWebhook($request->getContent(), $headers)) {
-                return response()->json(['message' => 'Invalid PayPal webhook signature'], 403);
-            }
-
-            $eventType = $payload['event_type'] ?? '';
-            if ($eventType === 'CHECKOUT.ORDER.APPROVED' || $eventType === 'PAYMENT.CAPTURE.COMPLETED') {
-                Log::info("PayPal Webhook Event: {$eventType}", ['resource' => $payload['resource'] ?? []]);
-            }
-            return response()->json(['status' => 'success', 'message' => 'PayPal webhook processed']);
-        }
-
-        // 2. Default to IntaSend Webhook processing
+        // Process incoming IntaSend Webhook
         $gateway = app(PaymentGatewayInterface::class);
 
         if (!$gateway->validateWebhook($request->getContent(), $headers)) {

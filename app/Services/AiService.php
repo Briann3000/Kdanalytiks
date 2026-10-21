@@ -31,6 +31,11 @@ class AiService
         $tier = $entity->subscriptionTier ?? \App\Models\SubscriptionTier::where('slug', 'free')->first();
         $limit = $tier ? (int) $tier->ai_limit_per_month : 5;
 
+        // [EARLY ACCESS / LAUNCH MODE]: Relaxed limit when early access is active
+        if (config('subscription.early_access_mode', true) && (!$tier || str_contains(strtolower($tier->slug), 'free'))) {
+            $limit = max($limit, (int) config('subscription.early_access.ai_analyses_monthly', 50));
+        }
+
         if ($limit === -1) {
             return true; // Unlimited
         }

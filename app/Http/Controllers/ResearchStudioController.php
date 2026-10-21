@@ -394,7 +394,7 @@ class ResearchStudioController extends Controller
             abort(403);
         }
 
-        $isTruncated = !$user->hasActiveSubscription();
+        $isTruncated = !$user->hasActiveSubscription() && !(config('subscription.early_access_mode', true) && config('subscription.early_access.allow_full_report_preview', true));
 
         return view('research-studio.preview_report', compact('report', 'isTruncated'));
     }

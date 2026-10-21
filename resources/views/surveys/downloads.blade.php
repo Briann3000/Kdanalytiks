@@ -31,8 +31,12 @@
                 </div>
                 <div class="p-8 space-y-4">
                     @php
+                        $isEarlyAccess = config('subscription.early_access_mode', true);
                         $canPro = in_array($currentTier, ['pro', 'enterprise']);
-                        $canEnterprise = ($currentTier === 'enterprise');
+                        $canExportXlsx = $canPro || ($isEarlyAccess && config('subscription.early_access.allow_excel_export', true));
+                        $canExportJson = $canPro || ($isEarlyAccess && config('subscription.early_access.allow_json_export', true));
+                        $canEnterprise = ($currentTier === 'enterprise') || ($isEarlyAccess && $canPro);
+                        $enterpriseLockText = $isEarlyAccess ? __('Upgrade to Pro') : __('Enterprise Only');
                     @endphp
 
                     <!-- CSV (Free) -->
@@ -70,7 +74,7 @@
                     </a>
 
                     <!-- XLSX (Pro) -->
-                    @if($canPro)
+                    @if($canExportXlsx)
                         <a href="{{ route('surveys.export_xlsx', $survey) }}" @click="setTimeout(() => refresh(), 3000)"
                             class="flex items-center justify-between p-4 bg-zinc-100 border border-zinc-200 rounded-2xl group hover:bg-zinc-100 transition-all shadow-sm">
                             <div class="flex items-center">
@@ -107,7 +111,7 @@
                     @endif
 
                     <!-- JSON (Pro) -->
-                    @if($canPro)
+                    @if($canExportJson)
                         <a href="{{ route('surveys.export_json', $survey) }}" @click="setTimeout(() => refresh(), 3000)"
                             class="flex items-center justify-between p-4 bg-amber-50/30 border border-amber-100 rounded-2xl group hover:bg-amber-50 transition-all shadow-sm">
                             <div class="flex items-center">
@@ -173,7 +177,7 @@
                                     <span class="block text-xs font-black text-gray-400 uppercase tracking-tight">{{ __('XML Document') }}</span>
                                     <span
                                         class="block text-[8px] text-slate-400 font-black uppercase tracking-widest flex items-center gap-1">
-                                        <i class="fa-solid fa-lock text-[7px]"></i> {{ __('Enterprise Only') }}
+                                        <i class="fa-solid fa-lock text-[7px]"></i> {{ $enterpriseLockText }}
                                     </span>
                                 </div>
                             </div>
@@ -210,7 +214,7 @@
                                     <span class="block text-xs font-black text-gray-400 uppercase tracking-tight">{{ __('SPSS (.sav)') }}</span>
                                     <span
                                         class="block text-[8px] text-violet-400 font-black uppercase tracking-widest flex items-center gap-1">
-                                        <i class="fa-solid fa-lock text-[7px]"></i> {{ __('Enterprise Only') }}
+                                        <i class="fa-solid fa-lock text-[7px]"></i> {{ $enterpriseLockText }}
                                     </span>
                                 </div>
                             </div>
@@ -245,7 +249,7 @@
                                     <span class="block text-xs font-black text-gray-400 uppercase tracking-tight">{{ __('Google Sheets') }}</span>
                                     <span
                                         class="block text-[8px] text-cyan-400 font-black uppercase tracking-widest flex items-center gap-1">
-                                        <i class="fa-solid fa-lock text-[7px]"></i> {{ __('Enterprise Only') }}
+                                        <i class="fa-solid fa-lock text-[7px]"></i> {{ $enterpriseLockText }}
                                     </span>
                                 </div>
                             </div>

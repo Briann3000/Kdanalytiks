@@ -42,14 +42,14 @@ class IntasendGateway implements PaymentGatewayInterface
     /**
      * Initiate a subscription purchase via IntaSend Checkout.
      */
-    public function purchaseSubscription($entity, SubscriptionTier $tier, bool $isYearly = false): array
+    public function purchaseSubscription($entity, SubscriptionTier $tier, bool $isYearly = false, string $currency = 'KES'): array
     {
         try {
             $checkout = new Checkout();
             $checkout->init($this->getCredentials());
 
-            $amount = $isYearly ? $tier->yearly_price : $tier->monthly_price;
-            $currency = 'KES';
+            $currency = strtoupper($currency ?: 'KES');
+            $amount = $tier->getPrice($currency, $isYearly);
 
             // Determine type for reference
             if ($entity instanceof Organization) {

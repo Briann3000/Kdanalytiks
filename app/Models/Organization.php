@@ -165,7 +165,13 @@ class Organization extends Model
             return false;
         }
 
-        return $currentCount >= $tier->max_surveys;
+        $max = $tier->max_surveys;
+        // [EARLY ACCESS / LAUNCH MODE]: Relaxed survey limit when early access is active
+        if (config('subscription.early_access_mode', true) && str_contains(strtolower($tier->slug), 'free')) {
+            $max = max($max, (int) config('subscription.early_access.max_surveys', 10));
+        }
+
+        return $currentCount >= $max;
     }
 
     public function subscriptionDaysRemaining(): int

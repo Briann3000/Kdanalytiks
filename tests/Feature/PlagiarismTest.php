@@ -53,12 +53,26 @@ class PlagiarismTest extends TestCase
         ]);
         $freeUser->plagiarism_scan_count = 0;
 
+        // 1. Standard mode (strict: 3 scans, 1,500 words)
+        config(['subscription.early_access_mode' => false]);
         $this->assertTrue($freeUser->canCheckPlagiarism());
         $this->assertEquals(1500, $freeUser->plagiarismWordLimit());
         $this->assertEquals(3, $freeUser->remainingPlagiarismScans());
 
         // Exhaust free trial scans
         $freeUser->plagiarism_scan_count = 3;
+        $this->assertFalse($freeUser->canCheckPlagiarism());
+        $this->assertEquals(0, $freeUser->remainingPlagiarismScans());
+
+        // 2. Early Access mode (relaxed: 10 scans, 5,000 words)
+        config(['subscription.early_access_mode' => true]);
+        $freeUser->plagiarism_scan_count = 0;
+        $this->assertTrue($freeUser->canCheckPlagiarism());
+        $this->assertEquals(5000, $freeUser->plagiarismWordLimit());
+        $this->assertEquals(10, $freeUser->remainingPlagiarismScans());
+
+        // Exhaust early access scans
+        $freeUser->plagiarism_scan_count = 10;
         $this->assertFalse($freeUser->canCheckPlagiarism());
         $this->assertEquals(0, $freeUser->remainingPlagiarismScans());
     }
