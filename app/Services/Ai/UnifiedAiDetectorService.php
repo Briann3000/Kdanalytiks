@@ -93,8 +93,18 @@ class UnifiedAiDetectorService
         $perplexityScore = min(100.0, max(0.0, round($uniqueRatio * 125, 1)));
 
         // 2. Burstiness & Rhythm (Sentence Length Standard Deviation)
-        $sentences = preg_split('/[.!?]+(?:\s+|$)/u', $cleanText, -1, PREG_SPLIT_NO_EMPTY);
-        $sentences = array_values(array_filter(array_map('trim', $sentences), fn($s) => mb_strlen($s) > 0));
+        // Protect common abbreviations, citations (e.g., et al.), and decimals from false sentence splits
+        $protectedText = preg_replace('/\b(et\s+al|i\.e|e\.g|vs|cf|ibid|dr|prof|mr|mrs|ms|u\.s|u\.k)\./iu', '$1§DOT§', $cleanText);
+        $protectedText = preg_replace('/(?<=\d)\.(?=\d)/u', '§DOT§', $protectedText);
+
+        $rawSentences = preg_split('/[.!?]+(?:\s+|$)/u', $protectedText, -1, PREG_SPLIT_NO_EMPTY);
+        $sentences = [];
+        foreach ($rawSentences as $rawS) {
+            $restoredS = trim(str_replace('§DOT§', '.', $rawS));
+            if (mb_strlen($restoredS) > 0) {
+                $sentences[] = $restoredS;
+            }
+        }
         $sentenceCount = count($sentences);
 
         $sentenceLengths = [];

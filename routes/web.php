@@ -346,8 +346,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Standalone Humanizer Routes
     Route::get('/humanizer', [\App\Http\Controllers\HumanizerController::class, 'index'])->name('humanizer.index');
-    Route::post('/humanizer/process', [\App\Http\Controllers\HumanizerController::class, 'process'])->name('humanizer.process');
-    Route::post('/humanizer/upload', [\App\Http\Controllers\HumanizerController::class, 'upload'])->name('humanizer.upload');
+    Route::post('/humanizer/process', [\App\Http\Controllers\HumanizerController::class, 'process'])->middleware('throttle:60,1')->name('humanizer.process');
     Route::post('/humanizer/download', [\App\Http\Controllers\HumanizerController::class, 'downloadDocx'])->name('humanizer.download');
 
     // Standalone AI Media Transcription Routes

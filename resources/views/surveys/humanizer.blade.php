@@ -14,13 +14,19 @@
                         customInstructions: '',
                         originalAnalysis: null,
                         humanizedAnalysis: null,
+                        analyzeAbortController: null,
 
                         async analyzeHumanizerText() {
                             if (!this.humanizerOriginal.trim()) return;
+                            if (this.analyzeAbortController) {
+                                this.analyzeAbortController.abort();
+                            }
+                            this.analyzeAbortController = new AbortController();
                             this.isAnalyzing = true;
                             try {
                                 const response = await fetch('{{ route('humanizer.process') }}', {
                                     method: 'POST',
+                                    signal: this.analyzeAbortController.signal,
                                     headers: {
                                         'Content-Type': 'application/json',
                                         'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
@@ -31,9 +37,13 @@
                                     })
                                 });
                                 const data = await response.json();
-                                this.originalAnalysis = data.analysis;
+                                if (data.analysis) {
+                                    this.originalAnalysis = data.analysis;
+                                }
                             } catch (e) {
-                                console.error(e);
+                                if (e.name !== 'AbortError') {
+                                    console.error(e);
+                                }
                             } finally {
                                 this.isAnalyzing = false;
                             }
@@ -61,10 +71,17 @@
                                 const data = await response.json();
                                 if (data.error) {
                                     Swal.fire({
-                                        title: 'Humanizer Error',
+                                        title: data.error === 'Quota exceeded' ? '{{ __('Quota Limit Reached') }}' : '{{ __('Humanizer Error') }}',
                                         text: data.message,
-                                        icon: 'error',
+                                        icon: data.error === 'Quota exceeded' ? 'warning' : 'error',
+                                        showCancelButton: data.error === 'Quota exceeded',
+                                        confirmButtonText: data.error === 'Quota exceeded' ? '{{ __('View Plans') }}' : '{{ __('OK') }}',
+                                        cancelButtonText: '{{ __('Cancel') }}',
                                         customClass: { popup: 'rounded-3xl' }
+                                    }).then((result) => {
+                                        if (data.error === 'Quota exceeded' && result.isConfirmed) {
+                                            window.location.href = '{{ route('pricing') }}';
+                                        }
                                     });
                                     return;
                                 }
@@ -132,7 +149,7 @@
                         </div>
                     </div>
 
-                    <textarea x-model="humanizerOriginal" @input.debounce.600ms="analyzeHumanizerText()"
+                    <textarea x-model="humanizerOriginal" @input.debounce.1200ms="analyzeHumanizerText()"
                         placeholder="{{ __('Paste your AI-generated text here...') }}"
                         class="w-full h-80 bg-black/30 border border-white/5 rounded-xl p-4 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#2271b1]/30 focus:ring-1 focus:ring-[#2271b1]/10 transition-all custom-scrollbar resize-none"></textarea>
 
@@ -227,11 +244,11 @@
                                     <div class="flex items-baseline gap-1">
                                         <span class="text-lg font-black"
                                             :class="(100 - originalAnalysis.aiProbability) < 40 ? 'text-red-400' : ((100 - originalAnalysis.aiProbability) < 65 ? 'text-amber-400' : 'text-emerald-400')"
-                                            x-text="(100 - originalAnalysis.aiProbability) + '%'"></span>
+                                            x-text="Math.round(100 - originalAnalysis.aiProbability) + '%'"></span>
                                     </div>
                                     <div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                                         <div class="h-full rounded-full transition-all duration-500"
-                                            :style="`width: ${100 - originalAnalysis.aiProbability}%;`"
+                                            :style="`width: ${Math.min(100, Math.max(0, Math.round(100 - originalAnalysis.aiProbability)))}%;`"
                                             :class="(100 - originalAnalysis.aiProbability) < 40 ? 'bg-red-500' : ((100 - originalAnalysis.aiProbability) < 65 ? 'bg-amber-500' : 'bg-emerald-500')">
                                         </div>
                                     </div>
@@ -247,11 +264,11 @@
                                     </div>
                                     <div class="flex items-baseline gap-1">
                                         <span class="text-lg font-black text-white"
-                                            x-text="originalAnalysis.perplexity + '%'"></span>
+                                            x-text="Math.round(originalAnalysis.perplexity) + '%'"></span>
                                     </div>
                                     <div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                                         <div class="h-full bg-[#2271b1] rounded-full transition-all duration-500"
-                                            :style="`width: ${originalAnalysis.perplexity}%;`"></div>
+                                            :style="`width: ${Math.min(100, Math.max(0, Math.round(originalAnalysis.perplexity)))}%;`"></div>
                                     </div>
                                 </div>
 
@@ -265,11 +282,11 @@
                                     </div>
                                     <div class="flex items-baseline gap-1">
                                         <span class="text-lg font-black text-white"
-                                            x-text="originalAnalysis.burstiness + '%'"></span>
+                                            x-text="Math.round(originalAnalysis.burstiness) + '%'"></span>
                                     </div>
                                     <div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                                         <div class="h-full bg-purple-500 rounded-full transition-all duration-500"
-                                            :style="`width: ${originalAnalysis.burstiness}%;`"></div>
+                                            :style="`width: ${Math.min(100, Math.max(0, Math.round(originalAnalysis.burstiness)))}%;`"></div>
                                     </div>
                                 </div>
                             </div>
@@ -411,10 +428,10 @@
                                     class="text-[9px] font-black tracking-wider text-slate-400">{{ __('Human Auth.') }}</span>
                                 <span class="text-xl font-black"
                                     :class="(100 - humanizedAnalysis.aiProbability) < 40 ? 'text-red-400' : ((100 - humanizedAnalysis.aiProbability) < 65 ? 'text-amber-400' : 'text-emerald-400')"
-                                    x-text="(100 - humanizedAnalysis.aiProbability) + '%'"></span>
+                                    x-text="Math.round(100 - humanizedAnalysis.aiProbability) + '%'"></span>
                                 <div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                                     <div class="h-full rounded-full transition-all duration-700"
-                                        :style="`width: ${100 - humanizedAnalysis.aiProbability}%;`"
+                                        :style="`width: ${Math.min(100, Math.max(0, Math.round(100 - humanizedAnalysis.aiProbability)))}%;`"
                                         :class="(100 - humanizedAnalysis.aiProbability) < 40 ? 'bg-red-500' : ((100 - humanizedAnalysis.aiProbability) < 65 ? 'bg-amber-500' : 'bg-emerald-500')">
                                     </div>
                                 </div>
@@ -425,10 +442,10 @@
                                 <span
                                     class="text-[9px] font-black tracking-wider text-slate-400">{{ __('Vocab Richness') }}</span>
                                 <span class="text-xl font-black text-white"
-                                    x-text="humanizedAnalysis.perplexity + '%'"></span>
+                                    x-text="Math.round(humanizedAnalysis.perplexity) + '%'"></span>
                                 <div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                                     <div class="h-full bg-[#2271b1] rounded-full transition-all duration-700"
-                                        :style="`width: ${humanizedAnalysis.perplexity}%;`"></div>
+                                        :style="`width: ${Math.min(100, Math.max(0, Math.round(humanizedAnalysis.perplexity)))}%;`"></div>
                                 </div>
                             </div>
 
@@ -436,10 +453,10 @@
                             <div class="bg-black/20 rounded-xl p-3 border border-white/5 flex flex-col gap-1.5">
                                 <span class="text-[9px] font-black tracking-wider text-slate-400">{{ __('Rhythm') }}</span>
                                 <span class="text-xl font-black text-white"
-                                    x-text="humanizedAnalysis.burstiness + '%'"></span>
+                                    x-text="Math.round(humanizedAnalysis.burstiness) + '%'"></span>
                                 <div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                                     <div class="h-full bg-purple-500 rounded-full transition-all duration-700"
-                                        :style="`width: ${humanizedAnalysis.burstiness}%;`"></div>
+                                        :style="`width: ${Math.min(100, Math.max(0, Math.round(humanizedAnalysis.burstiness)))}%;`"></div>
                                 </div>
                             </div>
                         </div>

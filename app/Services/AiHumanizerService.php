@@ -7,36 +7,6 @@ use Illuminate\Support\Str;
 
 class AiHumanizerService
 {
-    private const FLAGGED_WORDS = [
-        'delve',
-        'testament',
-        'tapestry',
-        'pivotal',
-        'furthermore',
-        'moreover',
-        'demystify',
-        'showcase',
-        'revolutionary',
-        'groundbreaking',
-        'beacon',
-        'utilize',
-        'optimize',
-        'interdisciplinary',
-        'holistic',
-        'robust',
-        'plethora',
-        'myriad',
-        'paramount',
-        'underscore',
-        'stark',
-        'testament',
-        'realm',
-        'fostering',
-        'navigating',
-        'shed_light',
-        'beacon_of'
-    ];
-
     public function __construct(
         private readonly GroqStreamingClient $groqStreamingClient,
         private readonly ?\App\Services\Ai\UnifiedAiDetectorService $unifiedAiDetector = null
@@ -53,13 +23,43 @@ class AiHumanizerService
     }
 
     /**
-     * Send text to the LLM to humanize it using dynamic settings, including paragraph chunking and multi-pass loops.
+     * Send text to the LLM to humanize it using dynamic settings, including paragraph chunking,
+     * cross-lingual pivot back-translation, and multi-pass refinement loops.
      */
     public function humanizeText(string $text, string $mode = 'standard', string $intensity = 'medium', ?string $customInstructions = null): string
     {
-        // Step 1: Chunk paragraphs keeping each chunk around 4000 chars to avoid token limit drops
-        $paragraphs = preg_split('/\n\s*\n/', $text);
-        $paragraphs = array_filter(array_map('trim', $paragraphs));
+        // Step 1: Chunk paragraphs keeping each chunk around 3500 chars to avoid token limit drops
+        $rawParagraphs = preg_split('/\n\s*\n/', $text);
+        $paragraphs = [];
+
+        foreach ($rawParagraphs as $rawPara) {
+            $rawPara = trim($rawPara);
+            if (empty($rawPara)) {
+                continue;
+            }
+
+            // Subdivide giant single paragraphs (>3500 chars) along sentence boundaries
+            if (strlen($rawPara) > 3500) {
+                $subSentences = preg_split('/(?<=[.!?])\s+/u', $rawPara);
+                $subChunk = [];
+                $subLen = 0;
+                foreach ($subSentences as $sent) {
+                    $sentLen = strlen($sent);
+                    if ($subLen + $sentLen > 3000 && !empty($subChunk)) {
+                        $paragraphs[] = implode(' ', $subChunk);
+                        $subChunk = [];
+                        $subLen = 0;
+                    }
+                    $subChunk[] = $sent;
+                    $subLen += $sentLen;
+                }
+                if (!empty($subChunk)) {
+                    $paragraphs[] = implode(' ', $subChunk);
+                }
+            } else {
+                $paragraphs[] = $rawPara;
+            }
+        }
 
         $chunks = [];
         $currentChunk = [];
@@ -67,7 +67,7 @@ class AiHumanizerService
 
         foreach ($paragraphs as $para) {
             $paraLength = strlen($para);
-            if ($currentLength + $paraLength > 4000 && !empty($currentChunk)) {
+            if ($currentLength + $paraLength > 3500 && !empty($currentChunk)) {
                 $chunks[] = implode("\n\n", $currentChunk);
                 $currentChunk = [];
                 $currentLength = 0;
@@ -81,10 +81,15 @@ class AiHumanizerService
 
         $humanizedChunks = [];
         foreach ($chunks as $chunk) {
-            $hChunk = $this->processParagraphChunk($chunk, $mode, $intensity, $customInstructions);
-            // Selective per-chunk refinement (only if AI Risk > 25%) to optimize token costs and eliminate full-document truncation
+            // Stage 1: Cross-Lingual Pivot (Option C) to disrupt syntactic token probability trees
+            $pivotChunk = $this->pivotTranslate($chunk, 'Spanish');
+
+            // Stage 2: Target Style Alignment & Entity Polish (academic, standard, creative)
+            $hChunk = $this->processParagraphChunk($pivotChunk, $mode, $intensity, $customInstructions);
+
+            // Stage 3: Guardrail scan & targeted refinement if AI probability exceeds 20%
             $cScan = $this->analyzeText($hChunk);
-            if ($cScan['aiProbability'] > 25) {
+            if ($cScan['aiProbability'] > 20) {
                 $hChunk = $this->runRefinementPass($hChunk, $customInstructions);
             }
             $humanizedChunks[] = $hChunk;
@@ -94,11 +99,106 @@ class AiHumanizerService
     }
 
     /**
+     * Perform a bidirectional cross-lingual pivot (English -> Pivot Language -> English)
+     * to disrupt LLM n-gram probability distributions and burstiness profiles.
+     */
+    public function pivotTranslate(string $text, string $pivotLanguage = 'Spanish'): string
+    {
+        if (trim($text) === '') {
+            return $text;
+        }
+
+        try {
+            // Forward pass: English -> Pivot Language (high fidelity)
+            $intermediate = $this->translateToPivot($text, $pivotLanguage);
+            if (empty(trim($intermediate))) {
+                return $text;
+            }
+
+            // Reverse pass: Pivot Language -> Idiomatic Human English (varied burstiness)
+            $retranslated = $this->translateFromPivot($intermediate, $pivotLanguage);
+            if (empty(trim($retranslated))) {
+                return $intermediate;
+            }
+
+            return $retranslated;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Cross-lingual pivot fallback: ' . $e->getMessage());
+            return $text;
+        }
+    }
+
+    /**
+     * Translate text from English to an intermediate pivot language preserving technical entities and citations.
+     */
+    public function translateToPivot(string $text, string $targetLanguage = 'Spanish'): string
+    {
+        $systemPrompt = "You are an expert bilingual linguist translating English prose into natural, idiomatic {$targetLanguage}.
+Your translation will serve as an intermediate linguistic bridge.
+
+CRITICAL INTEGRITY CONSTRAINTS:
+1. PRESERVE FACTUAL DATA: Keep all numbers, percentages, dates, statistics, formulas, and metric units strictly identical.
+2. PRESERVE CITATIONS: Keep all academic citations (e.g. '(Smith et al., 2021)', '(Johnson, 2019, p. 45)'), author names, and bibliographic references verbatim.
+3. PRESERVE PROPER ENTITIES: Maintain proper nouns, institutional names, and domain-specific terminology unchanged.
+4. NATURAL SYNTAX: Express sentences fluently in natural {$targetLanguage} rather than word-for-word literal substitution.
+5. PRESERVE STRUCTURE: Retain exact paragraph breaks.
+
+Return ONLY the {$targetLanguage} translation. Do not include any greeting, preamble, notes, or markdown commentary.";
+
+        $messages = [
+            ['role' => 'system', 'content' => $systemPrompt],
+            ['role' => 'user', 'content' => $text]
+        ];
+
+        $result = $this->groqStreamingClient->streamChatCompletion(
+            $messages,
+            fn($delta) => null,
+            config('services.groq.model', 'openai/gpt-oss-120b'),
+            0.3
+        );
+
+        return trim($result['content'] ?? '');
+    }
+
+    /**
+     * Re-translate intermediate text back into natural, idiomatic English breaking robotic token patterns.
+     */
+    public function translateFromPivot(string $text, string $sourceLanguage = 'Spanish'): string
+    {
+        $systemPrompt = "You are a master bilingual editor translating {$sourceLanguage} prose back into natural, authentic human English.
+Your goal is to convey the exact original meaning with organic human cadence, diverse sentence rhythm, and zero machine-generated stiffness.
+
+CORE RULES FOR NATURAL HUMAN RE-TRANSLATION:
+1. NATURAL HUMAN CADENCE: Use idiomatic English phrasing. Strictly avoid stiff, awkward literal phrasing ('translationese').
+2. BURSTINESS & SENTENCE DIVERSITY: Intentionally alternate sentence lengths. Pair longer analytical clauses with punchy, direct statements.
+3. BAN SYNTHETIC AI MARKERS: You are strictly forbidden from using generic AI transition clichés or buzzwords:
+   - Banned words: 'delve', 'delving', 'testament', 'tapestry', 'pivotal', 'furthermore', 'moreover', 'paramount', 'realm', 'beacon', 'crucial', 'multifaceted', 'interdisciplinary', 'stark', 'underscore'.
+   - Connect ideas organically through logic rather than formulaic transition words.
+4. PRESERVE FACTUAL DATA & CITATIONS: Strictly preserve all figures, percentages, dates, equations, and citations (e.g., '(Smith et al., 2021)') exactly as in the source.
+5. PRESERVE STRUCTURE: Preserve paragraph count and formatting.
+
+Return ONLY the final English translation. Do not include notes, introduction, or explanations.";
+
+        $messages = [
+            ['role' => 'system', 'content' => $systemPrompt],
+            ['role' => 'user', 'content' => $text]
+        ];
+
+        $result = $this->groqStreamingClient->streamChatCompletion(
+            $messages,
+            fn($delta) => null,
+            config('services.groq.model', 'openai/gpt-oss-120b'),
+            0.7
+        );
+
+        return trim($result['content'] ?? '');
+    }
+
+    /**
      * Process a chunk of paragraphs preserving exact structure.
      */
-    private function processParagraphChunk(string $chunk, string $mode, string $intensity, ?string $customInstructions = null): string
+    protected function processParagraphChunk(string $chunk, string $mode, string $intensity, ?string $customInstructions = null): string
     {
-
         if ($mode === 'academic') {
             $systemPrompt = "You are a senior academic researcher refining a draft for a peer-reviewed journal. 
 Your objective is to rewrite the text with high academic rigor and clinical precision. 
@@ -164,7 +264,7 @@ Never use transition words like 'Look,', 'And yet,', 'Furthermore', or 'Moreover
     /**
      * Secondary refinement pass over the full text.
      */
-    private function runRefinementPass(string $text, ?string $customInstructions = null): string
+    protected function runRefinementPass(string $text, ?string $customInstructions = null): string
     {
         $systemPrompt = "You are an expert copywriter and AI-detection bypass specialist. Your task is to perform an aggressive, secondary humanization pass over a draft that still carries mechanical AI patterns.
 
