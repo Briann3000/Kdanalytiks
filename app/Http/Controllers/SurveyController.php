@@ -1891,7 +1891,7 @@ class SurveyController extends Controller
     public function getAnalyticalData(\App\Models\Survey $survey, $responses, $includeAi = false, $forceGenerate = false)
     {
         @set_time_limit(600);
-        @ini_set('memory_limit', '1024M');
+        @ini_set('memory_limit', '512M');
         @ignore_user_abort(true);
         $isJson = !empty($survey->json_schema) && $survey->json_schema !== '[]';
         $totalResponses = $responses->count();
@@ -2894,7 +2894,7 @@ class SurveyController extends Controller
     public function exportPdf(\App\Models\Survey $survey)
     {
         @set_time_limit(600);
-        @ini_set('memory_limit', '1024M');
+        @ini_set('memory_limit', '512M');
         @ignore_user_abort(true);
         $this->authorizeOwner($survey);
 
@@ -3121,7 +3121,7 @@ class SurveyController extends Controller
     public function exportDocx(\App\Models\Survey $survey)
     {
         @set_time_limit(600);
-        @ini_set('memory_limit', '1024M');
+        @ini_set('memory_limit', '512M');
         @ignore_user_abort(true);
         \PhpOffice\PhpWord\Settings::setOutputEscapingEnabled(true);
         $this->authorizeOwner($survey);

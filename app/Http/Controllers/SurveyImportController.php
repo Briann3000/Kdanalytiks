@@ -41,7 +41,7 @@ class SurveyImportController extends Controller
     public function previewImport(Request $request)
     {
         $request->validate([
-            'file' => ['required', 'file', 'max:51200'],
+            'file' => ['required', 'file', 'max:20480'],
             'codebook' => ['nullable', 'file', 'max:10240'],
         ]);
 
