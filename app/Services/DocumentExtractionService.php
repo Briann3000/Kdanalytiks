@@ -38,8 +38,12 @@ class DocumentExtractionService
             throw new RuntimeException('PDF parsing dependency is not installed.');
         }
 
-        $parser = new \Smalot\PdfParser\Parser();
-        $text = trim($parser->parseFile($path)->getText());
+        try {
+            $parser = new \Smalot\PdfParser\Parser();
+            $text = trim($parser->parseFile($path)->getText());
+        } catch (\Throwable $e) {
+            throw new RuntimeException('Unable to parse the PDF document: ' . $e->getMessage(), 0, $e);
+        }
 
         if ($text === '') {
             throw new RuntimeException('This PDF does not contain extractable text. Scanned PDFs are not supported in v1.');

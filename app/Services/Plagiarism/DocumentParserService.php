@@ -75,7 +75,7 @@ class DocumentParserService
             if (!empty(trim($text))) {
                 return $text;
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Fallback to basic text stream extraction if parser encounters obscure PDF encoding
         }
 
@@ -125,7 +125,7 @@ class DocumentParserService
                 }
             }
             return $fullText;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return '';
         }
     }

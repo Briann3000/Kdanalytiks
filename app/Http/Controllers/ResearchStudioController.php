@@ -150,12 +150,12 @@ class ResearchStudioController extends Controller
             $docTitle = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
             $uuid = Str::uuid();
             $tempPath = 'temp/' . $uuid . '.' . $file->getClientOriginalExtension();
-            Storage::disk('local')->put($tempPath, file_get_contents($file->getRealPath()));
+            $file->storeAs('temp', $uuid . '.' . $file->getClientOriginalExtension(), 'local');
 
             try {
                 $text = $this->extractionService->extractText($file, $tempPath);
                 Storage::disk('local')->delete($tempPath);
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 if (Storage::disk('local')->exists($tempPath)) {
                     Storage::disk('local')->delete($tempPath);
                 }
